@@ -1,0 +1,255 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Venn Diagram (Universal Set, Fixed Positioning)</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; background: #fff; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); padding: 28px; }
+    h1 { color: #667eea; text-align: center; margin: 0 0 20px; font-size: 1.8rem; }
+
+    .toggle-section { display: flex; justify-content: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .toggle-btn { padding: 10px 22px; border: 2px solid #667eea; background: #fff; color: #667eea; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    .toggle-btn.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; }
+
+    .content-wrapper { display: grid; grid-template-columns: 1fr 420px; gap: 24px; }
+    @media (max-width: 980px) { .content-wrapper { grid-template-columns: 1fr; } }
+
+    .diagram-section { background: #f8f9fa; padding: 18px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+    /* Universal set frame - increased height for better spacing */
+    .u-frame { position: relative; width: 100%; max-width: 620px; aspect-ratio: 1.15 / 1; border: 3px solid #374151; border-radius: 10px; background: #ffffff; }
+    .u-title { position: absolute; top: -12px; left: 12px; background: #fff; padding: 2px 8px; font-weight: 800; color: #374151; border: 1px solid #374151; border-radius: 6px; font-size: 0.9rem; }
+
+    .venn-container { position: absolute; inset: 52px 24px 100px 24px; }
+    svg { width: 100%; height: 100%; display: block; }
+    .circle { fill: rgba(102,126,234,0.28); stroke: #667eea; stroke-width: 3; }
+    .label { font-size: 1.25rem; font-weight: 700; fill: #667eea; }
+
+    .input-box { position: absolute; transform: translate(-50%, -50%); }
+    .input-box input { width: 74px; padding: 6px 8px; border: 2px solid #667eea; border-radius: 6px; text-align: center; font-weight: 700; }
+    .input-box input:focus { outline: none; border-color: #764ba2; box-shadow: 0 0 0 3px rgba(102,126,234,0.2); }
+
+    /* Outside (complement) input - improved spacing and layout */
+    .outside-row { 
+      position: absolute; 
+      left: 50%; 
+      bottom: 22px; 
+      transform: translateX(-50%); 
+      display: flex; 
+      flex-direction: column;
+      align-items: center;
+      gap: 6px; 
+      background: #eef2ff; 
+      border: 1px solid #c7d2fe; 
+      padding: 10px 14px; 
+      border-radius: 8px;
+      min-width: 280px;
+    }
+    .outside-row label { 
+      font-weight: 700; 
+      color: #3730a3; 
+      font-size: 0.9rem;
+      text-align: center;
+      line-height: 1.3;
+    }
+    .outside-row input { 
+      width: 100px; 
+      padding: 6px 8px; 
+      border: 2px solid #6366f1; 
+      border-radius: 6px; 
+      text-align: center; 
+      font-weight: 700; 
+    }
+
+    .legend { width: 100%; max-width: 620px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+    .legend-title { color: #667eea; font-weight: 800; margin-bottom: 8px; }
+    .legend-item { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 6px 0; border-bottom: 1px solid #f0f2f6; font-size: 0.95rem; }
+    .legend-item:last-child { border-bottom: none; }
+
+    .stats-section { background: #f8f9fa; padding: 16px; border-radius: 10px; }
+    .stats-title { color: #667eea; font-weight: 800; text-align: center; margin-bottom: 10px; }
+    .stat-rows { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+    .stat-row { display: grid; grid-template-columns: 1fr 40px auto; align-items: center; padding: 10px 12px; border-bottom: 1px solid #eef2f7; }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-name { color: #374151; font-weight: 700; }
+    .stat-spacer {}
+    .stat-value { color: #667eea; font-weight: 800; text-align: right; font-size: 1.2rem; }
+
+    .reset-btn { width: 100%; margin-top: 10px; padding: 10px; border: none; border-radius: 8px; background: #dc3545; color: #fff; font-weight: 800; cursor: pointer; }
+    .reset-btn:hover { background: #c82333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Interactive Venn Diagram</h1>
+
+    <div class="toggle-section">
+      <button class="toggle-btn active" onclick="switchMode('2way', this)">2-Way Venn Diagram</button>
+      <button class="toggle-btn" onclick="switchMode('3way', this)">3-Way Venn Diagram</button>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="diagram-section">
+        <div class="u-frame">
+          <div class="u-title">Universal Set (U)</div>
+          <div class="venn-container" id="venn-container"></div>
+          <div class="outside-row">
+            <label for="outside">Outside (A ∪ B<span id="c-flag" style="display:none"> ∪ C</span>)'</label>
+            <input type="number" id="outside" min="0" value="0" oninput="updateStats()" />
+          </div>
+        </div>
+        <div class="legend">
+          <div class="legend-title">Region Guide</div>
+          <div id="legend-content"></div>
+        </div>
+      </div>
+
+      <div class="stats-section" id="stats">
+        <div class="stats-title">Summary Statistics</div>
+        <div class="stat-rows">
+          <div class="stat-row"><span class="stat-name">Total in Set A</span><span class="stat-spacer"></span><span class="stat-value" id="total-a">0</span></div>
+          <div class="stat-row"><span class="stat-name">Total in Set B</span><span class="stat-spacer"></span><span class="stat-value" id="total-b">0</span></div>
+          <div class="stat-row" id="row-c" style="display:none;"><span class="stat-name">Total in Set C</span><span class="stat-spacer"></span><span class="stat-value" id="total-c">0</span></div>
+          <div class="stat-row"><span class="stat-name">Outside (A ∪ B<span id="c-flag2" style="display:none"> ∪ C</span>)'</span><span class="stat-spacer"></span><span class="stat-value" id="outside-total">0</span></div>
+          <div class="stat-row"><span class="stat-name">Grand Total (U)</span><span class="stat-spacer"></span><span class="stat-value" id="grand-total">0</span></div>
+        </div>
+        <button class="reset-btn" onclick="resetAll()">Reset All Values</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentMode = '2way';
+
+    function switchMode(mode, btn) {
+      currentMode = mode;
+      document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      // Toggle C indicators
+      document.getElementById('row-c').style.display = mode === '3way' ? 'grid' : 'none';
+      document.getElementById('c-flag').style.display = mode === '3way' ? 'inline' : 'none';
+      document.getElementById('c-flag2').style.display = mode === '3way' ? 'inline' : 'none';
+
+      // Render diagram and legend
+      if (mode === '2way') {
+        render2Way();
+        setLegend2Way();
+      } else {
+        render3Way();
+        setLegend3Way();
+      }
+      updateStats();
+    }
+
+    function render2Way() {
+      const c = document.getElementById('venn-container');
+      c.innerHTML = `
+        <svg viewBox="0 0 500 360" aria-label="2-way Venn diagram A and B">
+          <circle class="circle" cx="200" cy="180" r="120" />
+          <circle class="circle" cx="300" cy="180" r="120" />
+          <text class="label" x="135" y="90">A</text>
+          <text class="label" x="343" y="90">B</text>
+        </svg>
+        <div class="input-box" style="left: 28%; top: 55%;"><input type="number" id="region-a-only" min="0" value="0" oninput="updateStats()" placeholder="A only"></div>
+        <div class="input-box" style="left: 50%; top: 55%;"><input type="number" id="region-ab" min="0" value="0" oninput="updateStats()" placeholder="A∩B"></div>
+        <div class="input-box" style="left: 72%; top: 55%;"><input type="number" id="region-b-only" min="0" value="0" oninput="updateStats()" placeholder="B only"></div>
+      `;
+    }
+
+    function render3Way() {
+      const c = document.getElementById('venn-container');
+      c.innerHTML = `
+        <svg viewBox="0 0 520 420" aria-label="3-way Venn diagram A, B, and C">
+          <!-- Arrange circles as a triangle for clear intersections -->
+          <circle class="circle" cx="220" cy="180" r="110" />
+          <circle class="circle" cx="300" cy="180" r="110" />
+          <circle class="circle" cx="260" cy="260" r="110" />
+          <text class="label" x="160" y="95">A</text>
+          <text class="label" x="345" y="95">B</text>
+          <text class="label" x="248" y="378">C</text>
+        </svg>
+        <!-- 7 region inputs - adjusted positioning to be higher and better centered -->
+        <div class="input-box" style="left: 24%; top: 38%;"><input type="number" id="region-a-only" min="0" value="0" oninput="updateStats()" placeholder="A only"></div>
+        <div class="input-box" style="left: 76%; top: 38%;"><input type="number" id="region-b-only" min="0" value="0" oninput="updateStats()" placeholder="B only"></div>
+        <div class="input-box" style="left: 50%; top: 72%;"><input type="number" id="region-c-only" min="0" value="0" oninput="updateStats()" placeholder="C only"></div>
+
+        <div class="input-box" style="left: 50%; top: 32%;"><input type="number" id="region-ab-only" min="0" value="0" oninput="updateStats()" placeholder="A∩B"></div>
+        <div class="input-box" style="left: 38%; top: 56%;"><input type="number" id="region-ac-only" min="0" value="0" oninput="updateStats()" placeholder="A∩C"></div>
+        <div class="input-box" style="left: 62%; top: 56%;"><input type="number" id="region-bc-only" min="0" value="0" oninput="updateStats()" placeholder="B∩C"></div>
+        <div class="input-box" style="left: 50%; top: 48%;"><input type="number" id="region-abc" min="0" value="0" oninput="updateStats()" placeholder="A∩B∩C"></div>
+      `;
+    }
+
+    function setLegend2Way() {
+      document.getElementById('legend-content').innerHTML = `
+        <div class="legend-item"><span>A only</span><span>Elements only in A</span></div>
+        <div class="legend-item"><span>A ∩ B</span><span>In both A and B</span></div>
+        <div class="legend-item"><span>B only</span><span>Elements only in B</span></div>
+        <div class="legend-item"><span>Outside (A ∪ B)'</span><span>In neither A nor B</span></div>
+      `;
+    }
+
+    function setLegend3Way() {
+      document.getElementById('legend-content').innerHTML = `
+        <div class="legend-item"><span>A only</span><span>Only in A</span></div>
+        <div class="legend-item"><span>B only</span><span>Only in B</span></div>
+        <div class="legend-item"><span>C only</span><span>Only in C</span></div>
+        <div class="legend-item"><span>A ∩ B ∩ C'</span><span>In A and B, not C</span></div>
+        <div class="legend-item"><span>A ∩ C ∩ B'</span><span>In A and C, not B</span></div>
+        <div class="legend-item"><span>B ∩ C ∩ A'</span><span>In B and C, not A</span></div>
+        <div class="legend-item"><span>A ∩ B ∩ C</span><span>In all three sets</span></div>
+        <div class="legend-item"><span>Outside (A ∪ B ∪ C)'</span><span>In none of A, B, or C</span></div>
+      `;
+    }
+
+    function v(id) { const el = document.getElementById(id); return el ? parseInt(el.value) || 0 : 0; }
+
+    function updateStats() {
+      const outside = v('outside');
+      if (currentMode === '2way') {
+        const aOnly = v('region-a-only');
+        const ab = v('region-ab');
+        const bOnly = v('region-b-only');
+        const totalA = aOnly + ab;
+        const totalB = bOnly + ab;
+        const grand = aOnly + ab + bOnly + outside;
+        document.getElementById('total-a').textContent = totalA;
+        document.getElementById('total-b').textContent = totalB;
+        document.getElementById('outside-total').textContent = outside;
+        document.getElementById('grand-total').textContent = grand;
+      } else {
+        const aOnly = v('region-a-only');
+        const bOnly = v('region-b-only');
+        const cOnly = v('region-c-only');
+        const abOnly = v('region-ab-only');
+        const acOnly = v('region-ac-only');
+        const bcOnly = v('region-bc-only');
+        const abc = v('region-abc');
+        const totalA = aOnly + abOnly + acOnly + abc;
+        const totalB = bOnly + abOnly + bcOnly + abc;
+        const totalC = cOnly + acOnly + bcOnly + abc;
+        const grand = aOnly + bOnly + cOnly + abOnly + acOnly + bcOnly + abc + outside;
+        document.getElementById('total-a').textContent = totalA;
+        document.getElementById('total-b').textContent = totalB;
+        document.getElementById('total-c').textContent = totalC;
+        document.getElementById('outside-total').textContent = outside;
+        document.getElementById('grand-total').textContent = grand;
+      }
+    }
+
+    function resetAll() {
+      document.querySelectorAll('#venn-container input[type="number"]').forEach(i => i.value = 0);
+      const outside = document.getElementById('outside'); if (outside) outside.value = 0;
+      updateStats();
+    }
+
+    // Initialize (2-way default)
+    render2Way();
+    setLegend2Way();
+    updateStats();
+  </script>
+</body>
+</html>
