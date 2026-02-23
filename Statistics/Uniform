@@ -1,0 +1,549 @@
+import React, { useMemo, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+function clamp(x: number, lo: number, hi: number) {
+  return Math.min(hi, Math.max(lo, x));
+}
+
+function fmt(x: number, digits = 4) {
+  if (!Number.isFinite(x)) return "—";
+  // Trim tiny negative zeros
+  const y = Math.abs(x) < 1e-12 ? 0 : x;
+  return y.toFixed(digits);
+}
+
+function uniformPdf(a: number, b: number) {
+  if (!(b > a)) return NaN;
+  return 1 / (b - a);
+}
+
+function uniformCdf(x: number, a: number, b: number) {
+  if (!(b > a)) return NaN;
+  if (x <= a) return 0;
+  if (x >= b) return 1;
+  return (x - a) / (b - a);
+}
+
+function pLeq(k: number, a: number, b: number) {
+  return uniformCdf(k, a, b);
+}
+
+function pGeq(k: number, a: number, b: number) {
+  if (!(b > a)) return NaN;
+  // Continuous: P(X >= k) = 1 - F(k)
+  return 1 - uniformCdf(k, a, b);
+}
+
+function pBetween(c: number, d: number, a: number, b: number) {
+  if (!(b > a)) return NaN;
+  const lo = Math.min(c, d);
+  const hi = Math.max(c, d);
+  const cl = clamp(lo, a, b);
+  const ch = clamp(hi, a, b);
+  if (ch <= cl) return 0;
+  return (ch - cl) / (b - a);
+}
+
+function invLeq(p: number, a: number, b: number) {
+  if (!(b > a)) return NaN;
+  const pp = clamp(p, 0, 1);
+  return a + pp * (b - a);
+}
+
+function invGeq(p: number, a: number, b: number) {
+  if (!(b > a)) return NaN;
+  const pp = clamp(p, 0, 1);
+  // P(X >= c) = (b - c)/(b - a) = p  => c = b - p(b-a)
+  return b - pp * (b - a);
+}
+
+function Formula({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="font-mono text-sm text-muted-foreground bg-muted/60 rounded-xl px-3 py-2">
+      {children}
+    </div>
+  );
+}
+
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div className="text-sm font-semibold tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+function ErrorBanner({ msg }: { msg: string }) {
+  return (
+    <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+      {msg}
+    </div>
+  );
+}
+
+function UniformPlot({
+  a,
+  b,
+  shadeFrom,
+  shadeTo,
+  caption,
+}: {
+  a: number;
+  b: number;
+  shadeFrom?: number;
+  shadeTo?: number;
+  caption?: string;
+}) {
+  // Simple SVG plot (pdf rectangle) with shaded probability interval.
+  const width = 720;
+  const height = 210;
+  const padX = 36;
+  const padY = 22;
+
+  const ok = b > a;
+  const pdf = ok ? 1 / (b - a) : NaN;
+
+  // Domain expansion so we can see space around [a,b]
+  const span = ok ? (b - a) : 1;
+  const xMin = ok ? a - 0.25 * span : 0;
+  const xMax = ok ? b + 0.25 * span : 1;
+
+  const xScale = (x: number) => {
+    if (!(xMax > xMin)) return padX;
+    const t = (x - xMin) / (xMax - xMin);
+    return padX + t * (width - 2 * padX);
+  };
+
+  // Vertical scale: make the rectangle visible regardless of height.
+  const rectTop = padY + 12;
+  const rectBottom = height - padY - 34;
+  const rectH = rectBottom - rectTop;
+
+  // Uniform pdf shown as constant-height bar. We annotate its value.
+  const yPdf = rectTop; // constant
+
+  const xA = xScale(ok ? a : 0.35);
+  const xB = xScale(ok ? b : 0.65);
+
+  const sf = shadeFrom;
+  const st = shadeTo;
+  const hasShade = ok && typeof sf === "number" && typeof st === "number";
+  const shadeLo = hasShade ? clamp(Math.min(sf!, st!), a, b) : a;
+  const shadeHi = hasShade ? clamp(Math.max(sf!, st!), a, b) : a;
+
+  const xShadeLo = xScale(shadeLo);
+  const xShadeHi = xScale(shadeHi);
+
+  return (
+    <div className="w-full">
+      <div className="rounded-2xl border bg-background p-3 shadow-sm">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+          {/* Axis */}
+          <line x1={padX} y1={rectBottom} x2={width - padX} y2={rectBottom} stroke="currentColor" opacity={0.25} />
+          {/* Pdf rectangle */}
+          <rect
+            x={Math.min(xA, xB)}
+            y={yPdf}
+            width={Math.abs(xB - xA)}
+            height={rectH}
+            fill="currentColor"
+            opacity={0.08}
+          />
+          <rect
+            x={Math.min(xA, xB)}
+            y={yPdf}
+            width={Math.abs(xB - xA)}
+            height={rectH}
+            fill="none"
+            stroke="currentColor"
+            opacity={0.35}
+          />
+
+          {/* Shaded region */}
+          {hasShade && shadeHi > shadeLo && (
+            <rect
+              x={Math.min(xShadeLo, xShadeHi)}
+              y={yPdf}
+              width={Math.abs(xShadeHi - xShadeLo)}
+              height={rectH}
+              fill="currentColor"
+              opacity={0.22}
+            />
+          )}
+
+          {/* Markers at a and b */}
+          <line x1={xA} y1={rectBottom} x2={xA} y2={rectBottom + 8} stroke="currentColor" opacity={0.35} />
+          <line x1={xB} y1={rectBottom} x2={xB} y2={rectBottom + 8} stroke="currentColor" opacity={0.35} />
+
+          {/* Labels */}
+          <text x={xA} y={height - 12} textAnchor="middle" fontSize={12} fill="currentColor" opacity={0.8}>
+            a = {ok ? fmt(a, 3) : "—"}
+          </text>
+          <text x={xB} y={height - 12} textAnchor="middle" fontSize={12} fill="currentColor" opacity={0.8}>
+            b = {ok ? fmt(b, 3) : "—"}
+          </text>
+
+          {/* Pdf annotation */}
+          <text x={padX} y={padY + 12} textAnchor="start" fontSize={12} fill="currentColor" opacity={0.75}>
+            f(x) = 1/(b − a) = {ok ? fmt(pdf, 4) : "—"} for a ≤ x ≤ b
+          </text>
+
+          {/* Caption */}
+          {caption && (
+            <text x={padX} y={rectBottom + 24} textAnchor="start" fontSize={12} fill="currentColor" opacity={0.75}>
+              {caption}
+            </text>
+          )}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+export default function UniformDistributionApplet() {
+  const [sigDigits, setSigDigits] = useState(4);
+
+  const [aStr, setAStr] = useState("0");
+  const [bStr, setBStr] = useState("10");
+
+  const a = Number(aStr);
+  const b = Number(bStr);
+
+  const ok = Number.isFinite(a) && Number.isFinite(b) && b > a;
+
+  // Probability mode toggle
+  const [probMode, setProbMode] = useState<"onesided" | "between">("onesided");
+
+  // One-sided: choose <= or >= and k
+  const [ineq, setIneq] = useState<"leq" | "geq">("leq");
+  const [kStr, setKStr] = useState("5");
+  const k = Number(kStr);
+
+  // Between: c and d
+  const [cStr, setCStr] = useState("2");
+  const [dStr, setDStr] = useState("7");
+  const c = Number(cStr);
+  const d = Number(dStr);
+
+  // Inverse mode
+  const [invIneq, setInvIneq] = useState<"leq" | "geq">("leq");
+  const [pStr, setPStr] = useState("0.6");
+  const p = Number(pStr);
+
+  const mean = useMemo(() => (ok ? (a + b) / 2 : NaN), [ok, a, b]);
+  const sd = useMemo(() => (ok ? (b - a) / Math.sqrt(12) : NaN), [ok, a, b]);
+
+  const pdf = useMemo(() => (ok ? 1 / (b - a) : NaN), [ok, a, b]);
+
+  const probValue = useMemo(() => {
+    if (!ok) return NaN;
+    if (probMode === "onesided") {
+      if (!Number.isFinite(k)) return NaN;
+      return ineq === "leq" ? pLeq(k, a, b) : pGeq(k, a, b);
+    }
+    if (!Number.isFinite(c) || !Number.isFinite(d)) return NaN;
+    return pBetween(c, d, a, b);
+  }, [ok, probMode, ineq, k, a, b, c, d]);
+
+  const invC = useMemo(() => {
+    if (!ok) return NaN;
+    if (!Number.isFinite(p)) return NaN;
+    return invIneq === "leq" ? invLeq(p, a, b) : invGeq(p, a, b);
+  }, [ok, invIneq, p, a, b]);
+
+  const shade = useMemo(() => {
+    if (!ok) return { from: undefined as number | undefined, to: undefined as number | undefined, caption: "" };
+
+    if (probMode === "onesided") {
+      if (!Number.isFinite(k)) return { from: undefined, to: undefined, caption: "" };
+      if (ineq === "leq") {
+        return {
+          from: a,
+          to: clamp(k, a, b),
+          caption: `Shaded area represents P(X ≤ k) with k = ${fmt(k, sigDigits)}`,
+        };
+      }
+      // P(X ≥ k)
+      return {
+        from: clamp(k, a, b),
+        to: b,
+        caption: `Shaded area represents P(X ≥ k) with k = ${fmt(k, sigDigits)}`,
+      };
+    }
+
+    if (!Number.isFinite(c) || !Number.isFinite(d)) return { from: undefined, to: undefined, caption: "" };
+    return {
+      from: clamp(Math.min(c, d), a, b),
+      to: clamp(Math.max(c, d), a, b),
+      caption: `Shaded area represents P(c ≤ X ≤ d) with c = ${fmt(Math.min(c, d), sigDigits)}, d = ${fmt(Math.max(c, d), sigDigits)}`,
+    };
+  }, [ok, probMode, ineq, k, a, b, c, d]);
+
+  const invCaption = useMemo(() => {
+    if (!ok) return "";
+    if (!Number.isFinite(p)) return "";
+    const pp = clamp(p, 0, 1);
+    return invIneq === "leq"
+      ? `Computed c so that P(X ≤ c) = p. With p = ${fmt(pp, sigDigits)}, c = ${fmt(invC, sigDigits)}.`
+      : `Computed c so that P(X ≥ c) = p. With p = ${fmt(pp, sigDigits)}, c = ${fmt(invC, sigDigits)}.`;
+  }, [ok, p, invIneq, invC, sigDigits]);
+
+  const inputError = useMemo(() => {
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return "Please enter numeric values for a and b.";
+    if (!(b > a)) return "The upper bound b must be greater than the lower bound a.";
+    return "";
+  }, [a, b]);
+
+  const pError = useMemo(() => {
+    if (!Number.isFinite(p)) return "Enter a numeric probability p.";
+    if (p < 0 || p > 1) return "Probability p must be between 0 and 1 (inclusive).";
+    return "";
+  }, [p]);
+
+  return (
+    <div className="w-full max-w-5xl mx-auto p-4 md:p-6 space-y-6">
+      <div className="space-y-2">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Uniform Distribution Applet</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
+          Enter bounds for a continuous uniform distribution U(a, b). Explore probabilities and inverse probabilities.
+        </p>
+      </div>
+
+      <Card className="rounded-2xl shadow-sm">
+        <CardHeader>
+          <CardTitle>0) Display Precision</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="digits">Decimal places (2 to 6)</Label>
+              <Input
+                id="digits"
+                type="range"
+                min={2}
+                max={6}
+                step={1}
+                value={sigDigits}
+                onChange={(e) => setSigDigits(Number(e.target.value))}
+              />
+              <div className="text-xs text-muted-foreground">All displayed decimals will use {sigDigits} places.</div>
+            </div>
+            <div className="rounded-2xl border bg-background p-4">
+              <div className="text-sm text-muted-foreground">Current setting</div>
+              <div className="text-2xl font-bold tabular-nums">{sigDigits}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl shadow-sm">
+        <CardHeader>
+          <CardTitle>1) Set the Distribution</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="a">Lower bound (a)</Label>
+              <Input id="a" value={aStr} onChange={(e) => setAStr(e.target.value)} inputMode="decimal" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="b">Upper bound (b)</Label>
+              <Input id="b" value={bStr} onChange={(e) => setBStr(e.target.value)} inputMode="decimal" />
+            </div>
+          </div>
+
+          {!ok && <ErrorBanner msg={inputError} />}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-start">
+            <div className="lg:col-span-2">
+              <UniformPlot a={a} b={b} shadeFrom={shade.from} shadeTo={shade.to} caption={shade.caption} />
+            </div>
+            <div className="space-y-4">
+              <div className="rounded-2xl border bg-background p-4">
+                <div className="text-sm font-semibold mb-3">Summary</div>
+                <div className="space-y-2">
+                  <StatRow label="PDF height" value={ok ? fmt(pdf, sigDigits) : "—"} />
+                  <StatRow label="Mean (μ)" value={ok ? fmt(mean, sigDigits) : "—"} />
+                  <StatRow label="Std. dev. (σ)" value={ok ? fmt(sd, sigDigits) : "—"} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="text-sm font-semibold">Formulas</div>
+                <Formula>μ = (a + b) / 2</Formula>
+                <Formula>σ = (b − a) / √12</Formula>
+                <Formula>f(x) = 1 / (b − a) for a ≤ x ≤ b</Formula>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl shadow-sm">
+        <CardHeader>
+          <CardTitle>2) Probability & Inverse Probability</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <Tabs defaultValue="prob">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="prob">Compute Probability</TabsTrigger>
+              <TabsTrigger value="inv">Inverse (Find c)</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="prob" className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant={probMode === "onesided" ? "default" : "outline"}
+                  onClick={() => setProbMode("onesided")}
+                >
+                  One-sided
+                </Button>
+                <Button
+                  type="button"
+                  variant={probMode === "between" ? "default" : "outline"}
+                  onClick={() => setProbMode("between")}
+                >
+                  Between (c to d)
+                </Button>
+              </div>
+
+              {probMode === "onesided" ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Inequality</Label>
+                    <Select value={ineq} onValueChange={(v) => setIneq(v as any)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="leq">P(X ≤ k)</SelectItem>
+                        <SelectItem value="geq">P(X ≥ k)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="k">k value</Label>
+                    <Input id="k" value={kStr} onChange={(e) => setKStr(e.target.value)} inputMode="decimal" />
+                  </div>
+                  <div className="rounded-2xl border bg-background p-4 flex flex-col justify-center">
+                    <div className="text-sm text-muted-foreground">Result</div>
+                    <div className="text-2xl font-bold tabular-nums">{ok ? fmt(probValue, sigDigits) : "—"}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Uses F(x) = (x − a)/(b − a) (clamped to [0,1]).
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="c">c value</Label>
+                    <Input id="c" value={cStr} onChange={(e) => setCStr(e.target.value)} inputMode="decimal" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="d">d value</Label>
+                    <Input id="d" value={dStr} onChange={(e) => setDStr(e.target.value)} inputMode="decimal" />
+                  </div>
+                  <div className="rounded-2xl border bg-background p-4 flex flex-col justify-center">
+                    <div className="text-sm text-muted-foreground">Result</div>
+                    <div className="text-2xl font-bold tabular-nums">{ok ? fmt(probValue, 4) : "—"}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      P(c ≤ X ≤ d) = (clamp(d) − clamp(c)) / (b − a).
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="rounded-2xl border bg-muted/40 p-4 text-sm">
+                <div className="font-semibold mb-2">Helpful reminders</div>
+                <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                  <li>Because the uniform distribution is continuous, P(X = k) = 0.</li>
+                  <li>
+                    If k is outside the interval, probabilities clamp automatically: if k ≤ a then P(X ≤ k)=0; if k ≥ b then
+                    P(X ≤ k)=1.
+                  </li>
+                  <li>Shaded region on the graph matches the probability you selected.</li>
+                </ul>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="inv" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Inverse type</Label>
+                  <Select value={invIneq} onValueChange={(v) => setInvIneq(v as any)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="leq">Find c for P(X ≤ c) = p</SelectItem>
+                      <SelectItem value="geq">Find c for P(X ≥ c) = p</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="p">Probability (p)</Label>
+                  <Input id="p" value={pStr} onChange={(e) => setPStr(e.target.value)} inputMode="decimal" />
+                  {pError && <div className="text-xs text-destructive">{pError}</div>}
+                </div>
+                <div className="rounded-2xl border bg-background p-4 flex flex-col justify-center">
+                  <div className="text-sm text-muted-foreground">Computed c</div>
+                  <div className="text-2xl font-bold tabular-nums">{ok && !pError ? fmt(invC, sigDigits) : "—"}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Always lies in [a, b].</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="text-sm font-semibold">Inverse formulas</div>
+                  <Formula>if P(X ≤ c) = p, then c = a + p(b − a)</Formula>
+                  <Formula>if P(X ≥ c) = p, then c = b − p(b − a)</Formula>
+                </div>
+                <div className="rounded-2xl border bg-muted/40 p-4 text-sm text-muted-foreground">
+                  <div className="font-semibold text-foreground mb-2">Interpretation</div>
+                  <div>{ok && !pError ? invCaption : "Enter valid a, b, and p to compute c."}</div>
+                </div>
+              </div>
+
+              {/* Show inverse c shading */}
+              <div className="pt-2">
+                <UniformPlot
+                  a={a}
+                  b={b}
+                  shadeFrom={invIneq === "leq" ? a : clamp(invC, a, b)}
+                  shadeTo={invIneq === "leq" ? clamp(invC, a, b) : b}
+                  caption={
+                    ok && !pError
+                      ? invIneq === "leq"
+                        ? `Shaded area represents P(X ≤ c) = p with c = ${fmt(invC, sigDigits)}`
+                        : `Shaded area represents P(X ≥ c) = p with c = ${fmt(invC, 4)}`
+                      : ""
+                  }
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl shadow-sm">
+        <CardHeader>
+          <CardTitle>Quick Checks (for students)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Does your answer make sense? Probabilities must be between 0 and 1.</li>
+            <li>For U(a,b), the area under the curve over the whole interval is always 1.</li>
+            <li>The mean is always the midpoint of the interval.</li>
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
