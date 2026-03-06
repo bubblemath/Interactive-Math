@@ -1,0 +1,682 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Regression Interactive Applet</title>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 0;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            font-size: 1.3em;
+        }
+        h3 {
+            color: #34495e;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="number"], input[type="range"], select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 120px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        input[type="range"] {
+            padding: 0;
+        }
+        .slider-value {
+            text-align: center;
+            font-weight: bold;
+            color: #3498db;
+            margin-top: 5px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .stats-display {
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .stat-item {
+            margin: 8px 0;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .stat-label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .stat-value {
+            color: #e74c3c;
+            font-family: 'Courier New', monospace;
+        }
+        .formula {
+            color: #16a085;
+            font-style: italic;
+            font-size: 0.9em;
+            display: block;
+            margin-top: 3px;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .data-table th {
+            background-color: #3498db;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #2980b9;
+        }
+        .data-table td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        .data-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .data-table tr:hover {
+            background-color: #e8f4f8;
+        }
+        .graph-container {
+            height: 400px;
+            margin-top: 15px;
+        }
+        .result-highlight {
+            background-color: #d5f4e6;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            border-left: 4px solid #27ae60;
+        }
+        .error-message {
+            background-color: #fadbd8;
+            color: #c0392b;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .info-box {
+            background-color: #e8f4f8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: end;
+        }
+    </style>
+</head>
+<body>
+    <h1>Linear Regression Interactive Applet</h1>
+    
+    <!-- Global Settings -->
+    <div class="panel full-width">
+        <div class="input-group">
+            <label for="sigFigs">Decimal Significant Figures: <span id="sigFigsValue">4</span></label>
+            <input type="range" id="sigFigs" min="2" max="6" step="1" value="4">
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Data Input Section -->
+        <div class="panel">
+            <h2>Data Input</h2>
+            <div class="info-box">
+                <strong>Input Format Options:</strong><br>
+                <strong>1. X,Y pairs:</strong> 1,2  3,4  5,6<br>
+                <strong>2. Separate lists:</strong><br>
+                &nbsp;&nbsp;&nbsp;X: 1 3 5<br>
+                &nbsp;&nbsp;&nbsp;Y: 2 4 6<br>
+                <strong>3. Two columns (X | Y):</strong><br>
+                &nbsp;&nbsp;&nbsp;1  2<br>
+                &nbsp;&nbsp;&nbsp;3  4<br>
+                &nbsp;&nbsp;&nbsp;5  6<br>
+                <strong>4. Two rows (X values then Y values):</strong><br>
+                &nbsp;&nbsp;&nbsp;1  3  5<br>
+                &nbsp;&nbsp;&nbsp;2  4  6
+            </div>
+            <div class="input-group">
+                <label for="dataInput">Enter Data:</label>
+                <textarea id="dataInput" placeholder="Enter data in any supported format"></textarea>
+            </div>
+            <button onclick="processData()">Process Data</button>
+            <div id="dataStatus"></div>
+        </div>
+
+        <!-- Summary Statistics -->
+        <div class="panel">
+            <h2>Summary Statistics</h2>
+            <div id="summaryStats" class="stats-display">
+                <p style="color: #7f8c8d; font-style: italic;">Enter data and click Process Data</p>
+            </div>
+        </div>
+
+        <!-- Data Table with Predictions and Residuals -->
+        <div class="panel full-width">
+            <h2>Data Table with Predictions & Residuals</h2>
+            <div class="table-container">
+                <table id="dataTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Index</th>
+                            <th>X</th>
+                            <th>Y (Actual)</th>
+                            <th>Ŷ (Predicted)</th>
+                            <th>Residual (Y - Ŷ)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTableBody">
+                        <tr>
+                            <td colspan="5" style="color: #7f8c8d; font-style: italic;">No data processed yet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Prediction Calculator -->
+        <div class="panel">
+            <h2>Prediction Calculator</h2>
+            <div class="input-row">
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="predX">Enter X value:</label>
+                    <input type="number" id="predX" step="0.01" value="0">
+                </div>
+                <button onclick="calculatePrediction()" style="width: auto; padding: 10px 30px;">Predict Y</button>
+            </div>
+            <div id="predictionResult"></div>
+        </div>
+
+        <!-- Scatterplot with Trend Line -->
+        <div class="panel">
+            <h2>Scatterplot with Trend Line</h2>
+            <div id="scatterplot" class="graph-container"></div>
+        </div>
+
+        <!-- Residual Plot -->
+        <div class="panel">
+            <h2>Residual Plot</h2>
+            <div id="residualPlot" class="graph-container"></div>
+        </div>
+    </div>
+
+    <script>
+        let sigFigs = 4;
+        let xData = [];
+        let yData = [];
+        let slope = 0;
+        let intercept = 0;
+        let r = 0;
+        let r2 = 0;
+        let xBar = 0;
+        let yBar = 0;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('sigFigs').addEventListener('input', function() {
+                sigFigs = parseInt(this.value);
+                document.getElementById('sigFigsValue').textContent = sigFigs;
+                // Reprocess data if it exists
+                if (xData.length > 0) {
+                    calculateRegression();
+                    updateDisplay();
+                }
+            });
+        });
+
+        function formatNumber(num) {
+            return num.toFixed(sigFigs);
+        }
+
+        function processData() {
+            try {
+                const input = document.getElementById('dataInput').value.trim();
+                
+                if (!input) {
+                    throw new Error('Please enter data');
+                }
+
+                xData = [];
+                yData = [];
+
+                // Check if input contains "X:" and "Y:" (separate lists format)
+                if (input.toUpperCase().includes('X:') && input.toUpperCase().includes('Y:')) {
+                    parseXYLists(input);
+                } else {
+                    // Try to determine format by analyzing structure
+                    const lines = input.split('\n').filter(line => line.trim());
+                    
+                    if (lines.length === 2) {
+                        // Could be two rows format
+                        if (tryParseTwoRows(lines)) {
+                            // Successfully parsed as two rows
+                        } else {
+                            // Try other formats
+                            parseGenericFormat(input);
+                        }
+                    } else {
+                        // Try column format or X,Y pairs
+                        if (!tryParseColumns(lines)) {
+                            parseGenericFormat(input);
+                        }
+                    }
+                }
+
+                if (xData.length < 2) {
+                    throw new Error('Need at least 2 data points');
+                }
+
+                calculateRegression();
+                updateDisplay();
+
+                document.getElementById('dataStatus').innerHTML = 
+                    `<div class="result-highlight">✓ Successfully processed ${xData.length} data points</div>`;
+
+            } catch (error) {
+                document.getElementById('dataStatus').innerHTML = 
+                    `<div class="error-message">Error: ${error.message}</div>`;
+                xData = [];
+                yData = [];
+            }
+        }
+
+        function parseXYLists(input) {
+            const lines = input.split('\n');
+            let xLine = '';
+            let yLine = '';
+            
+            for (let line of lines) {
+                if (line.toUpperCase().trim().startsWith('X:')) {
+                    xLine = line.substring(line.indexOf(':') + 1);
+                } else if (line.toUpperCase().trim().startsWith('Y:')) {
+                    yLine = line.substring(line.indexOf(':') + 1);
+                }
+            }
+            
+            const xValues = xLine.trim().split(/[\s,]+/).map(x => parseFloat(x)).filter(x => !isNaN(x));
+            const yValues = yLine.trim().split(/[\s,]+/).map(y => parseFloat(y)).filter(y => !isNaN(y));
+            
+            if (xValues.length !== yValues.length) {
+                throw new Error('X and Y lists must have the same length');
+            }
+            
+            xData = xValues;
+            yData = yValues;
+        }
+
+        function tryParseTwoRows(lines) {
+            // Try to parse as two rows: first row = X values, second row = Y values
+            const row1Values = lines[0].trim().split(/[\s,\t]+/).map(v => parseFloat(v)).filter(v => !isNaN(v));
+            const row2Values = lines[1].trim().split(/[\s,\t]+/).map(v => parseFloat(v)).filter(v => !isNaN(v));
+            
+            if (row1Values.length >= 2 && row1Values.length === row2Values.length) {
+                xData = row1Values;
+                yData = row2Values;
+                return true;
+            }
+            return false;
+        }
+
+        function tryParseColumns(lines) {
+            // Try to parse as two columns: column 1 = X, column 2 = Y
+            const tempX = [];
+            const tempY = [];
+            
+            for (let line of lines) {
+                const values = line.trim().split(/[\s,\t]+/).map(v => parseFloat(v)).filter(v => !isNaN(v));
+                
+                if (values.length === 2) {
+                    tempX.push(values[0]);
+                    tempY.push(values[1]);
+                } else if (values.length !== 0) {
+                    // Not a valid two-column format
+                    return false;
+                }
+            }
+            
+            if (tempX.length >= 2) {
+                xData = tempX;
+                yData = tempY;
+                return true;
+            }
+            
+            return false;
+        }
+
+        function parseGenericFormat(input) {
+            // Parse as X,Y pairs (space or newline separated)
+            const pairs = input.split(/[\n\s]+/);
+            
+            for (let pair of pairs) {
+                pair = pair.trim();
+                if (!pair) continue;
+                
+                const values = pair.split(',').map(v => parseFloat(v.trim()));
+                
+                if (values.length === 2 && !isNaN(values[0]) && !isNaN(values[1])) {
+                    xData.push(values[0]);
+                    yData.push(values[1]);
+                }
+            }
+        }
+
+        function calculateRegression() {
+            const n = xData.length;
+            
+            // Calculate means
+            xBar = xData.reduce((a, b) => a + b, 0) / n;
+            yBar = yData.reduce((a, b) => a + b, 0) / n;
+            
+            // Calculate slope and intercept
+            let sumXY = 0;
+            let sumX2 = 0;
+            let sumY2 = 0;
+            let sumXminusXbar2 = 0;
+            let sumYminusYbar2 = 0;
+            
+            for (let i = 0; i < n; i++) {
+                sumXY += (xData[i] - xBar) * (yData[i] - yBar);
+                sumX2 += Math.pow(xData[i] - xBar, 2);
+                sumY2 += Math.pow(yData[i] - yBar, 2);
+                sumXminusXbar2 += Math.pow(xData[i] - xBar, 2);
+                sumYminusYbar2 += Math.pow(yData[i] - yBar, 2);
+            }
+            
+            // Slope (a)
+            slope = sumXY / sumX2;
+            
+            // Intercept (b)
+            intercept = yBar - slope * xBar;
+            
+            // Correlation coefficient (r)
+            r = sumXY / Math.sqrt(sumX2 * sumY2);
+            
+            // Coefficient of determination (r²)
+            r2 = r * r;
+        }
+
+        function predictY(x) {
+            return slope * x + intercept;
+        }
+
+        function calculateResidual(x, y) {
+            return y - predictY(x);
+        }
+
+        function updateDisplay() {
+            updateSummaryStats();
+            updateDataTable();
+            updateScatterplot();
+            updateResidualPlot();
+        }
+
+        function updateSummaryStats() {
+            const n = xData.length;
+            
+            const html = `
+                <div class="stat-item">
+                    <span class="stat-label">Sample Size (n):</span>
+                    <span class="stat-value">${n}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Mean of X (x̄):</span>
+                    <span class="stat-value">${formatNumber(xBar)}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Mean of Y (ȳ):</span>
+                    <span class="stat-value">${formatNumber(yBar)}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Correlation Coefficient (r):</span>
+                    <span class="stat-value">${formatNumber(r)}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Coefficient of Determination (r²):</span>
+                    <span class="stat-value">${formatNumber(r2)}</span>
+                    <span class="formula">${formatNumber(r2 * 100)}% of variance in Y is explained by X</span>
+                </div>
+                <div class="result-highlight">
+                    <div class="stat-item">
+                        <span class="stat-label">Slope (a):</span>
+                        <span class="stat-value">${formatNumber(slope)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Y-Intercept (b):</span>
+                        <span class="stat-value">${formatNumber(intercept)}</span>
+                    </div>
+                    <div class="stat-item" style="margin-top: 10px;">
+                        <span class="stat-label">Regression Equation:</span>
+                        <span class="stat-value">ŷ = ${formatNumber(slope)}x + ${formatNumber(intercept)}</span>
+                        <span class="formula">Formula: ŷ = ax + b, where a = Σ[(x-x̄)(y-ȳ)] / Σ(x-x̄)² and b = ȳ - ax̄</span>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('summaryStats').innerHTML = html;
+        }
+
+        function updateDataTable() {
+            const tbody = document.getElementById('dataTableBody');
+            let html = '';
+            
+            for (let i = 0; i < xData.length; i++) {
+                const x = xData[i];
+                const y = yData[i];
+                const yPred = predictY(x);
+                const residual = calculateResidual(x, y);
+                
+                html += `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td>${formatNumber(x)}</td>
+                        <td>${formatNumber(y)}</td>
+                        <td>${formatNumber(yPred)}</td>
+                        <td>${formatNumber(residual)}</td>
+                    </tr>
+                `;
+            }
+            
+            tbody.innerHTML = html;
+        }
+
+        function updateScatterplot() {
+            // Create scatter plot of actual data
+            const scatterTrace = {
+                x: xData,
+                y: yData,
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Actual Data',
+                marker: {
+                    size: 10,
+                    color: '#e74c3c'
+                }
+            };
+            
+            // Create trend line
+            const xMin = Math.min(...xData);
+            const xMax = Math.max(...xData);
+            const xRange = xMax - xMin;
+            const xLineStart = xMin - xRange * 0.1;
+            const xLineEnd = xMax + xRange * 0.1;
+            
+            const trendLineTrace = {
+                x: [xLineStart, xLineEnd],
+                y: [predictY(xLineStart), predictY(xLineEnd)],
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Trend Line',
+                line: {
+                    color: '#3498db',
+                    width: 3
+                }
+            };
+            
+            const layout = {
+                title: 'Scatterplot with Regression Line',
+                xaxis: { title: 'X' },
+                yaxis: { title: 'Y' },
+                showlegend: true,
+                hovermode: 'closest'
+            };
+            
+            Plotly.newPlot('scatterplot', [scatterTrace, trendLineTrace], layout);
+        }
+
+        function updateResidualPlot() {
+            const residuals = [];
+            for (let i = 0; i < xData.length; i++) {
+                residuals.push(calculateResidual(xData[i], yData[i]));
+            }
+            
+            // Scatter plot of residuals
+            const residualTrace = {
+                x: xData,
+                y: residuals,
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Residuals',
+                marker: {
+                    size: 10,
+                    color: '#9b59b6'
+                }
+            };
+            
+            // Zero line
+            const xMin = Math.min(...xData);
+            const xMax = Math.max(...xData);
+            const zeroLineTrace = {
+                x: [xMin, xMax],
+                y: [0, 0],
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Zero Line',
+                line: {
+                    color: '#95a5a6',
+                    width: 2,
+                    dash: 'dash'
+                }
+            };
+            
+            const layout = {
+                title: 'Residual Plot',
+                xaxis: { title: 'X' },
+                yaxis: { title: 'Residuals (Y - Ŷ)' },
+                showlegend: true,
+                hovermode: 'closest'
+            };
+            
+            Plotly.newPlot('residualPlot', [residualTrace, zeroLineTrace], layout);
+        }
+
+        function calculatePrediction() {
+            try {
+                if (xData.length === 0) {
+                    throw new Error('Please process data first');
+                }
+                
+                const x = parseFloat(document.getElementById('predX').value);
+                
+                if (isNaN(x)) {
+                    throw new Error('Please enter a valid number');
+                }
+                
+                const yPred = predictY(x);
+                
+                const html = `
+                    <div class="result-highlight">
+                        <div class="stat-item">
+                            <span class="stat-label">For X = ${formatNumber(x)}:</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Predicted Y (Ŷ):</span>
+                            <span class="stat-value">${formatNumber(yPred)}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="formula">ŷ = ${formatNumber(slope)} × ${formatNumber(x)} + ${formatNumber(intercept)} = ${formatNumber(yPred)}</span>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('predictionResult').innerHTML = html;
+            } catch (error) {
+                document.getElementById('predictionResult').innerHTML = 
+                    `<div class="error-message">Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
