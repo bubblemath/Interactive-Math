@@ -27,6 +27,8 @@
             max-width: 1000px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         h1 {
@@ -266,68 +268,6 @@
             border-radius: 15px;
         }
 
-        .difficulty-selector {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .difficulty-btn {
-            padding: 10px 20px;
-            border: 2px solid #4facfe;
-            background: white;
-            color: #4facfe;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .difficulty-btn:hover {
-            background: #4facfe;
-            color: white;
-        }
-
-        .difficulty-btn.active {
-            background: #4facfe;
-            color: white;
-        }
-
-        .difficulty-btn.easy {
-            border-color: #28a745;
-            color: #28a745;
-        }
-
-        .difficulty-btn.easy.active,
-        .difficulty-btn.easy:hover {
-            background: #28a745;
-            color: white;
-        }
-
-        .difficulty-btn.medium {
-            border-color: #ffc107;
-            color: #d39e00;
-        }
-
-        .difficulty-btn.medium.active,
-        .difficulty-btn.medium:hover {
-            background: #ffc107;
-            color: #333;
-        }
-
-        .difficulty-btn.hard {
-            border-color: #dc3545;
-            color: #dc3545;
-        }
-
-        .difficulty-btn.hard.active,
-        .difficulty-btn.hard:hover {
-            background: #dc3545;
-            color: white;
-        }
-
         .problem-list {
             display: grid;
             gap: 20px;
@@ -529,7 +469,9 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('calculator')">Loan Calculator</button>
             <button class="tab" onclick="switchTab('comparison')">Loan Comparison</button>
-            <button class="tab" onclick="switchTab('practice')">Practice Problems</button>
+            <button class="tab" onclick="switchTab('easy')">Easy Problems</button>
+            <button class="tab" onclick="switchTab('medium')">Medium Problems</button>
+            <button class="tab" onclick="switchTab('hard')">Hard Problems</button>
         </div>
 
         <!-- Calculator Tab -->
@@ -648,17 +590,27 @@
             </div>
         </div>
 
-        <!-- Practice Problems Tab -->
-        <div id="practice" class="tab-content">
+        <!-- Easy Problems Tab -->
+        <div id="easy" class="tab-content">
             <div class="practice-container">
-                <div class="difficulty-selector">
-                    <button class="difficulty-btn active" onclick="filterByDifficulty('all')">All Problems</button>
-                    <button class="difficulty-btn easy" onclick="filterByDifficulty('easy')">⭐ Easy</button>
-                    <button class="difficulty-btn medium" onclick="filterByDifficulty('medium')">⭐⭐ Medium</button>
-                    <button class="difficulty-btn hard" onclick="filterByDifficulty('hard')">⭐⭐⭐ Hard</button>
-                </div>
+                <h2 style="color: #28a745; margin-bottom: 20px; text-align: center;">⭐ Easy Problems (2 steps)</h2>
+                <div class="problem-list" id="easyProblemList"></div>
+            </div>
+        </div>
 
-                <div class="problem-list" id="problemList"></div>
+        <!-- Medium Problems Tab -->
+        <div id="medium" class="tab-content">
+            <div class="practice-container">
+                <h2 style="color: #ffc107; margin-bottom: 20px; text-align: center;">⭐⭐ Medium Problems (3 steps)</h2>
+                <div class="problem-list" id="mediumProblemList"></div>
+            </div>
+        </div>
+
+        <!-- Hard Problems Tab -->
+        <div id="hard" class="tab-content">
+            <div class="practice-container">
+                <h2 style="color: #dc3545; margin-bottom: 20px; text-align: center;">⭐⭐⭐ Hard Problems (4 steps)</h2>
+                <div class="problem-list" id="hardProblemList"></div>
             </div>
         </div>
     </div>
@@ -669,8 +621,6 @@
         const rateSlider = document.getElementById('rate');
         const termSlider = document.getElementById('term');
         const frequencySlider = document.getElementById('frequency');
-
-        let currentFilter = 'all';
 
         const frequencyOptions = [
             { n: 12, label: 'Monthly (12)' },
@@ -839,7 +789,6 @@
             
             switch(problem.type) {
                 case 'findPayment':
-                    // PMT = P(r/n) / [1 - (1 + r/n)^(-nt)]
                     const denominator = 1 - Math.pow(1 + r_n, -problem.n * problem.t);
                     problem.correctAnswer = problem.P * r_n / denominator;
                     break;
@@ -852,13 +801,11 @@
                     break;
                     
                 case 'findSavings':
-                    // Calculate interest for 30-year loan
                     const r_n30 = r_decimal / problem.n;
                     const denom30 = 1 - Math.pow(1 + r_n30, -problem.n * problem.t30);
                     const PMT30 = problem.P * r_n30 / denom30;
                     const interest30 = (PMT30 * problem.n * problem.t30) - problem.P;
                     
-                    // Calculate interest for 15-year loan
                     const r_n15 = r_decimal / problem.n;
                     const denom15 = 1 - Math.pow(1 + r_n15, -problem.n * problem.t15);
                     const PMT15 = problem.P * r_n15 / denom15;
@@ -882,8 +829,12 @@
 
             if (tabName === 'comparison') {
                 compareLoans();
-            } else if (tabName === 'practice') {
-                renderProblemList();
+            } else if (tabName === 'easy') {
+                renderProblemList('easy');
+            } else if (tabName === 'medium') {
+                renderProblemList('medium');
+            } else if (tabName === 'hard') {
+                renderProblemList('hard');
             }
         }
 
@@ -903,7 +854,6 @@
             const nIndex = parseInt(frequencySlider.value);
             const n = frequencyOptions[nIndex].n;
 
-            // PMT = P(r/n) / [1 - (1 + r/n)^(-nt)]
             const r_n = r / n;
             const denominator = 1 - Math.pow(1 + r_n, -n * t);
             const PMT = P * r_n / denominator;
@@ -931,15 +881,13 @@
             const rB = parseFloat(document.getElementById('loanB_rate').value) / 100;
             const tB = parseFloat(document.getElementById('loanB_term').value);
             
-            const n = 12; // Monthly payments
+            const n = 12;
 
-            // Calculate Loan A
             const r_nA = rA / n;
             const denomA = 1 - Math.pow(1 + r_nA, -n * tA);
             const PMTA = PA * r_nA / denomA;
             const interestA = (PMTA * n * tA) - PA;
 
-            // Calculate Loan B
             const r_nB = rB / n;
             const denomB = 1 - Math.pow(1 + r_nB, -n * tB);
             const PMTB = PB * r_nB / denomB;
@@ -950,7 +898,6 @@
             document.getElementById('loanB_payment').textContent = formatCurrency(PMTB);
             document.getElementById('loanB_interest').textContent = formatCurrency(interestB);
 
-            // Update chart
             const maxValue = Math.max(interestA, interestB);
             const chartHeight = 250;
 
@@ -975,24 +922,11 @@
             }
         }
 
-        // Filter problems by difficulty
-        function filterByDifficulty(difficulty) {
-            currentFilter = difficulty;
-            
-            document.querySelectorAll('.difficulty-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            renderProblemList();
-        }
-
         // Render problem list
-        function renderProblemList() {
-            const problemList = document.getElementById('problemList');
-            const filteredProblems = currentFilter === 'all' 
-                ? problems 
-                : problems.filter(p => p.difficulty === currentFilter);
+        function renderProblemList(difficulty) {
+            const listId = difficulty + 'ProblemList';
+            const problemList = document.getElementById(listId);
+            const filteredProblems = problems.filter(p => p.difficulty === difficulty);
             
             problemList.innerHTML = '';
             
@@ -1054,7 +988,7 @@
                 return;
             }
 
-            const tolerance = problem.id >= 8 ? 10 : 1; // Larger tolerance for mortgage problems
+            const tolerance = problem.id >= 8 ? 10 : 1;
             const isCorrect = Math.abs(studentAnswer - problem.correctAnswer) < tolerance;
 
             if (isCorrect) {
