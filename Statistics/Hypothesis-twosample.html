@@ -4,6 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Two-Sample Hypothesis Testing Interactive Applet</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jstat@latest/dist/jstat.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -413,28 +414,63 @@
             <div class="input-section">
                 <h2 class="section-title">Two-Sample Proportions Test Inputs</h2>
                 
-                <div class="two-column-inputs">
-                    <div>
-                        <div class="column-header">Sample 1</div>
-                        <div class="input-group">
-                            <label>Successes (<span class="symbol">x₁</span>):</label>
-                            <input type="number" id="prop-x1" step="1" min="0" placeholder="Number of successes">
+                <div class="data-input-toggle">
+                    <button class="toggle-btn active" onclick="toggleProportionInput('count')">Count (Successes/Sample Size)</button>
+                    <button class="toggle-btn" onclick="toggleProportionInput('percent')">Percentage</button>
+                </div>
+                
+                <div id="prop-count-inputs">
+                    <div class="two-column-inputs">
+                        <div>
+                            <div class="column-header">Sample 1</div>
+                            <div class="input-group">
+                                <label>Successes (<span class="symbol">x₁</span>):</label>
+                                <input type="number" id="prop-x1" step="1" min="0" placeholder="Number of successes">
+                            </div>
+                            <div class="input-group">
+                                <label>Sample Size (<span class="symbol">n₁</span>):</label>
+                                <input type="number" id="prop-n1" step="1" min="1" placeholder="Sample size">
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <label>Sample Size (<span class="symbol">n₁</span>):</label>
-                            <input type="number" id="prop-n1" step="1" min="1" placeholder="Sample size">
+                        
+                        <div>
+                            <div class="column-header">Sample 2</div>
+                            <div class="input-group">
+                                <label>Successes (<span class="symbol">x₂</span>):</label>
+                                <input type="number" id="prop-x2" step="1" min="0" placeholder="Number of successes">
+                            </div>
+                            <div class="input-group">
+                                <label>Sample Size (<span class="symbol">n₂</span>):</label>
+                                <input type="number" id="prop-n2" step="1" min="1" placeholder="Sample size">
+                            </div>
                         </div>
                     </div>
-                    
-                    <div>
-                        <div class="column-header">Sample 2</div>
-                        <div class="input-group">
-                            <label>Successes (<span class="symbol">x₂</span>):</label>
-                            <input type="number" id="prop-x2" step="1" min="0" placeholder="Number of successes">
+                </div>
+                
+                <div id="prop-percent-inputs" class="hidden">
+                    <div class="two-column-inputs">
+                        <div>
+                            <div class="column-header">Sample 1</div>
+                            <div class="input-group">
+                                <label>Percentage (%):</label>
+                                <input type="number" id="prop-pct1" step="any" min="0" max="100" placeholder="e.g., 75.5">
+                            </div>
+                            <div class="input-group">
+                                <label>Sample Size (<span class="symbol">n₁</span>):</label>
+                                <input type="number" id="prop-n1-pct" step="1" min="1" placeholder="Sample size">
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <label>Sample Size (<span class="symbol">n₂</span>):</label>
-                            <input type="number" id="prop-n2" step="1" min="1" placeholder="Sample size">
+                        
+                        <div>
+                            <div class="column-header">Sample 2</div>
+                            <div class="input-group">
+                                <label>Percentage (%):</label>
+                                <input type="number" id="prop-pct2" step="any" min="0" max="100" placeholder="e.g., 68.2">
+                            </div>
+                            <div class="input-group">
+                                <label>Sample Size (<span class="symbol">n₂</span>):</label>
+                                <input type="number" id="prop-n2-pct" step="1" min="1" placeholder="Sample size">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -593,7 +629,7 @@
                     <div id="ind-sidebyside-format" class="hidden">
                         <div class="input-group">
                             <label>Side-by-Side Data:</label>
-                            <textarea id="ind-raw-sidebyside" placeholder="Enter data with Sample 1 and Sample 2 values on each line&#10;For unequal sizes, leave blank or use 'NA' for missing values&#10;Example:&#10;12.5  10.3&#10;13.2  11.5&#10;11.8  NA&#10;14.1  12.1&#10;15.0  &#10;(Blank or NA values will be skipped)"></textarea>
+                            <textarea id="ind-raw-sidebyside" placeholder="Enter data with Sample 1 in first column, Sample 2 in second column&#10;For unequal sizes, leave blank or use 'NA' for missing values&#10;Example:&#10;12.5  10.3&#10;13.2  11.5&#10;11.8  &#10;14.1  12.1&#10;  9.8&#10;(First column = Sample 1, Second column = Sample 2)"></textarea>
                         </div>
                     </div>
                 </div>
@@ -844,145 +880,7 @@
         let decimalPlaces = 4;
         let currentChart = null;
         
-        // Statistical functions
-        function normalCDF(z) {
-            const t = 1 / (1 + 0.2316419 * Math.abs(z));
-            const d = 0.3989423 * Math.exp(-z * z / 2);
-            const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
-            return z > 0 ? 1 - prob : prob;
-        }
-        
-        function normalInv(p) {
-            if (p <= 0 || p >= 1) return NaN;
-            
-            const a1 = -39.6968302866538, a2 = 220.946098424521, a3 = -275.928510446969;
-            const a4 = 138.357751867269, a5 = -30.6647980661472, a6 = 2.50662827745924;
-            const b1 = -54.4760987982241, b2 = 161.585836858041, b3 = -155.698979859887;
-            const b4 = 66.8013118877197, b5 = -13.2806815528857;
-            const c1 = -7.78489400243029E-03, c2 = -0.322396458041136, c3 = -2.40075827716184;
-            const c4 = -2.54973253934373, c5 = 4.37466414146497, c6 = 2.93816398269878;
-            const d1 = 7.78469570904146E-03, d2 = 0.32246712907004, d3 = 2.445134137143;
-            const d4 = 3.75440866190742;
-            const p_low = 0.02425, p_high = 1 - p_low;
-            
-            let q, r, x;
-            
-            if (p < p_low) {
-                q = Math.sqrt(-2 * Math.log(p));
-                x = (((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) / 
-                    ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
-            } else if (p <= p_high) {
-                q = p - 0.5;
-                r = q * q;
-                x = (((((a1 * r + a2) * r + a3) * r + a4) * r + a5) * r + a6) * q /
-                    (((((b1 * r + b2) * r + b3) * r + b4) * r + b5) * r + 1);
-            } else {
-                q = Math.sqrt(-2 * Math.log(1 - p));
-                x = -(((((c1 * q + c2) * q + c3) * q + c4) * q + c5) * q + c6) /
-                     ((((d1 * q + d2) * q + d3) * q + d4) * q + 1);
-            }
-            
-            return x;
-        }
-        
-        function tCDF(t, df) {
-            if (df <= 0) return NaN;
-            if (df > 1000) return normalCDF(t);
-            
-            const x = df / (df + t * t);
-            const a = df / 2.0;
-            const b = 0.5;
-            
-            function betaInc(x, a, b) {
-                if (x <= 0) return 0;
-                if (x >= 1) return 1;
-                
-                const lbeta = logGamma(a) + logGamma(b) - logGamma(a + b);
-                const front = Math.exp(Math.log(x) * a + Math.log(1 - x) * b - lbeta) / a;
-                
-                let f = 1.0, c = 1.0, d = 0.0;
-                
-                for (let i = 0; i <= 200; i++) {
-                    let m = i / 2;
-                    
-                    let numerator;
-                    if (i === 0) {
-                        numerator = 1.0;
-                    } else if (i % 2 === 0) {
-                        numerator = (m * (b - m) * x) / ((a + 2 * m - 1) * (a + 2 * m));
-                    } else {
-                        m = (i - 1) / 2;
-                        numerator = -((a + m) * (a + b + m) * x) / ((a + 2 * m) * (a + 2 * m + 1));
-                    }
-                    
-                    d = 1 + numerator * d;
-                    if (Math.abs(d) < 1e-30) d = 1e-30;
-                    d = 1 / d;
-                    
-                    c = 1 + numerator / c;
-                    if (Math.abs(c) < 1e-30) c = 1e-30;
-                    
-                    const cd = c * d;
-                    f *= cd;
-                    
-                    if (Math.abs(1 - cd) < 1e-10) {
-                        return front * (f - 1);
-                    }
-                }
-                
-                return front * (f - 1);
-            }
-            
-            const prob = betaInc(x, a, b);
-            return t < 0 ? prob / 2 : 1 - prob / 2;
-        }
-        
-        function tInv(p, df) {
-            if (p <= 0 || p >= 1) return NaN;
-            if (df > 1000) return normalInv(p);
-            
-            let low = -100;
-            let high = 100;
-            let mid, cdf;
-            
-            mid = normalInv(p);
-            
-            for (let i = 0; i < 100; i++) {
-                cdf = tCDF(mid, df);
-                
-                if (Math.abs(cdf - p) < 1e-10) {
-                    return mid;
-                }
-                
-                if (cdf < p) {
-                    low = mid;
-                } else {
-                    high = mid;
-                }
-                
-                mid = (low + high) / 2;
-            }
-            
-            return mid;
-        }
-        
-        function tPDF(t, df) {
-            const coef = Math.exp(logGamma((df + 1) / 2) - logGamma(df / 2)) / Math.sqrt(df * Math.PI);
-            return coef * Math.pow(1 + (t * t) / df, -(df + 1) / 2);
-        }
-        
-        function logGamma(x) {
-            const cof = [76.18009172947146, -86.50532032941677, 24.01409824083091,
-                        -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
-            let y = x;
-            let tmp = x + 5.5;
-            tmp -= (x + 0.5) * Math.log(tmp);
-            let ser = 1.000000000190015;
-            for (let j = 0; j < 6; j++) {
-                ser += cof[j] / ++y;
-            }
-            return -tmp + Math.log(2.5066282746310005 * ser / x);
-        }
+        // Use jStat library for accurate statistical distributions
         
         function formatNumber(num) {
             return num.toPrecision(decimalPlaces);
@@ -1002,6 +900,19 @@
         function updateDecimalDisplay() {
             decimalPlaces = parseInt(document.getElementById('decimalSlider').value);
             document.getElementById('decimalValue').textContent = decimalPlaces + ' significant figures';
+        }
+        
+        function toggleProportionInput(type) {
+            document.querySelectorAll('#two-proportion-section .toggle-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (type === 'count') {
+                document.getElementById('prop-count-inputs').classList.remove('hidden');
+                document.getElementById('prop-percent-inputs').classList.add('hidden');
+            } else {
+                document.getElementById('prop-count-inputs').classList.add('hidden');
+                document.getElementById('prop-percent-inputs').classList.remove('hidden');
+            }
         }
         
         function toggleIndependentInput(type) {
@@ -1041,7 +952,7 @@
             } else {
                 document.getElementById('ind-separate-format').classList.add('hidden');
                 document.getElementById('ind-sidebyside-format').classList.remove('hidden');
-                helpText.textContent = 'Enter data with Sample 1 and Sample 2 values on each line. Use blank or "NA" for missing values to allow unequal sample sizes.';
+                helpText.textContent = 'Enter data with Sample 1 in first column, Sample 2 in second column. Use blank or "NA" for missing values to allow unequal sample sizes.';
             }
         }
         
@@ -1064,12 +975,10 @@
             const format = document.getElementById('dep-data-format').value;
             
             if (format === 'separate') {
-                // Swap separate lists
                 const temp = document.getElementById('dep-raw1').value;
                 document.getElementById('dep-raw1').value = document.getElementById('dep-raw2').value;
                 document.getElementById('dep-raw2').value = temp;
             } else {
-                // Swap side-by-side data
                 const text = document.getElementById('dep-raw-sidebyside').value;
                 const lines = text.trim().split(/\n/);
                 const swapped = lines.map(line => {
@@ -1086,30 +995,42 @@
         }
         
         function calculateTwoProportion() {
-            const x1 = parseFloat(document.getElementById('prop-x1').value);
-            const n1 = parseFloat(document.getElementById('prop-n1').value);
-            const x2 = parseFloat(document.getElementById('prop-x2').value);
-            const n2 = parseFloat(document.getElementById('prop-n2').value);
+            let x1, n1, x2, n2;
             const alpha = parseFloat(document.getElementById('prop-alpha').value);
             
-            if (isNaN(x1) || isNaN(n1) || isNaN(x2) || isNaN(n2) || isNaN(alpha)) {
-                alert('Please fill in all fields with valid numbers.');
-                return;
+            if (!document.getElementById('prop-percent-inputs').classList.contains('hidden')) {
+                const pct1 = parseFloat(document.getElementById('prop-pct1').value);
+                n1 = parseFloat(document.getElementById('prop-n1-pct').value);
+                const pct2 = parseFloat(document.getElementById('prop-pct2').value);
+                n2 = parseFloat(document.getElementById('prop-n2-pct').value);
+                
+                if (isNaN(pct1) || isNaN(n1) || isNaN(pct2) || isNaN(n2) || isNaN(alpha)) {
+                    alert('Please fill in all fields with valid numbers.');
+                    return;
+                }
+                
+                x1 = Math.round((pct1 / 100) * n1);
+                x2 = Math.round((pct2 / 100) * n2);
+            } else {
+                x1 = parseFloat(document.getElementById('prop-x1').value);
+                n1 = parseFloat(document.getElementById('prop-n1').value);
+                x2 = parseFloat(document.getElementById('prop-x2').value);
+                n2 = parseFloat(document.getElementById('prop-n2').value);
+                
+                if (isNaN(x1) || isNaN(n1) || isNaN(x2) || isNaN(n2) || isNaN(alpha)) {
+                    alert('Please fill in all fields with valid numbers.');
+                    return;
+                }
             }
             
-            // Calculate sample proportions
             const p1 = x1 / n1;
             const p2 = x2 / n2;
-            
-            // Calculate pooled proportion
             const pPooled = (x1 + x2) / (n1 + n2);
             
-            // Display proportions
             document.getElementById('prop-p1-display').textContent = formatNumber(p1);
             document.getElementById('prop-p2-display').textContent = formatNumber(p2);
             document.getElementById('prop-pooled-display').textContent = formatNumber(pPooled);
             
-            // Check sample size conditions
             const n1p1 = n1 * p1;
             const n1q1 = n1 * (1 - p1);
             const n2p2 = n2 * p2;
@@ -1129,21 +1050,18 @@
                 checkText.innerHTML += '<br>✗ Warning: Sample size conditions not met (all should be ≥ 5)';
             }
             
-            // Calculate test statistic using pooled proportion
             const se = Math.sqrt(pPooled * (1 - pPooled) * (1/n1 + 1/n2));
             const z = (p1 - p2) / se;
             
-            // Calculate critical values
-            const zCritLeft = normalInv(alpha);
-            const zCritRight = normalInv(1 - alpha);
-            const zCritTwo = normalInv(1 - alpha / 2);
+            // Use jStat for accurate normal distribution
+            const zCritLeft = jStat.normal.inv(alpha, 0, 1);
+            const zCritRight = jStat.normal.inv(1 - alpha, 0, 1);
+            const zCritTwo = jStat.normal.inv(1 - alpha / 2, 0, 1);
             
-            // Calculate p-values
-            const pLeft = normalCDF(z);
-            const pRight = 1 - normalCDF(z);
+            const pLeft = jStat.normal.cdf(z, 0, 1);
+            const pRight = 1 - jStat.normal.cdf(z, 0, 1);
             const pTwo = 2 * Math.min(pLeft, pRight);
             
-            // Calculate confidence interval (using unpooled SE for CI)
             const seCI = Math.sqrt(p1 * (1 - p1) / n1 + p2 * (1 - p2) / n2);
             const margin = Math.abs(zCritTwo) * seCI;
             const ciLower = (p1 - p2) - margin;
@@ -1153,7 +1071,6 @@
             document.getElementById('prop-ci').textContent = 
                 `${confidenceLevel}% CI: (${formatNumber(ciLower)}, ${formatNumber(ciUpper)})`;
             
-            // Display results
             document.getElementById('prop-stat').textContent = formatNumber(z);
             document.getElementById('prop-crit-left').textContent = formatNumber(zCritLeft);
             document.getElementById('prop-crit-right').textContent = formatNumber(zCritRight);
@@ -1177,9 +1094,10 @@
             const data2 = [];
             
             for (let line of lines) {
+                if (line.trim() === '') continue;
+                
                 const parts = line.trim().split(/[\s,\t]+/);
                 
-                // Process first value
                 if (parts.length >= 1 && parts[0] !== '' && parts[0].toUpperCase() !== 'NA') {
                     const val1 = parseFloat(parts[0]);
                     if (!isNaN(val1)) {
@@ -1187,10 +1105,16 @@
                     }
                 }
                 
-                // Process second value
                 if (parts.length >= 2 && parts[1] !== '' && parts[1].toUpperCase() !== 'NA') {
                     const val2 = parseFloat(parts[1]);
                     if (!isNaN(val2)) {
+                        data2.push(val2);
+                    }
+                }
+                
+                if (parts.length === 1 && line.startsWith(' ') || line.startsWith('\t')) {
+                    const val2 = parseFloat(parts[0]);
+                    if (!isNaN(val2) && parts[0].toUpperCase() !== 'NA') {
                         data2.push(val2);
                     }
                 }
@@ -1240,7 +1164,6 @@
                     return;
                 }
                 
-                // No longer require equal sample sizes for independent samples
                 n1 = rawData1.length;
                 xbar1 = rawData1.reduce((a, b) => a + b, 0) / n1;
                 const variance1 = rawData1.reduce((sum, x) => sum + Math.pow(x - xbar1, 2), 0) / (n1 - 1);
@@ -1281,14 +1204,13 @@
             const df = Math.floor(Math.pow(se, 4) / 
                 (Math.pow(s1 * s1 / n1, 2) / (n1 - 1) + Math.pow(s2 * s2 / n2, 2) / (n2 - 1)));
             
-            // Calculate critical values
-            const tCritLeft = tInv(alpha, df);
-            const tCritRight = tInv(1 - alpha, df);
-            const tCritTwo = tInv(1 - alpha / 2, df);
+            // Use jStat for accurate Student's t-distribution
+            const tCritLeft = jStat.studentt.inv(alpha, df);
+            const tCritRight = jStat.studentt.inv(1 - alpha, df);
+            const tCritTwo = jStat.studentt.inv(1 - alpha / 2, df);
             
-            // Calculate p-values
-            const pLeft = tCDF(t, df);
-            const pRight = 1 - tCDF(t, df);
+            const pLeft = jStat.studentt.cdf(t, df);
+            const pRight = 1 - jStat.studentt.cdf(t, df);
             const pTwo = 2 * Math.min(pLeft, pRight);
             
             // Calculate confidence interval
@@ -1300,7 +1222,6 @@
             document.getElementById('ind-ci').textContent = 
                 `${confidenceLevel}% CI: (${formatNumber(ciLower)}, ${formatNumber(ciUpper)})`;
             
-            // Display results
             document.getElementById('ind-stat').textContent = formatNumber(t);
             document.getElementById('ind-df').textContent = df;
             document.getElementById('ind-crit-left').textContent = formatNumber(tCritLeft);
@@ -1369,21 +1290,18 @@
                 return;
             }
             
-            // Calculate test statistic
             const t = (dbar - mu0) / (sd / Math.sqrt(n));
             const df = n - 1;
             
-            // Calculate critical values
-            const tCritLeft = tInv(alpha, df);
-            const tCritRight = tInv(1 - alpha, df);
-            const tCritTwo = tInv(1 - alpha / 2, df);
+            // Use jStat for accurate Student's t-distribution
+            const tCritLeft = jStat.studentt.inv(alpha, df);
+            const tCritRight = jStat.studentt.inv(1 - alpha, df);
+            const tCritTwo = jStat.studentt.inv(1 - alpha / 2, df);
             
-            // Calculate p-values
-            const pLeft = tCDF(t, df);
-            const pRight = 1 - tCDF(t, df);
+            const pLeft = jStat.studentt.cdf(t, df);
+            const pRight = 1 - jStat.studentt.cdf(t, df);
             const pTwo = 2 * Math.min(pLeft, pRight);
             
-            // Calculate confidence interval
             const margin = Math.abs(tCritTwo) * (sd / Math.sqrt(n));
             const ciLower = dbar - margin;
             const ciUpper = dbar + margin;
@@ -1392,7 +1310,6 @@
             document.getElementById('dep-ci').textContent = 
                 `${confidenceLevel}% CI: (${formatNumber(ciLower)}, ${formatNumber(ciUpper)})`;
             
-            // Display results
             document.getElementById('dep-stat').textContent = formatNumber(t);
             document.getElementById('dep-df').textContent = df;
             document.getElementById('dep-crit-left').textContent = formatNumber(tCritLeft);
@@ -1420,7 +1337,7 @@
             const step = 0.1;
             
             for (let z = -range; z <= range; z += step) {
-                const y = (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * z * z);
+                const y = jStat.normal.pdf(z, 0, 1);
                 points.push({x: z, y: y});
             }
             
@@ -1490,7 +1407,7 @@
             const step = 0.05;
             
             for (let t = -range; t <= range; t += step) {
-                const y = tPDF(t, df);
+                const y = jStat.studentt.pdf(t, df);
                 points.push({x: t, y: y});
             }
             
