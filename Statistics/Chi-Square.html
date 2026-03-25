@@ -1,0 +1,550 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi-Square Test Calculator - Lesson 24</title>
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; margin: 0; padding: 20px; }
+        .container { max-width: 950px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 30px; }
+        h1 { text-align: center; color: #4a4a8a; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+        .test-selector { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
+        .test-btn { padding: 12px 24px; border: 2px solid #667eea; background: white; color: #667eea; border-radius: 25px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s ease; }
+        .test-btn:hover { background: #f0f0ff; }
+        .test-btn.active { background: #667eea; color: white; }
+        .section { background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+        .section h3 { color: #4a4a8a; margin-top: 0; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        .section h4 { color: #4a4a8a; margin-top: 15px; margin-bottom: 10px; }
+        .hypothesis-box { background: #e8f4f8; border-left: 4px solid #667eea; padding: 15px; margin: 15px 0; }
+        .hypothesis-box p { margin: 5px 0; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-weight: 600; color: #333; margin-bottom: 5px; }
+        .input-group input, .input-group select { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; transition: border-color 0.3s; }
+        .input-group input:focus, .input-group select:focus { border-color: #667eea; outline: none; }
+        .input-group small { color: #666; font-size: 12px; }
+        .grid-container { overflow-x: auto; margin: 15px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background: #667eea; color: white; }
+        td input { width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+        .btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 20px 0; }
+        .btn { padding: 12px 30px; border: none; border-radius: 25px; cursor: pointer; font-size: 16px; font-weight: 600; transition: all 0.3s ease; }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4); }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .results { display: none; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%); border-radius: 10px; padding: 20px; margin-top: 20px; }
+        .results.show { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .result-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #ddd; }
+        .result-item:last-child { border-bottom: none; }
+        .result-label { font-weight: 600; color: #4a4a8a; }
+        .result-value { font-size: 18px; color: #333; }
+        .warning { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin: 15px 0; color: #856404; }
+        .warning-icon { font-size: 20px; margin-right: 10px; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 15px; margin: 15px 0; color: #721c24; }
+        .assumptions-list { list-style-type: none; padding: 0; }
+        .assumptions-list li { padding: 8px 0; padding-left: 25px; position: relative; }
+        .assumptions-list li::before { content: "\2713"; position: absolute; left: 0; color: #28a745; font-weight: bold; }
+        .assumptions-list li.warning::before { content: "\26a0"; color: #ffc107; }
+        .assumptions-list li.error::before { content: "\2717"; color: #dc3545; }
+        .expected-table { margin-top: 15px; }
+        .expected-table td { background: #f0f0ff; }
+        .chi-comp-table td { background: #fff0f5; }
+        .chi-comp-large { background-color: #ffe0e0 !important; }
+        .alpha-selector { display: flex; align-items: center; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
+        .alpha-selector label { font-weight: 600; }
+        .alpha-selector select, .alpha-selector input[type='number'] { padding: 8px 15px; border: 2px solid #667eea; border-radius: 8px; font-size: 14px; width: auto; min-width: 80px; }
+        .info-tooltip { display: inline-block; width: 18px; height: 18px; background: #667eea; color: white; border-radius: 50%; text-align: center; font-size: 12px; line-height: 18px; cursor: help; margin-left: 5px; }
+        .decimal-slider-group { display: flex; align-items: center; gap: 15px; margin: 15px 0; flex-wrap: wrap; }
+        .decimal-slider-group label { font-weight: 600; }
+        .decimal-slider-group input[type='range'] { width: 180px; }
+        .hidden { display: none; }
+        .chi-comp-legend { background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 10px 15px; margin-top: 10px; font-size: 13px; }
+        .chi-comp-legend span { margin-right: 20px; }
+        .goodness-results-table th { background: #667eea; color: white; }
+        .goodness-results-table td { background: #f8f9fa; }
+        @media (max-width: 600px) { .test-selector { flex-direction: column; } .test-btn { width: 100%; } td input { width: 60px; } .decimal-slider-group { flex-direction: column; align-items: flex-start; } .alpha-selector { flex-direction: column; align-items: flex-start; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>2 Chi-Square Test Calculator</h1>
+        <p class="subtitle">Lesson 24 - Testing Categorical Data</p>
+        <div class="test-selector">
+            <button class="test-btn active" onclick="selectTest('goodness')" id="btn-goodness">Goodness of Fit</button>
+            <button class="test-btn" onclick="selectTest('independence')" id="btn-independence">Test of Independence</button>
+            <button class="test-btn" onclick="selectTest('homogeneity')" id="btn-homogeneity">Test of Homogeneity</button>
+        </div>
+        <div class="section">
+            <h3>Hypotheses</h3>
+            <div class="hypothesis-box" id="hypothesis-display">
+                <p><strong>H0:</strong> <span id="h0-text">The proportions are as expected (claimed)</span></p>
+                <p><strong>Hf1:</strong> <span id="ha-text">At least one proportion is not as expected</span></p>
+            </div>
+            <div class="alpha-selector">
+                <label for="alpha-select">Significance Level (f1):</label>
+                <select id="alpha-select" onchange="updateAlphaInput()">
+                    <option value="0.01">0.01</option>
+                    <option value="0.05" selected>0.05</option>
+                    <option value="0.10">0.10</option>
+                    <option value="custom">Custom</option>
+                </select>
+                <input type="number" id="alpha-custom" class="hidden" min="0.0001" max="0.5" step="0.0001" placeholder="e.g. 0.025" value="0.05" oninput="updateAlphaValue()">
+                <span class="info-tooltip" title="Common significance levels: 0.01 (very strict), 0.05 (standard), 0.10 (lenient). Or enter your own.">?</span>
+            </div>
+            <div class="decimal-slider-group">
+                <label for="decimal-slider">Decimal Places to Show: <span id="decimal-value">4</span></label>
+                <input type="range" id="decimal-slider" min="2" max="8" value="4" step="1" oninput="updateDecimalDisplay()">
+            </div>
+        </div>
+        <div class="section" id="goodness-input">
+            <h3>Data Entry - Goodness of Fit</h3>
+            <div class="input-group">
+                <label for="num-categories">Number of Categories:</label>
+                <input type="number" id="num-categories" min="2" max="20" value="4" onchange="generateGoodnessTable()">
+            </div>
+            <div class="grid-container">
+                <table id="goodness-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Observed (O)</th>
+                            <th>Expected (E)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="goodness-tbody"></tbody>
+                </table>
+            </div>
+            <small>Enter the observed counts and expected counts for each category.</small>
+        </div>
+        <div class="section hidden" id="contingency-input">
+            <h3>Data Entry - Contingency Table</h3>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div class="input-group" style="flex: 1; min-width: 150px;">
+                    <label for="num-rows">Number of Rows:</label>
+                    <input type="number" id="num-rows" min="2" max="10" value="2" onchange="generateContingencyTable()">
+                </div>
+                <div class="input-group" style="flex: 1; min-width: 150px;">
+                    <label for="num-cols">Number of Columns:</label>
+                    <input type="number" id="num-cols" min="2" max="10" value="3" onchange="generateContingencyTable()">
+                </div>
+            </div>
+            <div class="grid-container">
+                <table id="contingency-table">
+                    <thead id="contingency-thead"></thead>
+                    <tbody id="contingency-tbody"></tbody>
+                </table>
+            </div>
+            <small>Enter the observed counts for each cell in the contingency table.</small>
+        </div>
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="calculate()">Calculate 2 and P-value</button>
+            <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+        </div>
+        <div id="validation-messages"></div>
+        <div class="results" id="results">
+            <h3>Results</h3>
+            <div class="section">
+                <h4>Assumptions Check</h4>
+                <ul class="assumptions-list" id="assumptions-list"></ul>
+            </div>
+            <div class="section hidden" id="goodness-results-section">
+                <h4>Observed, Expected, and Chi-square Components</h4>
+                <div class="grid-container">
+                    <table class="goodness-results-table chi-comp-table" id="goodness-results-table"></table>
+                </div>
+                <div class="chi-comp-legend">
+                    <span>| Highlighted = Component > 4 |</span>
+                </div>
+            </div>
+            <div class="section hidden" id="expected-section">
+                <h4>Expected Counts</h4>
+                <div class="grid-container">
+                    <table class="expected-table" id="expected-table"></table>
+                </div>
+            </div>
+            <div class="section hidden" id="chi-comp-section">
+                <h4>Chi-square Components ((O−E)82/E)</h4>
+                <div class="grid-container">
+                    <table class="chi-comp-table" id="chi-comp-table"></table>
+                </div>
+                <div class="chi-comp-legend">
+                    <span>| Highlighted = Component > 4 |</span>
+                </div>
+            </div>
+            <div class="section">
+                <h4>Calculations</h4>
+                <div class="result-item">
+                    <span class="result-label">Degrees of Freedom (df):</span>
+                    <span class="result-value" id="df-result">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Chi-Square Statistic (2):</span>
+                    <span class="result-value" id="chi-result">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">P-value:</span>
+                    <span class="result-value" id="p-result">-</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Significance Level (1):</span>
+                    <span class="result-value" id="alpha-result">-</span>
+                </div>
+            </div>
+        </div>
+        <div class="section" style="margin-top: 30px;">
+            <h3>Quick Reference</h3>
+            <details>
+                <summary style="cursor: pointer; font-weight: 600; color: #667eea;">Degrees of Freedom Formulas</summary>
+                <ul style="margin-top: 10px;">
+                    <li><strong>Goodness of Fit:</strong> df = (number of categories) 1 1</li>
+                    <li><strong>Independence:</strong> df = (rows 1 1) 7f (columns 1 1)</li>
+                    <li><strong>Homogeneity:</strong> df = (rows 1 1) 7f (columns 1 1)</li>
+                </ul>
+            </details>
+            <details style="margin-top: 10px;">
+                <summary style="cursor: pointer; font-weight: 600; color: #667eea;">Chi-Square Formula</summary>
+                <p style="margin-top: 10px; text-align: center; font-size: 18px;">2 =  [(O 1 E)82 / E]</p>
+                <p style="text-align: center; color: #666;">Sum of (Observed 1 Expected)82 divided by Expected for each cell</p>
+            </details>
+            <details style="margin-top: 10px;">
+                <summary style="cursor: pointer; font-weight: 600; color: #667eea;">Assumptions</summary>
+                <ul style="margin-top: 10px;">
+                    <li>Data must be categorical (counts)</li>
+                    <li>Reasonably random sample</li>
+                    <li>All expected counts must be at least 5</li>
+                </ul>
+            </details>
+        </div>
+    </div>
+    <script>
+        let currentTest = 'goodness';
+        let decimalPlaces = 4;
+        let alphaValue = 0.05;
+        let lastDf, lastChiSquare, lastPValue, lastAssumptions, lastExpectedMatrix, lastObservedMatrix, lastChiCompMatrix, lastGoodnessData;
+        document.addEventListener('DOMContentLoaded', function() {
+            generateGoodnessTable();
+            generateContingencyTable();
+            updateAlphaInput();
+        });
+        function selectTest(testType) {
+            currentTest = testType;
+            document.querySelectorAll('.test-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + testType).classList.add('active');
+            const h0 = document.getElementById('h0-text');
+            const ha = document.getElementById('ha-text');
+            if (testType === 'goodness') {
+                h0.textContent = 'The proportions are as expected (claimed)';
+                ha.textContent = 'At least one proportion is not as expected';
+                document.getElementById('goodness-input').classList.remove('hidden');
+                document.getElementById('contingency-input').classList.add('hidden');
+            } else if (testType === 'independence') {
+                h0.textContent = 'The two variables are independent (no association)';
+                ha.textContent = 'The two variables are not independent (there is an association)';
+                document.getElementById('goodness-input').classList.add('hidden');
+                document.getElementById('contingency-input').classList.remove('hidden');
+            } else {
+                h0.textContent = 'The distributions are the same across all populations';
+                ha.textContent = 'At least one population has a different distribution';
+                document.getElementById('goodness-input').classList.add('hidden');
+                document.getElementById('contingency-input').classList.remove('hidden');
+            }
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('validation-messages').innerHTML = '';
+        }
+        function generateGoodnessTable() {
+            const numCat = parseInt(document.getElementById('num-categories').value) || 4;
+            const tbody = document.getElementById('goodness-tbody');
+            tbody.innerHTML = '';
+            for (let i = 1; i <= numCat; i++) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>Category ${i}</td><td><input type="number" id="obs-${i}" min="0" step="1" placeholder="0"></td><td><input type="number" id="exp-${i}" min="0" step="0.01" placeholder="0"></td>`;
+                tbody.appendChild(row);
+            }
+        }
+        function generateContingencyTable() {
+            const numRows = parseInt(document.getElementById('num-rows').value) || 2;
+            const numCols = parseInt(document.getElementById('num-cols').value) || 3;
+            const thead = document.getElementById('contingency-thead');
+            let headerHTML = '<tr><th></th>';
+            for (let j = 1; j <= numCols; j++) { headerHTML += `<th>Column ${j}</th>`; }
+            headerHTML += '</tr>';
+            thead.innerHTML = headerHTML;
+            const tbody = document.getElementById('contingency-tbody');
+            tbody.innerHTML = '';
+            for (let i = 1; i <= numRows; i++) {
+                let rowHTML = `<td><strong>Row ${i}</strong></td>`;
+                for (let j = 1; j <= numCols; j++) {
+                    rowHTML += `<td><input type="number" id="cell-${i}-${j}" min="0" step="1" placeholder="0"></td>`;
+                }
+                const row = document.createElement('tr');
+                row.innerHTML = rowHTML;
+                tbody.appendChild(row);
+            }
+        }
+        function calculate() {
+            document.getElementById('validation-messages').innerHTML = '';
+            if (currentTest === 'goodness') { calculateGoodness(); } else { calculateContingency(); }
+        }
+        function calculateGoodness() {
+            const numCat = parseInt(document.getElementById('num-categories').value);
+            let observed = [], expected = [], chiComps = [], valid = true, errorMsg = '';
+            for (let i = 1; i <= numCat; i++) {
+                const obs = parseFloat(document.getElementById('obs-' + i).value);
+                const exp = parseFloat(document.getElementById('exp-' + i).value);
+                if (isNaN(obs) || isNaN(exp)) { valid = false; errorMsg = 'Please enter all observed and expected values.'; break; }
+                if (obs < 0 || exp <= 0) { valid = false; errorMsg = 'Observed values must be ≥ 0 and expected values must be > 0.'; break; }
+                observed.push(obs); expected.push(exp);
+                chiComps.push(Math.pow(obs - exp, 2) / exp);
+            }
+            if (!valid) { showError(errorMsg); return; }
+            let chiSquare = chiComps.reduce((a, b) => a + b, 0);
+            const df = numCat - 1;
+            const pValue = 1 - chiSquareCDF(chiSquare, df);
+            const assumptions = checkAssumptions(expected);
+            lastGoodnessData = { observed, expected, chiComps };
+            displayResults(df, chiSquare, pValue, assumptions, null, null, null);
+        }
+        function calculateContingency() {
+            const numRows = parseInt(document.getElementById('num-rows').value);
+            const numCols = parseInt(document.getElementById('num-cols').value);
+            let observed = [], valid = true, errorMsg = '';
+            for (let i = 1; i <= numRows; i++) {
+                let row = [];
+                for (let j = 1; j <= numCols; j++) {
+                    const val = parseFloat(document.getElementById('cell-' + i + '-' + j).value);
+                    if (isNaN(val)) { valid = false; errorMsg = 'Please enter all cell values.'; break; }
+                    if (val < 0) { valid = false; errorMsg = 'All values must be ≥ 0.'; break; }
+                    row.push(val);
+                }
+                if (!valid) break;
+                observed.push(row);
+            }
+            if (!valid) { showError(errorMsg); return; }
+            let rowTotals = observed.map(row => row.reduce((a, b) => a + b, 0));
+            let colTotals = [];
+            for (let j = 0; j < numCols; j++) {
+                let colSum = 0;
+                for (let i = 0; i < numRows; i++) { colSum += observed[i][j]; }
+                colTotals.push(colSum);
+            }
+            let grandTotal = rowTotals.reduce((a, b) => a + b, 0);
+            if (grandTotal === 0) { showError('Total count cannot be zero.'); return; }
+            let expected = [];
+            for (let i = 0; i < numRows; i++) {
+                let row = [];
+                for (let j = 0; j < numCols; j++) {
+                    row.push((rowTotals[i] * colTotals[j]) / grandTotal);
+                }
+                expected.push(row);
+            }
+            let chiComps = [];
+            for (let i = 0; i < numRows; i++) {
+                let row = [];
+                for (let j = 0; j < numCols; j++) {
+                    row.push(Math.pow(observed[i][j] - expected[i][j], 2) / expected[i][j]);
+                }
+                chiComps.push(row);
+            }
+            let chiSquare = 0;
+            for (let i = 0; i < numRows; i++) {
+                for (let j = 0; j < numCols; j++) {
+                    chiSquare += chiComps[i][j];
+                }
+            }
+            const df = (numRows - 1) * (numCols - 1);
+            const pValue = 1 - chiSquareCDF(chiSquare, df);
+            const flatExpected = expected.flat();
+            const assumptions = checkAssumptions(flatExpected);
+            displayResults(df, chiSquare, pValue, assumptions, expected, observed, chiComps);
+        }
+        function checkAssumptions(expected) {
+            const assumptions = [];
+            const minExpected = Math.min(...expected);
+            const allAtLeast5 = minExpected >= 5;
+            assumptions.push({ text: 'Random sample (assumed based on data collection)', status: 'ok' });
+            assumptions.push({ text: 'Categorical data with counts', status: 'ok' });
+            if (allAtLeast5) {
+                assumptions.push({ text: `All expected counts ≥ 5 (minimum: ${minExpected.toFixed(decimalPlaces)})`, status: 'ok' });
+            } else {
+                assumptions.push({ text: `WARNING: Some expected counts < 5 (minimum: ${minExpected.toFixed(decimalPlaces)}). Results may not be reliable.`, status: 'warning' });
+            }
+            return assumptions;
+        }
+        function displayResults(df, chiSquare, pValue, assumptions, expectedMatrix, observedMatrix, chiCompMatrix) {
+            lastDf = df; lastChiSquare = chiSquare; lastPValue = pValue; lastAssumptions = assumptions; lastExpectedMatrix = expectedMatrix; lastObservedMatrix = observedMatrix; lastChiCompMatrix = chiCompMatrix;
+            const assumptionsList = document.getElementById('assumptions-list');
+            assumptionsList.innerHTML = '';
+            assumptions.forEach(a => {
+                const li = document.createElement('li');
+                li.textContent = a.text;
+                if (a.status === 'warning') li.classList.add('warning');
+                if (a.status === 'error') li.classList.add('error');
+                assumptionsList.appendChild(li);
+            });
+            const goodnessResultsSection = document.getElementById('goodness-results-section');
+            if (currentTest === 'goodness' && lastGoodnessData) {
+                goodnessResultsSection.classList.remove('hidden');
+                const table = document.getElementById('goodness-results-table');
+                let html = '<thead><tr><th>Category</th><th>Observed (O)</th><th>Expected (E)</th><th>Chi-square Component ((O−E)²/E)</th></tr></thead><tbody>';
+                for (let i = 0; i < lastGoodnessData.observed.length; i++) {
+                    const chiComp = lastGoodnessData.chiComps[i];
+                    const largeComp = chiComp > 4 ? 'chi-comp-large' : '';
+                    html += `<tr>
+                        <td>Category ${i + 1}</td>
+                        <td>${lastGoodnessData.observed[i].toFixed(decimalPlaces)}</td>
+                        <td>${lastGoodnessData.expected[i].toFixed(decimalPlaces)}</td>
+                        <td class="${largeComp}">${chiComp.toFixed(decimalPlaces)}</td>
+                    </tr>`;
+                }
+                html += '</tbody>';
+                table.innerHTML = html;
+            } else {
+                goodnessResultsSection.classList.add('hidden');
+            }
+            const expectedSection = document.getElementById('expected-section');
+            if (expectedMatrix) {
+                expectedSection.classList.remove('hidden');
+                const table = document.getElementById('expected-table');
+                let html = '<thead><tr><th></th>';
+                for (let j = 0; j < expectedMatrix[0].length; j++) { html += `<th>Col ${j + 1}</th>`; }
+                html += '</tr></thead><tbody>';
+                for (let i = 0; i < expectedMatrix.length; i++) {
+                    html += `<tr><td><strong>Row ${i + 1}</strong></td>`;
+                    for (let j = 0; j < expectedMatrix[i].length; j++) {
+                        html += `<td>${expectedMatrix[i][j].toFixed(decimalPlaces)}</td>`;
+                    }
+                    html += '</tr>';
+                }
+                html += '</tbody>';
+                table.innerHTML = html;
+            } else { expectedSection.classList.add('hidden'); }
+            const chiCompSection = document.getElementById('chi-comp-section');
+            if (chiCompMatrix) {
+                chiCompSection.classList.remove('hidden');
+                const table = document.getElementById('chi-comp-table');
+                let html = '<thead><tr><th></th>';
+                for (let j = 0; j < chiCompMatrix[0].length; j++) { html += `<th>Col ${j + 1}</th>`; }
+                html += '</tr></thead><tbody>';
+                for (let i = 0; i < chiCompMatrix.length; i++) {
+                    html += `<tr><td><strong>Row ${i + 1}</strong></td>`;
+                    for (let j = 0; j < chiCompMatrix[i].length; j++) {
+                        const chiComp = chiCompMatrix[i][j];
+                        const largeComp = chiComp > 4 ? 'chi-comp-large' : '';
+                        html += `<td class="${largeComp}">${chiComp.toFixed(decimalPlaces)}</td>`;
+                    }
+                    html += '</tr>';
+                }
+                html += '</tbody>';
+                table.innerHTML = html;
+            } else { chiCompSection.classList.add('hidden'); }
+            document.getElementById('df-result').textContent = df;
+            document.getElementById('chi-result').textContent = chiSquare.toFixed(decimalPlaces);
+            document.getElementById('p-result').textContent = pValue < Math.pow(10, -decimalPlaces) ? `< ${Math.pow(10, -decimalPlaces)}` : pValue.toFixed(decimalPlaces);
+            document.getElementById('alpha-result').textContent = alphaValue;
+            document.getElementById('results').classList.add('show');
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+        }
+        function showError(message) {
+            document.getElementById('validation-messages').innerHTML = `<div class="error"><span class="warning-icon">6a0"></span> ${message}</div>`;
+        }
+        function clearAll() {
+            const numCat = parseInt(document.getElementById('num-categories').value) || 4;
+            for (let i = 1; i <= numCat; i++) {
+                const obsInput = document.getElementById('obs-' + i);
+                const expInput = document.getElementById('exp-' + i);
+                if (obsInput) obsInput.value = '';
+                if (expInput) expInput.value = '';
+            }
+            const numRows = parseInt(document.getElementById('num-rows').value) || 2;
+            const numCols = parseInt(document.getElementById('num-cols').value) || 3;
+            for (let i = 1; i <= numRows; i++) {
+                for (let j = 1; j <= numCols; j++) {
+                    const cell = document.getElementById('cell-' + i + '-' + j);
+                    if (cell) cell.value = '';
+                }
+            }
+            lastGoodnessData = null;
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('validation-messages').innerHTML = '';
+        }
+        function updateDecimalDisplay() {
+            decimalPlaces = parseInt(document.getElementById('decimal-slider').value);
+            document.getElementById('decimal-value').textContent = decimalPlaces;
+            if (document.getElementById('results').classList.contains('show')) {
+                displayResults(lastDf, lastChiSquare, lastPValue, lastAssumptions, lastExpectedMatrix, lastObservedMatrix, lastChiCompMatrix);
+            }
+        }
+        function updateAlphaInput() {
+            const select = document.getElementById('alpha-select');
+            const customInput = document.getElementById('alpha-custom');
+            if (select.value === 'custom') {
+                customInput.classList.remove('hidden');
+                alphaValue = parseFloat(customInput.value) || 0.05;
+            } else {
+                customInput.classList.add('hidden');
+                alphaValue = parseFloat(select.value);
+            }
+            if (document.getElementById('results').classList.contains('show')) {
+                displayResults(lastDf, lastChiSquare, lastPValue, lastAssumptions, lastExpectedMatrix, lastObservedMatrix, lastChiCompMatrix);
+            }
+        }
+        function updateAlphaValue() {
+            const customInput = document.getElementById('alpha-custom');
+            alphaValue = parseFloat(customInput.value) || 0.05;
+            if (document.getElementById('results').classList.contains('show')) {
+                displayResults(lastDf, lastChiSquare, lastPValue, lastAssumptions, lastExpectedMatrix, lastObservedMatrix, lastChiCompMatrix);
+            }
+        }
+        function chiSquareCDF(x, df) {
+            if (x <= 0) return 0;
+            return gammainc(df / 2, x / 2);
+        }
+        function gammainc(a, x) {
+            const EPSILON = 1e-12;
+            const MAX_ITER = 200;
+            if (x < 0 || a <= 0) return 0;
+            if (x === 0) return 0;
+            if (x < a + 1) {
+                let sum = 1 / a;
+                let term = 1 / a;
+                for (let n = 1; n < MAX_ITER; n++) {
+                    term *= x / (a + n);
+                    sum += term;
+                    if (Math.abs(term) < EPSILON * Math.abs(sum)) break;
+                }
+                return sum * Math.exp(-x + a * Math.log(x) - logGamma(a));
+            }
+            let f = 1 + x - a;
+            let c = f;
+            let d = 0;
+            for (let n = 1; n < MAX_ITER; n++) {
+                const an = n * (a - n);
+                const bn = 2 * n + 1 + x - a;
+                d = bn + an * d;
+                if (Math.abs(d) < 1e-30) d = 1e-30;
+                c = bn + an / c;
+                if (Math.abs(c) < 1e-30) c = 1e-30;
+                d = 1 / d;
+                const delta = c * d;
+                f *= delta;
+                if (Math.abs(delta - 1) < EPSILON) break;
+            }
+            return 1 - Math.exp(-x + a * Math.log(x) - logGamma(a)) / f;
+        }
+        function logGamma(x) {
+            const g = 7;
+            const c = [0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+            if (x < 0.5) { return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x); }
+            x -= 1;
+            let a = c[0];
+            for (let i = 1; i < g + 2; i++) { a += c[i] / (x + i); }
+            const t = x + g + 0.5;
+            return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+        }
+    </script>
+</body>
+</html>
