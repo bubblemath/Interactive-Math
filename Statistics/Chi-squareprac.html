@@ -1,0 +1,333 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi-Square Practice Applet (Lesson 24)</title>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    body { background: #f5f7fa; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; }
+    .container { max-width: 900px; margin: 30px auto; background: #fff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); padding: 30px; }
+    h1 { text-align: center; color: #4a4a8a; margin-bottom: 0; }
+    .sidebar { float: left; width: 220px; background: #f0f0ff; border-radius: 10px; margin-right: 24px; padding: 16px 0; min-height: 600px; }
+    .sidebar button { display: block; width: 100%; background: none; border: none; padding: 12px 20px; text-align: left; font-size: 16px; color: #667eea; font-weight: 600; border-radius: 0 20px 20px 0; margin-bottom: 2px; cursor: pointer; transition: background 0.2s; }
+    .sidebar button.active { background: #667eea; color: #fff; }
+    .main { margin-left: 244px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .step { margin-bottom: 22px; }
+    .step label { font-weight: 600; display: block; margin-bottom: 6px; }
+    .step input[type=text], .step input[type=number], .step select, .step textarea { width: 100%; padding: 8px; border: 1.5px solid #bbb; border-radius: 6px; font-size: 15px; margin-bottom: 8px; }
+    .step textarea { min-height: 40px; }
+    .check-btn { background: #667eea; color: #fff; border: none; padding: 8px 24px; border-radius: 20px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+    .check-btn:hover { background: #4a4a8a; }
+    .feedback { margin-top: 8px; font-weight: 600; }
+    .feedback.correct { color: #28a745; }
+    .feedback.incorrect { color: #dc3545; }
+    .summary-section { margin-bottom: 18px; }
+    .summary-section h3 { color: #4a4a8a; margin-bottom: 8px; }
+    .formula { background: #f0f0ff; border-left: 4px solid #667eea; padding: 8px 16px; margin: 10px 0; font-size: 17px; }
+    table.data-table { border-collapse: collapse; margin: 10px 0 18px 0; width: 100%; }
+    table.data-table th, table.data-table td { border: 1.5px solid #bbb; padding: 7px 12px; text-align: center; }
+    table.data-table th { background: #667eea; color: #fff; font-weight: 600; }
+    @media (max-width: 900px) { .sidebar { float: none; width: 100%; margin: 0 0 20px 0; min-height: unset; } .main { margin-left: 0; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1><span>&chi;<sup>2</sup></span> Practice Applet</h1>
+    <div class="sidebar" id="sidebar"></div>
+    <div class="main" id="main"></div>
+  </div>
+  <script>
+    // Problem data
+    const problems = [
+      {
+        name: "Summary",
+        content: `
+          <div class="summary-section">
+            <h3>Chi-Square Test Types</h3>
+            <ul>
+              <li><b>Goodness of Fit:</b> One categorical variable, compare observed to expected distribution.</li>
+              <li><b>Test of Independence:</b> Two categorical variables, one sample, test for association.</li>
+              <li><b>Test for Homogeneity:</b> One categorical variable, two or more independent samples, test if distributions are the same.</li>
+            </ul>
+          </div>
+          <div class="summary-section">
+            <h3>Formulas</h3>
+            <div class="formula">$$\chi^2 = \sum \frac{(O - E)^2}{E}$$</div>
+            <ul>
+              <li><b>Goodness of Fit:</b> $$df = \text{number of categories} - 1$$</li>
+              <li><b>Independence/Homogeneity:</b> $$df = (\text{rows} - 1) \times (\text{columns} - 1)$$</li>
+            </ul>
+          </div>
+          <div class="summary-section">
+            <h3>Hypothesis Reminders</h3>
+            <ul>
+              <li><b>Goodness of Fit:</b> H<sub>0</sub>: Proportions are as expected. H<sub>a</sub>: At least one proportion is different.</li>
+              <li><b>Independence:</b> H<sub>0</sub>: Variables are independent. H<sub>a</sub>: Variables are not independent.</li>
+              <li><b>Homogeneity:</b> H<sub>0</sub>: Distributions are the same. H<sub>a</sub>: At least one distribution is different.</li>
+            </ul>
+          </div>
+          <div class="summary-section">
+            <h3>Decision Reminders</h3>
+            <ul>
+              <li>If p-value &lt; &alpha;, <b>reject H<sub>0</sub></b></li>
+              <li>If p-value &ge; &alpha;, <b>fail to reject H<sub>0</sub></b></li>
+              <li>Always write H<sub>a</sub> in context!</li>
+            </ul>
+          </div>
+        `
+      },
+      // Example Problem: Candy Colors
+      {
+        name: "Candy Colors",
+        stem: `A bag of colored candies is supposed to be equally distributed among 5 colors. Out of 100 candies, the counts are below. Is there evidence the distribution is not as expected?`,
+        table: [
+          ["Color", "Observed"],
+          ["Red", 18],
+          ["Blue", 22],
+          ["Green", 20],
+          ["Yellow", 19],
+          ["Orange", 21]
+        ],
+        steps: [
+          {
+            label: "1. What type of chi-square test should you use?",
+            type: "select",
+            options: ["Goodness of Fit", "Independence", "Homogeneity"],
+            answer: "Goodness of Fit",
+            correct: "Correct! This is a Goodness of Fit test.",
+            hint: "This is one categorical variable compared to an expected distribution."
+          },
+          {
+            label: "2. Select the null hypothesis (H₀):",
+            type: "select",
+            options: [
+              "Proportions are as expected.",
+              "Variables are independent.",
+              "Distributions are the same."
+            ],
+            answer: "Proportions are as expected.",
+            correct: "Great! H₀: Proportions are as expected.",
+            hint: "For GoF, H₀ is that the proportions are as expected."
+          },
+          {
+            label: "3. Select the alternative hypothesis (Hₐ):",
+            type: "select",
+            options: [
+              "At least one proportion is different.",
+              "Variables are not independent.",
+              "At least one distribution is different."
+            ],
+            answer: "At least one proportion is different.",
+            correct: "Great! Hₐ: At least one proportion is different.",
+            hint: "For GoF, Hₐ is that at least one proportion is different."
+          },
+          {
+            label: "4. Enter the chi-square statistic and p-value (rounded to 3 decimals):",
+            type: "calc",
+            chi: 0.7,
+            p: 0.951,
+            correct: "Correct! The calculations are right.",
+            hint: "Expected = 20 for each. Use the formula: sum((O-E)^2/E)."
+          },
+          {
+            label: "5. Select the correct conclusion:",
+            type: "select",
+            options: [
+              "Since the p-value > α, fail to reject H₀. There is not sufficient evidence to suggest the proportions are different.",
+              "Since the p-value < α, reject H₀. There is sufficient evidence to suggest the proportions are different."
+            ],
+            answer: "Since the p-value > α, fail to reject H₀. There is not sufficient evidence to suggest the proportions are different.",
+            correct: "Good! Since p-value > α, fail to reject H₀.",
+            hint: "If p-value > α, fail to reject H₀."
+          },
+          {
+            label: "6. Which color contributed most to the chi-square value?",
+            type: "select",
+            options: ["Red", "Blue", "Green", "Yellow", "Orange"],
+            answer: "Blue",
+            correct: "Correct! Blue had the largest contribution.",
+            hint: "Calculate (O-E)^2/E for each color."
+          }
+        ]
+      },
+      // Example Problem: Drinks by Gender
+      {
+        name: "Drinks by Gender",
+        stem: `The following data is on drinking behavior for independently chosen random samples of male and female students. Does there appear to be a gender difference with respect to drinking behavior?`,
+        table: [
+          ["", "Men", "Women", "Total"],
+          ["None", 140, 186, 326],
+          ["Low", 478, 661, 1139],
+          ["Moderate", 300, 173, 473],
+          ["High", 63, 16, 79],
+          ["Total", 981, 1036, 2017]
+        ],
+        steps: [
+          {
+            label: "1. What type of chi-square test should you use?",
+            type: "select",
+            options: ["Goodness of Fit", "Independence", "Homogeneity"],
+            answer: "Homogeneity",
+            correct: "Correct! This is a Test for Homogeneity.",
+            hint: "Two or more independent samples (men/women)."
+          },
+          {
+            label: "2. Select the null hypothesis (H₀):",
+            type: "select",
+            options: [
+              "Proportions are as expected.",
+              "Variables are independent.",
+              "Distributions are the same."
+            ],
+            answer: "Distributions are the same.",
+            correct: "Great! H₀: Distributions are the same.",
+            hint: "For homogeneity, H₀ is that the distributions are the same."
+          },
+          {
+            label: "3. Select the alternative hypothesis (Hₐ):",
+            type: "select",
+            options: [
+              "At least one proportion is different.",
+              "Variables are not independent.",
+              "At least one distribution is different."
+            ],
+            answer: "At least one distribution is different.",
+            correct: "Great! Hₐ: At least one distribution is different.",
+            hint: "For homogeneity, Hₐ is that at least one distribution is different."
+          },
+          {
+            label: "4. Enter the chi-square statistic and p-value (rounded to 3 decimals):",
+            type: "calc",
+            chi: 54.2,
+            p: 0.000,
+            correct: "Correct! The calculations are right.",
+            hint: "Calculate expected for each cell, then sum (O-E)^2/E."
+          },
+          {
+            label: "5. Select the correct conclusion:",
+            type: "select",
+            options: [
+              "Since the p-value < α, reject H₀. There is sufficient evidence to suggest at least one distribution is different.",
+              "Since the p-value > α, fail to reject H₀. There is not sufficient evidence to suggest a difference."
+            ],
+            answer: "Since the p-value < α, reject H₀. There is sufficient evidence to suggest at least one distribution is different.",
+            correct: "Good! Since p-value < α, reject H₀.",
+            hint: "If p-value < α, reject H₀."
+          },
+          {
+            label: "6. Which cell contributed most to the chi-square value?",
+            type: "select",
+            options: ["Men/Low", "Women/Low", "Men/High", "Women/High", "Men/None", "Women/None", "Men/Moderate", "Women/Moderate"],
+            answer: "Women/High",
+            correct: "Correct! Women/High had the largest contribution.",
+            hint: "Calculate (O-E)^2/E for each cell."
+          }
+        ]
+      }
+    ];
+
+    // Sidebar rendering
+    const sidebarDiv = document.getElementById('sidebar');
+    const mainDiv = document.getElementById('main');
+    let activeTab = 0;
+
+    function renderSidebar() {
+      sidebarDiv.innerHTML = '';
+      problems.forEach((p, i) => {
+        const btn = document.createElement('button');
+        btn.className = (i === activeTab ? 'active' : '');
+        btn.textContent = p.name;
+        btn.onclick = () => { activeTab = i; renderSidebar(); renderMain(); };
+        sidebarDiv.appendChild(btn);
+      });
+    }
+
+    function renderMain() {
+      mainDiv.innerHTML = '';
+      const p = problems[activeTab];
+      if (activeTab === 0) {
+        mainDiv.innerHTML = p.content;
+        if (window.MathJax) MathJax.typeset();
+        return;
+      }
+      // Problem stem
+      const stemDiv = document.createElement('div');
+      stemDiv.style.marginBottom = '10px';
+      stemDiv.innerHTML = `<b>Question:</b> <br>${p.stem}`;
+      mainDiv.appendChild(stemDiv);
+      // Data table
+      if (p.table) {
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        p.table.forEach((row, i) => {
+          const tr = document.createElement('tr');
+          row.forEach((cell, j) => {
+            const tag = i === 0 ? 'th' : 'td';
+            const td = document.createElement(tag);
+            td.textContent = cell;
+            tr.appendChild(td);
+          });
+          table.appendChild(tr);
+        });
+        mainDiv.appendChild(table);
+      }
+      // Steps
+      p.steps.forEach((step, idx) => {
+        const stepDiv = document.createElement('div');
+        stepDiv.className = 'step';
+        stepDiv.innerHTML = `<label>${step.label}</label>`;
+        let input, checkBtn, feedback;
+        if (step.type === 'select') {
+          input = document.createElement('select');
+          step.options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = opt;
+            input.appendChild(option);
+          });
+          stepDiv.appendChild(input);
+        } else if (step.type === 'calc') {
+          input = document.createElement('div');
+          input.innerHTML = `<input type='number' step='0.001' placeholder='chi-square' style='width:110px;'> <input type='number' step='0.001' placeholder='p-value' style='width:110px;'>`;
+          stepDiv.appendChild(input);
+        }
+        checkBtn = document.createElement('button');
+        checkBtn.className = 'check-btn';
+        checkBtn.textContent = 'Check';
+        feedback = document.createElement('div');
+        feedback.className = 'feedback';
+        checkBtn.onclick = () => {
+          let correct = false;
+          if (step.type === 'select') {
+            correct = input.value === step.answer;
+          } else if (step.type === 'calc') {
+            const chi = parseFloat(input.children[0].value);
+            const pval = parseFloat(input.children[1].value);
+            correct = Math.abs(chi - step.chi) < 0.01 && Math.abs(pval - step.p) < 0.01;
+          }
+          if (correct) {
+            feedback.textContent = step.correct;
+            feedback.className = 'feedback correct';
+          } else {
+            feedback.textContent = step.hint;
+            feedback.className = 'feedback incorrect';
+          }
+          if (window.MathJax) MathJax.typeset();
+        };
+        stepDiv.appendChild(checkBtn);
+        stepDiv.appendChild(feedback);
+        mainDiv.appendChild(stepDiv);
+      });
+      if (window.MathJax) MathJax.typeset();
+    }
+
+    renderSidebar();
+    renderMain();
+  </script>
+</body>
+</html>
