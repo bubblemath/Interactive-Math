@@ -1,0 +1,1682 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sampling & Experimental Design Interactive Learning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .header {
+            background: linear-gradient(90deg, #4a00e0, #8e2de2);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            background: #0f0f23;
+            padding: 10px;
+            gap: 5px;
+        }
+        .tab-btn {
+            padding: 12px 16px;
+            border: none;
+            background: #2d2d44;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            font-size: 0.85rem;
+        }
+        .tab-btn:hover {
+            background: #4a00e0;
+        }
+        .tab-btn.active {
+            background: linear-gradient(90deg, #4a00e0, #8e2de2);
+            box-shadow: 0 4px 15px rgba(74, 0, 224, 0.4);
+        }
+        .tab-content {
+            display: none;
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .card h2 {
+            color: #8e2de2;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #4a00e0;
+            padding-bottom: 10px;
+        }
+        .card h3 {
+            color: #00d4ff;
+            margin: 15px 0 10px 0;
+        }
+        .term-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .term-card {
+            background: rgba(74, 0, 224, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #8e2de2;
+        }
+        .term-card strong {
+            color: #00d4ff;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .scenario-card {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .scenario-card p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        .options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .option-btn {
+            padding: 10px 20px;
+            border: 2px solid #4a00e0;
+            background: transparent;
+            color: #fff;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .option-btn:hover {
+            background: #4a00e0;
+        }
+        .option-btn.correct {
+            background: #00c853;
+            border-color: #00c853;
+        }
+        .option-btn.incorrect {
+            background: #ff1744;
+            border-color: #ff1744;
+        }
+        .feedback {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .feedback.show {
+            display: block;
+        }
+        .feedback.correct {
+            background: rgba(0, 200, 83, 0.2);
+            border: 1px solid #00c853;
+        }
+        .feedback.incorrect {
+            background: rgba(255, 23, 68, 0.2);
+            border: 1px solid #ff1744;
+        }
+        .score-display {
+            background: linear-gradient(90deg, #4a00e0, #8e2de2);
+            padding: 15px 25px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+        .flashcard-container {
+            perspective: 1000px;
+            margin: 20px auto;
+            max-width: 500px;
+        }
+        .flashcard {
+            width: 100%;
+            height: 250px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            cursor: pointer;
+        }
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            text-align: center;
+            font-size: 1.3rem;
+        }
+        .flashcard-front {
+            background: linear-gradient(135deg, #4a00e0, #8e2de2);
+        }
+        .flashcard-back {
+            background: linear-gradient(135deg, #00c853, #00bfa5);
+            transform: rotateY(180deg);
+        }
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .nav-btn {
+            padding: 12px 30px;
+            border: none;
+            background: #4a00e0;
+            color: #fff;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+        .nav-btn:hover {
+            background: #8e2de2;
+            transform: scale(1.05);
+        }
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00c853, #00bfa5);
+            transition: width 0.3s;
+        }
+        .bias-scenario {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .bias-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .experiment-builder {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 25px;
+            border-radius: 15px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #4a00e0;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1rem;
+        }
+        .input-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .check-btn {
+            padding: 15px 40px;
+            border: none;
+            background: linear-gradient(90deg, #4a00e0, #8e2de2);
+            color: #fff;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+        }
+        .check-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(74, 0, 224, 0.4);
+        }
+        .sorter-item {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            cursor: grab;
+            transition: all 0.3s;
+        }
+        .sorter-item:hover {
+            background: rgba(74, 0, 224, 0.3);
+        }
+        .drop-zone {
+            min-height: 150px;
+            border: 3px dashed #4a00e0;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .drop-zone.highlight {
+            background: rgba(74, 0, 224, 0.2);
+            border-color: #8e2de2;
+        }
+        .drop-zone h3 {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .reset-btn {
+            padding: 10px 25px;
+            border: 2px solid #ff1744;
+            background: transparent;
+            color: #ff1744;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 15px;
+        }
+        .reset-btn:hover {
+            background: #ff1744;
+            color: #fff;
+        }
+        ul {
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+        .theme-section {
+            margin-bottom: 30px;
+        }
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(74, 0, 224, 0.3), rgba(142, 45, 226, 0.3));
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #00d4ff;
+        }
+        /* Frog Tale Styles */
+        .frog-story {
+            background: rgba(255, 248, 220, 0.1);
+            padding: 25px;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            border: 2px solid #ffc107;
+            margin: 20px 0;
+        }
+        .frog-story .highlight-g {
+            color: #ff1744;
+            font-weight: bold;
+        }
+        .count-input {
+            width: 100px;
+            padding: 10px;
+            font-size: 1.2rem;
+            text-align: center;
+            border: 2px solid #4a00e0;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            margin: 0 10px;
+        }
+        .timer-display {
+            font-size: 2rem;
+            color: #00d4ff;
+            text-align: center;
+            margin: 20px 0;
+        }
+        /* Jelly Blubber Styles */
+        .jelly-container {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 5px;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+        }
+        .jelly {
+            aspect-ratio: 1;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .jelly:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+        .jelly.selected {
+            box-shadow: 0 0 0 3px #fff, 0 0 15px #00d4ff;
+        }
+        .jelly.red { background: linear-gradient(135deg, #ff6b6b, #ee5a5a); }
+        .jelly.orange { background: linear-gradient(135deg, #ffa502, #ff7f50); }
+        .jelly.yellow { background: linear-gradient(135deg, #ffd32a, #ffcd3c); }
+        .jelly.green { background: linear-gradient(135deg, #26de81, #20bf6b); }
+        .jelly.blue { background: linear-gradient(135deg, #4bcffa, #0fbcf9); }
+        .jelly.purple { background: linear-gradient(135deg, #a55eea, #8854d0); }
+        .sampling-method-card {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 15px 0;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .results-table th, .results-table td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .results-table th {
+            background: linear-gradient(90deg, #4a00e0, #8e2de2);
+        }
+        .results-table tr:nth-child(even) {
+            background: rgba(255,255,255,0.05);
+        }
+        .stat-box {
+            background: linear-gradient(135deg, #4a00e0, #8e2de2);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 10px;
+        }
+        .stat-box .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .stat-box .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .stats-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .activity-step {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #00d4ff;
+        }
+        .activity-step h4 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+        }
+        .reflection-questions {
+            background: rgba(255, 193, 7, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #ffc107;
+            margin-top: 20px;
+        }
+        .reflection-questions h3 {
+            color: #ffc107;
+            margin-bottom: 15px;
+        }
+        .reflection-questions ol {
+            margin-left: 20px;
+        }
+        .reflection-questions li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        @media (max-width: 768px) {
+            .tabs {
+                flex-direction: column;
+            }
+            .tab-btn {
+                width: 100%;
+            }
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            .jelly-container {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Sampling & Experimental Design</h1>
+        <p>Interactive Learning Experience</p>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'overview')">📚 Overview</button>
+        <button class="tab-btn" onclick="openTab(event, 'exploration')">🔬 Sampling Exploration</button>
+        <button class="tab-btn" onclick="openTab(event, 'detective')">🔍 Design Detective</button>
+        <button class="tab-btn" onclick="openTab(event, 'termtoss')">🎯 Term Toss</button>
+        <button class="tab-btn" onclick="openTab(event, 'biasbuster')">🛡️ Bias Busters</button>
+        <button class="tab-btn" onclick="openTab(event, 'builder')">🧪 Experiment Builder</button>
+        <button class="tab-btn" onclick="openTab(event, 'sorter')">📋 Study Sorter</button>
+    </div>
+
+    <!-- Tab 1: Overview -->
+    <div id="overview" class="tab-content active">
+        <div class="card">
+            <h2>📚 Key Terms & Definitions</h2>
+            <div class="term-grid">
+                <div class="term-card">
+                    <strong>Population</strong>
+                    The entire group of individuals that we want information about.
+                </div>
+                <div class="term-card">
+                    <strong>Census</strong>
+                    A complete count of the population.
+                </div>
+                <div class="term-card">
+                    <strong>Sample</strong>
+                    A part of the population that we actually examine to gather information.
+                </div>
+                <div class="term-card">
+                    <strong>Sampling Design</strong>
+                    The method used to choose the sample from the population.
+                </div>
+                <div class="term-card">
+                    <strong>Sampling Frame</strong>
+                    A list of every individual in the population.
+                </div>
+                <div class="term-card">
+                    <strong>Bias</strong>
+                    A systematic error in measuring the estimate that favors certain outcomes.
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🎲 Types of Sampling Designs</h2>
+            <div class="term-grid">
+                <div class="term-card">
+                    <strong>Simple Random Sample (SRS)</strong>
+                    Every individual has an equal chance of being selected; every set of n individuals has an equal chance of being selected.
+                </div>
+                <div class="term-card">
+                    <strong>Stratified Random Sample</strong>
+                    Population is divided into homogeneous groups (strata), then SRS is pulled from each stratum.
+                </div>
+                <div class="term-card">
+                    <strong>Systematic Random Sample</strong>
+                    Select sample by following a systematic approach; randomly select where to begin.
+                </div>
+                <div class="term-card">
+                    <strong>Cluster Sample</strong>
+                    Based on location; randomly pick a location and sample all individuals there.
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>⚠️ Sources of Bias</h2>
+            <div class="term-grid">
+                <div class="term-card">
+                    <strong>Voluntary Response Bias</strong>
+                    People choose to respond; usually only those with strong opinions participate.
+                </div>
+                <div class="term-card">
+                    <strong>Convenience Sampling</strong>
+                    Asking people who are easy to ask; produces biased results.
+                </div>
+                <div class="term-card">
+                    <strong>Undercoverage</strong>
+                    Some groups of the population are left out of the sampling process.
+                </div>
+                <div class="term-card">
+                    <strong>Nonresponse Bias</strong>
+                    Occurs when individuals chosen for the sample can't be contacted or refuse to cooperate.
+                </div>
+                <div class="term-card">
+                    <strong>Response Bias</strong>
+                    Behavior of respondent or interviewer causes bias; wrong answers given.
+                </div>
+                <div class="term-card">
+                    <strong>Question Wording Bias</strong>
+                    Wording can influence answers; connotation of words or technical language affects responses.
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔬 Experimental Design Terms</h2>
+            <div class="term-grid">
+                <div class="term-card">
+                    <strong>Observational Study</strong>
+                    Measures characteristics without attempting to influence variables.
+                </div>
+                <div class="term-card">
+                    <strong>Cross-sectional Study</strong>
+                    Collecting data about individuals at a current point in time.
+                </div>
+                <div class="term-card">
+                    <strong>Retrospective Study</strong>
+                    Looks back to compare how frequently exposure to a risk factor is present.
+                </div>
+                <div class="term-card">
+                    <strong>Prospective Study</strong>
+                    Looks forward to see if a certain outcome will happen.
+                </div>
+                <div class="term-card">
+                    <strong>Designed Experiment</strong>
+                    Actively imposes treatment to observe the response.
+                </div>
+                <div class="term-card">
+                    <strong>Experimental Unit</strong>
+                    The single individual to which treatments are assigned.
+                </div>
+                <div class="term-card">
+                    <strong>Factor</strong>
+                    The explanatory variable in an experiment.
+                </div>
+                <div class="term-card">
+                    <strong>Level</strong>
+                    A specific value for the factor.
+                </div>
+                <div class="term-card">
+                    <strong>Response Variable</strong>
+                    What you measure in the experiment.
+                </div>
+                <div class="term-card">
+                    <strong>Treatment</strong>
+                    A specific experimental condition applied to the units.
+                </div>
+                <div class="term-card">
+                    <strong>Control Group</strong>
+                    A group used to compare the factor against; can be a placebo or current standard.
+                </div>
+                <div class="term-card">
+                    <strong>Placebo</strong>
+                    A "dummy" treatment that has no physical effect.
+                </div>
+                <div class="term-card">
+                    <strong>Blinding</strong>
+                    Method used so units do not know which treatment they are getting.
+                </div>
+                <div class="term-card">
+                    <strong>Double-Blind</strong>
+                    Neither the units nor the evaluator know which treatment a subject received.
+                </div>
+                <div class="term-card">
+                    <strong>Confounding Variable</strong>
+                    Its effect on the response cannot be separated from the effects of the explanatory variable.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 2: Sampling Exploration (NEW) -->
+    <div id="exploration" class="tab-content">
+        <!-- Part 1: Frog Tale Census Activity -->
+        <div class="card">
+            <h2>🐸 Part 1: The Frog Tale - How Good is a Census?</h2>
+            <p>In this activity, you'll experience firsthand the challenges of conducting a census. Your task is to count ALL the letters "G" or "g" in the story below. You have <strong>3 minutes</strong>!</p>
+            
+            <div class="highlight-box">
+                <p><strong>📋 Instructions:</strong> Imagine the letter "G" or "g" represents a defective product caused by a Gremlin, and you are the quality inspector. Count every single G/g in the story below.</p>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0;">
+                <button class="nav-btn" onclick="startFrogTimer()" id="start-timer-btn">▶️ Start 3-Minute Timer</button>
+                <div class="timer-display" id="frog-timer">3:00</div>
+            </div>
+
+            <div class="frog-story" id="frog-story">
+                <h3 style="text-align: center; margin-bottom: 20px; color: #ffc107;">🏰 A FAIRY TALE 🏰</h3>
+                <p>While strollin<span class="highlight-g">g</span> throu<span class="highlight-g">g</span>h a <span class="highlight-g">g</span>len, a <span class="highlight-g">g</span>iddy En<span class="highlight-g">g</span>lish <span class="highlight-g">g</span>irl tripped on a rather lar<span class="highlight-g">g</span>e, almost <span class="highlight-g">g</span>i<span class="highlight-g">g</span>antic fro<span class="highlight-g">g</span>. The <span class="highlight-g">g</span>irl sta<span class="highlight-g">gg</span>ered but re<span class="highlight-g">g</span>ained her footin<span class="highlight-g">g</span> and was about to <span class="highlight-g">g</span>o on when the fro<span class="highlight-g">g</span> be<span class="highlight-g">g</span>an to speak and <span class="highlight-g">g</span>esticulate to <span class="highlight-g">g</span>ain the <span class="highlight-g">g</span>irl's attention.</p>
+                <p>"I have not always been a fro<span class="highlight-g">g</span>," he croaked. The fro<span class="highlight-g">g</span>'s <span class="highlight-g">g</span>reen colorin<span class="highlight-g">g</span> seemed to <span class="highlight-g">g</span>low bri<span class="highlight-g">g</span>htly as he continued. "I was once a <span class="highlight-g">g</span>racious kni<span class="highlight-g">g</span>ht. A <span class="highlight-g">g</span>entleman called <span class="highlight-g">G</span>allant <span class="highlight-g">G</span>eor<span class="highlight-g">g</span>e <span class="highlight-g">G</span>renville, but was chan<span class="highlight-g">g</span>ed into this <span class="highlight-g">g</span>hastly fro<span class="highlight-g">g</span> you now see by an un<span class="highlight-g">g</span>odly, ma<span class="highlight-g">g</span>ical <span class="highlight-g">g</span>enie. The spell can only be broken if I <span class="highlight-g">g</span>ain a <span class="highlight-g">g</span>irl's <span class="highlight-g">g</span>ood <span class="highlight-g">g</span>races and spend a ni<span class="highlight-g">g</span>ht in her <span class="highlight-g">g</span>arden."</p>
+                <p>The a<span class="highlight-g">g</span>o<span class="highlight-g">g</span> <span class="highlight-g">g</span>irl was skeptical, of course. She <span class="highlight-g">g</span>azed at the fro<span class="highlight-g">g</span>'s pleadin<span class="highlight-g">g</span> eyes and soon her doubts <span class="highlight-g">g</span>ave way to her <span class="highlight-g">g</span>iddy nature. <span class="highlight-g">G</span>i<span class="highlight-g">gg</span>lin<span class="highlight-g">g</span>, she decided to <span class="highlight-g">g</span>rant the fro<span class="highlight-g">g</span>'s wish and took him home strai<span class="highlight-g">g</span>htway, puttin<span class="highlight-g">g</span> him by her <span class="highlight-g">g</span>arden <span class="highlight-g">g</span>ate.</p>
+                <p>That ni<span class="highlight-g">g</span>ht the <span class="highlight-g">g</span>irl slept <span class="highlight-g">g</span>randly and sure enou<span class="highlight-g">g</span>h, when she awoke the followin<span class="highlight-g">g</span> mornin<span class="highlight-g">g</span>, there alon<span class="highlight-g">g</span>side her <span class="highlight-g">g</span>arden <span class="highlight-g">g</span>ate was the <span class="highlight-g">g</span>racious kni<span class="highlight-g">g</span>ht, <span class="highlight-g">G</span>eor<span class="highlight-g">g</span>e <span class="highlight-g">G</span>renville.</p>
+                <p>Well, stran<span class="highlight-g">g</span>ely enou<span class="highlight-g">g</span>h, for a lon<span class="highlight-g">g</span>, lon<span class="highlight-g">g</span> time the <span class="highlight-g">g</span>irl's mother did not believe that story.</p>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0;">
+                <label style="font-size: 1.2rem;">Your G/g Count: </label>
+                <input type="number" class="count-input" id="user-g-count" placeholder="?">
+                <button class="check-btn" onclick="checkFrogCount()">Check My Count</button>
+            </div>
+
+            <div class="feedback" id="frog-feedback"></div>
+
+            <div class="reflection-questions" id="frog-reflection" style="display: none;">
+                <h3>🤔 Reflection Questions</h3>
+                <ol>
+                    <li><strong>Did your count match the actual count?</strong> Why or why not?</li>
+                    <li><strong>Should everyone in class have the same count?</strong> In theory yes, but in practice, human error makes perfect census counts difficult!</li>
+                    <li><strong>What does this tell you about a Census?</strong> Even when we try to count EVERYTHING, errors occur. Censuses are time-consuming, expensive, and still prone to mistakes.</li>
+                    <li><strong>When might sampling be better than a census?</strong> When the population is large, when counting is destructive, when time/money is limited, or when perfect accuracy isn't required.</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Part 2: Jelly Blubber Sampling Activity -->
+        <div class="card">
+            <h2>🫧 Part 2: Jelly Blubber Sampling Comparison</h2>
+            <p>Now let's explore how different sampling methods compare! Below are 100 "Jelly Blubbers" of different colors. Each jelly has a hidden "length" value. Your goal is to estimate the <strong>population mean length</strong> using different sampling methods.</p>
+
+            <div class="highlight-box">
+                <p><strong>🎯 Goal:</strong> The TRUE population mean is hidden. Use each sampling method to select 10 jellies and see which method gets closest to the true mean!</p>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-value" id="true-mean">???</div>
+                    <div class="stat-label">True Population Mean</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="selected-count">0</div>
+                    <div class="stat-label">Jellies Selected</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="sample-mean">--</div>
+                    <div class="stat-label">Sample Mean</div>
+                </div>
+            </div>
+
+            <div id="jelly-container" class="jelly-container"></div>
+
+            <!-- Sampling Method Tabs -->
+            <div class="sampling-method-card">
+                <h3>📊 Choose Your Sampling Method:</h3>
+                <div class="nav-buttons" style="margin-bottom: 20px;">
+                    <button class="nav-btn" onclick="setSamplingMethod('judgmental')" id="btn-judgmental">👁️ Judgmental</button>
+                    <button class="nav-btn" onclick="setSamplingMethod('srs')" id="btn-srs">🎲 SRS</button>
+                    <button class="nav-btn" onclick="setSamplingMethod('stratified')" id="btn-stratified">📊 Stratified</button>
+                    <button class="nav-btn" onclick="setSamplingMethod('systematic')" id="btn-systematic">📏 Systematic</button>
+                </div>
+
+                <div class="activity-step" id="method-instructions">
+                    <h4>👆 Select a sampling method above to begin!</h4>
+                    <p>Each method will guide you through selecting 10 jellies in a different way.</p>
+                </div>
+
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="check-btn" onclick="calculateSampleMean()" id="calc-mean-btn" style="display: none;">📊 Calculate Sample Mean</button>
+                    <button class="reset-btn" onclick="resetJellies()">🔄 Reset Selection</button>
+                </div>
+            </div>
+
+            <!-- Results Comparison -->
+            <div class="card" style="margin-top: 20px;">
+                <h3>📈 Results Comparison</h3>
+                <p>Record your results from each sampling method:</p>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Sampling Method</th>
+                            <th>Sample Mean</th>
+                            <th>Error from True Mean</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>👁️ Judgmental</td>
+                            <td><input type="number" id="result-judgmental" class="count-input" style="width: 80px;" placeholder="--"></td>
+                            <td id="error-judgmental">--</td>
+                        </tr>
+                        <tr>
+                            <td>🎲 Simple Random Sample</td>
+                            <td><input type="number" id="result-srs" class="count-input" style="width: 80px;" placeholder="--"></td>
+                            <td id="error-srs">--</td>
+                        </tr>
+                        <tr>
+                            <td>📊 Stratified</td>
+                            <td><input type="number" id="result-stratified" class="count-input" style="width: 80px;" placeholder="--"></td>
+                            <td id="error-stratified">--</td>
+                        </tr>
+                        <tr>
+                            <td>📏 Systematic</td>
+                            <td><input type="number" id="result-systematic" class="count-input" style="width: 80px;" placeholder="--"></td>
+                            <td id="error-systematic">--</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div style="text-align: center;">
+                    <button class="check-btn" onclick="revealTrueMean()">🎉 Reveal True Mean & Compare</button>
+                </div>
+            </div>
+
+            <div class="reflection-questions">
+                <h3>🤔 Reflection Questions for Jelly Blubbers</h3>
+                <ol>
+                    <li><strong>Which method do you think will be the most accurate?</strong> Why?</li>
+                    <li><strong>Which method do you think will be the least accurate?</strong> Why?</li>
+                    <li><strong>Which method would be easier to implement in real life?</strong></li>
+                    <li><strong>Which method would be cheaper to implement in real life?</strong></li>
+                    <li><strong>Why might judgmental sampling be problematic?</strong> (Think about bias!)</li>
+                    <li><strong>How does stratified sampling ensure representation?</strong></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Design Detective -->
+    <div id="detective" class="tab-content">
+        <div class="card">
+            <h2>🔍 Design Detective</h2>
+            <p>Identify the correct sampling method used in each scenario!</p>
+            <div class="score-display">Score: <span id="detective-score">0</span> / <span id="detective-total">6</span></div>
+            
+            <div id="detective-scenarios">
+                <div class="scenario-card" id="scenario-1">
+                    <h3>Scenario 1</h3>
+                    <p>The Educational Testing Service (ETS) needed a sample of colleges. ETS first divided all colleges into groups of similar types (small public, small private, etc.). Then they randomly selected 3 colleges from each group.</p>
+                    <div class="options">
+                        <button class="option-btn" onclick="checkDetective(1, 'srs', this)">Simple Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(1, 'stratified', this)">Stratified Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(1, 'systematic', this)">Systematic Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(1, 'cluster', this)">Cluster Sample</button>
+                    </div>
+                    <div class="feedback" id="feedback-1"></div>
+                </div>
+
+                <div class="scenario-card" id="scenario-2">
+                    <h3>Scenario 2</h3>
+                    <p>A county commissioner wants to survey people in her district to determine their opinions on a particular law. She decides to randomly select blocks in her district and then survey all who live on those blocks.</p>
+                    <div class="options">
+                        <button class="option-btn" onclick="checkDetective(2, 'srs', this)">Simple Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(2, 'stratified', this)">Stratified Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(2, 'systematic', this)">Systematic Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(2, 'cluster', this)">Cluster Sample</button>
+                    </div>
+                    <div class="feedback" id="feedback-2"></div>
+                </div>
+
+                <div class="scenario-card" id="scenario-3">
+                    <h3>Scenario 3</h3>
+                    <p>A local restaurant manager wants to survey customers about the service they receive. Each night the manager randomly chooses a number between 1 & 10. He then gives a survey to that customer, and to every 10th customer after them.</p>
+                    <div class="options">
+                        <button class="option-btn" onclick="checkDetective(3, 'srs', this)">Simple Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(3, 'stratified', this)">Stratified Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(3, 'systematic', this)">Systematic Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(3, 'cluster', this)">Cluster Sample</button>
+                    </div>
+                    <div class="feedback" id="feedback-3"></div>
+                </div>
+
+                <div class="scenario-card" id="scenario-4">
+                    <h3>Scenario 4</h3>
+                    <p>A researcher assigns each student in a school a number from 1 to 500. She then uses a random number generator to select 50 numbers, and surveys those students.</p>
+                    <div class="options">
+                        <button class="option-btn" onclick="checkDetective(4, 'srs', this)">Simple Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(4, 'stratified', this)">Stratified Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(4, 'systematic', this)">Systematic Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(4, 'cluster', this)">Cluster Sample</button>
+                    </div>
+                    <div class="feedback" id="feedback-4"></div>
+                </div>
+
+                <div class="scenario-card" id="scenario-5">
+                    <h3>Scenario 5</h3>
+                    <p>A company wants to survey its employees. They separate employees by department (Marketing, Sales, Engineering, HR), then randomly select 10 employees from each department.</p>
+                    <div class="options">
+                        <button class="option-btn" onclick="checkDetective(5, 'srs', this)">Simple Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(5, 'stratified', this)">Stratified Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(5, 'systematic', this)">Systematic Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(5, 'cluster', this)">Cluster Sample</button>
+                    </div>
+                    <div class="feedback" id="feedback-5"></div>
+                </div>
+
+                <div class="scenario-card" id="scenario-6">
+                    <h3>Scenario 6</h3>
+                    <p>A health inspector randomly selects 5 restaurants in a city and inspects every food item in those restaurants.</p>
+                    <div class="options">
+                        <button class="option-btn" onclick="checkDetective(6, 'srs', this)">Simple Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(6, 'stratified', this)">Stratified Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(6, 'systematic', this)">Systematic Random Sample</button>
+                        <button class="option-btn" onclick="checkDetective(6, 'cluster', this)">Cluster Sample</button>
+                    </div>
+                    <div class="feedback" id="feedback-6"></div>
+                </div>
+            </div>
+            <button class="reset-btn" onclick="resetDetective()">🔄 Reset Activity</button>
+        </div>
+    </div>
+
+    <!-- Tab 4: Term Toss -->
+    <div id="termtoss" class="tab-content">
+        <div class="card">
+            <h2>🎯 Term Toss - Flashcard Review</h2>
+            <p>Click the card to flip and reveal the definition. Use the arrows to navigate.</p>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="term-progress" style="width: 0%"></div>
+            </div>
+            <p style="text-align: center; margin-bottom: 20px;">Card <span id="current-card">1</span> of <span id="total-cards">15</span></p>
+
+            <div class="flashcard-container">
+                <div class="flashcard" id="flashcard" onclick="flipCard()">
+                    <div class="flashcard-front" id="card-front">
+                        <span id="term-display">Population</span>
+                    </div>
+                    <div class="flashcard-back" id="card-back">
+                        <span id="definition-display">The entire group of individuals that we want information about.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-buttons">
+                <button class="nav-btn" onclick="prevCard()">⬅️ Previous</button>
+                <button class="nav-btn" onclick="shuffleCards()">🔀 Shuffle</button>
+                <button class="nav-btn" onclick="nextCard()">Next ➡️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 5: Bias Busters -->
+    <div id="biasbuster" class="tab-content">
+        <div class="card">
+            <h2>🛡️ Bias Busters Simulation</h2>
+            <p>Identify the type of bias present in each scenario!</p>
+            <div class="score-display">Score: <span id="bias-score">0</span> / <span id="bias-total">6</span></div>
+
+            <div class="bias-scenario" id="bias-1">
+                <h3>Scenario 1: The 1936 Literary Digest Poll</h3>
+                <p>Before the presidential election of 1936 (FDR vs. Alf Landon), the magazine Literary Digest predicted Landon winning in a 3-to-2 victory based on a survey of 10 million people. George Gallup surveyed only 50,000 people and correctly predicted Roosevelt would win. The Digest's survey came from magazine subscribers, car owners, and telephone directories.</p>
+                <p><strong>What type of bias affected the Literary Digest poll?</strong></p>
+                <div class="bias-options">
+                    <button class="option-btn" onclick="checkBias(1, 'voluntary', this)">Voluntary Response</button>
+                    <button class="option-btn" onclick="checkBias(1, 'convenience', this)">Convenience Sampling</button>
+                    <button class="option-btn" onclick="checkBias(1, 'undercoverage', this)">Undercoverage</button>
+                    <button class="option-btn" onclick="checkBias(1, 'nonresponse', this)">Nonresponse</button>
+                    <button class="option-btn" onclick="checkBias(1, 'response', this)">Response Bias</button>
+                    <button class="option-btn" onclick="checkBias(1, 'wording', this)">Question Wording</button>
+                </div>
+                <div class="feedback" id="bias-feedback-1"></div>
+            </div>
+
+            <div class="bias-scenario" id="bias-2">
+                <h3>Scenario 2: American Idol Voting</h3>
+                <p>In American Idol, viewers vote for the "best" singer via an app, online, or text message. Viewers can vote up to 10 times per voting period.</p>
+                <p><strong>What type of bias is present?</strong></p>
+                <div class="bias-options">
+                    <button class="option-btn" onclick="checkBias(2, 'voluntary', this)">Voluntary Response</button>
+                    <button class="option-btn" onclick="checkBias(2, 'convenience', this)">Convenience Sampling</button>
+                    <button class="option-btn" onclick="checkBias(2, 'undercoverage', this)">Undercoverage</button>
+                    <button class="option-btn" onclick="checkBias(2, 'nonresponse', this)">Nonresponse</button>
+                    <button class="option-btn" onclick="checkBias(2, 'response', this)">Response Bias</button>
+                    <button class="option-btn" onclick="checkBias(2, 'wording', this)">Question Wording</button>
+                </div>
+                <div class="feedback" id="bias-feedback-2"></div>
+            </div>
+
+            <div class="bias-scenario" id="bias-3">
+                <h3>Scenario 3: Job Application</h3>
+                <p>A job applicant is asked to take a personality test during the recruitment process. One question asks "Do you like meeting new people?" The applicant thinks that, since this is a customer service job, the company wants someone who enjoys meeting people. Despite being an introvert, the applicant answers "yes" to increase their chances of being hired.</p>
+                <p><strong>What type of bias is present?</strong></p>
+                <div class="bias-options">
+                    <button class="option-btn" onclick="checkBias(3, 'voluntary', this)">Voluntary Response</button>
+                    <button class="option-btn" onclick="checkBias(3, 'convenience', this)">Convenience Sampling</button>
+                    <button class="option-btn" onclick="checkBias(3, 'undercoverage', this)">Undercoverage</button>
+                    <button class="option-btn" onclick="checkBias(3, 'nonresponse', this)">Nonresponse</button>
+                    <button class="option-btn" onclick="checkBias(3, 'response', this)">Response Bias</button>
+                    <button class="option-btn" onclick="checkBias(3, 'wording', this)">Question Wording</button>
+                </div>
+                <div class="feedback" id="bias-feedback-3"></div>
+            </div>
+
+            <div class="bias-scenario" id="bias-4">
+                <h3>Scenario 4: Phone Survey</h3>
+                <p>A research company conducts a telephone survey about political opinions. They call 1,000 randomly selected phone numbers, but only 300 people answer and agree to participate.</p>
+                <p><strong>What type of bias is most likely present?</strong></p>
+                <div class="bias-options">
+                    <button class="option-btn" onclick="checkBias(4, 'voluntary', this)">Voluntary Response</button>
+                    <button class="option-btn" onclick="checkBias(4, 'convenience', this)">Convenience Sampling</button>
+                    <button class="option-btn" onclick="checkBias(4, 'undercoverage', this)">Undercoverage</button>
+                    <button class="option-btn" onclick="checkBias(4, 'nonresponse', this)">Nonresponse</button>
+                    <button class="option-btn" onclick="checkBias(4, 'response', this)">Response Bias</button>
+                    <button class="option-btn" onclick="checkBias(4, 'wording', this)">Question Wording</button>
+                </div>
+                <div class="feedback" id="bias-feedback-4"></div>
+            </div>
+
+            <div class="bias-scenario" id="bias-5">
+                <h3>Scenario 5: Mall Survey</h3>
+                <p>A researcher wants to study shopping habits of Americans. She stands outside a luxury mall on a Tuesday afternoon and surveys people as they exit.</p>
+                <p><strong>What type of bias is present?</strong></p>
+                <div class="bias-options">
+                    <button class="option-btn" onclick="checkBias(5, 'voluntary', this)">Voluntary Response</button>
+                    <button class="option-btn" onclick="checkBias(5, 'convenience', this)">Convenience Sampling</button>
+                    <button class="option-btn" onclick="checkBias(5, 'undercoverage', this)">Undercoverage</button>
+                    <button class="option-btn" onclick="checkBias(5, 'nonresponse', this)">Nonresponse</button>
+                    <button class="option-btn" onclick="checkBias(5, 'response', this)">Response Bias</button>
+                    <button class="option-btn" onclick="checkBias(5, 'wording', this)">Question Wording</button>
+                </div>
+                <div class="feedback" id="bias-feedback-5"></div>
+            </div>
+
+            <div class="bias-scenario" id="bias-6">
+                <h3>Scenario 6: Leading Question</h3>
+                <p>A survey asks: "Do you agree that the irresponsible government should stop wasting taxpayer money on unnecessary programs?"</p>
+                <p><strong>What type of bias is present?</strong></p>
+                <div class="bias-options">
+                    <button class="option-btn" onclick="checkBias(6, 'voluntary', this)">Voluntary Response</button>
+                    <button class="option-btn" onclick="checkBias(6, 'convenience', this)">Convenience Sampling</button>
+                    <button class="option-btn" onclick="checkBias(6, 'undercoverage', this)">Undercoverage</button>
+                    <button class="option-btn" onclick="checkBias(6, 'nonresponse', this)">Nonresponse</button>
+                    <button class="option-btn" onclick="checkBias(6, 'response', this)">Response Bias</button>
+                    <button class="option-btn" onclick="checkBias(6, 'wording', this)">Question Wording</button>
+                </div>
+                <div class="feedback" id="bias-feedback-6"></div>
+            </div>
+
+            <button class="reset-btn" onclick="resetBias()">🔄 Reset Activity</button>
+        </div>
+    </div>
+
+    <!-- Tab 6: Experiment Builder -->
+    <div id="builder" class="tab-content">
+        <div class="card">
+            <h2>🔬 Design the Experiment Builder</h2>
+            <p>Practice identifying the components of experimental design!</p>
+
+            <div class="highlight-box">
+                <h3>📋 Scenario: Fertilizer Study</h3>
+                <p>A farm-product manufacturer wants to determine if the yield of a crop is different when the soil is treated with three different types of fertilizers. Fifteen similar plots of land are planted with the same type of seed but are fertilized differently. At the end of the growing season, the mean yield from the sample plots is compared.</p>
+            </div>
+
+            <div class="experiment-builder">
+                <div class="input-group">
+                    <label>🧪 Experimental Units (What/who receives the treatment?)</label>
+                    <input type="text" id="exp1-units" placeholder="Enter your answer...">
+                </div>
+                <div class="input-group">
+                    <label>📊 Factor (What is the explanatory variable?)</label>
+                    <input type="text" id="exp1-factor" placeholder="Enter your answer...">
+                </div>
+                <div class="input-group">
+                    <label>📈 Levels (What are the specific values of the factor?)</label>
+                    <input type="text" id="exp1-levels" placeholder="Enter your answer...">
+                </div>
+                <div class="input-group">
+                    <label>📉 Response Variable (What is being measured?)</label>
+                    <input type="text" id="exp1-response" placeholder="Enter your answer...">
+                </div>
+                <div class="input-group">
+                    <label>💊 Treatments (What conditions are applied?)</label>
+                    <input type="text" id="exp1-treatment" placeholder="Enter your answer...">
+                </div>
+                <button class="check-btn" onclick="checkExperiment1()">Check Answers</button>
+                <div class="feedback" id="exp1-feedback" style="margin-top: 20px;"></div>
+            </div>
+
+            <div class="highlight-box" style="margin-top: 30px;">
+                <h3>📋 Scenario: Cake Pan Study</h3>
+                <p>A consumer group wants to test cake pans to see which works the best (bakes evenly). It will test aluminum, glass, and plastic pans in both gas and electric ovens.</p>
+            </div>
+
+            <div class="experiment-builder">
+                <div class="input-group">
+                    <label>🧪 Experimental Units</label>
+                    <input type="text" id="exp2-units" placeholder="Enter your answer...">
+                </div>
+                <div class="input-group">
+                    <label>📊 Factors (There are TWO factors here!)</label>
+                    <input type="text" id="exp2-factor" placeholder="Enter your answer...">
+                </div>
+                <div class="input-group">
+                    <label>📈 Levels (List levels for each factor)</label>
+                    <input type="text" id="exp2-levels" placeholder="Enter your answer...">
+                </div>
+                <div class="input-group">
+                    <label>📉 Response Variable</label>
+                    <input type="text" id="exp2-response" placeholder="Enter your answer...">
+                </div>
+                <div class="input-group">
+                    <label>💊 Treatments (How many total combinations?)</label>
+                    <input type="text" id="exp2-treatment" placeholder="Enter your answer...">
+                </div>
+                <button class="check-btn" onclick="checkExperiment2()">Check Answers</button>
+                <div class="feedback" id="exp2-feedback" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 7: Study Sorter -->
+    <div id="sorter" class="tab-content">
+        <div class="card">
+            <h2>📋 Observational vs. Experimental Sorter</h2>
+            <p>Classify each study as the correct type. Click a study, then click the category to place it.</p>
+            <div class="score-display">Sorted: <span id="sorter-score">0</span> / <span id="sorter-total">8</span></div>
+
+            <div id="studies-container">
+                <div class="sorter-item" data-type="cross-sectional" onclick="selectStudy(this)">
+                    A researcher surveys 500 adults today about their current exercise habits and stress levels.
+                </div>
+                <div class="sorter-item" data-type="retrospective" onclick="selectStudy(this)">
+                    Scientists compare the childhood diets of adults who developed heart disease with those who didn't.
+                </div>
+                <div class="sorter-item" data-type="prospective" onclick="selectStudy(this)">
+                    Researchers follow 1,000 smokers and 1,000 non-smokers for 20 years to see who develops lung cancer.
+                </div>
+                <div class="sorter-item" data-type="experimental" onclick="selectStudy(this)">
+                    Patients are randomly assigned to receive either a new drug or a placebo, then their symptoms are measured.
+                </div>
+                <div class="sorter-item" data-type="cross-sectional" onclick="selectStudy(this)">
+                    A poll asks registered voters who they plan to vote for in the upcoming election.
+                </div>
+                <div class="sorter-item" data-type="retrospective" onclick="selectStudy(this)">
+                    Medical records are examined to see if patients who had strokes were more likely to have had high blood pressure.
+                </div>
+                <div class="sorter-item" data-type="prospective" onclick="selectStudy(this)">
+                    A cohort of newborns is tracked for 18 years to study factors affecting academic achievement.
+                </div>
+                <div class="sorter-item" data-type="experimental" onclick="selectStudy(this)">
+                    Plots of land are randomly assigned different fertilizers to compare crop yields.
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 30px;">
+                <div class="drop-zone" id="cross-sectional-zone" onclick="dropStudy('cross-sectional')">
+                    <h3>📸 Cross-Sectional</h3>
+                    <p style="font-size: 0.9rem; opacity: 0.8;">Data collected at one point in time</p>
+                    <div class="dropped-items"></div>
+                </div>
+                <div class="drop-zone" id="retrospective-zone" onclick="dropStudy('retrospective')">
+                    <h3>⏪ Retrospective</h3>
+                    <p style="font-size: 0.9rem; opacity: 0.8;">Looks back at past data</p>
+                    <div class="dropped-items"></div>
+                </div>
+                <div class="drop-zone" id="prospective-zone" onclick="dropStudy('prospective')">
+                    <h3>⏩ Prospective</h3>
+                    <p style="font-size: 0.9rem; opacity: 0.8;">Follows subjects into the future</p>
+                    <div class="dropped-items"></div>
+                </div>
+                <div class="drop-zone" id="experimental-zone" onclick="dropStudy('experimental')">
+                    <h3>🧪 Experimental</h3>
+                    <p style="font-size: 0.9rem; opacity: 0.8;">Treatments are imposed</p>
+                    <div class="dropped-items"></div>
+                </div>
+            </div>
+
+            <button class="reset-btn" onclick="resetSorter()">🔄 Reset Activity</button>
+        </div>
+    </div>
+
+    <script>
+        // Tab functionality
+        function openTab(evt, tabName) {
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+
+        // ==================== FROG TALE ACTIVITY ====================
+        let frogTimerInterval;
+        let frogTimeLeft = 180; // 3 minutes in seconds
+        const actualGCount = 83; // The actual count of G/g in the story
+
+        function startFrogTimer() {
+            const btn = document.getElementById('start-timer-btn');
+            btn.disabled = true;
+            btn.textContent = '⏱️ Timer Running...';
+            
+            frogTimerInterval = setInterval(() => {
+                frogTimeLeft--;
+                const minutes = Math.floor(frogTimeLeft / 60);
+                const seconds = frogTimeLeft % 60;
+                document.getElementById('frog-timer').textContent = 
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (frogTimeLeft <= 0) {
+                    clearInterval(frogTimerInterval);
+                    document.getElementById('frog-timer').textContent = "⏰ Time's Up!";
+                    btn.textContent = '✅ Timer Complete';
+                }
+            }, 1000);
+        }
+
+        function checkFrogCount() {
+            const userCount = parseInt(document.getElementById('user-g-count').value);
+            const feedback = document.getElementById('frog-feedback');
+            const reflection = document.getElementById('frog-reflection');
+            
+            if (isNaN(userCount)) {
+                feedback.className = 'feedback show incorrect';
+                feedback.innerHTML = '⚠️ Please enter a number!';
+                return;
+            }
+            
+            const difference = Math.abs(userCount - actualGCount);
+            let message = '';
+            
+            if (difference === 0) {
+                message = `🎉 <strong>Perfect!</strong> You counted exactly ${actualGCount} G/g's! That's incredibly rare - most people miss some!`;
+                feedback.className = 'feedback show correct';
+            } else if (difference <= 5) {
+                message = `👏 <strong>Very close!</strong> You counted ${userCount}, the actual count is <strong>${actualGCount}</strong>. You were only off by ${difference}!`;
+                feedback.className = 'feedback show correct';
+            } else if (difference <= 15) {
+                message = `📊 <strong>Good effort!</strong> You counted ${userCount}, the actual count is <strong>${actualGCount}</strong>. You were off by ${difference}. This is very common!`;
+                feedback.className = 'feedback show incorrect';
+            } else {
+                message = `📉 You counted ${userCount}, the actual count is <strong>${actualGCount}</strong>. You were off by ${difference}. Don't worry - this demonstrates exactly why censuses are difficult!`;
+                feedback.className = 'feedback show incorrect';
+            }
+            
+            message += `<br><br><strong>Key Insight:</strong> Even with careful counting, human error makes perfect census counts nearly impossible. This is why sampling methods are so valuable!`;
+            
+            feedback.innerHTML = message;
+            reflection.style.display = 'block';
+            
+            // Highlight all G's in the story
+            document.querySelectorAll('.highlight-g').forEach(el => {
+                el.style.background = '#ff1744';
+                el.style.padding = '2px';
+                el.style.borderRadius = '3px';
+            });
+        }
+
+        // ==================== JELLY BLUBBER ACTIVITY ====================
+        const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple'];
+        let jellies = [];
+        let selectedJellies = [];
+        let currentMethod = null;
+        let trueMean = 0;
+        let systematicStart = 0;
+
+        // Generate 100 jellies with random lengths
+        function generateJellies() {
+            jellies = [];
+            const container = document.getElementById('jelly-container');
+            container.innerHTML = '';
+            
+            // Generate lengths with some variation by color (to make stratified sampling meaningful)
+            const colorMeans = {
+                red: 15, orange: 20, yellow: 25, 
+                green: 30, blue: 35, purple: 40
+            };
+            
+            for (let i = 0; i < 100; i++) {
+                const color = colors[Math.floor(i / 16.67) % 6]; // Roughly equal distribution
+                const baseMean = colorMeans[color];
+                const length = Math.round(baseMean + (Math.random() - 0.5) * 20); // Add randomness
+                
+                jellies.push({
+                    id: i + 1,
+                    color: color,
+                    length: Math.max(5, Math.min(50, length)) // Keep between 5-50
+                });
+            }
+            
+            // Shuffle jellies
+            jellies.sort(() => Math.random() - 0.5);
+            
+            // Calculate true mean
+            trueMean = jellies.reduce((sum, j) => sum + j.length, 0) / jellies.length;
+            
+            // Render jellies
+            jellies.forEach((jelly, index) => {
+                const div = document.createElement('div');
+                div.className = `jelly ${jelly.color}`;
+                div.id = `jelly-${jelly.id}`;
+                div.textContent = jelly.id;
+                div.onclick = () => toggleJelly(jelly.id);
+                container.appendChild(div);
+            });
+        }
+
+        function toggleJelly(id) {
+            if (currentMethod === 'srs' || currentMethod === 'stratified' || currentMethod === 'systematic') {
+                return; // These methods auto-select
+            }
+            
+            const jelly = jellies.find(j => j.id === id);
+            const element = document.getElementById(`jelly-${id}`);
+            
+            if (selectedJellies.includes(id)) {
+                selectedJellies = selectedJellies.filter(j => j !== id);
+                element.classList.remove('selected');
+            } else if (selectedJellies.length < 10) {
+                selectedJellies.push(id);
+                element.classList.add('selected');
+            }
+            
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            document.getElementById('selected-count').textContent = selectedJellies.length;
+            document.getElementById('calc-mean-btn').style.display = 
+                selectedJellies.length === 10 ? 'inline-block' : 'none';
+        }
+
+        function setSamplingMethod(method) {
+            currentMethod = method;
+            resetJellies();
+            
+            // Update button styles
+            document.querySelectorAll('.nav-buttons .nav-btn').forEach(btn => {
+                btn.style.background = '#4a00e0';
+            });
+            document.getElementById(`btn-${method}`).style.background = '#00c853';
+            
+            const instructions = document.getElementById('method-instructions');
+            
+            switch(method) {
+                case 'judgmental':
+                    instructions.innerHTML = `
+                        <h4>👁️ Judgmental Sampling</h4>
+                        <p>Click on 10 jellies that YOU think will give a good average length. Use your judgment to pick jellies that seem "typical" or "average."</p>
+                        <p><em>Think: What biases might affect your choices?</em></p>
+                    `;
+                    break;
+                    
+                case 'srs':
+                    instructions.innerHTML = `
+                        <h4>🎲 Simple Random Sample (SRS)</h4>
+                        <p>Click the button below to randomly select 10 jellies. Every jelly has an equal chance of being selected!</p>
+                        <button class="nav-btn" onclick="performSRS()">🎲 Generate Random Sample</button>
+                    `;
+                    break;
+                    
+                case 'stratified':
+                    instructions.innerHTML = `
+                        <h4>📊 Stratified Random Sample</h4>
+                        <p>The jellies are divided into 6 color groups (strata). Click below to randomly select jellies from each color group proportionally.</p>
+                        <button class="nav-btn" onclick="performStratified()">📊 Generate Stratified Sample</button>
+                    `;
+                    break;
+                    
+                case 'systematic':
+                    systematicStart = Math.floor(Math.random() * 10) + 1;
+                    instructions.innerHTML = `
+                        <h4>📏 Systematic Random Sample</h4>
+                        <p>Random starting point: <strong>${systematicStart}</strong></p>
+                        <p>Click below to select every 10th jelly starting from jelly #${systematicStart}.</p>
+                        <button class="nav-btn" onclick="performSystematic()">📏 Generate Systematic Sample</button>
+                    `;
+                    break;
+            }
+        }
+
+        function performSRS() {
+            resetJellies();
+            const indices = [];
+            while (indices.length < 10) {
+                const rand = Math.floor(Math.random() * 100);
+                if (!indices.includes(rand)) {
+                    indices.push(rand);
+                }
+            }
+            indices.forEach(i => {
+                selectedJellies.push(jellies[i].id);
+                document.getElementById(`jelly-${jellies[i].id}`).classList.add('selected');
+            });
+            updateSelectedCount();
+        }
+
+        function performStratified() {
+            resetJellies();
+            // Select ~2 from each color (total 12, but we'll take 10)
+            const byColor = {};
+            colors.forEach(c => byColor[c] = []);
+            jellies.forEach(j => byColor[j.color].push(j));
+            
+            // Take 1-2 from each color to get 10 total
+            const perColor = [2, 2, 2, 2, 1, 1]; // 10 total
+            let colorIndex = 0;
+            colors.forEach(color => {
+                const colorJellies = byColor[color];
+                const shuffled = colorJellies.sort(() => Math.random() - 0.5);
+                for (let i = 0; i < perColor[colorIndex] && i < shuffled.length; i++) {
+                    selectedJellies.push(shuffled[i].id);
+                    document.getElementById(`jelly-${shuffled[i].id}`).classList.add('selected');
+                }
+                colorIndex++;
+            });
+            updateSelectedCount();
+        }
+
+        function performSystematic() {
+            resetJellies();
+            for (let i = systematicStart - 1; i < 100 && selectedJellies.length < 10; i += 10) {
+                selectedJellies.push(jellies[i].id);
+                document.getElementById(`jelly-${jellies[i].id}`).classList.add('selected');
+            }
+            updateSelectedCount();
+        }
+
+        function calculateSampleMean() {
+            const selectedLengths = selectedJellies.map(id => 
+                jellies.find(j => j.id === id).length
+            );
+            const mean = selectedLengths.reduce((a, b) => a + b, 0) / selectedLengths.length;
+            document.getElementById('sample-mean').textContent = mean.toFixed(2);
+            
+            // Auto-fill the results table
+            if (currentMethod) {
+                document.getElementById(`result-${currentMethod}`).value = mean.toFixed(2);
+            }
+        }
+
+        function resetJellies() {
+            selectedJellies = [];
+            document.querySelectorAll('.jelly').forEach(j => j.classList.remove('selected'));
+            document.getElementById('selected-count').textContent = '0';
+            document.getElementById('sample-mean').textContent = '--';
+            document.getElementById('calc-mean-btn').style.display = 'none';
+        }
+
+        function revealTrueMean() {
+            document.getElementById('true-mean').textContent = trueMean.toFixed(2);
+            
+            // Calculate errors
+            ['judgmental', 'srs', 'stratified', 'systematic'].forEach(method => {
+                const input = document.getElementById(`result-${method}`);
+                const errorCell = document.getElementById(`error-${method}`);
+                if (input.value) {
+                    const error = Math.abs(parseFloat(input.value) - trueMean).toFixed(2);
+                    errorCell.textContent = error;
+                    errorCell.style.color = error < 3 ? '#00c853' : error < 6 ? '#ffc107' : '#ff1744';
+                }
+            });
+        }
+
+        // Initialize jellies on page load
+        generateJellies();
+
+        // ==================== DESIGN DETECTIVE ====================
+        let detectiveScore = 0;
+        const detectiveAnswers = {
+            1: 'stratified',
+            2: 'cluster',
+            3: 'systematic',
+            4: 'srs',
+            5: 'stratified',
+            6: 'cluster'
+        };
+        const detectiveExplanations = {
+            1: 'Correct! This is STRATIFIED sampling because they divided colleges into homogeneous groups (strata) and then randomly selected from each group.',
+            2: 'Correct! This is CLUSTER sampling because she randomly selected locations (blocks) and surveyed everyone in those locations.',
+            3: 'Correct! This is SYSTEMATIC sampling because he uses a fixed interval (every 10th customer) with a random starting point.',
+            4: 'Correct! This is a SIMPLE RANDOM SAMPLE because every student has an equal chance of being selected using random numbers.',
+            5: 'Correct! This is STRATIFIED sampling because they divided employees into groups (departments) and randomly selected from each.',
+            6: 'Correct! This is CLUSTER sampling because they randomly selected locations (restaurants) and inspected everything at those locations.'
+        };
+
+        function checkDetective(num, answer, btn) {
+            const feedback = document.getElementById(`feedback-${num}`);
+            const buttons = btn.parentElement.querySelectorAll('.option-btn');
+            
+            if (btn.classList.contains('correct') || btn.classList.contains('incorrect')) return;
+            
+            buttons.forEach(b => b.disabled = true);
+            
+            if (answer === detectiveAnswers[num]) {
+                btn.classList.add('correct');
+                feedback.className = 'feedback show correct';
+                feedback.innerHTML = '✅ ' + detectiveExplanations[num];
+                detectiveScore++;
+            } else {
+                btn.classList.add('incorrect');
+                feedback.className = 'feedback show incorrect';
+                feedback.innerHTML = `❌ Not quite. The correct answer is ${detectiveAnswers[num].toUpperCase()}. ${detectiveExplanations[num].replace('Correct! ', '')}`;
+            }
+            document.getElementById('detective-score').textContent = detectiveScore;
+        }
+
+        function resetDetective() {
+            detectiveScore = 0;
+            document.getElementById('detective-score').textContent = '0';
+            document.querySelectorAll('#detective-scenarios .option-btn').forEach(btn => {
+                btn.classList.remove('correct', 'incorrect');
+                btn.disabled = false;
+            });
+            document.querySelectorAll('#detective-scenarios .feedback').forEach(fb => {
+                fb.className = 'feedback';
+                fb.innerHTML = '';
+            });
+        }
+
+        // ==================== TERM TOSS FLASHCARDS ====================
+        const terms = [
+            { term: 'Population', definition: 'The entire group of individuals that we want information about.' },
+            { term: 'Sample', definition: 'A part of the population that we actually examine to gather information.' },
+            { term: 'Sampling Frame', definition: 'A list of every individual in the population.' },
+            { term: 'Bias', definition: 'A systematic error in measuring the estimate that favors certain outcomes.' },
+            { term: 'Simple Random Sample', definition: 'Every individual has an equal chance of being selected; every set of n individuals has an equal chance.' },
+            { term: 'Stratified Random Sample', definition: 'Population divided into homogeneous groups (strata), then SRS pulled from each stratum.' },
+            { term: 'Systematic Random Sample', definition: 'Select sample by following a systematic approach with a random starting point.' },
+            { term: 'Cluster Sample', definition: 'Based on location; randomly pick a location and sample all individuals there.' },
+            { term: 'Experimental Unit', definition: 'The single individual (person, animal, plant, etc.) to which treatments are assigned.' },
+            { term: 'Factor', definition: 'The explanatory variable in an experiment.' },
+            { term: 'Level', definition: 'A specific value for the factor.' },
+            { term: 'Response Variable', definition: 'What you measure in the experiment.' },
+            { term: 'Treatment', definition: 'A specific experimental condition applied to the units.' },
+            { term: 'Placebo', definition: 'A "dummy" treatment that has no physical effect.' },
+            { term: 'Confounding Variable', definition: 'Its effect on the response cannot be separated from the effects of the explanatory variable.' }
+        ];
+
+        let currentCardIndex = 0;
+        let shuffledTerms = [...terms];
+
+        function updateCard() {
+            const card = document.getElementById('flashcard');
+            card.classList.remove('flipped');
+            document.getElementById('term-display').textContent = shuffledTerms[currentCardIndex].term;
+            document.getElementById('definition-display').textContent = shuffledTerms[currentCardIndex].definition;
+            document.getElementById('current-card').textContent = currentCardIndex + 1;
+            document.getElementById('total-cards').textContent = shuffledTerms.length;
+            document.getElementById('term-progress').style.width = ((currentCardIndex + 1) / shuffledTerms.length * 100) + '%';
+        }
+
+        function flipCard() {
+            document.getElementById('flashcard').classList.toggle('flipped');
+        }
+
+        function nextCard() {
+            currentCardIndex = (currentCardIndex + 1) % shuffledTerms.length;
+            updateCard();
+        }
+
+        function prevCard() {
+            currentCardIndex = (currentCardIndex - 1 + shuffledTerms.length) % shuffledTerms.length;
+            updateCard();
+        }
+
+        function shuffleCards() {
+            shuffledTerms = [...terms].sort(() => Math.random() - 0.5);
+            currentCardIndex = 0;
+            updateCard();
+        }
+
+        // ==================== BIAS BUSTERS ====================
+        let biasScore = 0;
+        const biasAnswers = {
+            1: 'undercoverage',
+            2: 'voluntary',
+            3: 'response',
+            4: 'nonresponse',
+            5: 'convenience',
+            6: 'wording'
+        };
+        const biasExplanations = {
+            1: 'The Literary Digest poll suffered from UNDERCOVERAGE - during the Great Depression, their sampling frame (magazine subscribers, car owners, phone users) excluded poorer Americans who couldn\'t afford these luxuries and who overwhelmingly supported FDR.',
+            2: 'American Idol voting is VOLUNTARY RESPONSE bias - only viewers who feel strongly enough choose to vote, and allowing multiple votes amplifies passionate fans\' influence.',
+            3: 'This is RESPONSE BIAS - the applicant gave an inaccurate answer because they wanted to appear favorable, not because of how the question was worded.',
+            4: 'This is NONRESPONSE bias - 70% of selected participants couldn\'t be reached or refused to participate, and those who don\'t respond may differ systematically from those who do.',
+            5: 'This is CONVENIENCE SAMPLING - the researcher surveyed whoever was easy to access, but luxury mall shoppers on a Tuesday afternoon aren\'t representative of all Americans.',
+            6: 'This is QUESTION WORDING bias - loaded words like "irresponsible," "wasting," and "unnecessary" push respondents toward a particular answer.'
+        };
+
+        function checkBias(num, answer, btn) {
+            const feedback = document.getElementById(`bias-feedback-${num}`);
+            const buttons = btn.parentElement.querySelectorAll('.option-btn');
+            
+            if (btn.classList.contains('correct') || btn.classList.contains('incorrect')) return;
+            
+            buttons.forEach(b => b.disabled = true);
+            
+            if (answer === biasAnswers[num]) {
+                btn.classList.add('correct');
+                feedback.className = 'feedback show correct';
+                feedback.innerHTML = '✅ Correct! ' + biasExplanations[num];
+                biasScore++;
+            } else {
+                btn.classList.add('incorrect');
+                feedback.className = 'feedback show incorrect';
+                feedback.innerHTML = '❌ ' + biasExplanations[num];
+            }
+            document.getElementById('bias-score').textContent = biasScore;
+        }
+
+        function resetBias() {
+            biasScore = 0;
+            document.getElementById('bias-score').textContent = '0';
+            document.querySelectorAll('#biasbuster .option-btn').forEach(btn => {
+                btn.classList.remove('correct', 'incorrect');
+                btn.disabled = false;
+            });
+            document.querySelectorAll('#biasbuster .feedback').forEach(fb => {
+                fb.className = 'feedback';
+                fb.innerHTML = '';
+            });
+        }
+
+        // ==================== EXPERIMENT BUILDER ====================
+        function checkExperiment1() {
+            const feedback = document.getElementById('exp1-feedback');
+            const answers = `
+                <h3>✅ Model Answers:</h3>
+                <ul>
+                    <li><strong>Experimental Units:</strong> The 15 plots of land</li>
+                    <li><strong>Factor:</strong> Type of fertilizer</li>
+                    <li><strong>Levels:</strong> 3 levels (the three different types of fertilizers)</li>
+                    <li><strong>Response Variable:</strong> Crop yield</li>
+                    <li><strong>Treatments:</strong> The 3 different fertilizers applied to the plots</li>
+                </ul>
+            `;
+            feedback.className = 'feedback show correct';
+            feedback.innerHTML = answers;
+        }
+
+        function checkExperiment2() {
+            const feedback = document.getElementById('exp2-feedback');
+            const answers = `
+                <h3>✅ Model Answers:</h3>
+                <ul>
+                    <li><strong>Experimental Units:</strong> The cakes (or cake pans with cakes)</li>
+                    <li><strong>Factors:</strong> TWO factors - (1) Pan material and (2) Oven type</li>
+                    <li><strong>Levels:</strong> Pan material: 3 levels (aluminum, glass, plastic); Oven type: 2 levels (gas, electric)</li>
+                    <li><strong>Response Variable:</strong> How evenly the cake bakes</li>
+                    <li><strong>Treatments:</strong> 6 total treatments (3 pan types × 2 oven types = 6 combinations)</li>
+                </ul>
+            `;
+            feedback.className = 'feedback show correct';
+            feedback.innerHTML = answers;
+        }
+
+        // ==================== STUDY SORTER ====================
+        let selectedStudy = null;
+        let sorterScore = 0;
+
+        function selectStudy(element) {
+            if (selectedStudy) {
+                selectedStudy.style.border = 'none';
+            }
+            selectedStudy = element;
+            element.style.border = '3px solid #00d4ff';
+        }
+
+        function dropStudy(zone) {
+            if (!selectedStudy) return;
+            
+            const correctZone = selectedStudy.dataset.type;
+            const dropZone = document.getElementById(`${zone}-zone`).querySelector('.dropped-items');
+            
+            if (zone === correctZone) {
+                selectedStudy.style.background = 'rgba(0, 200, 83, 0.3)';
+                selectedStudy.style.border = '2px solid #00c853';
+                dropZone.appendChild(selectedStudy);
+                sorterScore++;
+                document.getElementById('sorter-score').textContent = sorterScore;
+            } else {
+                selectedStudy.style.background = 'rgba(255, 23, 68, 0.3)';
+                selectedStudy.style.border = '2px solid #ff1744';
+                setTimeout(() => {
+                    selectedStudy.style.background = 'rgba(255,255,255,0.1)';
+                    selectedStudy.style.border = 'none';
+                }, 1000);
+            }
+            selectedStudy = null;
+        }
+
+        function resetSorter() {
+            sorterScore = 0;
+            document.getElementById('sorter-score').textContent = '0';
+            const container = document.getElementById('studies-container');
+            document.querySelectorAll('.sorter-item').forEach(item => {
+                item.style.background = 'rgba(255,255,255,0.1)';
+                item.style.border = 'none';
+                container.appendChild(item);
+            });
+            selectedStudy = null;
+        }
+
+        // Initialize
+        updateCard();
+    </script>
+</body>
+</html>
