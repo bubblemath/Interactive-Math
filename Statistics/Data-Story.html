@@ -1,0 +1,838 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Can Data Tell a Story? - Google Trends Exploration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #4285f4, #34a853, #fbbc05, #ea4335);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 3px solid #e9ecef;
+            flex-wrap: wrap;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 18px 15px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -3px;
+        }
+        
+        .tab-btn:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .tab-btn.active {
+            background: white;
+            color: #4285f4;
+            border-bottom-color: #4285f4;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 40px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #4285f4;
+            display: inline-block;
+        }
+        
+        h3 {
+            color: #495057;
+            margin: 25px 0 15px 0;
+        }
+        
+        p {
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+        
+        .instruction-box {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-left: 5px solid #2196f3;
+            padding: 20px;
+            border-radius: 0 10px 10px 0;
+            margin: 20px 0;
+        }
+        
+        .instruction-box h4 {
+            color: #1565c0;
+            margin-bottom: 10px;
+        }
+        
+        .trends-embed {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .trends-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #4285f4, #1a73e8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin: 10px;
+        }
+        
+        .trends-link:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(66, 133, 244, 0.4);
+        }
+        
+        .question-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        
+        .question-card label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+        
+        .question-card textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+        
+        .question-card textarea:focus {
+            outline: none;
+            border-color: #4285f4;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .step {
+            display: flex;
+            align-items: center;
+            margin: 10px;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #4285f4, #1a73e8);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .step-text {
+            color: #495057;
+            font-weight: 500;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .comparison-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .comparison-card h4 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .comparison-card .emoji {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-left: 5px solid #ff9800;
+            padding: 20px;
+            border-radius: 0 10px 10px 0;
+            margin: 20px 0;
+        }
+        
+        .highlight-box.green {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border-left-color: #4caf50;
+        }
+        
+        .highlight-box.purple {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            border-left-color: #9c27b0;
+        }
+        
+        .artist-input-section {
+            background: linear-gradient(135deg, #fce4ec, #f8bbd9);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .artist-input-section input {
+            padding: 15px 25px;
+            font-size: 1.1em;
+            border: 2px solid #ec407a;
+            border-radius: 30px;
+            width: 300px;
+            max-width: 100%;
+            text-align: center;
+        }
+        
+        .artist-input-section input:focus {
+            outline: none;
+            border-color: #ad1457;
+        }
+        
+        .artist-input-section button {
+            background: linear-gradient(135deg, #ec407a, #ad1457);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: transform 0.3s ease;
+        }
+        
+        .artist-input-section button:hover {
+            transform: scale(1.05);
+        }
+        
+        #artist-comparison-result {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .free-explore-ideas {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .idea-chip {
+            background: linear-gradient(135deg, #e8eaf6, #c5cae9);
+            padding: 15px 20px;
+            border-radius: 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #3f51b5;
+        }
+        
+        .idea-chip:hover {
+            background: linear-gradient(135deg, #3f51b5, #1a237e);
+            color: white;
+            transform: translateY(-3px);
+        }
+        
+        .reflection-section {
+            background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+        }
+        
+        .save-btn {
+            background: linear-gradient(135deg, #34a853, #1e8e3e);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .save-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(52, 168, 83, 0.4);
+        }
+        
+        .key-concept {
+            background: #fff;
+            border: 2px solid #4285f4;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin: 15px 0;
+            display: inline-block;
+        }
+        
+        .key-concept strong {
+            color: #4285f4;
+        }
+        
+        footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+            
+            .tab-btn {
+                font-size: 0.85em;
+                padding: 12px 10px;
+            }
+            
+            .tab-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Can Data Tell a Story?</h1>
+            <p>Exploring the World Through Google Trends</p>
+        </header>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="openTab(event, 'guided')">🎯 Guided Exploration</button>
+            <button class="tab-btn" onclick="openTab(event, 'comparative')">📈 Comparative Analysis</button>
+            <button class="tab-btn" onclick="openTab(event, 'events')">🌍 Event-Driven Data</button>
+            <button class="tab-btn" onclick="openTab(event, 'music')">🎵 Musical Artists</button>
+            <button class="tab-btn" onclick="openTab(event, 'free')">🔬 Free Exploration</button>
+        </div>
+        
+        <!-- TAB 1: Guided Exploration -->
+        <div id="guided" class="tab-content active">
+            <h2>🎯 Guided Exploration: The Pandemic Story</h2>
+            
+            <p>Let's start by exploring how major world events leave fingerprints in search data. The COVID-19 pandemic fundamentally changed how we work and learn—and Google Trends captured it all.</p>
+            
+            <div class="step-indicator">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-text">Open Google Trends</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-text">Search the term</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-text">Analyze the pattern</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-text">Tell the story</div>
+                </div>
+            </div>
+            
+            <div class="instruction-box">
+                <h4>📋 Your First Investigation</h4>
+                <p>Click the button below to search for <strong>"online classes"</strong> on Google Trends. Set the time range to <strong>2019 - Present</strong> and location to <strong>United States</strong>.</p>
+            </div>
+            
+            <div class="trends-embed">
+                <p>🔍 Click to explore this search term on Google Trends:</p>
+                <a href="https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=online%20classes" target="_blank" class="trends-link">Explore "Online Classes" →</a>
+                <a href="https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=remote%20work" target="_blank" class="trends-link">Explore "Remote Work" →</a>
+            </div>
+            
+            <div class="key-concept">
+                <strong>Key Statistics Concept:</strong> A sudden spike in data often indicates an external event or catalyst. This is called an <em>outlier</em> or <em>anomaly</em>.
+            </div>
+            
+            <div class="question-card">
+                <label>1. What do you notice about the search trend in March 2020? Describe the pattern you see.</label>
+                <textarea placeholder="I notice that..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>2. What real-world event caused this dramatic change? How does the data "tell" this story?</label>
+                <textarea placeholder="The data shows..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>3. Look at the trend AFTER the initial spike. What story does the "new normal" tell us?</label>
+                <textarea placeholder="After the spike, I observe..."></textarea>
+            </div>
+            
+            <div class="highlight-box">
+                <h4>💡 Think About It</h4>
+                <p>If you were a business owner, university administrator, or policy maker, how might this data have helped you make decisions in early 2020? What about now?</p>
+            </div>
+            
+            <div class="question-card">
+                <label>4. Reflection: In what ways can search data serve as a "digital pulse" of society?</label>
+                <textarea placeholder="Search data can reveal..."></textarea>
+            </div>
+        </div>
+        
+        <!-- TAB 2: Comparative Analysis -->
+        <div id="comparative" class="tab-content">
+            <h2>📈 Comparative Analysis: The Evolution of Academic Help</h2>
+            
+            <p>One of the most powerful features of Google Trends is comparing multiple search terms. This reveals not just individual trends, but <strong>relationships and shifts</strong> between concepts over time.</p>
+            
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <div class="emoji">📱</div>
+                    <h4>Photomath</h4>
+                    <p>Mobile app that solves math problems by taking photos</p>
+                    <p><em>Launched: 2014</em></p>
+                </div>
+                <div class="comparison-card">
+                    <div class="emoji">📚</div>
+                    <h4>Chegg</h4>
+                    <p>Online tutoring and textbook solutions platform</p>
+                    <p><em>Popular since: ~2010</em></p>
+                </div>
+                <div class="comparison-card">
+                    <div class="emoji">🤖</div>
+                    <h4>ChatGPT</h4>
+                    <p>AI chatbot capable of answering complex questions</p>
+                    <p><em>Launched: Nov 2022</em></p>
+                </div>
+            </div>
+            
+            <div class="instruction-box">
+                <h4>📋 Your Investigation</h4>
+                <p>Compare all three terms on Google Trends. Set the time range to <strong>2019 - Present</strong>.</p>
+            </div>
+            
+            <div class="trends-embed">
+                <a href="https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=photomath,chegg,chatgpt" target="_blank" class="trends-link">Compare All Three Terms →</a>
+            </div>
+            
+            <div class="key-concept">
+                <strong>Key Statistics Concept:</strong> When one trend rises as another falls, this may indicate <em>substitution</em> or <em>displacement</em>—a new option replacing an older one.
+            </div>
+            
+            <div class="question-card">
+                <label>1. Describe the relationship between Chegg and ChatGPT searches starting in late 2022. What pattern do you observe?</label>
+                <textarea placeholder="I observe that..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>2. What does this data suggest about how students' study habits and resource preferences might be changing?</label>
+                <textarea placeholder="This suggests..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>3. Look at the seasonal patterns (peaks and valleys). When do searches peak? What might explain this?</label>
+                <textarea placeholder="The peaks occur..."></textarea>
+            </div>
+            
+            <div class="highlight-box green">
+                <h4>🎓 Academic Integrity Connection</h4>
+                <p>This data is relevant to discussions about academic integrity. How might educators and institutions respond to these shifting trends? What policies might need to evolve?</p>
+            </div>
+            
+            <div class="question-card">
+                <label>4. If you were advising Chegg's leadership team, what would this data tell you about the company's future? What strategic decisions might you recommend?</label>
+                <textarea placeholder="Based on this data, I would recommend..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>5. What are the limitations of using Google Trends data to draw conclusions about student behavior?</label>
+                <textarea placeholder="Some limitations include..."></textarea>
+            </div>
+        </div>
+        
+        <!-- TAB 3: Event-Driven Data -->
+        <div id="events" class="tab-content">
+            <h2>🌍 Event-Driven Data: Global Sporting Events</h2>
+            
+            <p>Some data patterns are <strong>cyclical</strong>—they repeat at regular intervals. Global sporting events provide perfect examples of predictable, event-driven search behavior.</p>
+            
+            <div class="comparison-grid">
+                <div class="comparison-card">
+                    <div class="emoji">⚽</div>
+                    <h4>FIFA World Cup</h4>
+                    <p>Every 4 years</p>
+                    <p><em>Recent: 2022 (Qatar), 2026 (USA/Canada/Mexico)</em></p>
+                </div>
+                <div class="comparison-card">
+                    <div class="emoji">🏅</div>
+                    <h4>Olympics</h4>
+                    <p>Every 2 years (alternating Summer/Winter)</p>
+                    <p><em>Recent: 2024 Paris, 2026 Milan</em></p>
+                </div>
+            </div>
+            
+            <div class="trends-embed">
+                <a href="https://trends.google.com/trends/explore?date=2014-01-01%202026-04-07&q=world%20cup,olympics" target="_blank" class="trends-link">Compare World Cup vs Olympics →</a>
+            </div>
+            
+            <div class="key-concept">
+                <strong>Key Statistics Concept:</strong> <em>Cyclical patterns</em> are regular, predictable fluctuations that repeat over a fixed period. <em>Seasonality</em> is a specific type of cyclical pattern tied to calendar periods.
+            </div>
+            
+            <div class="question-card">
+                <label>1. Describe the pattern you see. How often do the major spikes occur for each event?</label>
+                <textarea placeholder="The World Cup shows spikes every..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>2. Which event generates more search interest at its peak? What factors might explain this difference?</label>
+                <textarea placeholder="At peak times..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>3. What happens to search interest BETWEEN major events? Is it zero? What does this baseline tell us?</label>
+                <textarea placeholder="Between events..."></textarea>
+            </div>
+            
+            <div class="highlight-box purple">
+                <h4>🎬 Bonus Investigation: Movie Releases</h4>
+                <p>Compare "Barbie movie" and "Oppenheimer" during summer 2023. This phenomenon was called "Barbenheimer"—what does the data show?</p>
+            </div>
+            
+            <div class="trends-embed">
+                <a href="https://trends.google.com/trends/explore?date=2023-01-01%202023-12-31&geo=US&q=barbie%20movie,oppenheimer" target="_blank" class="trends-link">Explore Barbenheimer →</a>
+                <a href="https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=marvel%20avengers" target="_blank" class="trends-link">Explore Marvel Avengers →</a>
+            </div>
+            
+            <div class="question-card">
+                <label>4. How do entertainment events differ from sporting events in their search patterns? (Think about duration, buildup, and decline)</label>
+                <textarea placeholder="Entertainment events tend to..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>5. If you were a marketing executive, how would you use this cyclical data to plan advertising campaigns?</label>
+                <textarea placeholder="I would use this data to..."></textarea>
+            </div>
+        </div>
+        
+        <!-- TAB 4: Musical Artists -->
+        <div id="music" class="tab-content">
+            <h2>🎵 Musical Artists: Popularity & Cultural Moments</h2>
+            
+            <p>Music artists provide fascinating case studies because their search trends reflect <strong>album releases, tours, controversies, and cultural moments</strong>. Let's start with YOUR favorite artist!</p>
+            
+            <div class="artist-input-section">
+                <h3>🎤 Start With Your Favorite Artist</h3>
+                <p>Enter your favorite musical artist to see their Google Trends data:</p>
+                <br>
+                <input type="text" id="favorite-artist" placeholder="Enter artist name...">
+                <br>
+                <button onclick="searchArtist()">Search on Google Trends →</button>
+                <div id="artist-comparison-result"></div>
+            </div>
+            
+            <div class="question-card">
+                <label>1. What patterns do you notice in your favorite artist's search trend? Can you identify specific events (album releases, tours, news) that caused spikes?</label>
+                <textarea placeholder="For my artist, I notice..."></textarea>
+            </div>
+            
+            <div class="instruction-box">
+                <h4>📋 Now Let's Compare: Beyoncé vs. Taylor Swift</h4>
+                <p>These two artists are cultural icons with massive, dedicated fanbases. Compare their search trends over the past 5 years.</p>
+            </div>
+            
+            <div class="trends-embed">
+                <a href="https://trends.google.com/trends/explore?date=2020-01-01%202026-04-07&geo=US&q=beyonce,taylor%20swift" target="_blank" class="trends-link">Compare Beyoncé vs Taylor Swift →</a>
+            </div>
+            
+            <div class="question-card">
+                <label>2. Describe the overall trend patterns for both artists. Who has more consistent search interest? Who has bigger spikes?</label>
+                <textarea placeholder="Comparing the two artists..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>3. Can you identify specific events that caused major spikes for each artist? (Think: album releases, tours, awards, news events)</label>
+                <textarea placeholder="For Beyoncé, I can identify... For Taylor Swift, I can identify..."></textarea>
+            </div>
+            
+            <div class="highlight-box">
+                <h4>🔍 Deeper Analysis</h4>
+                <p>Try adding your favorite artist to the Beyoncé vs. Taylor Swift comparison. How does your artist compare to these global superstars?</p>
+            </div>
+            
+            <div class="question-card">
+                <label>4. Now compare all three (your artist + Beyoncé + Taylor Swift). What does this tell you about relative popularity and cultural reach?</label>
+                <textarea placeholder="When I add my artist to the comparison..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>5. What are the limitations of using search data to measure an artist's "popularity" or "success"? What doesn't this data capture?</label>
+                <textarea placeholder="Search data doesn't capture..."></textarea>
+            </div>
+            
+            <div class="key-concept">
+                <strong>Key Statistics Concept:</strong> <em>Relative comparison</em> helps us understand scale. A trend that looks significant in isolation might appear small when compared to larger phenomena.
+            </div>
+        </div>
+        
+        <!-- TAB 5: Free Exploration -->
+        <div id="free" class="tab-content">
+            <h2>🔬 Free Exploration: Your Data Story</h2>
+            
+            <p>Now it's your turn to become a data detective! Choose a topic that interests you and use Google Trends to uncover the story the data tells.</p>
+            
+            <div class="instruction-box">
+                <h4>💡 Need Inspiration? Try These Ideas:</h4>
+            </div>
+            
+            <div class="free-explore-ideas">
+                <div class="idea-chip" onclick="window.open('https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=AI%20tools', '_blank')">AI Tools</div>
+                <div class="idea-chip" onclick="window.open('https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=electric%20vehicles', '_blank')">Electric Vehicles</div>
+                <div class="idea-chip" onclick="window.open('https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=climate%20change', '_blank')">Climate Change</div>
+                <div class="idea-chip" onclick="window.open('https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=mental%20health', '_blank')">Mental Health</div>
+                <div class="idea-chip" onclick="window.open('https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=cryptocurrency', '_blank')">Cryptocurrency</div>
+                <div class="idea-chip" onclick="window.open('https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=plant%20based%20diet', '_blank')">Plant-Based Diet</div>
+                <div class="idea-chip" onclick="window.open('https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=work%20from%20home', '_blank')">Work From Home</div>
+                <div class="idea-chip" onclick="window.open('https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=streaming%20services', '_blank')">Streaming Services</div>
+            </div>
+            
+            <div class="trends-embed">
+                <a href="https://trends.google.com/trends/" target="_blank" class="trends-link">Open Google Trends to Explore →</a>
+            </div>
+            
+            <div class="question-card">
+                <label>1. What topic(s) did you choose to explore? Why did this interest you?</label>
+                <textarea placeholder="I chose to explore..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>2. Describe the main pattern(s) you discovered. What story does the data tell?</label>
+                <textarea placeholder="The data shows..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>3. What external events or factors might explain the patterns you observed?</label>
+                <textarea placeholder="The patterns might be explained by..."></textarea>
+            </div>
+            
+            <div class="question-card">
+                <label>4. Did anything in the data surprise you? What questions does this data raise that you'd want to investigate further?</label>
+                <textarea placeholder="I was surprised to find..."></textarea>
+            </div>
+            
+            <div class="reflection-section">
+                <h3>📝 Final Reflection: Can Data Tell a Story?</h3>
+                <p>Think about everything you've explored today. Consider the patterns, the surprises, and the connections between data and real-world events.</p>
+                
+                <div class="question-card" style="background: white;">
+                    <label>Based on your explorations today, answer our central question: <strong>Can data tell a story?</strong> Explain your reasoning with specific examples from your investigations.</label>
+                    <textarea placeholder="After exploring Google Trends, I believe that data..." style="min-height: 200px;"></textarea>
+                </div>
+                
+                <div class="question-card" style="background: white;">
+                    <label>What are the limitations of using search data to understand human behavior and social trends? What important context might be missing?</label>
+                    <textarea placeholder="Some limitations include..."></textarea>
+                </div>
+                
+                <div class="question-card" style="background: white;">
+                    <label>How might you use data storytelling skills in your future career or studies?</label>
+                    <textarea placeholder="I could use these skills to..."></textarea>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <button class="save-btn" onclick="saveResponses()">💾 Save My Responses</button>
+                <p style="margin-top: 15px; color: #6c757d; font-size: 0.9em;">Click to download your responses as a text file</p>
+            </div>
+        </div>
+        
+        <footer>
+            <p>📊 Data Storytelling Activity | Powered by Google Trends | Created for Introduction to Statistics</p>
+        </footer>
+    </div>
+    
+    <script>
+        function openTab(evt, tabName) {
+            const tabContents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove("active");
+            }
+            
+            const tabBtns = document.getElementsByClassName("tab-btn");
+            for (let i = 0; i < tabBtns.length; i++) {
+                tabBtns[i].classList.remove("active");
+            }
+            
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+        
+        function searchArtist() {
+            const artist = document.getElementById('favorite-artist').value;
+            if (artist.trim() === '') {
+                alert('Please enter an artist name!');
+                return;
+            }
+            
+            const encodedArtist = encodeURIComponent(artist);
+            const url = `https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=${encodedArtist}`;
+            window.open(url, '_blank');
+            
+            const resultDiv = document.getElementById('artist-comparison-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <p>✅ Opened Google Trends for <strong>${artist}</strong></p>
+                <p style="margin-top: 10px;">Now try comparing with Beyoncé and Taylor Swift:</p>
+                <a href="https://trends.google.com/trends/explore?date=2019-01-01%202026-04-07&geo=US&q=${encodedArtist},beyonce,taylor%20swift" target="_blank" class="trends-link" style="margin-top: 10px; display: inline-block;">Compare All Three →</a>
+            `;
+        }
+        
+        function saveResponses() {
+            const textareas = document.querySelectorAll('textarea');
+            let responses = "=== DATA STORYTELLING ACTIVITY RESPONSES ===\n";
+            responses += "Date: " + new Date().toLocaleDateString() + "\n\n";
+            
+            const tabs = ['Guided Exploration', 'Comparative Analysis', 'Event-Driven Data', 'Musical Artists', 'Free Exploration'];
+            let currentTab = 0;
+            let questionNum = 1;
+            
+            textareas.forEach((textarea, index) => {
+                if (index === 0) {
+                    responses += `\n--- ${tabs[0]} ---\n\n`;
+                } else if (index === 4) {
+                    responses += `\n--- ${tabs[1]} ---\n\n`;
+                    questionNum = 1;
+                } else if (index === 9) {
+                    responses += `\n--- ${tabs[2]} ---\n\n`;
+                    questionNum = 1;
+                } else if (index === 14) {
+                    responses += `\n--- ${tabs[3]} ---\n\n`;
+                    questionNum = 1;
+                } else if (index === 19) {
+                    responses += `\n--- ${tabs[4]} ---\n\n`;
+                    questionNum = 1;
+                }
+                
+                const label = textarea.previousElementSibling.textContent;
+                responses += `Question ${questionNum}: ${label}\n`;
+                responses += `Response: ${textarea.value || '(No response)'}\n\n`;
+                questionNum++;
+            });
+            
+            const blob = new Blob([responses], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Data_Storytelling_Responses.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('Your responses have been saved!');
+        }
+        
+        // Allow Enter key to trigger artist search
+        document.getElementById('favorite-artist').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchArtist();
+            }
+        });
+    </script>
+</body>
+</html>
