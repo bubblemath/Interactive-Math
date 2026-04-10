@@ -1,0 +1,993 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Probability Explorer – Lesson 8: Interactive Edition</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin: 0; padding: 20px; min-height: 100vh; }
+    .container { max-width: 1200px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden; }
+    h1 { text-align: center; color: #fff; margin: 0; padding: 20px; background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); font-size: 1.8em; }
+    .tab-bar { display: flex; background: #2c3e50; flex-wrap: wrap; }
+    .tab-btn { flex: 1; min-width: 120px; padding: 16px 12px; border: none; background: transparent; color: #ecf0f1; font-size: 1em; cursor: pointer; transition: all 0.3s; border-bottom: 3px solid transparent; }
+    .tab-btn:hover { background: rgba(255,255,255,0.1); }
+    .tab-btn.active { background: rgba(255,255,255,0.15); border-bottom: 3px solid #00f2fe; color: #00f2fe; font-weight: bold; }
+    .tab-content { display: none; padding: 25px; min-height: 500px; }
+    .tab-content.active { display: block; }
+    
+    /* Summary Tab */
+    .formula-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
+    .formula-card { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 12px; padding: 20px; border-left: 5px solid #4facfe; }
+    .formula-card h3 { margin: 0 0 10px 0; color: #2c3e50; }
+    .formula-card .formula { background: #fff; padding: 12px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 1.1em; text-align: center; margin: 10px 0; color: #e74c3c; font-weight: bold; }
+    .formula-card p { margin: 8px 0; color: #555; line-height: 1.5; }
+    .key-term { display: inline-block; background: #3498db; color: #fff; padding: 3px 10px; border-radius: 15px; font-size: 0.85em; margin: 2px; }
+    
+    /* Exploration Tab */
+    .explore-controls { background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+    .explore-controls h3 { margin: 0 0 15px 0; color: #2c3e50; }
+    .control-row { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 15px; }
+    .control-row label { font-weight: bold; color: #555; }
+    .control-row select, .control-row input { padding: 10px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; }
+    .control-row input[type="number"] { width: 70px; }
+    .marble-config { display: none; flex-wrap: wrap; gap: 15px; padding: 15px; background: #e9ecef; border-radius: 8px; margin-top: 10px; }
+    .marble-config.visible { display: flex; }
+    .marble-input { display: flex; align-items: center; gap: 8px; }
+    .marble-input .color-dot { width: 20px; height: 20px; border-radius: 50%; }
+    .marble-input .color-dot.white { background: radial-gradient(circle at 30% 30%, #fff, #ddd); border: 1px solid #bbb; }
+    .marble-input .color-dot.red { background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b); }
+    .marble-input .color-dot.blue { background: radial-gradient(circle at 30% 30%, #74b9ff, #2980b9); }
+    .event-controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 2px dashed #dee2e6; }
+    .event-btn { padding: 10px 20px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+    .event-btn.event-a { background: #3498db; color: #fff; }
+    .event-btn.event-b { background: #e74c3c; color: #fff; }
+    .event-btn.active { box-shadow: 0 0 0 3px #2c3e50; transform: scale(1.05); }
+    .event-btn.clear { background: #95a5a6; color: #fff; }
+    .event-legend { display: flex; gap: 20px; margin-top: 10px; font-size: 0.9em; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-color { width: 20px; height: 20px; border-radius: 4px; }
+    .legend-color.event-a { background: rgba(52, 152, 219, 0.5); }
+    .legend-color.event-b { background: rgba(231, 76, 60, 0.5); }
+    .legend-color.overlap { background: rgba(100, 50, 100, 0.7); }
+    
+    .sample-space-container { background: #f8f9fa; border-radius: 12px; padding: 20px; margin-top: 20px; }
+    .sample-space-container h3 { margin: 0 0 15px 0; color: #2c3e50; text-align: center; }
+    .sample-space { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 15px 0; }
+    .click-instruction { text-align: center; color: #7f8c8d; font-style: italic; margin-bottom: 15px; }
+    
+    /* Dice styles */
+    .dice-face { width: 50px; height: 50px; background: #fff; border: 2px solid #bdc3c7; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.4em; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    .dice-face:hover { transform: scale(1.1); border-color: #3498db; }
+    .dice-face.event-a { background: rgba(52, 152, 219, 0.5); border-color: #3498db; }
+    .dice-face.event-b { background: rgba(231, 76, 60, 0.5); border-color: #e74c3c; }
+    .dice-face.overlap { background: rgba(100, 50, 100, 0.7); border-color: #5a2a5a; color: #fff; }
+    
+    /* Two dice grid */
+    .two-dice-grid { display: grid; grid-template-columns: repeat(7, 50px); gap: 4px; justify-content: center; }
+    .two-dice-grid .header { background: #2c3e50; color: #fff; font-weight: bold; display: flex; align-items: center; justify-content: center; border-radius: 4px; height: 50px; font-size: 0.9em; }
+    .dice-cell { width: 50px; height: 50px; background: #fff; border: 1px solid #bdc3c7; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7em; cursor: pointer; transition: all 0.2s; }
+    .dice-cell:hover { background: #eee; transform: scale(1.05); }
+    .dice-cell.event-a { background: rgba(52, 152, 219, 0.5); border-color: #3498db; }
+    .dice-cell.event-b { background: rgba(231, 76, 60, 0.5); border-color: #e74c3c; }
+    .dice-cell.overlap { background: rgba(100, 50, 100, 0.7); border-color: #5a2a5a; color: #fff; }
+    
+    /* Marble styles */
+    .marble { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8em; cursor: pointer; transition: all 0.2s; border: 3px solid transparent; }
+    .marble:hover { transform: scale(1.15); }
+    .marble.white { background: radial-gradient(circle at 30% 30%, #fff, #ddd); color: #555; border-color: #bbb; }
+    .marble.red { background: radial-gradient(circle at 30% 30%, #ff6b6b, #c0392b); color: #fff; }
+    .marble.blue { background: radial-gradient(circle at 30% 30%, #74b9ff, #2980b9); color: #fff; }
+    .marble.event-a { box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.8), inset 0 0 10px rgba(52, 152, 219, 0.5); }
+    .marble.event-b { box-shadow: 0 0 0 4px rgba(231, 76, 60, 0.8), inset 0 0 10px rgba(231, 76, 60, 0.5); }
+    .marble.overlap { box-shadow: 0 0 0 4px rgba(100, 50, 100, 0.9), inset 0 0 10px rgba(100, 50, 100, 0.5); }
+    
+    /* Card styles */
+    .card-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-bottom: 8px; }
+    .suit-label { width: 100%; text-align: center; background: #f1f3f5; padding: 8px; font-weight: bold; border-radius: 4px; margin-bottom: 8px; }
+    .card { width: 42px; height: 60px; background: #fff; border: 2px solid #bdc3c7; border-radius: 5px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 4px; font-size: 0.8em; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+    .card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .card .rank { font-size: 1em; }
+    .card .suit { font-size: 1.1em; }
+    .card.red { color: #e74c3c; }
+    .card.black { color: #2c3e50; }
+    .card.event-a { background: rgba(52, 152, 219, 0.4); border-color: #3498db; border-width: 3px; }
+    .card.event-b { background: rgba(231, 76, 60, 0.4); border-color: #e74c3c; border-width: 3px; }
+    .card.overlap { background: rgba(100, 50, 100, 0.6); border-color: #5a2a5a; border-width: 3px; }
+    .card.overlap .rank, .card.overlap .suit { color: #fff; }
+    
+    /* Probability display */
+    .prob-display { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 20px; border-radius: 12px; margin-top: 20px; }
+    .prob-display h4 { margin: 0 0 15px 0; font-size: 1.2em; }
+    .formula-work { background: rgba(255,255,255,0.15); padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; line-height: 1.8; }
+    .formula-work .step { margin: 8px 0; }
+    .formula-work .highlight-a { color: #74b9ff; font-weight: bold; }
+    .formula-work .highlight-b { color: #fab1a0; font-weight: bold; }
+    .formula-work .highlight-overlap { color: #dfe6e9; font-weight: bold; }
+    .formula-work .result { font-size: 1.3em; margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(255,255,255,0.3); }
+    
+    /* Simulation Tab */
+    .sim-container { max-width: 800px; margin: 0 auto; }
+    .sim-section { background: #f8f9fa; border-radius: 12px; padding: 25px; margin-bottom: 25px; border: 2px solid #e9ecef; }
+    .sim-section h3 { margin: 0 0 20px 0; color: #2c3e50; text-align: center; }
+    .concept-demo { background: #e8f6ff; border-radius: 10px; padding: 20px; margin-top: 15px; }
+    .concept-demo h4 { margin: 0 0 15px 0; color: #2980b9; }
+    .demo-controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+    .demo-btn { padding: 10px 18px; background: #3498db; color: #fff; border: none; border-radius: 20px; cursor: pointer; transition: all 0.2s; font-size: 0.95em; }
+    .demo-btn:hover { background: #2980b9; transform: translateY(-2px); }
+    .demo-btn.active { background: #27ae60; }
+    .demo-result { background: #fff; padding: 15px; border-radius: 8px; border-left: 4px solid #3498db; line-height: 1.7; }
+    
+    /* Practice Tab */
+    .practice-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: #fff; }
+    .tally { font-size: 1.2em; }
+    .tally .correct { color: #2ecc71; font-weight: bold; }
+    .tally .incorrect { color: #e74c3c; font-weight: bold; }
+    .streak-display { font-size: 1.3em; font-weight: bold; }
+    .streak-display .streak-num { color: #f1c40f; font-size: 1.5em; }
+    .streak-notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 20px 40px; border-radius: 15px; font-size: 1.5em; font-weight: bold; color: #fff; z-index: 1000; animation: streakPop 0.5s ease-out; display: none; }
+    @keyframes streakPop { 0% { transform: translateX(-50%) scale(0); } 50% { transform: translateX(-50%) scale(1.2); } 100% { transform: translateX(-50%) scale(1); } }
+    .streak-3 { background: linear-gradient(90deg, #f39c12, #e74c3c); }
+    .streak-5 { background: linear-gradient(90deg, #9b59b6, #3498db); }
+    .streak-7 { background: linear-gradient(90deg, #1abc9c, #2ecc71); }
+    .streak-10 { background: linear-gradient(90deg, #f1c40f, #e67e22); }
+    
+    .practice-section { margin-bottom: 30px; }
+    .practice-section h3 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; margin-bottom: 20px; }
+    .practice-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+    .practice-problem { background: #f8f9fa; border-radius: 12px; padding: 20px; border: 2px solid #e9ecef; }
+    .practice-problem h4 { margin: 0 0 15px 0; color: #2c3e50; display: flex; align-items: center; gap: 10px; }
+    .practice-problem h4 .num { background: #3498db; color: #fff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9em; }
+    .practice-problem h4 .type { font-size: 0.85em; color: #7f8c8d; font-weight: normal; }
+    .problem-text { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 15px; line-height: 1.6; }
+    .answer-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .answer-input { flex: 1; min-width: 100px; padding: 10px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; }
+    .answer-input:focus { border-color: #3498db; outline: none; }
+    .check-btn { padding: 10px 20px; background: #27ae60; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+    .check-btn:hover { background: #219a52; }
+    .feedback { margin-top: 12px; padding: 12px; border-radius: 8px; display: none; }
+    .feedback.correct { display: block; background: #d5f4e6; color: #27ae60; border: 1px solid #27ae60; }
+    .feedback.incorrect { display: block; background: #fdeaea; color: #e74c3c; border: 1px solid #e74c3c; }
+    .randomize-all { display: block; margin: 25px auto 0; padding: 15px 40px; background: linear-gradient(90deg, #f39c12 0%, #e74c3c 100%); color: #fff; border: none; border-radius: 30px; font-size: 1.2em; font-weight: bold; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+    .randomize-all:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(243,156,18,0.4); }
+    
+    @media (max-width: 700px) {
+      .tab-btn { font-size: 0.85em; padding: 12px 8px; }
+      h1 { font-size: 1.4em; }
+      .practice-header { flex-direction: column; text-align: center; }
+      .two-dice-grid { grid-template-columns: repeat(7, 38px); }
+      .two-dice-grid .header, .dice-cell { width: 38px; height: 38px; font-size: 0.6em; }
+      .card { width: 32px; height: 48px; font-size: 0.65em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎲 Probability Explorer – Lesson 8: Interactive Edition</h1>
+    
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="openTab(event, 'summary')">📚 Key Concepts</button>
+      <button class="tab-btn" onclick="openTab(event, 'exploration')">🔍 Exploration</button>
+      <button class="tab-btn" onclick="openTab(event, 'simulation')">🧪 Simulation</button>
+      <button class="tab-btn" onclick="openTab(event, 'practice')">✏️ Practice</button>
+    </div>
+    
+    <!-- SUMMARY TAB -->
+    <div id="summary" class="tab-content active">
+      <h2 style="text-align:center; color:#2c3e50;">Key Terms & Formulas</h2>
+      <div style="text-align:center; margin-bottom:20px;">
+        <span class="key-term">Experiment</span>
+        <span class="key-term">Event</span>
+        <span class="key-term">Sample Space</span>
+        <span class="key-term">Complement</span>
+        <span class="key-term">Union</span>
+        <span class="key-term">Mutually Exclusive</span>
+        <span class="key-term">Odds</span>
+      </div>
+      
+      <div class="formula-grid">
+        <div class="formula-card">
+          <h3>🎯 Basic Probability</h3>
+          <div class="formula">P(E) = favorable / total</div>
+          <p><strong>Sample Space (S):</strong> The set of all possible outcomes.</p>
+          <p><strong>Event (E):</strong> A specific outcome or set of outcomes.</p>
+        </div>
+        
+        <div class="formula-card">
+          <h3>🔄 Complement Rule</h3>
+          <div class="formula">P(E') = 1 − P(E)</div>
+          <p>The probability that event E does <strong>not</strong> occur.</p>
+          <p><em>Tip: Use for "at least" problems!</em></p>
+        </div>
+        
+        <div class="formula-card">
+          <h3>⚡ Union Rule (General)</h3>
+          <div class="formula">P(A ∪ B) = P(A) + P(B) − P(A ∩ B)</div>
+          <p>For any two events, add probabilities and subtract overlap.</p>
+        </div>
+        
+        <div class="formula-card">
+          <h3>🚫 Mutually Exclusive</h3>
+          <div class="formula">P(A ∪ B) = P(A) + P(B)</div>
+          <p>When events <strong>cannot</strong> occur simultaneously.</p>
+        </div>
+        
+        <div class="formula-card">
+          <h3>📊 Probability to Odds</h3>
+          <div class="formula">Odds = P(E) : P(E')</div>
+          <p>Convert probability to odds in favor.</p>
+        </div>
+        
+        <div class="formula-card">
+          <h3>🔢 Odds to Probability</h3>
+          <div class="formula">P(E) = m / (m + n)</div>
+          <p>If odds are m to n, use this formula.</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- EXPLORATION TAB -->
+    <div id="exploration" class="tab-content">
+      <h2 style="text-align:center; color:#2c3e50;">Interactive Sample Space Explorer</h2>
+      
+      <div class="explore-controls">
+        <h3>⚙️ Configure Your Experiment</h3>
+        <div class="control-row">
+          <label>Sample Space Type:</label>
+          <select id="problem-type" onchange="updateProblemType()">
+            <option value="one-die">Six-Sided Die (6 outcomes)</option>
+            <option value="two-dice">Two Six-Sided Dice (36 outcomes)</option>
+            <option value="marbles">Marble Jar (Customizable)</option>
+            <option value="cards">Deck of Cards (52 outcomes)</option>
+          </select>
+        </div>
+        
+        <div id="marble-config" class="marble-config">
+          <div class="marble-input">
+            <div class="color-dot white"></div>
+            <label>White:</label>
+            <input type="number" id="white-count" value="4" min="0" max="20" onchange="updateMarbles()">
+          </div>
+          <div class="marble-input">
+            <div class="color-dot red"></div>
+            <label>Red:</label>
+            <input type="number" id="red-count" value="3" min="0" max="20" onchange="updateMarbles()">
+          </div>
+          <div class="marble-input">
+            <div class="color-dot blue"></div>
+            <label>Blue:</label>
+            <input type="number" id="blue-count" value="3" min="0" max="20" onchange="updateMarbles()">
+          </div>
+        </div>
+        
+        <div class="event-controls">
+          <button class="event-btn event-a active" id="btn-event-a" onclick="setActiveEvent('A')">Select Event A</button>
+          <button class="event-btn event-b" id="btn-event-b" onclick="setActiveEvent('B')">Select Event B</button>
+          <button class="event-btn clear" onclick="clearAllSelections()">Clear All</button>
+        </div>
+        
+        <div class="event-legend">
+          <div class="legend-item"><div class="legend-color event-a"></div> Event A (Blue)</div>
+          <div class="legend-item"><div class="legend-color event-b"></div> Event B (Red)</div>
+          <div class="legend-item"><div class="legend-color overlap"></div> A ∩ B (Overlap - Purple)</div>
+        </div>
+      </div>
+      
+      <div class="sample-space-container">
+        <h3 id="space-title">Sample Space: Six-Sided Die</h3>
+        <p class="click-instruction">Click elements to add them to the selected event. Overlapping selections turn purple.</p>
+        <div class="sample-space" id="sample-space"></div>
+      </div>
+      
+      <div class="prob-display" id="prob-display">
+        <h4>📐 Probability Calculation</h4>
+        <div class="formula-work" id="formula-work">
+          Select elements above to see the probability formula worked out step-by-step.
+        </div>
+      </div>
+    </div>
+    
+    <!-- SIMULATION TAB -->
+    <div id="simulation" class="tab-content">
+      <h2 style="text-align:center; color:#2c3e50;">Concept Demonstrations</h2>
+      
+      <div class="sim-container">
+        <div class="sim-section">
+          <h3>🔄 Complement Rule</h3>
+          <div class="concept-demo">
+            <h4>Explore: P(E) and P(not E)</h4>
+            <div class="demo-controls">
+              <button class="demo-btn" onclick="demoComplement('die-2')">P(rolling a 2)</button>
+              <button class="demo-btn" onclick="demoComplement('die-even')">P(rolling even)</button>
+              <button class="demo-btn" onclick="demoComplement('die-less4')">P(less than 4)</button>
+              <button class="demo-btn" onclick="demoComplement('marble-red')">P(red marble)</button>
+              <button class="demo-btn" onclick="demoComplement('card-ace')">P(drawing Ace)</button>
+            </div>
+            <div class="demo-result" id="complement-result">Click a button to see the Complement Rule in action!</div>
+          </div>
+        </div>
+        
+        <div class="sim-section">
+          <h3>🚫 Mutually Exclusive Events</h3>
+          <div class="concept-demo">
+            <h4>Events that CANNOT occur together</h4>
+            <div class="demo-controls">
+              <button class="demo-btn" onclick="demoMutuallyExclusive('ace-king')">Ace OR King</button>
+              <button class="demo-btn" onclick="demoMutuallyExclusive('die-1-6')">Roll 1 OR Roll 6</button>
+              <button class="demo-btn" onclick="demoMutuallyExclusive('marble-colors')">White OR Blue marble</button>
+              <button class="demo-btn" onclick="demoMutuallyExclusive('face-number')">Face card OR Number ≤5</button>
+            </div>
+            <div class="demo-result" id="mutually-result">Click a button to see Mutually Exclusive events!</div>
+          </div>
+        </div>
+        
+        <div class="sim-section">
+          <h3>⚡ Union with Overlap</h3>
+          <div class="concept-demo">
+            <h4>Events that CAN occur together</h4>
+            <div class="demo-controls">
+              <button class="demo-btn" onclick="demoUnionOverlap('spade-king')">Spade OR King</button>
+              <button class="demo-btn" onclick="demoUnionOverlap('odd-less4')">Odd OR Less than 4</button>
+              <button class="demo-btn" onclick="demoUnionOverlap('red-queen')">Red card OR Queen</button>
+              <button class="demo-btn" onclick="demoUnionOverlap('heart-face')">Heart OR Face card</button>
+            </div>
+            <div class="demo-result" id="union-result">Click a button to see Union with Overlap!</div>
+          </div>
+        </div>
+        
+        <div class="sim-section">
+          <h3>📊 Odds Conversions</h3>
+          <div class="concept-demo">
+            <h4>Convert between Probability and Odds</h4>
+            <div class="demo-controls">
+              <button class="demo-btn" onclick="demoOdds('prob-to-odds', 3, 7)">P(E)=3/7 → Odds</button>
+              <button class="demo-btn" onclick="demoOdds('prob-to-odds', 5, 6)">P(E)=5/6 → Odds</button>
+              <button class="demo-btn" onclick="demoOdds('odds-to-prob', 5, 3)">Odds 5:3 → P(E)</button>
+              <button class="demo-btn" onclick="demoOdds('odds-to-prob', 2, 7)">Odds 2:7 → P(E)</button>
+            </div>
+            <div class="demo-result" id="odds-result">Click a button to see Odds conversions!</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- PRACTICE TAB -->
+    <div id="practice" class="tab-content">
+      <div class="practice-header">
+        <div class="tally">
+          ✅ Correct: <span class="correct" id="correct-count">0</span> &nbsp;|&nbsp; 
+          ❌ Incorrect: <span class="incorrect" id="incorrect-count">0</span>
+        </div>
+        <div class="streak-display">
+          🔥 Streak: <span class="streak-num" id="streak-count">0</span>
+        </div>
+      </div>
+      
+      <div id="streak-popup" class="streak-notification"></div>
+      
+      <div class="practice-section">
+        <h3>📋 Labeled Practice (Questions 1-4)</h3>
+        <div class="practice-grid" id="labeled-problems"></div>
+      </div>
+      
+      <div class="practice-section">
+        <h3>🎯 Mixed Practice – Identify the Method! (Questions 5-8)</h3>
+        <div class="practice-grid" id="unlabeled-problems"></div>
+      </div>
+      
+      <button class="randomize-all" onclick="randomizeAllProblems()">🔄 Randomize All Problems</button>
+    </div>
+  </div>
+
+<script>
+// ==================== TAB NAVIGATION ====================
+function openTab(evt, tabId) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  evt.currentTarget.classList.add('active');
+}
+
+// ==================== EXPLORATION TAB ====================
+let activeEvent = 'A';
+let eventA = new Set();
+let eventB = new Set();
+let currentProblemType = 'one-die';
+let totalOutcomes = 6;
+
+function setActiveEvent(event) {
+  activeEvent = event;
+  document.getElementById('btn-event-a').classList.toggle('active', event === 'A');
+  document.getElementById('btn-event-b').classList.toggle('active', event === 'B');
+}
+
+function updateProblemType() {
+  currentProblemType = document.getElementById('problem-type').value;
+  document.getElementById('marble-config').classList.toggle('visible', currentProblemType === 'marbles');
+  clearAllSelections();
+  renderSampleSpace();
+}
+
+function clearAllSelections() {
+  eventA.clear();
+  eventB.clear();
+  renderSampleSpace();
+  updateProbabilityDisplay();
+}
+
+function toggleElement(id) {
+  const targetSet = activeEvent === 'A' ? eventA : eventB;
+  if (targetSet.has(id)) {
+    targetSet.delete(id);
+  } else {
+    targetSet.add(id);
+  }
+  updateElementStyles();
+  updateProbabilityDisplay();
+}
+
+function updateElementStyles() {
+  document.querySelectorAll('#sample-space [data-id]').forEach(el => {
+    const id = el.dataset.id;
+    const inA = eventA.has(id);
+    const inB = eventB.has(id);
+    el.classList.remove('event-a', 'event-b', 'overlap');
+    if (inA && inB) {
+      el.classList.add('overlap');
+    } else if (inA) {
+      el.classList.add('event-a');
+    } else if (inB) {
+      el.classList.add('event-b');
+    }
+  });
+}
+
+function renderSampleSpace() {
+  const space = document.getElementById('sample-space');
+  const title = document.getElementById('space-title');
+  space.innerHTML = '';
+  
+  switch(currentProblemType) {
+    case 'one-die':
+      title.textContent = 'Sample Space: Six-Sided Die (6 outcomes)';
+      totalOutcomes = 6;
+      for (let i = 1; i <= 6; i++) {
+        const el = document.createElement('div');
+        el.className = 'dice-face';
+        el.textContent = i;
+        el.dataset.id = `die-${i}`;
+        el.onclick = () => toggleElement(`die-${i}`);
+        space.appendChild(el);
+      }
+      break;
+      
+    case 'two-dice':
+      title.textContent = 'Sample Space: Two Six-Sided Dice (36 outcomes)';
+      totalOutcomes = 36;
+      const gridContainer = document.createElement('div');
+      gridContainer.className = 'two-dice-grid';
+      gridContainer.id = 'two-dice-grid';
+      
+      // Header row
+      gridContainer.innerHTML = '<div class="header">Die 2→</div>';
+      for (let j = 1; j <= 6; j++) {
+        gridContainer.innerHTML += `<div class="header">${j}</div>`;
+      }
+      
+      // Data rows
+      for (let i = 1; i <= 6; i++) {
+        const rowHeader = document.createElement('div');
+        rowHeader.className = 'header';
+        rowHeader.textContent = i;
+        gridContainer.appendChild(rowHeader);
+        
+        for (let j = 1; j <= 6; j++) {
+          const cell = document.createElement('div');
+          cell.className = 'dice-cell';
+          cell.textContent = `(${i},${j})`;
+          cell.dataset.id = `dice-${i}-${j}`;
+          cell.onclick = () => toggleElement(`dice-${i}-${j}`);
+          gridContainer.appendChild(cell);
+        }
+      }
+      space.appendChild(gridContainer);
+      break;
+      
+    case 'marbles':
+      const white = parseInt(document.getElementById('white-count').value) || 0;
+      const red = parseInt(document.getElementById('red-count').value) || 0;
+      const blue = parseInt(document.getElementById('blue-count').value) || 0;
+      totalOutcomes = white + red + blue;
+      title.textContent = `Sample Space: Marble Jar (${totalOutcomes} marbles)`;
+      
+      let marbleId = 0;
+      for (let i = 0; i < white; i++) {
+        const el = document.createElement('div');
+        el.className = 'marble white';
+        el.textContent = 'W' + (i+1);
+        el.dataset.id = `marble-${marbleId}`;
+        el.dataset.color = 'white';
+        el.onclick = () => toggleElement(el.dataset.id);
+        space.appendChild(el);
+        marbleId++;
+      }
+      for (let i = 0; i < red; i++) {
+        const el = document.createElement('div');
+        el.className = 'marble red';
+        el.textContent = 'R' + (i+1);
+        el.dataset.id = `marble-${marbleId}`;
+        el.dataset.color = 'red';
+        el.onclick = () => toggleElement(el.dataset.id);
+        space.appendChild(el);
+        marbleId++;
+      }
+      for (let i = 0; i < blue; i++) {
+        const el = document.createElement('div');
+        el.className = 'marble blue';
+        el.textContent = 'B' + (i+1);
+        el.dataset.id = `marble-${marbleId}`;
+        el.dataset.color = 'blue';
+        el.onclick = () => toggleElement(el.dataset.id);
+        space.appendChild(el);
+        marbleId++;
+      }
+      break;
+      
+    case 'cards':
+      title.textContent = 'Sample Space: Standard 52-Card Deck';
+      totalOutcomes = 52;
+      const suits = [
+        {symbol: '♥', name: 'Hearts', color: 'red'},
+        {symbol: '♦', name: 'Diamonds', color: 'red'},
+        {symbol: '♣', name: 'Clubs', color: 'black'},
+        {symbol: '♠', name: 'Spades', color: 'black'}
+      ];
+      const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+      
+      suits.forEach(suit => {
+        const label = document.createElement('div');
+        label.className = 'suit-label';
+        label.innerHTML = `${suit.symbol} ${suit.name}`;
+        space.appendChild(label);
+        
+        const row = document.createElement('div');
+        row.className = 'card-row';
+        ranks.forEach(rank => {
+          const card = document.createElement('div');
+          card.className = `card ${suit.color}`;
+          card.innerHTML = `<span class="rank">${rank}</span><span class="suit">${suit.symbol}</span>`;
+          card.dataset.id = `card-${rank}-${suit.symbol}`;
+          card.dataset.rank = rank;
+          card.dataset.suit = suit.symbol;
+          card.dataset.color = suit.color;
+          card.onclick = () => toggleElement(card.dataset.id);
+          row.appendChild(card);
+        });
+        space.appendChild(row);
+      });
+      break;
+  }
+  updateElementStyles();
+}
+
+function updateMarbles() {
+  if (currentProblemType === 'marbles') {
+    clearAllSelections();
+    renderSampleSpace();
+  }
+}
+
+function gcd(a, b) {
+  return b === 0 ? a : gcd(b, a % b);
+}
+
+function simplifyFraction(num, den) {
+  if (num === 0) return '0';
+  if (den === 0) return 'undefined';
+  const g = gcd(Math.abs(num), Math.abs(den));
+  const sNum = num / g;
+  const sDen = den / g;
+  return sDen === 1 ? `${sNum}` : `${sNum}/${sDen}`;
+}
+
+function updateProbabilityDisplay() {
+  const work = document.getElementById('formula-work');
+  const sizeA = eventA.size;
+  const sizeB = eventB.size;
+  const overlap = [...eventA].filter(x => eventB.has(x)).length;
+  const union = sizeA + sizeB - overlap;
+  
+  if (sizeA === 0 && sizeB === 0) {
+    work.innerHTML = 'Select elements above to see the probability formula worked out step-by-step.';
+    return;
+  }
+  
+  if (totalOutcomes === 0) {
+    work.innerHTML = 'Please configure a sample space with at least one outcome.';
+    return;
+  }
+  
+  let html = '';
+  
+  // Event A
+  html += `<div class="step"><span class="highlight-a">Event A:</span> ${sizeA} outcome(s) selected</div>`;
+  html += `<div class="step"><span class="highlight-a">P(A)</span> = ${sizeA}/${totalOutcomes} = <strong>${simplifyFraction(sizeA, totalOutcomes)}</strong></div>`;
+  
+  if (sizeB > 0) {
+    // Event B
+    html += `<div class="step"><span class="highlight-b">Event B:</span> ${sizeB} outcome(s) selected</div>`;
+    html += `<div class="step"><span class="highlight-b">P(B)</span> = ${sizeB}/${totalOutcomes} = <strong>${simplifyFraction(sizeB, totalOutcomes)}</strong></div>`;
+    
+    // Overlap
+    html += `<div class="step"><span class="highlight-overlap">A ∩ B (Overlap):</span> ${overlap} outcome(s)</div>`;
+    html += `<div class="step"><span class="highlight-overlap">P(A ∩ B)</span> = ${overlap}/${totalOutcomes} = <strong>${simplifyFraction(overlap, totalOutcomes)}</strong></div>`;
+    
+    // Union calculation
+    html += `<div class="step" style="margin-top:15px;"><strong>Union Rule:</strong></div>`;
+    if (overlap === 0) {
+      html += `<div class="step">Since A and B are <strong>mutually exclusive</strong> (no overlap):</div>`;
+      html += `<div class="step">P(A ∪ B) = P(A) + P(B)</div>`;
+      html += `<div class="step">P(A ∪ B) = ${sizeA}/${totalOutcomes} + ${sizeB}/${totalOutcomes}</div>`;
+    } else {
+      html += `<div class="step">Since A and B <strong>overlap</strong>:</div>`;
+      html += `<div class="step">P(A ∪ B) = P(A) + P(B) − P(A ∩ B)</div>`;
+      html += `<div class="step">P(A ∪ B) = ${sizeA}/${totalOutcomes} + ${sizeB}/${totalOutcomes} − ${overlap}/${totalOutcomes}</div>`;
+    }
+    html += `<div class="result">P(A ∪ B) = ${union}/${totalOutcomes} = <strong>${simplifyFraction(union, totalOutcomes)}</strong></div>`;
+    
+    // Complement
+    html += `<div class="step" style="margin-top:10px;">Complement: P(not (A ∪ B)) = 1 − ${simplifyFraction(union, totalOutcomes)} = <strong>${simplifyFraction(totalOutcomes - union, totalOutcomes)}</strong></div>`;
+  } else {
+    // Only Event A - show complement
+    html += `<div class="step" style="margin-top:15px;"><strong>Complement Rule:</strong></div>`;
+    html += `<div class="step">P(A') = 1 − P(A) = 1 − ${sizeA}/${totalOutcomes}</div>`;
+    html += `<div class="result">P(not A) = ${totalOutcomes - sizeA}/${totalOutcomes} = <strong>${simplifyFraction(totalOutcomes - sizeA, totalOutcomes)}</strong></div>`;
+  }
+  
+  work.innerHTML = html;
+}
+
+// ==================== SIMULATION TAB ====================
+function demoComplement(type) {
+  let result = '';
+  switch(type) {
+    case 'die-2':
+      result = `<strong>Event E:</strong> Rolling a 2 on a six-sided die<br><br>
+        <strong>P(E) = 1/6</strong> (1 favorable outcome out of 6)<br><br>
+        <strong>Complement E':</strong> NOT rolling a 2<br>
+        <strong>P(E') = 1 − P(E) = 1 − 1/6 = 5/6</strong><br><br>
+        ✓ Check: P(E) + P(E') = 1/6 + 5/6 = 1 ✓`;
+      break;
+    case 'die-even':
+      result = `<strong>Event E:</strong> Rolling an even number {2, 4, 6}<br><br>
+        <strong>P(E) = 3/6 = 1/2</strong><br><br>
+        <strong>Complement E':</strong> Rolling an odd number {1, 3, 5}<br>
+        <strong>P(E') = 1 − 1/2 = 1/2</strong>`;
+      break;
+    case 'die-less4':
+      result = `<strong>Event E:</strong> Rolling less than 4 {1, 2, 3}<br><br>
+        <strong>P(E) = 3/6 = 1/2</strong><br><br>
+        <strong>Complement E':</strong> Rolling 4 or more {4, 5, 6}<br>
+        <strong>P(E') = 1 − 1/2 = 1/2</strong>`;
+      break;
+    case 'marble-red':
+      result = `<strong>Event E:</strong> Selecting a red marble (jar: 4 white, 3 red, 3 blue)<br><br>
+        <strong>P(E) = 3/10</strong><br><br>
+        <strong>Complement E':</strong> NOT selecting red (white or blue)<br>
+        <strong>P(E') = 1 − 3/10 = 7/10</strong>`;
+      break;
+    case 'card-ace':
+      result = `<strong>Event E:</strong> Drawing an Ace from a 52-card deck<br><br>
+        <strong>P(E) = 4/52 = 1/13</strong><br><br>
+        <strong>Complement E':</strong> NOT drawing an Ace<br>
+        <strong>P(E') = 1 − 4/52 = 48/52 = 12/13</strong>`;
+      break;
+  }
+  document.getElementById('complement-result').innerHTML = result;
+}
+
+function demoMutuallyExclusive(type) {
+  let result = '';
+  switch(type) {
+    case 'ace-king':
+      result = `<strong>Event A:</strong> Drawing an Ace → P(A) = 4/52<br>
+        <strong>Event B:</strong> Drawing a King → P(B) = 4/52<br><br>
+        <strong>Mutually Exclusive?</strong> YES! A card cannot be both an Ace and a King.<br><br>
+        <strong>P(A ∩ B) = 0</strong><br><br>
+        <strong>P(A ∪ B) = P(A) + P(B) = 4/52 + 4/52 = 8/52 = 2/13</strong>`;
+      break;
+    case 'die-1-6':
+      result = `<strong>Event A:</strong> Rolling a 1 → P(A) = 1/6<br>
+        <strong>Event B:</strong> Rolling a 6 → P(B) = 1/6<br><br>
+        <strong>Mutually Exclusive?</strong> YES! Cannot roll both 1 and 6 on one die.<br><br>
+        <strong>P(A ∪ B) = 1/6 + 1/6 = 2/6 = 1/3</strong>`;
+      break;
+    case 'marble-colors':
+      result = `<strong>Event A:</strong> Selecting white marble → P(A) = 4/10<br>
+        <strong>Event B:</strong> Selecting blue marble → P(B) = 3/10<br><br>
+        <strong>Mutually Exclusive?</strong> YES! One marble cannot be two colors.<br><br>
+        <strong>P(A ∪ B) = 4/10 + 3/10 = 7/10</strong>`;
+      break;
+    case 'face-number':
+      result = `<strong>Event A:</strong> Drawing a face card (J,Q,K) → P(A) = 12/52<br>
+        <strong>Event B:</strong> Drawing a number card ≤5 (A,2,3,4,5) → P(B) = 20/52<br><br>
+        <strong>Mutually Exclusive?</strong> YES! A card is either a face card or a number card.<br><br>
+        <strong>P(A ∪ B) = 12/52 + 20/52 = 32/52 = 8/13</strong>`;
+      break;
+  }
+  document.getElementById('mutually-result').innerHTML = result;
+}
+
+function demoUnionOverlap(type) {
+  let result = '';
+  switch(type) {
+    case 'spade-king':
+      result = `<strong>Event A:</strong> Drawing a Spade → P(A) = 13/52<br>
+        <strong>Event B:</strong> Drawing a King → P(B) = 4/52<br><br>
+        <strong>Mutually Exclusive?</strong> NO! The King of Spades is both.<br><br>
+        <strong>P(A ∩ B) = 1/52</strong> (King of Spades)<br><br>
+        <strong>P(A ∪ B) = P(A) + P(B) − P(A ∩ B)</strong><br>
+        <strong>= 13/52 + 4/52 − 1/52 = 16/52 = 4/13</strong>`;
+      break;
+    case 'odd-less4':
+      result = `<strong>Event A:</strong> Rolling odd {1, 3, 5} → P(A) = 3/6<br>
+        <strong>Event B:</strong> Rolling less than 4 {1, 2, 3} → P(B) = 3/6<br><br>
+        <strong>Mutually Exclusive?</strong> NO! 1 and 3 are both odd AND less than 4.<br><br>
+        <strong>P(A ∩ B) = 2/6</strong> (outcomes: 1, 3)<br><br>
+        <strong>P(A ∪ B) = 3/6 + 3/6 − 2/6 = 4/6 = 2/3</strong>`;
+      break;
+    case 'red-queen':
+      result = `<strong>Event A:</strong> Drawing a red card → P(A) = 26/52<br>
+        <strong>Event B:</strong> Drawing a Queen → P(B) = 4/52<br><br>
+        <strong>Mutually Exclusive?</strong> NO! Queen of Hearts and Queen of Diamonds are both.<br><br>
+        <strong>P(A ∩ B) = 2/52</strong><br><br>
+        <strong>P(A ∪ B) = 26/52 + 4/52 − 2/52 = 28/52 = 7/13</strong>`;
+      break;
+    case 'heart-face':
+      result = `<strong>Event A:</strong> Drawing a Heart → P(A) = 13/52<br>
+        <strong>Event B:</strong> Drawing a face card (J,Q,K) → P(B) = 12/52<br><br>
+        <strong>Mutually Exclusive?</strong> NO! J♥, Q♥, K♥ are both Hearts and face cards.<br><br>
+        <strong>P(A ∩ B) = 3/52</strong><br><br>
+        <strong>P(A ∪ B) = 13/52 + 12/52 − 3/52 = 22/52 = 11/26</strong>`;
+      break;
+  }
+  document.getElementById('union-result').innerHTML = result;
+}
+
+function demoOdds(type, a, b) {
+  let result = '';
+  if (type === 'prob-to-odds') {
+    const complement = b - a;
+    result = `<strong>Given:</strong> P(E) = ${a}/${b}<br><br>
+      <strong>Step 1:</strong> Find P(E') = 1 − ${a}/${b} = ${complement}/${b}<br><br>
+      <strong>Step 2:</strong> Odds in favor = P(E) : P(E')<br>
+      <strong>= ${a}/${b} : ${complement}/${b} = ${a} : ${complement}</strong><br><br>
+      <strong>Odds against = ${complement} : ${a}</strong>`;
+  } else {
+    const sum = a + b;
+    result = `<strong>Given:</strong> Odds in favor are ${a} to ${b}<br><br>
+      <strong>Formula:</strong> P(E) = m / (m + n)<br><br>
+      <strong>P(E) = ${a} / (${a} + ${b}) = ${a}/${sum}</strong><br><br>
+      <strong>P(E') = ${b}/${sum}</strong>`;
+  }
+  document.getElementById('odds-result').innerHTML = result;
+}
+
+// ==================== PRACTICE TAB ====================
+let practiceState = {
+  correct: 0,
+  incorrect: 0,
+  streak: 0,
+  problems: {}
+};
+
+const problemBanks = {
+  complement: [
+    { text: 'If P(E) = 3/8, find P(not E).', answer: '5/8', hint: 'Use P(E\') = 1 − P(E). Subtract numerator from denominator: 8 − 3 = 5.' },
+    { text: 'If P(E) = 2/5, find P(not E).', answer: '3/5', hint: 'Use P(E\') = 1 − P(E). Subtract: 5 − 2 = 3.' },
+    { text: 'If P(E) = 7/12, find P(not E).', answer: '5/12', hint: 'Use P(E\') = 1 − P(E). Subtract: 12 − 7 = 5.' },
+    { text: 'If P(E) = 4/9, find P(not E).', answer: '5/9', hint: 'Use P(E\') = 1 − P(E). Subtract: 9 − 4 = 5.' },
+    { text: 'If P(E) = 5/11, find P(not E).', answer: '6/11', hint: 'Use P(E\') = 1 − P(E). Subtract: 11 − 5 = 6.' }
+  ],
+  
+  mutuallyExclusive: [
+    { text: 'Events A and B are mutually exclusive. If P(A) = 2/9 and P(B) = 4/9, find P(A or B).', answer: '6/9', altAnswers: ['2/3'], hint: 'For mutually exclusive: P(A ∪ B) = P(A) + P(B). Add numerators: 2 + 4 = 6.' },
+    { text: 'Events A and B are mutually exclusive. If P(A) = 3/10 and P(B) = 2/10, find P(A or B).', answer: '5/10', altAnswers: ['1/2'], hint: 'For mutually exclusive: P(A ∪ B) = P(A) + P(B). Add: 3 + 2 = 5.' },
+    { text: 'Events A and B are mutually exclusive. If P(A) = 1/6 and P(B) = 3/6, find P(A or B).', answer: '4/6', altAnswers: ['2/3'], hint: 'For mutually exclusive: P(A ∪ B) = P(A) + P(B). Add: 1 + 3 = 4.' },
+    { text: 'Events A and B are mutually exclusive. If P(A) = 5/12 and P(B) = 3/12, find P(A or B).', answer: '8/12', altAnswers: ['2/3'], hint: 'For mutually exclusive: P(A ∪ B) = P(A) + P(B). Add: 5 + 3 = 8.' },
+    { text: 'Events A and B are mutually exclusive. If P(A) = 2/7 and P(B) = 3/7, find P(A or B).', answer: '5/7', hint: 'For mutually exclusive: P(A ∪ B) = P(A) + P(B). Add: 2 + 3 = 5.' }
+  ],
+  
+  unionOverlap: [
+    { text: 'If P(A) = 5/12, P(B) = 4/12, and P(A and B) = 2/12, find P(A or B).', answer: '7/12', hint: 'Use P(A ∪ B) = P(A) + P(B) − P(A ∩ B). Calculate: 5 + 4 − 2 = 7.' },
+    { text: 'If P(A) = 6/10, P(B) = 5/10, and P(A and B) = 3/10, find P(A or B).', answer: '8/10', altAnswers: ['4/5'], hint: 'Use P(A ∪ B) = P(A) + P(B) − P(A ∩ B). Calculate: 6 + 5 − 3 = 8.' },
+    { text: 'If P(A) = 7/15, P(B) = 6/15, and P(A and B) = 4/15, find P(A or B).', answer: '9/15', altAnswers: ['3/5'], hint: 'Use P(A ∪ B) = P(A) + P(B) − P(A ∩ B). Calculate: 7 + 6 − 4 = 9.' },
+    { text: 'If P(A) = 4/9, P(B) = 5/9, and P(A and B) = 2/9, find P(A or B).', answer: '7/9', hint: 'Use P(A ∪ B) = P(A) + P(B) − P(A ∩ B). Calculate: 4 + 5 − 2 = 7.' },
+    { text: 'If P(A) = 8/20, P(B) = 7/20, and P(A and B) = 3/20, find P(A or B).', answer: '12/20', altAnswers: ['3/5'], hint: 'Use P(A ∪ B) = P(A) + P(B) − P(A ∩ B). Calculate: 8 + 7 − 3 = 12.' }
+  ],
+  
+  oddsToProb: [
+    { text: 'If the odds in favor of event E are 3 to 5, find P(E).', answer: '3/8', hint: 'Use P(E) = m/(m+n). Here: 3/(3+5) = 3/8.' },
+    { text: 'If the odds in favor of event E are 4 to 7, find P(E).', answer: '4/11', hint: 'Use P(E) = m/(m+n). Here: 4/(4+7) = 4/11.' },
+    { text: 'If the odds in favor of event E are 2 to 3, find P(E).', answer: '2/5', hint: 'Use P(E) = m/(m+n). Here: 2/(2+3) = 2/5.' },
+    { text: 'If the odds in favor of event E are 5 to 4, find P(E).', answer: '5/9', hint: 'Use P(E) = m/(m+n). Here: 5/(5+4) = 5/9.' },
+    { text: 'If the odds in favor of event E are 7 to 3, find P(E).', answer: '7/10', hint: 'Use P(E) = m/(m+n). Here: 7/(7+3) = 7/10.' }
+  ],
+  
+  atLeast: [
+    { text: 'A jar contains 5 red and 7 blue marbles. If 2 marbles are drawn, the probability that both are blue is 7/22. Find the probability that at least one marble is red.', answer: '15/22', hint: 'P(at least one red) = 1 − P(no red) = 1 − P(both blue) = 1 − 7/22.' },
+    { text: 'When rolling two dice, the probability of getting no sixes is 25/36. Find the probability of getting at least one six.', answer: '11/36', hint: 'P(at least one six) = 1 − P(no sixes) = 1 − 25/36.' },
+    { text: 'The probability that none of 3 students pass an exam is 1/8. Find the probability that at least one student passes.', answer: '7/8', hint: 'P(at least one passes) = 1 − P(none pass) = 1 − 1/8.' },
+    { text: 'When flipping 4 coins, the probability of getting all tails is 1/16. Find the probability of getting at least one head.', answer: '15/16', hint: 'P(at least one head) = 1 − P(all tails) = 1 − 1/16.' },
+    { text: 'The probability that a basketball player misses all 3 free throws is 8/125. Find the probability that she makes at least one.', answer: '117/125', hint: 'P(at least one made) = 1 − P(all missed) = 1 − 8/125.' }
+  ],
+  
+  mutuallyExclusiveCards: [
+    { text: 'Find the probability of drawing an Ace or a King from a standard 52-card deck.', answer: '8/52', altAnswers: ['2/13'], hint: 'Ace and King are mutually exclusive. P(Ace or King) = 4/52 + 4/52 = 8/52.' },
+    { text: 'Find the probability of drawing a Jack or a Queen from a standard 52-card deck.', answer: '8/52', altAnswers: ['2/13'], hint: 'Jack and Queen are mutually exclusive. P(J or Q) = 4/52 + 4/52 = 8/52.' },
+    { text: 'Find the probability of drawing a 7 or a 10 from a standard 52-card deck.', answer: '8/52', altAnswers: ['2/13'], hint: '7 and 10 are mutually exclusive. P(7 or 10) = 4/52 + 4/52 = 8/52.' },
+    { text: 'Find the probability of drawing a 2 or a face card (J, Q, K) from a standard 52-card deck.', answer: '16/52', altAnswers: ['4/13'], hint: '2s and face cards are mutually exclusive. P = 4/52 + 12/52 = 16/52.' },
+    { text: 'Find the probability of drawing an Ace or a number card from 2-5 from a standard 52-card deck.', answer: '20/52', altAnswers: ['5/13'], hint: 'These are mutually exclusive. P = 4/52 + 16/52 = 20/52.' }
+  ],
+  
+  unionOverlapCards: [
+    { text: 'Find the probability of drawing a Heart or a Queen from a standard 52-card deck.', answer: '16/52', altAnswers: ['4/13'], hint: 'P(Heart) = 13/52, P(Queen) = 4/52, P(Queen of Hearts) = 1/52. Use: 13 + 4 − 1 = 16.' },
+    { text: 'Find the probability of drawing a Diamond or a King from a standard 52-card deck.', answer: '16/52', altAnswers: ['4/13'], hint: 'P(Diamond) = 13/52, P(King) = 4/52, P(King of Diamonds) = 1/52. Use: 13 + 4 − 1 = 16.' },
+    { text: 'Find the probability of drawing a Club or a Jack from a standard 52-card deck.', answer: '16/52', altAnswers: ['4/13'], hint: 'P(Club) = 13/52, P(Jack) = 4/52, P(Jack of Clubs) = 1/52. Use: 13 + 4 − 1 = 16.' },
+    { text: 'Find the probability of drawing a red card or a face card from a standard 52-card deck.', answer: '32/52', altAnswers: ['8/13'], hint: 'P(red) = 26/52, P(face) = 12/52, P(red face) = 6/52. Use: 26 + 12 − 6 = 32.' },
+    { text: 'Find the probability of drawing a Spade or a number card (2-10) from a standard 52-card deck.', answer: '40/52', altAnswers: ['10/13'], hint: 'P(Spade) = 13/52, P(number 2-10) = 36/52, P(Spade 2-10) = 9/52. Use: 13 + 36 − 9 = 40.' }
+  ],
+  
+  probToOdds: [
+    { text: 'If P(E) = 3/7, find the odds in favor of E. (Answer as "a:b" or "a to b")', answer: '3:4', altAnswers: ['3 to 4'], hint: 'P(E\') = 1 − 3/7 = 4/7. Odds = P(E):P(E\') = 3:4.' },
+    { text: 'If P(E) = 5/8, find the odds in favor of E. (Answer as "a:b" or "a to b")', answer: '5:3', altAnswers: ['5 to 3'], hint: 'P(E\') = 1 − 5/8 = 3/8. Odds = P(E):P(E\') = 5:3.' },
+    { text: 'If P(E) = 2/9, find the odds in favor of E. (Answer as "a:b" or "a to b")', answer: '2:7', altAnswers: ['2 to 7'], hint: 'P(E\') = 1 − 2/9 = 7/9. Odds = P(E):P(E\') = 2:7.' },
+    { text: 'If P(E) = 4/5, find the odds in favor of E. (Answer as "a:b" or "a to b")', answer: '4:1', altAnswers: ['4 to 1'], hint: 'P(E\') = 1 − 4/5 = 1/5. Odds = P(E):P(E\') = 4:1.' },
+    { text: 'If P(E) = 7/10, find the odds in favor of E. (Answer as "a:b" or "a to b")', answer: '7:3', altAnswers: ['7 to 3'], hint: 'P(E\') = 1 − 7/10 = 3/10. Odds = P(E):P(E\') = 7:3.' }
+  ]
+};
+
+const labeledTypes = [
+  { id: 'complement', title: 'Complement Rule', bank: 'complement' },
+  { id: 'mutually', title: 'Mutually Exclusive Union', bank: 'mutuallyExclusive' },
+  { id: 'union', title: 'Union with Overlap', bank: 'unionOverlap' },
+  { id: 'odds', title: 'Odds to Probability', bank: 'oddsToProb' }
+];
+
+const unlabeledTypes = [
+  { id: 'atleast', bank: 'atLeast' },
+  { id: 'meCards', bank: 'mutuallyExclusiveCards' },
+  { id: 'unionCards', bank: 'unionOverlapCards' },
+  { id: 'probToOdds', bank: 'probToOdds' }
+];
+
+function generateProblems() {
+  const labeledContainer = document.getElementById('labeled-problems');
+  labeledContainer.innerHTML = '';
+  
+  labeledTypes.forEach((type, idx) => {
+    const bank = problemBanks[type.bank];
+    const problem = bank[Math.floor(Math.random() * bank.length)];
+    practiceState.problems[type.id] = problem;
+    
+    const div = document.createElement('div');
+    div.className = 'practice-problem';
+    div.innerHTML = `
+      <h4><span class="num">${idx + 1}</span> <span class="type">${type.title}</span></h4>
+      <div class="problem-text">${problem.text}</div>
+      <div class="answer-row">
+        <input type="text" class="answer-input" id="input-${type.id}" placeholder="Enter answer">
+        <button class="check-btn" onclick="checkAnswer('${type.id}')">Check</button>
+      </div>
+      <div class="feedback" id="feedback-${type.id}"></div>
+    `;
+    labeledContainer.appendChild(div);
+  });
+  
+  const unlabeledContainer = document.getElementById('unlabeled-problems');
+  unlabeledContainer.innerHTML = '';
+  
+  unlabeledTypes.forEach((type, idx) => {
+    const bank = problemBanks[type.bank];
+    const problem = bank[Math.floor(Math.random() * bank.length)];
+    practiceState.problems[type.id] = problem;
+    
+    const div = document.createElement('div');
+    div.className = 'practice-problem';
+    div.innerHTML = `
+      <h4><span class="num">${idx + 5}</span> <span class="type">Identify the method!</span></h4>
+      <div class="problem-text">${problem.text}</div>
+      <div class="answer-row">
+        <input type="text" class="answer-input" id="input-${type.id}" placeholder="Enter answer">
+        <button class="check-btn" onclick="checkAnswer('${type.id}')">Check</button>
+      </div>
+      <div class="feedback" id="feedback-${type.id}"></div>
+    `;
+    unlabeledContainer.appendChild(div);
+  });
+}
+
+function normalizeAnswer(s) {
+  return s.replace(/\s/g, '').toLowerCase().replace('to', ':');
+}
+
+function checkAnswer(id) {
+  const input = document.getElementById(`input-${id}`).value.trim();
+  const feedback = document.getElementById(`feedback-${id}`);
+  const problem = practiceState.problems[id];
+  
+  const userNorm = normalizeAnswer(input);
+  const correctNorm = normalizeAnswer(problem.answer);
+  const altAnswers = problem.altAnswers || [];
+  
+  const isCorrect = userNorm === correctNorm || altAnswers.some(alt => normalizeAnswer(alt) === userNorm);
+  
+  if (isCorrect) {
+    practiceState.correct++;
+    practiceState.streak++;
+    const encouragements = ['🎉 Excellent!', '⭐ Perfect!', '💪 Great job!', '🌟 Outstanding!', '✨ Brilliant!', '🔥 On fire!'];
+    feedback.className = 'feedback correct';
+    feedback.textContent = encouragements[Math.floor(Math.random() * encouragements.length)];
+    checkStreak();
+  } else {
+    practiceState.incorrect++;
+    practiceState.streak = 0;
+    feedback.className = 'feedback incorrect';
+    feedback.innerHTML = `<strong>Not quite!</strong> ${problem.hint}<br><em>Correct answer: ${problem.answer}</em>`;
+  }
+  
+  updateTally();
+}
+
+function checkStreak() {
+  const popup = document.getElementById('streak-popup');
+  let message = '';
+  let className = '';
+  
+  if (practiceState.streak === 3) {
+    message = '🔥 Nice streak! 3 in a row!';
+    className = 'streak-3';
+  } else if (practiceState.streak === 5) {
+    message = '🏅 Awesome! 5 correct!';
+    className = 'streak-5';
+  } else if (practiceState.streak === 7) {
+    message = '⚡ Incredible! 7 straight!';
+    className = 'streak-7';
+  } else if (practiceState.streak === 10) {
+    message = '🏆 LEGENDARY! 10 in a row!';
+    className = 'streak-10';
+  }
+  
+  if (message) {
+    popup.textContent = message;
+    popup.className = `streak-notification ${className}`;
+    popup.style.display = 'block';
+    setTimeout(() => { popup.style.display = 'none'; }, 2500);
+  }
+}
+
+function updateTally() {
+  document.getElementById('correct-count').textContent = practiceState.correct;
+  document.getElementById('incorrect-count').textContent = practiceState.incorrect;
+  document.getElementById('streak-count').textContent = practiceState.streak;
+}
+
+function randomizeAllProblems() {
+  document.querySelectorAll('.feedback').forEach(f => {
+    f.className = 'feedback';
+    f.textContent = '';
+  });
+  document.querySelectorAll('.answer-input').forEach(i => i.value = '');
+  generateProblems();
+}
+
+// ==================== INITIALIZATION ====================
+document.addEventListener('DOMContentLoaded', () => {
+  setActiveEvent('A');
+  renderSampleSpace();
+  generateProblems();
+});
+</script>
+</body>
+</html>
