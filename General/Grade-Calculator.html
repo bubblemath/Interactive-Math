@@ -641,7 +641,7 @@
             const categoryInputsHTML = categories.map((cat, i) => `
                     <div class="input-group${cat.isFinal ? ' final-input' : ''}">
                         <label>${cat.name} (${cat.weight}%)${cat.isFinal ? ' <span class="final-badge">FINAL</span>' : ''}</label>
-                        <input type="number" id="cat${i}" min="0" max="100" placeholder="Enter grade" oninput="calculateAverage()">
+                        <input type="number" id="cat${i}" min="0" max="100" placeholder="Enter grade (e.g., 85)" oninput="calculateAverage()">
                         <span class="what-if-label" id="whatif${i}" style="display:none;">What-If</span>
                     </div>`).join('');
 
@@ -864,6 +864,11 @@
         .grade-c { background: #fefcbf; color: #975a16; }
         .grade-d { background: #fed7aa; color: #c05621; }
         .grade-f { background: #fed7d7; color: #c53030; }
+        .input-hint {
+            font-size: 0.85em;
+            color: #718096;
+            margin-top: 3px;
+        }
         @media (max-width: 480px) {
             body { padding: 10px; }
             .card { padding: 15px; }
@@ -884,7 +889,7 @@
 
             <div id="averageTab" class="tab-content active">
                 <h2>Calculate Your Current Average</h2>
-                <p style="color: #718096; margin-bottom: 15px;">Enter your grades below. Leave blank for incomplete categories to see "what-if" projections.</p>
+                <p style="color: #718096; margin-bottom: 15px;">Enter your grades as percentages (e.g., enter 85 for 85%). Leave blank for incomplete categories to see "what-if" projections.</p>
                 
                 ${categoryInputsHTML}
 
@@ -904,12 +909,12 @@
 
             <div id="neededTab" class="tab-content">
                 <h2>What Grade Do I Need on the Final?</h2>
-                <p style="color: #718096; margin-bottom: 15px;">Enter your current grades (excluding final), then select your target grade.</p>
+                <p style="color: #718096; margin-bottom: 15px;">Enter your current grades as percentages (e.g., enter 85 for 85%), then select your target grade.</p>
                 
                 ${nonFinalCategories.map((cat, i) => `
                     <div class="input-group">
                         <label>${cat.name} (${cat.weight}%)</label>
-                        <input type="number" id="needed${i}" min="0" max="100" placeholder="Enter current grade" oninput="calculateNeeded()">
+                        <input type="number" id="needed${i}" min="0" max="100" placeholder="Enter grade (e.g., 85)" oninput="calculateNeeded()">
                     </div>`).join('')}
 
                 <div class="slider-container">
@@ -974,8 +979,11 @@
                 const whatIfLabel = document.getElementById('whatif' + i);
                 const value = parseFloat(input.value);
                 
-                if (!isNaN(value)) {
-                    weightedSum += value * (cat.weight / 100);
+                if (!isNaN(value) && input.value !== '') {
+                    // Student enters percentage (e.g., 85), convert to decimal for calculation
+                    const scoreDecimal = value / 100;
+                    const weightDecimal = cat.weight / 100;
+                    weightedSum += scoreDecimal * weightDecimal;
                     totalWeight += cat.weight;
                     hasAnyGrade = true;
                     whatIfLabel.style.display = 'none';
@@ -986,7 +994,8 @@
             const resultBox = document.getElementById('averageResult');
             
             if (hasAnyGrade) {
-                const average = totalWeight > 0 ? (weightedSum / totalWeight) * 100 : 0;
+                // Convert back to percentage for display
+                const average = totalWeight > 0 ? (weightedSum / (totalWeight / 100)) : 0;
                 const letter = getLetterGrade(average);
                 
                 document.getElementById('avgPercentage').textContent = average.toFixed(1) + '%';
@@ -1008,18 +1017,24 @@
         }
 
         function calculateNeeded() {
-            const target = parseFloat(document.getElementById('targetSlider').value);
-            document.getElementById('targetDisplay').textContent = target + '%';
+            // Get target as percentage (e.g., 80 for 80%)
+            const targetPercentage = parseFloat(document.getElementById('targetSlider').value);
+            document.getElementById('targetDisplay').textContent = targetPercentage + '%';
 
             let currentWeightedSum = 0;
-            let currentWeight = 0;
+            let currentTotalWeight = 0;
             let allFilled = true;
 
             nonFinalCategories.forEach((cat, i) => {
-                const value = parseFloat(document.getElementById('needed' + i).value);
-                if (!isNaN(value)) {
-                    currentWeightedSum += value * (cat.weight / 100);
-                    currentWeight += cat.weight;
+                const inputValue = document.getElementById('needed' + i).value;
+                const value = parseFloat(inputValue);
+                
+                if (inputValue !== '' && !isNaN(value)) {
+                    // Student enters percentage (e.g., 85), convert to decimal for calculation
+                    const scoreDecimal = value / 100;
+                    const weightDecimal = cat.weight / 100;
+                    currentWeightedSum += scoreDecimal * weightDecimal;
+                    currentTotalWeight += cat.weight;
                 } else {
                     allFilled = false;
                 }
@@ -1036,22 +1051,29 @@
                 return;
             }
 
-            const finalWeight = finalCategory.weight / 100;
-            const neededScore = (target / 100 - currentWeightedSum) / finalWeight;
-            const neededPercentage = neededScore * 100;
+            // Convert target to decimal and calculate needed final score
+            const targetDecimal = targetPercentage / 100;
+            const finalWeightDecimal = finalCategory.weight / 100;
+            
+            // Formula: neededScore = (targetDecimal - currentWeightedSum) / finalWeightDecimal
+            const neededScoreDecimal = (targetDecimal - currentWeightedSum) / finalWeightDecimal;
+            
+            // Convert back to percentage for display
+            const neededPercentage = neededScoreDecimal * 100;
 
             if (neededPercentage <= 0) {
                 resultDiv.className = 'needed-result achieved';
                 scoreDiv.textContent = '🎉 Already Achieved!';
-                messageDiv.textContent = 'You\\'ve already secured a ' + target + '% or higher! Any final exam score will maintain your grade.';
+                messageDiv.textContent = 'You\\'ve already secured a ' + targetPercentage + '% or higher! Any final exam score will maintain your grade.';
             } else if (neededPercentage > 100) {
                 resultDiv.className = 'needed-result impossible';
                 scoreDiv.textContent = neededPercentage.toFixed(1) + '%';
-                messageDiv.textContent = '⚠️ This target is not mathematically possible. Consider aiming for a ' + getLetterGrade(currentWeightedSum * 100 / currentWeight) + ' instead.';
+                const currentAvg = (currentWeightedSum / (currentTotalWeight / 100)).toFixed(1);
+                messageDiv.textContent = '⚠️ This target is not mathematically possible. Your current average is ' + currentAvg + '%. Consider aiming for a ' + getLetterGrade(parseFloat(currentAvg)) + ' instead.';
             } else {
                 resultDiv.className = 'needed-result possible';
                 scoreDiv.textContent = neededPercentage.toFixed(1) + '%';
-                messageDiv.textContent = 'You need this score on the ${finalExam.name} to achieve a ' + target + '% (' + getLetterGrade(target) + ') in the course.';
+                messageDiv.textContent = 'You need this score on the ${finalExam.name} to achieve a ' + targetPercentage + '% (' + getLetterGrade(targetPercentage) + ') in the course.';
             }
         }
     <\/script>
