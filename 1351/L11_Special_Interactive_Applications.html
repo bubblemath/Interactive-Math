@@ -1,0 +1,668 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 11: Special Interactive Applications</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-gradient(135deg,#0a1628 0%,#162447 50%,#1f4068 100%);min-height:100vh;color:#e0e0e0;line-height:1.6}
+        .container{max-width:1100px;margin:0 auto;padding:20px}
+        header{text-align:center;padding:28px 20px;background:rgba(255,255,255,0.04);border-radius:20px;margin-bottom:22px;border:1px solid rgba(255,255,255,0.08);position:relative;overflow:hidden}
+        header::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#f59e0b,#4facfe,#a78bfa,#4ade80,#ef4444)}
+        header h1{font-size:2em;background:linear-gradient(135deg,#4facfe,#00f2fe);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+        header p{color:#8ab4d8;font-size:1em}
+        .course-tag{display:inline-block;background:linear-gradient(135deg,#4facfe,#00f2fe);padding:4px 16px;border-radius:20px;font-size:.82em;margin-top:10px;color:#0a1628;font-weight:600}
+
+        /* Stats Bar */
+        .stats-bar{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;background:rgba(0,0,0,0.25);border-radius:14px;padding:14px 20px;margin-bottom:18px;border:1px solid rgba(255,255,255,0.06)}
+        .stat-item{display:flex;align-items:center;gap:6px;font-size:.9em}
+        .stat-item .val{font-weight:700;color:#fff}
+        .stat-item.correct .val{color:#4ade80}
+        .stat-item.wrong .val{color:#f87171}
+        .stat-item.skipped .val{color:#fbbf24}
+        .timer-toggle{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.06);padding:6px 14px;border-radius:10px}
+        .timer-toggle label{color:#8ab4d8;font-size:.85em;cursor:pointer}
+        .switch{position:relative;width:40px;height:22px}
+        .switch input{opacity:0;width:0;height:0}
+        .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.15);border-radius:22px;transition:.3s}
+        .slider:before{position:absolute;content:"";height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+        .switch input:checked+.slider{background:#4facfe}
+        .switch input:checked+.slider:before{transform:translateX(18px)}
+        .timer-display{font-family:'Courier New',monospace;font-size:1.1em;color:#4facfe;min-width:60px;text-align:center}
+
+        /* Tabs */
+        .tab-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;justify-content:center}
+        .tab-btn{padding:11px 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#8ab4d8;cursor:pointer;transition:all .3s;font-size:.84em;display:flex;align-items:center;gap:6px}
+        .tab-btn:hover{background:rgba(255,255,255,0.1);color:#fff}
+        .tab-btn.active{background:linear-gradient(135deg,#4facfe,#00f2fe);color:#0a1628;border-color:transparent;font-weight:600}
+        .tab-content{display:none;background:rgba(255,255,255,0.04);border-radius:20px;border:1px solid rgba(255,255,255,0.08);padding:24px;min-height:500px}
+        .tab-content.active{display:block}
+        .tab-header{display:flex;align-items:center;gap:14px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.08)}
+        .tab-header .icon{font-size:2.2em}
+        .tab-header h2{color:#4facfe;font-size:1.3em}
+        .tab-header p{color:#8ab4d8;font-size:.88em}
+
+        /* Timer Info */
+        .timer-info{background:rgba(79,172,254,0.06);border:1px solid rgba(79,172,254,0.2);border-radius:12px;padding:12px 16px;margin-bottom:18px;font-size:.85em;display:flex;gap:16px;flex-wrap:wrap}
+        .timer-info div{flex:1;min-width:200px}
+        .timer-info h5{margin-bottom:4px}
+        .timer-info .on-info h5{color:#4ade80}
+        .timer-info .off-info h5{color:#fbbf24}
+
+        /* Problem Area */
+        .problem-selector{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+        .prob-btn{width:38px;height:38px;border-radius:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#8ab4d8;cursor:pointer;font-size:.88em;font-weight:600;transition:all .3s;display:flex;align-items:center;justify-content:center}
+        .prob-btn:hover{background:rgba(79,172,254,0.15);border-color:#4facfe;color:#fff}
+        .prob-btn.active{background:linear-gradient(135deg,#4facfe,#00f2fe);color:#0a1628;border-color:transparent}
+        .prob-btn.correct{background:rgba(74,222,128,0.2);border-color:rgba(74,222,128,0.4);color:#4ade80}
+        .prob-btn.wrong{background:rgba(248,113,113,0.2);border-color:rgba(248,113,113,0.4);color:#f87171}
+
+        .problem-card{background:rgba(0,0,0,0.2);border-radius:14px;padding:20px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.06)}
+        .problem-card h3{color:#fbbf24;margin-bottom:12px;font-size:1.05em}
+        .problem-card .scenario{color:#e0e0e0;margin-bottom:16px;font-size:.95em;line-height:1.7}
+        .problem-card .scenario strong{color:#4facfe}
+
+        .input-group{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:14px}
+        .input-field{display:flex;flex-direction:column;gap:4px}
+        .input-field label{color:#8ab4d8;font-size:.82em}
+        .input-field input{padding:10px 14px;background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.15);border-radius:10px;color:#fff;font-size:1em;width:160px}
+        .input-field input:focus{outline:none;border-color:#4facfe}
+        .input-field .unit{color:#8ab4d8;font-size:.82em;margin-top:2px}
+
+        .btn{padding:10px 20px;border:none;border-radius:10px;cursor:pointer;font-size:.92em;font-weight:600;transition:all .3s}
+        .btn-primary{background:linear-gradient(135deg,#4facfe,#00f2fe);color:#0a1628}
+        .btn-primary:hover{transform:translateY(-2px);box-shadow:0 4px 15px rgba(79,172,254,0.4)}
+        .btn-hint{background:rgba(251,191,36,0.15);color:#fbbf24;border:1px solid rgba(251,191,36,0.3)}
+        .btn-hint:hover{background:rgba(251,191,36,0.25)}
+        .btn-next{background:rgba(167,139,250,0.15);color:#a78bfa;border:1px solid rgba(167,139,250,0.3)}
+        .btn-next:hover{background:rgba(167,139,250,0.25)}
+        .btn-group{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+
+        .feedback{padding:14px 18px;border-radius:12px;margin-top:14px;display:none;font-size:.95em}
+        .feedback.show{display:block}
+        .feedback.correct{background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:#4ade80}
+        .feedback.wrong{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171}
+        .feedback.hint{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);color:#fbbf24}
+
+        .info-box{border-radius:12px;padding:14px 18px;margin:14px 0;font-size:.92em}
+        .box-blue{background:rgba(79,172,254,0.08);border:1px solid rgba(79,172,254,0.25)}
+        .box-blue h4{color:#4facfe;margin-bottom:6px}
+
+        /* Desmos */
+        .calculator-btn{position:fixed;bottom:30px;right:30px;width:60px;height:60px;background:linear-gradient(135deg,#2ecc71,#27ae60);border:none;border-radius:50%;cursor:pointer;font-size:1.5em;color:white;box-shadow:0 4px 15px rgba(46,204,113,0.4);transition:all .3s;z-index:100}
+        .calculator-btn:hover{transform:scale(1.1)}
+        .calculator-btn .tooltip{position:absolute;right:70px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.9);color:white;padding:8px 12px;border-radius:8px;font-size:.7em;white-space:nowrap;opacity:0;transition:opacity .3s;pointer-events:none}
+        .calculator-btn:hover .tooltip{opacity:1}
+        .calculator-modal{position:fixed;bottom:100px;right:30px;width:400px;height:500px;background:white;border-radius:15px;box-shadow:0 10px 40px rgba(0,0,0,0.5);display:none;z-index:99;overflow:hidden}
+        .calculator-modal.show{display:block}
+        .calculator-modal-header{background:#2ecc71;color:white;padding:10px 15px;display:flex;justify-content:space-between;align-items:center}
+        .calculator-close{background:none;border:none;color:white;font-size:1.5em;cursor:pointer}
+        #desmos-container{width:100%;height:calc(100% - 45px)}
+
+        footer{text-align:center;padding:22px 20px;margin-top:25px;color:#4a6a8a;font-size:.88em;border-top:1px solid rgba(255,255,255,0.06)}
+        footer a{color:#4facfe;text-decoration:none}
+        @media(max-width:768px){header h1{font-size:1.5em}.tab-btn{padding:8px 10px;font-size:.76em}.input-field input{width:120px}.calculator-modal{width:90%;right:5%}}
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>🚀 Special Interactive Applications</h1>
+        <p>Real-World Problem Solving: Measurement, Perimeter & Area</p>
+        <span class="course-tag">Math 1351 · Lesson 11 · Fundamentals of Mathematics II</span>
+    </header>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item correct">✅ Correct: <span class="val" id="totalCorrect">0</span></div>
+        <div class="stat-item wrong">❌ Wrong: <span class="val" id="totalWrong">0</span></div>
+        <div class="stat-item skipped">⏭️ Skipped: <span class="val" id="totalSkipped">0</span></div>
+        <div class="timer-toggle">
+            <label class="switch"><input type="checkbox" id="timerToggle" onchange="toggleTimer()"><span class="slider"></span></label>
+            <label for="timerToggle">Timer</label>
+            <span class="timer-display" id="timerDisplay">0:00</span>
+        </div>
+    </div>
+
+    <!-- Timer Info -->
+    <div class="timer-info">
+        <div class="on-info"><h5>⏱️ Timer ON (Fluency Mode)</h5><p>Builds speed and prepares you for timed exams. Track how quickly you can solve real-world problems accurately.</p></div>
+        <div class="off-info"><h5>🧘 Timer OFF (Learning Mode)</h5><p>Take your time to understand each step. Focus on the process, not the clock. Best for first attempts and deep exploration.</p></div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="kitchen">🧪 Kitchen Conversions</button>
+        <button class="tab-btn" data-tab="map">🗺️ Map Scale</button>
+        <button class="tab-btn" data-tab="room">🏠 Room Designer</button>
+        <button class="tab-btn" data-tab="sector">⭕ Sectors & Arcs</button>
+        <button class="tab-btn" data-tab="polygon">🔷 Regular Polygons</button>
+    </nav>
+
+    <!-- TAB 1: KITCHEN -->
+    <div class="tab-content active" id="kitchen">
+        <div class="tab-header">
+            <span class="icon">🧪</span>
+            <div><h2>Kitchen Conversion Challenge</h2><p>Scale recipes and convert between cooking measurements</p></div>
+        </div>
+        <div class="problem-selector" id="kitchen-selector"></div>
+        <div class="problem-card" id="kitchen-problem"></div>
+        <div class="input-group" id="kitchen-inputs"></div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="checkAnswer('kitchen')">✅ Check Answer</button>
+            <button class="btn btn-hint" onclick="showHint('kitchen')">💡 Hint</button>
+            <button class="btn btn-next" onclick="nextProblem('kitchen')">➡️ Next</button>
+        </div>
+        <div class="feedback" id="kitchen-feedback"></div>
+    </div>
+
+    <!-- TAB 2: MAP -->
+    <div class="tab-content" id="map">
+        <div class="tab-header">
+            <span class="icon">🗺️</span>
+            <div><h2>Map Scale Calculator</h2><p>Calculate real-world distances from map measurements using scale ratios</p></div>
+        </div>
+        <div class="problem-selector" id="map-selector"></div>
+        <div class="problem-card" id="map-problem"></div>
+        <div class="input-group" id="map-inputs"></div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="checkAnswer('map')">✅ Check Answer</button>
+            <button class="btn btn-hint" onclick="showHint('map')">💡 Hint</button>
+            <button class="btn btn-next" onclick="nextProblem('map')">➡️ Next</button>
+        </div>
+        <div class="feedback" id="map-feedback"></div>
+    </div>
+
+    <!-- TAB 3: ROOM -->
+    <div class="tab-content" id="room">
+        <div class="tab-header">
+            <span class="icon">🏠</span>
+            <div><h2>Room Designer</h2><p>Calculate perimeter, area, and paint needed for real rooms</p></div>
+        </div>
+        <div class="problem-selector" id="room-selector"></div>
+        <div class="problem-card" id="room-problem"></div>
+        <div class="input-group" id="room-inputs"></div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="checkAnswer('room')">✅ Check Answer</button>
+            <button class="btn btn-hint" onclick="showHint('room')">💡 Hint</button>
+            <button class="btn btn-next" onclick="nextProblem('room')">➡️ Next</button>
+        </div>
+        <div class="feedback" id="room-feedback"></div>
+    </div>
+
+    <!-- TAB 4: SECTOR -->
+    <div class="tab-content" id="sector">
+        <div class="tab-header">
+            <span class="icon">⭕</span>
+            <div><h2>Sector & Segment Calculator</h2><p>Find arc lengths and sector areas for partial circles</p></div>
+        </div>
+        <div class="problem-selector" id="sector-selector"></div>
+        <div class="problem-card" id="sector-problem"></div>
+        <div class="input-group" id="sector-inputs"></div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="checkAnswer('sector')">✅ Check Answer</button>
+            <button class="btn btn-hint" onclick="showHint('sector')">💡 Hint</button>
+            <button class="btn btn-next" onclick="nextProblem('sector')">➡️ Next</button>
+        </div>
+        <div class="feedback" id="sector-feedback"></div>
+    </div>
+
+    <!-- TAB 5: POLYGON -->
+    <div class="tab-content" id="polygon">
+        <div class="tab-header">
+            <span class="icon">🔷</span>
+            <div><h2>Regular Polygon Area & Perimeter</h2><p>Use the apothem to find area: A = ½ × apothem × perimeter</p></div>
+        </div>
+        <div class="problem-selector" id="polygon-selector"></div>
+        <div class="problem-card" id="polygon-problem"></div>
+        <div class="input-group" id="polygon-inputs"></div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="checkAnswer('polygon')">✅ Check Answer</button>
+            <button class="btn btn-hint" onclick="showHint('polygon')">💡 Hint</button>
+            <button class="btn btn-next" onclick="nextProblem('polygon')">➡️ Next</button>
+        </div>
+        <div class="feedback" id="polygon-feedback"></div>
+    </div>
+
+    <footer>
+        <p>Math 1351 - Fundamentals of Mathematics II | Lesson 11: Special Interactive Applications</p>
+        <p style="margin-top:8px">Built with 💙 for future mathematics educators</p>
+        <p style="margin-top:8px;font-size:.85em"><a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC BY 4.0</a></p>
+    </footer>
+</div>
+
+<!-- Desmos Calculator -->
+<button class="calculator-btn" onclick="toggleCalc()" title="Desmos Scientific Calculator">🧮<span class="tooltip">Desmos Scientific Calculator</span></button>
+<div class="calculator-modal" id="calcModal">
+    <div class="calculator-modal-header"><span>Desmos Scientific Calculator</span><button class="calculator-close" onclick="toggleCalc()">×</button></div>
+    <div id="desmos-container"></div>
+</div>
+<script src="https://www.desmos.com/api/v1.8/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+
+<script>
+// ==================== GLOBAL STATE ====================
+var stats = {correct: 0, wrong: 0, skipped: 0};
+var timerOn = false, timerInterval = null, timerSeconds = 0;
+var currentProblems = {kitchen: 0, map: 0, room: 0, sector: 0, polygon: 0};
+var problemStatus = {kitchen: {}, map: {}, room: {}, sector: {}, polygon: {}};
+
+// ==================== TIMER ====================
+function toggleTimer(){
+    timerOn = document.getElementById('timerToggle').checked;
+    if(timerOn){
+        timerSeconds = 0;
+        timerInterval = setInterval(function(){
+            timerSeconds++;
+            var m = Math.floor(timerSeconds/60);
+            var s = timerSeconds % 60;
+            document.getElementById('timerDisplay').textContent = m + ':' + (s<10?'0':'') + s;
+        }, 1000);
+    } else {
+        clearInterval(timerInterval);
+        document.getElementById('timerDisplay').textContent = '0:00';
+        timerSeconds = 0;
+    }
+}
+
+function updateStats(){
+    document.getElementById('totalCorrect').textContent = stats.correct;
+    document.getElementById('totalWrong').textContent = stats.wrong;
+    document.getElementById('totalSkipped').textContent = stats.skipped;
+}
+
+// ==================== DESMOS ====================
+var desmosCalc = null;
+function toggleCalc(){
+    var m = document.getElementById('calcModal');
+    m.classList.toggle('show');
+    if(m.classList.contains('show') && !desmosCalc){
+        var el = document.getElementById('desmos-container');
+        if(typeof Desmos !== 'undefined') desmosCalc = Desmos.ScientificCalculator(el);
+    }
+}
+
+// ==================== TAB NAVIGATION ====================
+document.querySelectorAll('.tab-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+        document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active');});
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+});
+
+// ==================== PROBLEM DATA ====================
+var PROBLEMS = {
+    kitchen: [
+        {
+            title: 'Scaling Pancakes for a Class',
+            scenario: 'A pancake recipe serves <strong>4 people</strong> and calls for <strong>1½ cups of flour</strong>. You need to serve <strong>30 students</strong>. How many cups of flour do you need?',
+            inputs: [{label:'Cups of flour needed', id:'k1', unit:'cups'}],
+            answer: [11.25],
+            tolerance: [0.1],
+            hint: 'Find the scale factor: 30 ÷ 4 = 7.5. Then multiply: 1.5 × 7.5 = ?'
+        },
+        {
+            title: 'Tablespoons to Cups',
+            scenario: 'A spice mix recipe requires <strong>24 tablespoons of paprika</strong>. You only have a cup measure. How many cups is that? <em>(1 cup = 16 tablespoons)</em>',
+            inputs: [{label:'Cups of paprika', id:'k2', unit:'cups'}],
+            answer: [1.5],
+            tolerance: [0.01],
+            hint: 'Divide tablespoons by 16 (since 16 Tbsp = 1 cup): 24 ÷ 16 = ?'
+        },
+        {
+            title: 'European Recipe Conversion',
+            scenario: 'A French recipe calls for <strong>375 mL of cream</strong>. Convert this to cups. <em>(1 L ≈ 4.23 cups)</em>',
+            inputs: [{label:'Cups of cream', id:'k3', unit:'cups'}],
+            answer: [1.59],
+            tolerance: [0.05],
+            hint: '375 mL = 0.375 L. Then multiply: 0.375 × 4.23 = ?'
+        },
+        {
+            title: 'Punch for a School Dance',
+            scenario: 'You need punch for <strong>120 students</strong>, each getting an <strong>8 oz serving</strong>. How many gallons of punch do you need? <em>(1 gallon = 128 oz)</em>',
+            inputs: [{label:'Gallons needed', id:'k4', unit:'gallons'}],
+            answer: [7.5],
+            tolerance: [0.1],
+            hint: 'Total ounces: 120 × 8 = 960 oz. Then divide by 128 oz/gallon: 960 ÷ 128 = ?'
+        },
+        {
+            title: 'Halving a Complex Recipe',
+            scenario: 'A cookie recipe calls for <strong>2¾ cups of sugar</strong>. You want to make <strong>half</strong> the recipe. How many cups of sugar do you need? Express as a decimal.',
+            inputs: [{label:'Cups of sugar', id:'k5', unit:'cups'}],
+            answer: [1.375],
+            tolerance: [0.01],
+            hint: '2¾ = 2.75. Half of 2.75 = 2.75 ÷ 2 = ?'
+        },
+        {
+            title: 'Tripling a Bread Recipe',
+            scenario: 'A bread recipe uses <strong>⅔ cup of oil</strong> and <strong>2¼ cups of water</strong>. You want to <strong>triple</strong> the recipe. How much oil and water do you need?',
+            inputs: [{label:'Cups of oil', id:'k6a', unit:'cups'},{label:'Cups of water', id:'k6b', unit:'cups'}],
+            answer: [2, 6.75],
+            tolerance: [0.01, 0.05],
+            hint: 'Oil: ⅔ × 3 = 2. Water: 2.25 × 3 = ?'
+        }
+    ],
+    map: [
+        {
+            title: 'USGS Topographic Map',
+            scenario: 'A USGS map has a scale of <strong>1:24,000</strong>. A hiking trail measures <strong>5.25 inches</strong> on the map. What is the actual trail distance in <strong>miles</strong>? <em>(1 mile = 63,360 inches)</em>',
+            inputs: [{label:'Actual distance', id:'m1', unit:'miles'}],
+            answer: [1.99],
+            tolerance: [0.05],
+            hint: 'Map distance × scale = actual distance in inches: 5.25 × 24,000 = 126,000 inches. Then divide by 63,360 inches/mile.'
+        },
+        {
+            title: 'Road Atlas Distance',
+            scenario: 'A road atlas uses a scale of <strong>1 inch = 20 miles</strong>. Two cities are <strong>150 miles</strong> apart. How far apart are they on the map?',
+            inputs: [{label:'Map distance', id:'m2', unit:'inches'}],
+            answer: [7.5],
+            tolerance: [0.01],
+            hint: 'Divide actual distance by scale: 150 ÷ 20 = ?'
+        },
+        {
+            title: 'Park Area on a Map',
+            scenario: 'On a map with scale <strong>1 inch = 5 miles</strong>, a national park measures <strong>3 inches by 4 inches</strong>. What is the actual area of the park in <strong>square miles</strong>?',
+            inputs: [{label:'Actual area', id:'m3', unit:'sq miles'}],
+            answer: [300],
+            tolerance: [1],
+            hint: 'Each inch = 5 miles. So 3 in = 15 mi and 4 in = 20 mi. Area = 15 × 20 = ?'
+        },
+        {
+            title: 'Photocopied Map Scale',
+            scenario: 'A map has a scale of <strong>1:50,000</strong>. It is photocopied at <strong>50% reduction</strong>. What is the new effective scale ratio?',
+            inputs: [{label:'New scale (1:___)', id:'m4', unit:''}],
+            answer: [100000],
+            tolerance: [1],
+            hint: 'If the map shrinks by 50%, each inch now represents twice the distance: 50,000 × 2 = ?'
+        },
+        {
+            title: 'Straight-Line vs Road Distance',
+            scenario: 'On a map (scale: <strong>1 inch = 10 miles</strong>), the straight-line distance between two towns is <strong>2.5 inches</strong>. The road distance on the map is <strong>3.8 inches</strong>. Find both actual distances.',
+            inputs: [{label:'Straight-line (miles)', id:'m5a', unit:'miles'},{label:'Road distance (miles)', id:'m5b', unit:'miles'}],
+            answer: [25, 38],
+            tolerance: [0.1, 0.1],
+            hint: 'Multiply each map distance by the scale factor (10): 2.5 × 10 = ? and 3.8 × 10 = ?'
+        },
+        {
+            title: 'Classroom Map Activity',
+            scenario: 'Students create a map of their school campus at a scale of <strong>1 cm = 8 meters</strong>. The football field is <strong>100 meters</strong> long. How many centimeters long should it be on their map?',
+            inputs: [{label:'Map length', id:'m6', unit:'cm'}],
+            answer: [12.5],
+            tolerance: [0.1],
+            hint: 'Divide actual length by scale: 100 ÷ 8 = ?'
+        }
+    ],
+    room: [
+        {
+            title: 'Baseboard for an L-Shaped Room',
+            scenario: 'An L-shaped room has outer dimensions <strong>15 ft × 20 ft</strong> with a <strong>5 ft × 8 ft</strong> rectangular notch cut from one corner. There are <strong>2 doorways</strong> (each <strong>3 ft</strong> wide). How many feet of baseboard do you need?',
+            inputs: [{label:'Baseboard needed', id:'r1', unit:'feet'}],
+            answer: [70],
+            tolerance: [0.5],
+            hint: 'Perimeter of L-shape: 15+20+10+8+5+12 = 70... but subtract doorways? Actually trace the outline: go around the outside of the L-shape. Full perimeter = 15+20+(20-8)+(15-5)+5+8 = 15+20+12+10+5+8 = 70. Then subtract 2×3 = 6 for doors. Wait — re-read: the answer is the perimeter minus doors = 70 - 6 = 64... Let me recalculate. The L-shape perimeter: starting at bottom-left going clockwise: 20 (bottom) + 15 (right side) + 8 (left along notch) + 5 (down notch) + 12 (remaining bottom of notch side) + 10 (left side) = 70. Minus 2 doors × 3 ft = 64.'
+        },
+        {
+            title: 'Flooring with Waste Factor',
+            scenario: 'A rectangular kitchen is <strong>12 ft × 15 ft</strong>. You want to install tile and need to buy <strong>10% extra</strong> for waste/cuts. How many square feet of tile should you purchase?',
+            inputs: [{label:'Tile to purchase', id:'r2', unit:'sq ft'}],
+            answer: [198],
+            tolerance: [1],
+            hint: 'Area = 12 × 15 = 180 sq ft. Add 10%: 180 × 1.10 = ?'
+        },
+        {
+            title: 'The Paint Problem',
+            scenario: 'A room is <strong>14 ft × 16 ft</strong> with <strong>9 ft ceilings</strong>. It has <strong>2 windows</strong> (each 3 ft × 4 ft) and <strong>1 door</strong> (3 ft × 7 ft). One gallon covers <strong>350 sq ft</strong>. How many gallons do you need? (Round up to whole gallons)',
+            inputs: [{label:'Gallons needed', id:'r3', unit:'gallons'}],
+            answer: [2],
+            tolerance: [0.1],
+            hint: 'Wall area = 2(14×9) + 2(16×9) = 252 + 288 = 540. Subtract windows: 2(3×4) = 24. Subtract door: 3×7 = 21. Paintable area = 540 - 24 - 21 = 495. Gallons = 495 ÷ 350 = 1.41... round up to 2.'
+        },
+        {
+            title: 'Circular Rug in a Rectangular Room',
+            scenario: 'A rectangular room is <strong>10 ft × 12 ft</strong>. You place a <strong>circular rug with diameter 8 ft</strong> in the center. How many square feet of hardwood floor remain exposed? (Use π ≈ 3.14)',
+            inputs: [{label:'Exposed floor area', id:'r4', unit:'sq ft'}],
+            answer: [69.76],
+            tolerance: [0.5],
+            hint: 'Room area = 10 × 12 = 120. Rug area = π × r² = 3.14 × 4² = 3.14 × 16 = 50.24. Exposed = 120 - 50.24 = ?'
+        },
+        {
+            title: 'Fencing a Backyard',
+            scenario: 'A rectangular backyard is <strong>40 ft × 60 ft</strong>. One 60-ft side is against the house (no fence needed). Fencing costs <strong>$12 per foot</strong>. What is the total cost?',
+            inputs: [{label:'Total fencing cost', id:'r5', unit:'$'}],
+            answer: [1680],
+            tolerance: [1],
+            hint: 'Fencing needed: 40 + 60 + 40 = 140 ft (three sides). Cost = 140 × $12 = ?'
+        },
+        {
+            title: 'Wallpaper for an Accent Wall',
+            scenario: 'An accent wall is <strong>14 ft wide × 9 ft tall</strong>. It has one window (<strong>4 ft × 3 ft</strong>). Wallpaper comes in rolls that cover <strong>30 sq ft</strong> each. How many rolls do you need? (Round up)',
+            inputs: [{label:'Rolls needed', id:'r6', unit:'rolls'}],
+            answer: [4],
+            tolerance: [0.1],
+            hint: 'Wall area = 14 × 9 = 126. Minus window = 126 - 12 = 114 sq ft. Rolls = 114 ÷ 30 = 3.8 → round up to 4.'
+        }
+    ],
+    sector: [
+        {
+            title: 'Pizza Slice Crust Length',
+            scenario: 'A pizza has a <strong>14-inch diameter</strong>. It is cut into <strong>8 equal slices</strong> (each with a 45° central angle). What is the <strong>crust length</strong> (arc length) of one slice? (Use π ≈ 3.14)',
+            inputs: [{label:'Arc length', id:'s1', unit:'inches'}],
+            answer: [5.50],
+            tolerance: [0.1],
+            hint: 'Arc length = (θ/360) × 2πr. Here r = 7 (radius = diameter/2), θ = 45°. So: (45/360) × 2 × 3.14 × 7 = ?'
+        },
+        {
+            title: 'Windshield Wiper Coverage',
+            scenario: 'A windshield wiper blade is <strong>18 inches</strong> long and sweeps through an angle of <strong>120°</strong>. What <strong>area</strong> does the wiper clean? (Use π ≈ 3.14)',
+            inputs: [{label:'Sector area', id:'s2', unit:'sq inches'}],
+            answer: [339.12],
+            tolerance: [1],
+            hint: 'Sector area = (θ/360) × πr². Here r = 18, θ = 120°. So: (120/360) × 3.14 × 18² = (1/3) × 3.14 × 324 = ?'
+        },
+        {
+            title: 'Pendulum Swing Distance',
+            scenario: 'A pendulum is <strong>2 feet</strong> long and swings through an arc of <strong>60°</strong>. How far does the tip of the pendulum travel in one swing? (Use π ≈ 3.14)',
+            inputs: [{label:'Arc distance', id:'s3', unit:'feet'}],
+            answer: [2.09],
+            tolerance: [0.05],
+            hint: 'Arc length = (θ/360) × 2πr = (60/360) × 2 × 3.14 × 2 = (1/6) × 12.56 = ?'
+        },
+        {
+            title: 'Garden Quadrant',
+            scenario: 'You are designing a garden bed that is a <strong>quarter circle (90° sector)</strong> with a radius of <strong>6 feet</strong>. Find both the <strong>area</strong> and the <strong>perimeter</strong> (arc + two radii). (Use π ≈ 3.14)',
+            inputs: [{label:'Area', id:'s4a', unit:'sq ft'},{label:'Perimeter', id:'s4b', unit:'ft'}],
+            answer: [28.26, 21.42],
+            tolerance: [0.2, 0.2],
+            hint: 'Area = (90/360) × π × 6² = (1/4) × 3.14 × 36 = 28.26. Perimeter = arc + 2r = (90/360) × 2π(6) + 2(6) = 9.42 + 12 = ?'
+        },
+        {
+            title: 'Clock Hand Sweep',
+            scenario: 'The minute hand of a clock is <strong>10 inches</strong> long. How far does the tip travel in <strong>20 minutes</strong>? (20 min = 120° of rotation. Use π ≈ 3.14)',
+            inputs: [{label:'Distance traveled', id:'s5', unit:'inches'}],
+            answer: [20.93],
+            tolerance: [0.2],
+            hint: 'Arc length = (θ/360) × 2πr = (120/360) × 2 × 3.14 × 10 = (1/3) × 62.8 = ?'
+        },
+        {
+            title: 'Circular Window Segment',
+            scenario: 'A circular window has a <strong>radius of 3 feet</strong>. A horizontal chord divides it, creating a segment with a central angle of <strong>90°</strong>. Find the <strong>area of the sector</strong> (the pie-slice shape). (Use π ≈ 3.14)',
+            inputs: [{label:'Sector area', id:'s6', unit:'sq ft'}],
+            answer: [7.065],
+            tolerance: [0.1],
+            hint: 'Sector area = (θ/360) × πr² = (90/360) × 3.14 × 9 = (1/4) × 28.26 = ?'
+        }
+    ],
+    polygon: [
+        {
+            title: 'Hexagonal Gazebo Floor',
+            scenario: 'A regular hexagonal gazebo has a <strong>side length of 6 ft</strong> and an <strong>apothem of 5.2 ft</strong>. Find the <strong>perimeter</strong> and <strong>area</strong> of the floor.',
+            inputs: [{label:'Perimeter', id:'p1a', unit:'ft'},{label:'Area', id:'p1b', unit:'sq ft'}],
+            answer: [36, 93.6],
+            tolerance: [0.1, 0.5],
+            hint: 'Perimeter = 6 sides × 6 ft = 36 ft. Area = ½ × apothem × perimeter = ½ × 5.2 × 36 = ?'
+        },
+        {
+            title: 'Octagonal Window Trim',
+            scenario: 'A regular octagonal window has a <strong>side length of 1.5 ft</strong> and an <strong>apothem of 1.81 ft</strong>. Find the <strong>perimeter</strong> (for trim) and the <strong>area</strong> (for glass).',
+            inputs: [{label:'Perimeter', id:'p2a', unit:'ft'},{label:'Area', id:'p2b', unit:'sq ft'}],
+            answer: [12, 10.86],
+            tolerance: [0.1, 0.2],
+            hint: 'Perimeter = 8 × 1.5 = 12 ft. Area = ½ × 1.81 × 12 = ?'
+        },
+        {
+            title: 'Stop Sign (Regular Octagon)',
+            scenario: 'A standard stop sign is a regular octagon with a <strong>side length of 12.4 inches</strong> and an <strong>apothem of 15 inches</strong>. What is its area?',
+            inputs: [{label:'Area', id:'p3', unit:'sq inches'}],
+            answer: [744],
+            tolerance: [1],
+            hint: 'Perimeter = 8 × 12.4 = 99.2 in. Area = ½ × apothem × perimeter = ½ × 15 × 99.2 = ?'
+        },
+        {
+            title: 'Pentagon vs Square: Same Perimeter',
+            scenario: 'A regular pentagon and a square both have a <strong>perimeter of 40 ft</strong>. The pentagon has an <strong>apothem of 5.51 ft</strong>. Find the area of EACH shape. Which has more area?',
+            inputs: [{label:'Square area', id:'p4a', unit:'sq ft'},{label:'Pentagon area', id:'p4b', unit:'sq ft'}],
+            answer: [100, 110.2],
+            tolerance: [0.1, 0.5],
+            hint: 'Square: side = 40÷4 = 10, area = 10² = 100. Pentagon: A = ½ × 5.51 × 40 = ?'
+        },
+        {
+            title: 'Dodecagonal City Plaza',
+            scenario: 'A city plaza is a regular <strong>12-sided polygon (dodecagon)</strong> with a <strong>side length of 20 meters</strong> and an <strong>apothem of 37.32 meters</strong>. Find its area in square meters.',
+            inputs: [{label:'Area', id:'p5', unit:'sq meters'}],
+            answer: [4478.4],
+            tolerance: [2],
+            hint: 'Perimeter = 12 × 20 = 240 m. Area = ½ × 37.32 × 240 = ?'
+        },
+        {
+            title: 'Triangular Traffic Island',
+            scenario: 'A traffic island is an equilateral triangle with <strong>side length 10 ft</strong> and <strong>apothem 2.89 ft</strong>. Find the perimeter and area.',
+            inputs: [{label:'Perimeter', id:'p6a', unit:'ft'},{label:'Area', id:'p6b', unit:'sq ft'}],
+            answer: [30, 43.35],
+            tolerance: [0.1, 0.5],
+            hint: 'Perimeter = 3 × 10 = 30 ft. Area = ½ × 2.89 × 30 = ?'
+        }
+    ]
+};
+
+// ==================== RENDER FUNCTIONS ====================
+function loadTab(tab){
+    var problems = PROBLEMS[tab];
+    var selector = document.getElementById(tab + '-selector');
+    selector.innerHTML = '';
+    for(var i = 0; i < problems.length; i++){
+        var btn = document.createElement('button');
+        btn.className = 'prob-btn' + (i === currentProblems[tab] ? ' active' : '');
+        if(problemStatus[tab][i] === 'correct') btn.className += ' correct';
+        if(problemStatus[tab][i] === 'wrong') btn.className += ' wrong';
+        btn.textContent = (i+1);
+        (function(idx){
+            btn.addEventListener('click', function(){
+                currentProblems[tab] = idx;
+                loadTab(tab);
+            });
+        })(i);
+        selector.appendChild(btn);
+    }
+
+    var prob = problems[currentProblems[tab]];
+    var problemDiv = document.getElementById(tab + '-problem');
+    problemDiv.innerHTML = '<h3>' + prob.title + '</h3><div class="scenario">' + prob.scenario + '</div>';
+
+    var inputsDiv = document.getElementById(tab + '-inputs');
+    inputsDiv.innerHTML = '';
+    for(var j = 0; j < prob.inputs.length; j++){
+        var inp = prob.inputs[j];
+        var field = document.createElement('div');
+        field.className = 'input-field';
+        field.innerHTML = '<label>' + inp.label + '</label><input type="number" step="0.01" id="input-' + inp.id + '" placeholder="Your answer"><div class="unit">' + inp.unit + '</div>';
+        inputsDiv.appendChild(field);
+    }
+
+    // Hide feedback
+    var fb = document.getElementById(tab + '-feedback');
+    fb.style.display = 'none';
+    fb.className = 'feedback';
+}
+
+// ==================== CHECK ANSWER ====================
+function checkAnswer(tab){
+    var prob = PROBLEMS[tab][currentProblems[tab]];
+    var fb = document.getElementById(tab + '-feedback');
+    var allCorrect = true;
+
+    for(var i = 0; i < prob.inputs.length; i++){
+        var input = document.getElementById('input-' + prob.inputs[i].id);
+        var userVal = parseFloat(input.value);
+        if(isNaN(userVal)){
+            allCorrect = false;
+            break;
+        }
+        if(Math.abs(userVal - prob.answer[i]) > prob.tolerance[i]){
+            allCorrect = false;
+            break;
+        }
+    }
+
+    fb.style.display = 'block';
+    if(allCorrect){
+        fb.className = 'feedback show correct';
+        fb.innerHTML = '<strong>✅ Correct!</strong> Great work! The answer is <strong>' + prob.answer.join(', ') + '</strong>.';
+        if(!problemStatus[tab][currentProblems[tab]]){
+            stats.correct++;
+            problemStatus[tab][currentProblems[tab]] = 'correct';
+            updateStats();
+        }
+    } else {
+        fb.className = 'feedback show wrong';
+        fb.innerHTML = '<strong>❌ Not quite.</strong> Check your calculations and try again. Make sure you\'re using the correct units and formulas.';
+        if(!problemStatus[tab][currentProblems[tab]]){
+            stats.wrong++;
+            problemStatus[tab][currentProblems[tab]] = 'wrong';
+            updateStats();
+        }
+    }
+    loadTab(tab); // refresh selector colors
+    // Re-show feedback after reload
+    setTimeout(function(){
+        var fb2 = document.getElementById(tab + '-feedback');
+        fb2.style.display = 'block';
+        fb2.className = fb.className;
+        fb2.innerHTML = fb.innerHTML;
+    }, 10);
+}
+
+// ==================== HINT ====================
+function showHint(tab){
+    var prob = PROBLEMS[tab][currentProblems[tab]];
+    var fb = document.getElementById(tab + '-feedback');
+    fb.style.display = 'block';
+    fb.className = 'feedback show hint';
+    fb.innerHTML = '<strong>💡 Hint:</strong> ' + prob.hint;
+}
+
+// ==================== NEXT PROBLEM ====================
+function nextProblem(tab){
+    var problems = PROBLEMS[tab];
+    if(!problemStatus[tab][currentProblems[tab]]){
+        stats.skipped++;
+        problemStatus[tab][currentProblems[tab]] = 'skipped';
+        updateStats();
+    }
+    currentProblems[tab] = (currentProblems[tab] + 1) % problems.length;
+    loadTab(tab);
+}
+
+// ==================== INIT ====================
+window.onload = function(){
+    loadTab('kitchen');
+    loadTab('map');
+    loadTab('room');
+    loadTab('sector');
+    loadTab('polygon');
+};
+</script>
+</body>
+</html>
