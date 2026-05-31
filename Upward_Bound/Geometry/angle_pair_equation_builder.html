@@ -1,0 +1,393 @@
+
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.app { padding: 1rem 0; }
+.type-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+.type-btn { padding: 10px 6px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); background: var(--color-background-primary); cursor: pointer; text-align: center; transition: border-color 0.15s; }
+.type-btn:hover { border-color: var(--color-border-secondary); }
+.type-btn.active { border: 2px solid #534AB7; background: #EEEDFE; }
+.type-btn .t-icon { display: block; height: 44px; margin-bottom: 6px; }
+.type-btn .t-label { font-size: 12px; color: var(--color-text-secondary); }
+.type-btn.active .t-label { color: #3C3489; font-weight: 500; }
+.main { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.panel { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.25rem; }
+.panel-title { font-size: 14px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.04em; }
+canvas { display: block; width: 100%; height: auto; }
+.fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1rem; }
+.field-row { display: flex; align-items: center; gap: 8px; }
+.field-row label { font-size: 13px; color: var(--color-text-secondary); min-width: 80px; }
+.field-row input { flex: 1; padding: 7px 10px; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); background: var(--color-background-primary); color: var(--color-text-primary); font-family: var(--font-sans); font-size: 14px; }
+.field-row input:focus { outline: none; border-color: #534AB7; }
+.eq-box { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem 1.25rem; margin-bottom: 1rem; min-height: 56px; display: flex; flex-direction: column; gap: 6px; }
+.eq-text { font-size: 15px; color: var(--color-text-primary); font-weight: 500; }
+.eq-sub { font-size: 13px; color: var(--color-text-secondary); }
+.solve-area { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem 1.25rem; }
+.solve-step { font-size: 13px; color: var(--color-text-primary); padding: 4px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.solve-step:last-child { border-bottom: none; font-weight: 500; color: #3C3489; }
+.solve-placeholder { font-size: 13px; color: var(--color-text-secondary); font-style: italic; }
+button.solve-btn { display: block; width: 100%; margin-top: 10px; padding: 9px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-primary); color: var(--color-text-primary); font-family: var(--font-sans); font-size: 14px; cursor: pointer; }
+button.solve-btn:hover { background: var(--color-background-secondary); }
+.hint { font-size: 12px; color: var(--color-text-secondary); margin-top: 6px; }
+</style>
+
+<div class="app">
+<h2 class="sr-only">Angle pair equation builder — select a pair type, enter expressions, see the labeled diagram and equation automatically.</h2>
+
+<div class="type-grid" id="typeGrid"></div>
+
+<div class="main">
+  <div class="panel">
+    <div class="panel-title">Diagram</div>
+    <canvas id="diagramCanvas" width="320" height="260"></canvas>
+    <p class="hint" id="relHint"></p>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Enter angle information</div>
+    <div class="fields" id="fields"></div>
+    <div class="panel-title" style="margin-top:1rem;">Equation</div>
+    <div class="eq-box" id="eqBox"><span class="solve-placeholder">Choose a type and enter values above.</span></div>
+    <div class="panel-title">Solution steps</div>
+    <div class="solve-area" id="solveArea"><span class="solve-placeholder">Fill in both angle fields to see the solution.</span></div>
+    <button class="solve-btn" id="solveBtn" onclick="doSolve()">Show solution steps</button>
+  </div>
+</div>
+</div>
+
+<script>
+const TYPES = [
+  { id:'comp',   label:'Complementary', sum:90,   hint:'Both angles add to 90°. Often found in right angles.' },
+  { id:'supp',   label:'Supplementary', sum:180,  hint:'Both angles add to 180°. These two angles are separate but still sum to 180°.' },
+  { id:'linear', label:'Linear pair',   sum:180,  hint:'Adjacent and supplementary — sit next to each other on a straight line.' },
+  { id:'vert',   label:'Vertical',      sum:null, hint:'Formed by two intersecting lines. Vertical angles are always equal.' },
+  { id:'adj',    label:'Adjacent',      sum:null, hint:'Share a common vertex and a common side, but do not overlap.' },
+];
+
+let currentType = 'comp';
+
+const C1 = '#4B8EF5';
+const C2 = '#2DB87C';
+const RC = '#374151';
+const D = Math.PI / 180;
+
+function buildTypeGrid() {
+  const grid = document.getElementById('typeGrid');
+  grid.innerHTML = '';
+  TYPES.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'type-btn' + (t.id === currentType ? ' active' : '');
+    btn.innerHTML = `<span class="t-icon">${miniIcon(t.id)}</span><span class="t-label">${t.label}</span>`;
+    btn.onclick = () => selectType(t.id);
+    grid.appendChild(btn);
+  });
+}
+
+function miniIcon(id) {
+  const svg = (inner) => `<svg width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+  switch(id) {
+    case 'comp': return svg(`
+      <line x1="6" y1="38" x2="40" y2="38" stroke="${RC}" stroke-width="1.5"/>
+      <line x1="6" y1="6" x2="6" y2="38" stroke="${RC}" stroke-width="1.5"/>
+      <line x1="6" y1="38" x2="36" y2="12" stroke="${RC}" stroke-width="1.5"/>
+      <rect x="6" y="30" width="8" height="8" fill="none" stroke="${RC}" stroke-width="1"/>
+      <path d="M6 38 L20 38 A14 14 0 0 0 17.5 28 Z" fill="${C1}" fill-opacity="0.4"/>
+      <path d="M6 38 L17.5 28 A14 14 0 0 0 6 24 Z" fill="${C2}" fill-opacity="0.4"/>`);
+    case 'supp': return svg(`
+      <rect x="2" y="10" width="16" height="14" rx="2" fill="${C1}" fill-opacity="0.2" stroke="${C1}" stroke-width="1"/>
+      <text x="10" y="21" text-anchor="middle" font-size="8" fill="${C1}">∠1</text>
+      <text x="22" y="21" text-anchor="middle" font-size="9" fill="${RC}">+</text>
+      <rect x="26" y="10" width="16" height="14" rx="2" fill="${C2}" fill-opacity="0.2" stroke="${C2}" stroke-width="1"/>
+      <text x="34" y="21" text-anchor="middle" font-size="8" fill="${C2}">∠2</text>
+      <text x="22" y="34" text-anchor="middle" font-size="8" fill="${RC}">= 180°</text>`);
+    case 'linear': return svg(`
+      <line x1="2" y1="22" x2="42" y2="22" stroke="${RC}" stroke-width="1.5"/>
+      <line x1="22" y1="22" x2="22" y2="4" stroke="${RC}" stroke-width="1.5"/>
+      <path d="M22 22 L36 22 A14 14 0 0 0 22 8 Z" fill="${C1}" fill-opacity="0.4"/>
+      <path d="M22 22 L22 8 A14 14 0 0 0 8 22 Z" fill="${C2}" fill-opacity="0.4"/>`);
+    case 'vert': return svg(`
+      <line x1="4" y1="4" x2="40" y2="40" stroke="${RC}" stroke-width="1.5"/>
+      <line x1="40" y1="4" x2="4" y2="40" stroke="${RC}" stroke-width="1.5"/>
+      <path d="M22 22 L32 14 A14 14 0 0 0 14 12 Z" fill="${C2}" fill-opacity="0.4"/>
+      <path d="M22 22 L12 30 A14 14 0 0 0 30 32 Z" fill="${C2}" fill-opacity="0.4"/>
+      <path d="M22 22 L12 14 A14 14 0 0 0 10 32 Z" fill="${C1}" fill-opacity="0.4"/>
+      <path d="M22 22 L32 30 A14 14 0 0 0 34 12 Z" fill="${C1}" fill-opacity="0.4"/>`);
+    case 'adj': return svg(`
+      <line x1="4" y1="36" x2="42" y2="36" stroke="${RC}" stroke-width="1.5"/>
+      <line x1="12" y1="36" x2="30" y2="8" stroke="${RC}" stroke-width="1.5"/>
+      <line x1="12" y1="36" x2="4" y2="16" stroke="${RC}" stroke-width="1.5"/>
+      <path d="M12 36 L24 36 A12 12 0 0 0 21 28 Z" fill="${C1}" fill-opacity="0.4"/>
+      <path d="M12 36 L21 28 A12 12 0 0 0 7 28 Z" fill="${C2}" fill-opacity="0.4"/>`);
+  }
+}
+
+function selectType(id) {
+  currentType = id;
+  buildTypeGrid();
+  buildFields();
+  drawDiagram();
+  updateEquation();
+  document.getElementById('relHint').textContent = TYPES.find(t => t.id === id).hint;
+  document.getElementById('solveArea').innerHTML = '<span class="solve-placeholder">Fill in both angle fields to see the solution.</span>';
+}
+
+function buildFields() {
+  const el = document.getElementById('fields');
+  let html = '';
+  if (currentType === 'vert') {
+    html = `
+      <div class="field-row"><label style="color:${C1}">Angle 1</label><input id="f1" type="text" placeholder="e.g. 3x + 15" oninput="updateEquation()"></div>
+      <div class="field-row"><label style="color:${C2}">Angle 2</label><input id="f2" type="text" placeholder="e.g. 5x − 25" oninput="updateEquation()"></div>`;
+  } else if (currentType === 'adj') {
+    html = `
+      <div class="field-row"><label style="color:${C1}">Angle 1</label><input id="f1" type="text" placeholder="e.g. 2x + 10" oninput="updateEquation()"></div>
+      <div class="field-row"><label style="color:${C2}">Angle 2</label><input id="f2" type="text" placeholder="e.g. 3x − 5" oninput="updateEquation()"></div>
+      <div class="field-row"><label>Total (opt.)</label><input id="f3" type="text" placeholder="e.g. 110" oninput="updateEquation()"></div>`;
+  } else {
+    html = `
+      <div class="field-row"><label style="color:${C1}">Angle 1</label><input id="f1" type="text" placeholder="e.g. 3x − 5" oninput="updateEquation()"></div>
+      <div class="field-row"><label style="color:${C2}">Angle 2</label><input id="f2" type="text" placeholder="e.g. x + 15" oninput="updateEquation()"></div>`;
+  }
+  el.innerHTML = html;
+}
+
+function gf(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+
+function updateEquation() {
+  const a1 = gf('f1'), a2 = gf('f2'), a3 = gf('f3');
+  const box = document.getElementById('eqBox');
+  drawDiagram();
+  if (!a1 && !a2) { box.innerHTML = '<span class="solve-placeholder">Choose a type and enter values above.</span>'; return; }
+  const l1 = a1 || '∠1', l2 = a2 || '∠2';
+  let eq = '', sub = '';
+  if (currentType === 'comp')   { eq = `(${l1}) + (${l2}) = 90°`; sub = 'Complementary angles sum to 90°'; }
+  else if (currentType === 'supp')   { eq = `(${l1}) + (${l2}) = 180°`; sub = 'Supplementary angles sum to 180°'; }
+  else if (currentType === 'linear') { eq = `(${l1}) + (${l2}) = 180°`; sub = 'Linear pair: adjacent + supplementary → sum to 180°'; }
+  else if (currentType === 'vert')   { eq = `${l1} = ${l2}`; sub = 'Vertical angles are congruent (equal)'; }
+  else if (currentType === 'adj') {
+    if (a3) { eq = `(${l1}) + (${l2}) = ${a3}°`; sub = 'Adjacent angles share vertex and side; total given'; }
+    else    { eq = `∠1 = (${l1}),  ∠2 = (${l2})`; sub = 'Adjacent angles — enter total above to write an equation'; }
+  }
+  box.innerHTML = `<span class="eq-text">${eq}</span><span class="eq-sub">${sub}</span>`;
+}
+
+function doSolve() {
+  const a1 = gf('f1'), a2 = gf('f2'), a3 = gf('f3');
+  const area = document.getElementById('solveArea');
+  if (!a1 || !a2) { area.innerHTML = '<span class="solve-placeholder">Please enter both angle expressions first.</span>'; return; }
+  let sum = currentType === 'comp' ? 90 : (currentType === 'supp' || currentType === 'linear') ? 180 : currentType === 'adj' && a3 ? parseFloat(a3) : null;
+  const steps = [];
+  if (currentType === 'vert') {
+    steps.push(`Set equal (vertical angles):`);
+    steps.push(`${a1} = ${a2}`);
+    const sol = solveEqual(a1, a2);
+    if (sol) { steps.push(...sol.steps); steps.push(`x = ${sol.x}`); steps.push(`∠1 = ∠2 = ${evalExpr(a1, sol.x)}°`); }
+  } else if (sum !== null) {
+    steps.push(`Write the equation:`);
+    steps.push(`(${a1}) + (${a2}) = ${sum}`);
+    const c = combineExpr(a1, a2, sum);
+    if (c) { steps.push(...c.steps); steps.push(`x = ${c.x}`); steps.push(`∠1 = ${evalExpr(a1, c.x)}°,  ∠2 = ${evalExpr(a2, c.x)}°`); }
+    else steps.push('Combine like terms and solve for x.');
+  } else steps.push('Enter a total above to write an equation.');
+  area.innerHTML = steps.map((s, i) => `<div class="solve-step" ${i===steps.length-1?'style="font-weight:500;color:#3C3489"':''}>${s}</div>`).join('');
+}
+
+function parseLinear(expr) {
+  let s = expr.replace(/\s+/g,'').replace(/−/g,'-');
+  let coef = 0, con = 0;
+  (s.match(/[+-]?[^+-]+/g)||[]).forEach(t => {
+    if (t.includes('x')) { const c = t.replace('x',''); coef += (c===''||c==='+')?1:(c==='-'?-1:(parseFloat(c)||0)); }
+    else con += parseFloat(t)||0;
+  });
+  return { coef, con };
+}
+function evalExpr(e, x) { const p = parseLinear(e); return Math.round(p.coef*x+p.con); }
+function combineExpr(a1, a2, sum) {
+  try {
+    const p1=parseLinear(a1), p2=parseLinear(a2);
+    const tc=p1.coef+p2.coef, tk=p1.con+p2.con;
+    const steps = [`Combine: ${tc}x${tk>=0?'+':''}${tk} = ${sum}`];
+    if (tk!==0) steps.push(`${tc}x = ${sum-tk}`);
+    const x=(sum-tk)/tc;
+    return isFinite(x) ? { steps, x: Math.round(x*1000)/1000 } : null;
+  } catch(e) { return null; }
+}
+function solveEqual(a1, a2) {
+  try {
+    const p1=parseLinear(a1), p2=parseLinear(a2);
+    const dc=p1.coef-p2.coef, dk=p2.con-p1.con;
+    const x=dk/dc;
+    return isFinite(x) ? { steps: [`${dc}x = ${dk}`], x: Math.round(x*1000)/1000 } : null;
+  } catch(e) { return null; }
+}
+
+function drawDiagram() {
+  const canvas = document.getElementById('diagramCanvas');
+  const ctx = canvas.getContext('2d');
+  const W=320, H=260;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#f8f9ff'; ctx.fillRect(0,0,W,H);
+
+  const a1 = gf('f1')||'∠1', a2 = gf('f2')||'∠2';
+
+  const arrow = (x1,y1,x2,y2,col) => {
+    ctx.strokeStyle=col||RC; ctx.lineWidth=2; ctx.fillStyle=col||RC;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    const ang=Math.atan2(y2-y1,x2-x1);
+    ctx.beginPath(); ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-10*Math.cos(ang-0.28),y2-10*Math.sin(ang-0.28));
+    ctx.lineTo(x2-10*Math.cos(ang+0.28),y2-10*Math.sin(ang+0.28));
+    ctx.closePath(); ctx.fill();
+  };
+  const line = (x1,y1,x2,y2) => { ctx.strokeStyle=RC; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); };
+
+  const sector = (cx,cy,r,startDeg,endDeg,col,ccw) => {
+    const s=startDeg*D, e=endDeg*D;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,s,e,ccw||false); ctx.closePath();
+    ctx.fillStyle=col; ctx.globalAlpha=0.3; ctx.fill(); ctx.globalAlpha=1;
+    ctx.strokeStyle=col; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(cx,cy,r,s,e,ccw||false); ctx.stroke();
+    ctx.strokeStyle=RC; ctx.lineWidth=2;
+  };
+
+  const lbl = (x,y,txt,col,size) => { ctx.font=`${size||13}px sans-serif`; ctx.fillStyle=col||RC; ctx.fillText(txt,x,y); };
+
+  switch(currentType) {
+
+    case 'comp': {
+      // Vertex R at (70, 220). Rays: horizontal → U (0°), vertical ↑ D (-90°), diagonal → M (-38°).
+      // ∠1 (blue) = ∠MRU — between diagonal (-38°) and horizontal (0°).
+      // ∠2 (green) = ∠DRM — between vertical (-90°) and diagonal (-38°).
+      const vx=70, vy=220;
+      sector(vx,vy,62, -38, 0, C1);          // ∠MRU: diagonal → horizontal (blue = angle 1)
+      sector(vx,vy,62, -90, -38, C2);         // ∠DRM: vertical → diagonal (green = angle 2)
+      arrow(vx,vy, 230, vy, RC);             // horizontal ray → U
+      arrow(vx,vy, vx, 40, RC);             // vertical ray ↑ D
+      arrow(vx,vy, 218, 74, RC);            // diagonal ray → M (angle ~-38°)
+      ctx.strokeStyle=RC; ctx.lineWidth=1.5; ctx.strokeRect(vx,vy-14,14,14); // right-angle square
+      lbl(vx-14,vy+15,'R',RC,12);
+      lbl(234,vy+5,'U',RC,12);
+      lbl(vx-5,34,'D',RC,12);
+      lbl(222,70,'M',RC,12);
+      // labels inside each arc
+      lbl(vx+68,vy-14,a1,C1,13);  // ∠MRU label — to the right of diagonal, above baseline
+      lbl(vx+14,vy-65,a2,C2,13);  // ∠DRM label — between vertical and diagonal
+      break;
+    }
+
+    case 'supp': {
+      // Two NON-TOUCHING separate angles, side by side, with + sign and = 180° below
+      // Left: angle 1 (blue) — vertex at (75,180), rays at 0° and 120°
+      // Right: angle 2 (green) — vertex at (230,180), rays at 180° and 60°  (= 120° opening, complementing left)
+      const lx=75, ly=185, rx=230, ry=185;
+
+      // Left angle (blue): opens from 0° to 120° — a wide obtuse angle
+      sector(lx,ly,58, -120, 0, C1);
+      arrow(lx,ly, lx+60, ly, RC);              // horizontal right
+      arrow(lx,ly, lx-30, ly-52, RC);           // upper-left ray
+      lbl(lx-14,ly+15,'K',RC,12);
+      lbl(lx+64,ly+5,'S',RC,12);
+      lbl(lx-42,ly-54,'C',RC,12);
+      lbl(lx+28,ly-28,a1,C1,13);
+
+      // Plus sign center
+      ctx.font='bold 18px sans-serif'; ctx.fillStyle=RC; ctx.fillText('+',152,ly-18);
+
+      // Right angle (green): opens from 180° to 60° (going counterclockwise) — acute angle
+      sector(rx,ry,58, -180, -60, C2, false);
+      arrow(rx,ry, rx-62, ry, RC);              // horizontal left
+      arrow(rx,ry, rx+30, ry-52, RC);           // upper-right ray
+      lbl(rx+6,ry+15,'P',RC,12);
+      lbl(rx-76,ry+5,'T',RC,12);
+      lbl(rx+34,ry-54,'J',RC,12);
+      lbl(rx-42,ry-28,a2,C2,13);
+
+      // = 180° label beneath
+      ctx.font='14px sans-serif'; ctx.fillStyle=RC; ctx.fillText('combined = 180°',100,240);
+      break;
+    }
+
+    case 'linear': {
+      const ax=160, ay=205;
+      sector(ax,ay,65, -90, 0, C1);
+      sector(ax,ay,65, -180, -90, C2);
+      line(14,ay,308,ay);
+      arrow(ax,ay,ax,50,RC);
+      lbl(10,ay+15,'B',RC,12); lbl(ax-6,ay+15,'A',RC,12); lbl(300,ay+15,'D',RC,12); lbl(ax+5,44,'C',RC,12);
+      lbl(ax+24,ay-38,a1,C1,13); lbl(ax-76,ay-38,a2,C2,13);
+      break;
+    }
+
+    case 'vert': {
+      // Two lines crossing at P (160,130).
+      // Line 1: A (upper-left, 130°) ↔ B (lower-right, 310° = -50°)
+      // Line 2: C (upper-right, 50°) ↔ D (lower-left, 230°)
+      // APC = angle at top between A(130°) and C(50°) → GREEN (angle 2)
+      // DPB = angle at bottom between D(230°) and B(310°) → GREEN (angle 2)
+      // APD = angle at left between A(130°) and D(230°) → BLUE (angle 1)
+      // CPB = angle at right between C(50°) and B(310°)=-50° → BLUE (angle 1)
+      const px=160, py=130, r=70;
+      const aA=130*D, aC=50*D, aD=230*D, aB=-50*D;
+
+      // APC (top, green): from C(50°) to A(130°) counterclockwise = going ccw from 50 to 130
+      sector(px,py,r, 50, 130, C2, false);
+      // DPB (bottom, green): from B(310°=-50°) to D(230°) ccw
+      sector(px,py,r, 230, 310, C2, false);
+      // APD (left, blue): from A(130°) to D(230°)
+      sector(px,py,r, 130, 230, C1, false);
+      // CPB (right, blue): from B(-50°=310°) to C(50°) going ccw (i.e. from -50 to 50)
+      sector(px,py,r, -50, 50, C1, false);
+
+      // Draw the two full crossing lines
+      const Ex=(x,ang,d)=>x+d*Math.cos(ang*D), Ey=(y,ang,d)=>y+d*Math.sin(ang*D);
+      line(Ex(px,130,90),Ey(py,130,90), Ex(px,-50,90),Ey(py,-50,90));  // Line A-B
+      line(Ex(px,50,90),Ey(py,50,90), Ex(px,230,90),Ey(py,230,90));    // Line C-D
+      ctx.beginPath(); ctx.arc(px,py,4,0,Math.PI*2); ctx.fillStyle=RC; ctx.fill();
+
+      // Endpoint labels
+      lbl(Ex(px,130,96),Ey(py,130,96)-4,'A',RC,12);
+      lbl(Ex(px,-50,96)+2,Ey(py,-50,96)+4,'B',RC,12);
+      lbl(Ex(px,50,96)+2,Ey(py,50,96)-4,'C',RC,12);
+      lbl(Ex(px,230,96)-10,Ey(py,230,96)+4,'D',RC,12);
+      lbl(px+4,py-4,'P',RC,11);
+
+      // Angle labels:
+      // ∠2 green: APC (top) and DPB (bottom)
+      lbl(px-14,py-55,a2,C2,13);   // top center
+      lbl(px-14,py+68,a2,C2,13);   // bottom center
+      // ∠1 blue: APD (left) and CPB (right)
+      lbl(px-62,py+10,a1,C1,13);   // left
+      lbl(px+46,py+10,a1,C1,13);   // right
+      break;
+    }
+
+    case 'adj': {
+      // Vertex B at (90, 215).
+      // Ray BA: horizontal right (0°) — the base ray
+      // Ray BD: going upper-right at -50° (50° above horizontal)
+      // Ray BE: going upper-left at -130° (50° above horizontal, left side)
+      // ∠DBA (blue, angle 1): between BD (-50°) and BA (0°)  — the right lower angle
+      // ∠EBD (green, angle 2): between BE (-130°) and BD (-50°) — the upper angle
+      const bx=90, by=215;
+      sector(bx,by,64, -50, 0, C1);       // ∠DBA: from -50° to 0° (blue, angle 1)
+      sector(bx,by,64, -130, -50, C2);    // ∠EBD: from -130° to -50° (green, angle 2)
+      arrow(bx,by, 230,by, RC);            // ray BA → horizontal right
+      arrow(bx,by, bx+145, by-122, RC);   // ray BD → upper right  (cos-50°, sin-50° scaled)
+      arrow(bx,by, bx-60, by-125, RC);    // ray BE → upper left
+      lbl(bx-12,by+15,'B',RC,12);
+      lbl(234,by+5,'A',RC,12);
+      lbl(bx+150,by-125,'D',RC,12);
+      lbl(bx-74,by-126,'E',RC,12);
+      lbl(bx+72,by-20,a1,C1,13);   // ∠DBA label (right lower sector)
+      lbl(bx+38,by-78,a2,C2,13);   // ∠EBD label (upper sector)
+      break;
+    }
+  }
+}
+
+selectType('comp');
+buildTypeGrid();
+buildFields();
+drawDiagram();
+document.getElementById('relHint').textContent = TYPES[0].hint;
+</script>
