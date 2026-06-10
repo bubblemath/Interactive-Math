@@ -1,0 +1,492 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Translating Words into Math — A Worktable</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script defer src="https://www.desmos.com/api/v1.11/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#EBEEF1; --card:#FFFFFF; --ink:#16212E; --muted:#5C6775;
+  --hair:#D7DCE2; --hair-strong:#C2C9D1;
+  --recognize:#2563C9; --order:#C13D6B; --translate:#0E8C8B;
+  --op-add:#13885B; --op-sub:#CC4A22; --op-mul:#2563C9; --op-div:#5B4BE8;
+  --good:#13885B; --good-bg:#E7F4EE; --bad:#CC4A22; --bad-bg:#FBEAE3;
+  --display:"Space Grotesk", system-ui, sans-serif;
+  --body:"Source Serif 4", Georgia, serif;
+  --mono:"JetBrains Mono", ui-monospace, monospace;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--paper);
+  background-image:linear-gradient(rgba(22,33,46,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(22,33,46,.035) 1px,transparent 1px);
+  background-size:26px 26px;color:var(--ink);font-family:var(--body);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:880px;margin:0 auto;padding:0 22px;}
+
+.hero{padding:84px 0 40px;}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 18px;}
+.hero h1{font-family:var(--display);font-weight:700;font-size:clamp(32px,5.4vw,54px);line-height:1.06;letter-spacing:-.02em;margin:0 0 18px;}
+.hero h1 em{font-style:normal;color:var(--translate);}
+.lede{font-size:clamp(18px,2.4vw,21px);max-width:62ch;color:#2c3744;margin:0 0 30px;}
+.hero-card{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:22px 24px;box-shadow:0 1px 0 rgba(22,33,46,.04);}
+.hero-card .demo-label{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.phrasemap{font-family:var(--display);font-size:clamp(17px,2.5vw,21px);line-height:1.9;}
+.phrasemap .kw{font-weight:600;border-radius:5px;padding:1px 6px;}
+.phrasemap .arrow{color:var(--muted);margin:0 10px;font-family:var(--mono);font-size:15px;}
+
+nav.toc{position:sticky;top:0;z-index:50;background:rgba(235,238,241,.86);backdrop-filter:blur(8px);border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);margin-top:46px;}
+.toc-inner{max-width:880px;margin:0 auto;padding:10px 22px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.toc a{font-family:var(--mono);font-size:12.5px;text-decoration:none;color:var(--muted);padding:7px 11px;border-radius:8px;border:1px solid transparent;white-space:nowrap;}
+.toc a:hover{color:var(--ink);background:rgba(22,33,46,.05);}
+.toc a.active{color:var(--ink);border-color:var(--hair-strong);background:var(--card);}
+.toc .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+
+section.module{padding:62px 0 26px;border-bottom:1px solid var(--hair);}
+.tag{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.tag .dot{width:9px;height:9px;border-radius:50%;}
+.module h2{font-family:var(--display);font-weight:600;font-size:clamp(25px,3.8vw,36px);letter-spacing:-.015em;line-height:1.1;margin:0 0 14px;}
+.module p{max-width:64ch;}
+.when{background:var(--card);border:1px solid var(--hair);border-left-width:4px;border-radius:10px;padding:14px 18px;margin:22px 0;font-size:16.5px;}
+.when b{font-family:var(--display);font-weight:600;}
+
+.panel{background:var(--card);border:1px solid var(--hair);border-radius:12px;padding:22px 22px 24px;margin:24px 0;box-shadow:0 1px 0 rgba(22,33,46,.04);}
+.panel h3{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 6px;font-weight:600;}
+.step{overflow:hidden;max-height:0;opacity:0;transition:max-height .45s ease,opacity .4s ease,margin .4s ease;margin:0;padding-left:18px;border-left:2px solid var(--hair);}
+.step.shown{max-height:320px;opacity:1;margin:14px 0;}
+.step .step-n{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.step .step-body{margin-top:4px;}
+.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;}
+
+button{font-family:var(--mono);font-size:13px;font-weight:500;cursor:pointer;padding:10px 15px;border-radius:9px;border:1px solid var(--ink);background:var(--ink);color:#fff;transition:transform .12s ease,background .15s ease,opacity .15s;}
+button:hover{transform:translateY(-1px);}
+button:active{transform:translateY(0);}
+button.ghost{background:transparent;color:var(--ink);border-color:var(--hair-strong);}
+button.ghost:hover{background:rgba(22,33,46,.05);}
+button:disabled{opacity:.5;cursor:default;transform:none;}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--recognize);outline-offset:2px;}
+
+.feedback{font-family:var(--mono);font-size:13.5px;margin-top:14px;min-height:1.2em;line-height:1.6;}
+.feedback.good{color:var(--good);}
+.feedback.bad{color:var(--bad);}
+.feedback .sol{display:block;margin-top:8px;color:var(--ink);}
+
+/* keyword highlight */
+.kw{font-weight:600;border-radius:5px;padding:1px 6px;background:#eef2fb;color:var(--recognize);}
+.kw.sub{background:var(--bad-bg);color:var(--bad);}
+.rev-chip{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--bad);background:var(--bad-bg);border-radius:20px;padding:2px 9px;margin-left:8px;vertical-align:middle;}
+
+/* sorter centerpiece */
+.sorter{background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:26px 24px;margin:24px 0;box-shadow:0 1px 0 rgba(22,33,46,.04);}
+.sorter .scoreline{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:18px;}
+.sorter .word{font-family:var(--display);font-weight:700;font-size:clamp(30px,6vw,46px);text-align:center;letter-spacing:-.01em;padding:18px 0 8px;}
+.sorter .word small{display:block;font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:8px;}
+.opgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px;}
+.opbtn{display:flex;align-items:center;gap:12px;justify-content:center;font-family:var(--display);font-weight:600;font-size:16px;padding:16px;border-radius:11px;border:1.5px solid var(--hair-strong);background:#fff;color:var(--ink);transition:transform .1s,border-color .15s,background .15s;}
+.opbtn .sym{font-size:22px;width:26px;text-align:center;}
+.opbtn:hover:not(:disabled){transform:translateY(-1px);border-color:var(--ink);}
+.opbtn.correct{background:var(--good-bg);border-color:var(--good);color:var(--good);}
+.opbtn.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--bad);}
+.opbtn:disabled{cursor:default;}
+.sorter .sfeed{font-family:var(--mono);font-size:13.5px;margin-top:16px;min-height:1.3em;}
+.sorter .sfeed.good{color:var(--good);}
+.sorter .sfeed.bad{color:var(--bad);}
+
+/* MC drill */
+.mc .phrase{font-family:var(--display);font-weight:500;font-size:clamp(19px,3vw,24px);margin:6px 0 18px;line-height:1.5;}
+.mc .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.mc .opt{font-family:var(--mono);font-size:18px;padding:16px;border-radius:11px;border:1.5px solid var(--hair-strong);background:#fff;color:var(--ink);}
+.mc .opt:hover:not(:disabled){border-color:var(--ink);transform:translateY(-1px);}
+.mc .opt.correct{background:var(--good-bg);border-color:var(--good);color:var(--good);}
+.mc .opt.wrong{background:var(--bad-bg);border-color:var(--bad);color:var(--bad);}
+.mc .opt:disabled{cursor:default;}
+
+/* typed translate */
+.tp .phrase{font-family:var(--display);font-weight:500;font-size:clamp(19px,3vw,24px);margin:6px 0 6px;line-height:1.5;}
+.tp .sub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:14px;}
+.answer-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px;}
+input[type=text]{font-family:var(--mono);font-size:16px;padding:11px 13px;border-radius:9px;border:1px solid var(--hair-strong);background:#fff;color:var(--ink);min-width:200px;flex:1;}
+
+.ref{padding:60px 0 30px;}
+.bank-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px;}
+.bank{background:var(--card);border:1px solid var(--hair);border-radius:11px;padding:16px 18px;border-top:3px solid;}
+.bank h4{font-family:var(--display);font-weight:600;font-size:16px;margin:0 0 10px;display:flex;align-items:center;gap:9px;}
+.bank h4 .sym{font-family:var(--mono);font-size:18px;}
+.bank ul{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:7px;}
+.bank li{font-family:var(--mono);font-size:13px;background:#f4f6f9;border:1px solid var(--hair);border-radius:7px;padding:4px 9px;color:var(--ink);}
+.reversal{background:var(--ink);color:#fff;border-radius:12px;padding:20px 22px;margin-top:18px;}
+.reversal .formula-label{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#f2b8a6;margin-bottom:10px;}
+.reversal p{margin:6px 0;font-size:15.5px;max-width:none;}
+.reversal code{font-family:var(--mono);background:rgba(255,255,255,.12);padding:1px 7px;border-radius:5px;}
+
+footer{padding:40px 0 90px;color:var(--muted);font-family:var(--mono);font-size:12px;}
+
+#calcToggle{position:fixed;right:18px;bottom:18px;z-index:80;background:var(--ink);color:#fff;border:1px solid var(--ink);box-shadow:0 6px 20px rgba(22,33,46,.25);}
+#calcPanel{position:fixed;right:18px;bottom:70px;z-index:80;width:340px;max-width:calc(100vw - 36px);background:var(--card);border:1px solid var(--hair-strong);border-radius:14px;box-shadow:0 14px 40px rgba(22,33,46,.28);overflow:hidden;display:none;}
+#calcPanel.open{display:block;}
+#calcPanel .calc-head{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:11px 14px;border-bottom:1px solid var(--hair);}
+#desmosSci{width:100%;height:420px;}
+#calcPanel .calc-msg{padding:24px;font-family:var(--mono);font-size:13px;color:var(--muted);line-height:1.6;}
+
+@media (max-width:640px){
+  body{font-size:16px;}
+  .bank-grid,.opgrid,.mc .opts{grid-template-columns:1fr;}
+  .hero{padding:54px 0 28px;}
+  input[type=text]{min-width:0;width:100%;}
+  .answer-row button{flex:1;}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;scroll-behavior:auto !important;}}
+</style>
+</head>
+<body>
+
+<div class="wrap hero">
+  <p class="eyebrow">Pre-algebra · Words into expressions</p>
+  <h1>Every phrase hides an <em>operation</em> — and sometimes a hidden order.</h1>
+  <p class="lede">Translating is two jobs at once. First, spot the word that names the operation: "sum" means add, "quotient" means divide. Second, get the order right — because a few phrases like "less than" and "subtracted from" quietly flip it. Master both and any sentence becomes an expression.</p>
+
+  <div class="hero-card">
+    <p class="demo-label">The keyword names the operation</p>
+    <div class="phrasemap">
+      the <span class="kw">sum</span> of a number and 8 <span class="arrow">→</span> \(x+8\)<br>
+      12 <span class="kw sub">less than</span> a number <span class="arrow">→</span> \(x-12\) <span class="rev-chip">↺ reverses</span>
+    </div>
+  </div>
+</div>
+
+<nav class="toc">
+  <div class="toc-inner">
+    <a href="#recognize"><span class="dot" style="background:var(--recognize)"></span>Spot the operation</a>
+    <a href="#order"><span class="dot" style="background:var(--order)"></span>Mind the order</a>
+    <a href="#translate"><span class="dot" style="background:var(--translate)"></span>Translate</a>
+    <a href="#ref">Keyword bank</a>
+  </div>
+</nav>
+
+<!-- ===== RECOGNIZE ===== -->
+<section class="module" id="recognize" style="--accent:var(--recognize)">
+  <div class="wrap">
+    <span class="tag"><span class="dot" style="background:var(--recognize)"></span>Skill 01 · Recognizing the operation</span>
+    <h2>Which operation does each word signal?</h2>
+    <p>Each operation has its own vocabulary. A word flashes up — tap the operation it belongs to and build a streak. Words like "less than" and "goes into" also carry an order trap, which the next section tackles; here, just nail the operation.</p>
+
+    <div class="sorter" data-sorter>
+      <div class="scoreline"><span>Streak: <b data-streak>0</b></span><span>Best: <b data-best>0</b></span></div>
+      <div class="word" data-word>—</div>
+      <div class="opgrid">
+        <button class="opbtn" data-op="add"><span class="sym" style="color:var(--op-add)">+</span> Addition</button>
+        <button class="opbtn" data-op="sub"><span class="sym" style="color:var(--op-sub)">−</span> Subtraction</button>
+        <button class="opbtn" data-op="mul"><span class="sym" style="color:var(--op-mul)">×</span> Multiplication</button>
+        <button class="opbtn" data-op="div"><span class="sym" style="color:var(--op-div)">÷</span> Division</button>
+      </div>
+      <div class="sfeed" data-sfeed></div>
+      <div class="controls"><button data-next disabled>Next word</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== ORDER ===== -->
+<section class="module" id="order" style="--accent:var(--order)">
+  <div class="wrap">
+    <span class="tag"><span class="dot" style="background:var(--order)"></span>Skill 02 · Getting the order right</span>
+    <h2>A few phrases reverse what you write.</h2>
+    <p>Addition and multiplication don't care about order — "3 more than a number" and "a number plus 3" are the same. But subtraction and division do, and three phrases flip the order on purpose: "less than," "subtracted from," and "goes into." Read them carefully.</p>
+
+    <div class="when" style="border-left-color:var(--order)">
+      <b>The reversers.</b> "5 <i>less than</i> x" is \(x-5\). "5 <i>subtracted from</i> x" is \(x-5\). "5 <i>goes into</i> x" is \(x\div5\). The number you hear first lands second.
+    </div>
+
+    <div class="panel">
+      <h3>Worked examples · order</h3>
+      <div class="stepper" data-stepper>
+        <div class="step"><span class="step-n">"less than" flips</span><div class="step-body">"5 less than a number" → the number comes first: \(x-5\) (not \(5-x\)).</div></div>
+        <div class="step"><span class="step-n">"subtracted from" flips</span><div class="step-body">"10 subtracted from a number" → \(x-10\). But "a number subtracted from 10" → \(10-x\).</div></div>
+        <div class="step"><span class="step-n">"decreased by" keeps order</span><div class="step-body">"a number decreased by 4" → \(x-4\). No flip — start at the number, take away 4.</div></div>
+        <div class="step"><span class="step-n">"goes into" flips</span><div class="step-body">"3 goes into a number" → \(x\div3 = \tfrac{x}{3}\). Whatever goes <i>into</i> the other is the divisor.</div></div>
+      </div>
+      <div class="controls"><button data-reveal>Reveal next step</button><button class="ghost" data-reset-steps>Reset</button></div>
+    </div>
+
+    <div class="panel mc" data-mc>
+      <h3>Pick the correct order</h3>
+      <div class="phrase" data-phrase></div>
+      <div class="opts" data-opts></div>
+      <div class="feedback" data-feedback></div>
+      <div class="controls"><button data-mc-next>New phrase</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TRANSLATE ===== -->
+<section class="module" id="translate" style="--accent:var(--translate)">
+  <div class="wrap">
+    <span class="tag"><span class="dot" style="background:var(--translate)"></span>Skill 03 · Translating the whole phrase</span>
+    <h2>Put the operation and the order together — and watch for grouping.</h2>
+    <p>Some phrases bundle a piece together first. Words like "the sum of," "the difference of," or "the quantity" wrap things in parentheses. "Twice the sum of a number and 3" is \(2(x+3)\); but "the sum of twice a number and 3" is \(2x+3\). Where the grouping words sit tells you where the parentheses go.</p>
+
+    <div class="when" style="border-left-color:var(--translate)">
+      <b>"by" is not always times.</b> "Increased by 5" adds (\(x+5\)); "multiplied by 5" multiplies (\(5x\)). The verb decides — "by" just points to the amount.
+    </div>
+
+    <div class="panel">
+      <h3>Worked examples · translation</h3>
+      <div class="stepper" data-stepper>
+        <div class="step"><span class="step-n">Plain</span><div class="step-body">"the sum of a number and 8" → \(x+8\).</div></div>
+        <div class="step"><span class="step-n">Order trap</span><div class="step-body">"12 less than a number" → \(x-12\).</div></div>
+        <div class="step"><span class="step-n">Multiplication</span><div class="step-body">"the product of 5 and a number" → \(5x\); "triple a number" → \(3x\).</div></div>
+        <div class="step"><span class="step-n">Division</span><div class="step-body">"the quotient of a number and 4" → \(\tfrac{x}{4}\); "8 divided by a number" → \(\tfrac{8}{x}\).</div></div>
+        <div class="step"><span class="step-n">Grouping</span><div class="step-body">"twice the sum of a number and 3" → \(2(x+3)\). The "sum" is grouped first, then doubled.</div></div>
+      </div>
+      <div class="controls"><button data-reveal>Reveal next step</button><button class="ghost" data-reset-steps>Reset</button></div>
+    </div>
+
+    <div class="panel tp" data-tp>
+      <h3>Your turn · translate the phrase</h3>
+      <div class="phrase" data-phrase></div>
+      <div class="sub">Use <b>x</b> for "a number". Type * for times if you like — 3x and 3*x both work, and 2(x+3) is fine.</div>
+      <div class="answer-row">
+        <input type="text" data-input placeholder="e.g. x + 8" autocomplete="off" spellcheck="false">
+        <button data-check>Check</button>
+        <button class="ghost" data-new>New phrase</button>
+        <button class="ghost" data-show>Show solution</button>
+      </div>
+      <div class="feedback" data-feedback></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== KEYWORD BANK ===== -->
+<section class="ref" id="ref">
+  <div class="wrap">
+    <span class="tag"><span class="dot" style="background:var(--ink)"></span>Keyword bank</span>
+    <h2 style="font-family:var(--display);font-weight:600;font-size:clamp(24px,4vw,34px);margin:0 0 6px;">The words that signal each operation.</h2>
+    <div class="bank-grid">
+      <div class="bank" style="border-top-color:var(--op-add)">
+        <h4><span class="sym" style="color:var(--op-add)">+</span> Addition</h4>
+        <ul><li>add</li><li>sum</li><li>plus</li><li>increase</li><li>total</li><li>exceeds</li><li>more than</li></ul>
+      </div>
+      <div class="bank" style="border-top-color:var(--op-sub)">
+        <h4><span class="sym" style="color:var(--op-sub)">−</span> Subtraction</h4>
+        <ul><li>subtract</li><li>less than</li><li>difference</li><li>decrease</li><li>take away</li><li>deduct</li></ul>
+      </div>
+      <div class="bank" style="border-top-color:var(--op-mul)">
+        <h4><span class="sym" style="color:var(--op-mul)">×</span> Multiplication</h4>
+        <ul><li>multiply</li><li>product</li><li>by</li><li>times</li><li>doubles</li><li>twice</li><li>triples</li></ul>
+      </div>
+      <div class="bank" style="border-top-color:var(--op-div)">
+        <h4><span class="sym" style="color:var(--op-div)">÷</span> Division</h4>
+        <ul><li>divide</li><li>quotient</li><li>goes into</li><li>how many times</li></ul>
+      </div>
+    </div>
+    <div class="reversal">
+      <p class="formula-label">↺ Reversal words — order flips</p>
+      <p><b>less than</b>: "5 less than x" → <code>x − 5</code></p>
+      <p><b>subtracted from</b>: "5 subtracted from x" → <code>x − 5</code></p>
+      <p><b>goes into / divided into</b>: "5 goes into x" → <code>x ÷ 5</code></p>
+      <p style="color:#c7cfd9;margin-top:12px;">Everything else keeps the order you read it in. Order only changes the answer for subtraction and division.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="wrap">Made for practice · refresh any drill freely · tap to sort, type to translate · open the calculator (bottom-right) · math rendering and the calculator need an internet connection.</footer>
+
+<button id="calcToggle">Calculator</button>
+<div id="calcPanel">
+  <div class="calc-head">Desmos · scientific calculator</div>
+  <div id="desmosSci"></div>
+</div>
+
+<script>
+/* ---------- KaTeX ---------- */
+function renderMath(el){if(window.renderMathInElement){renderMathInElement(el,{delimiters:[{left:"\\[",right:"\\]",display:true},{left:"\\(",right:"\\)",display:false}],throwOnError:false});}}
+window.addEventListener("DOMContentLoaded",function(){(function go(){if(window.renderMathInElement){renderMath(document.body);init();}else setTimeout(go,60);})();});
+
+/* ---------- expression evaluator ---------- */
+function tokenizeExpr(str){
+  let s=str.replace(/\s+/g,'').replace(/[−–—]/g,'-').replace(/[×*]/g,'*').replace(/[÷]/g,'/').toLowerCase();
+  const raw=[];let i=0;
+  while(i<s.length){const c=s[i];
+    if(/[0-9.]/.test(c)){let j=i+1;while(j<s.length&&/[0-9.]/.test(s[j]))j++;raw.push({t:'num',v:parseFloat(s.slice(i,j))});i=j;}
+    else if(c==='x'||c==='n'){raw.push({t:'var'});i++;}
+    else if('+-*/()'.includes(c)){raw.push({t:c});i++;}
+    else return null;}
+  const out=[];for(let k=0;k<raw.length;k++){out.push(raw[k]);const a=raw[k],b=raw[k+1];if(!b)continue;
+    const ev=(a.t==='num'||a.t===')'||a.t==='var');const sv=(b.t==='num'||b.t==='var'||b.t==='(');if(ev&&sv)out.push({t:'*'});}
+  return out;
+}
+function parseExpr(str){
+  const toks=tokenizeExpr(str);if(!toks||!toks.length)return null;let p=0;
+  const peek=()=>toks[p],next=()=>toks[p++];
+  function expr(){let v=term();while(peek()&&(peek().t==='+'||peek().t==='-')){const op=next().t;v={t:'op',op,a:v,b:term()};}return v;}
+  function term(){let v=factor();while(peek()&&(peek().t==='*'||peek().t==='/')){const op=next().t;v={t:'op',op,a:v,b:factor()};}return v;}
+  function factor(){const t=peek();if(!t)throw'eof';if(t.t==='+'){next();return factor();}if(t.t==='-'){next();return{t:'neg',a:factor()};}return prim();}
+  function prim(){const t=next();if(!t)throw'eof';if(t.t==='num')return{t:'num',v:t.v};if(t.t==='var')return{t:'var'};if(t.t==='('){const v=expr();if(!peek()||peek().t!==')')throw'paren';next();return v;}throw'ue';}
+  try{const ast=expr();if(p!==toks.length)return null;return ast;}catch(e){return null;}
+}
+function evalAST(n,x){switch(n.t){case'num':return n.v;case'var':return x;case'neg':return -evalAST(n.a,x);case'op':{const a=evalAST(n.a,x),b=evalAST(n.b,x);return n.op==='+'?a+b:n.op==='-'?a-b:n.op==='*'?a*b:a/b;}}}
+function equiv(s1,s2){const A=parseExpr(s1),B=parseExpr(s2);if(!A||!B)return false;
+  const xs=[1,2,3,5,7,11,0.5,-2,-3.5,4.25];let valid=0;
+  for(const x of xs){const a=evalAST(A,x),b=evalAST(B,x);if(!isFinite(a)||!isFinite(b))continue;if(Math.abs(a-b)>1e-7)return false;valid++;}
+  return valid>=5;}
+
+/* ---------- helpers ---------- */
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+
+/* ---------- keyword sorter ---------- */
+const OPS={add:"Addition",sub:"Subtraction",mul:"Multiplication",div:"Division"};
+const REVWORDS=["less than","goes into","how many times"];
+const SORTER=[
+  {w:"add",op:"add"},{w:"sum",op:"add"},{w:"plus",op:"add"},{w:"increase",op:"add"},{w:"total",op:"add"},{w:"exceeds",op:"add"},{w:"more than",op:"add"},
+  {w:"subtract",op:"sub"},{w:"less than",op:"sub"},{w:"difference",op:"sub"},{w:"decrease",op:"sub"},{w:"take away",op:"sub"},{w:"deduct",op:"sub"},
+  {w:"multiply",op:"mul"},{w:"product",op:"mul"},{w:"by",op:"mul"},{w:"times",op:"mul"},{w:"doubles",op:"mul"},{w:"twice",op:"mul"},{w:"triples",op:"mul"},
+  {w:"divide",op:"div"},{w:"quotient",op:"div"},{w:"goes into",op:"div"},{w:"how many times",op:"div"}
+];
+function wireSorter(){
+  const sec=document.querySelector("[data-sorter]");
+  const wordEl=sec.querySelector("[data-word]"),feed=sec.querySelector("[data-sfeed]");
+  const btns=[...sec.querySelectorAll("[data-op]")],next=sec.querySelector("[data-next]");
+  const streakEl=sec.querySelector("[data-streak]"),bestEl=sec.querySelector("[data-best]");
+  let queue=[],cur=null,answered=false,streak=0,best=0;
+  function load(){if(!queue.length)queue=shuffle(SORTER);cur=queue.pop();answered=false;
+    wordEl.innerHTML='"'+cur.w+'"';
+    btns.forEach(b=>{b.disabled=false;b.classList.remove('correct','wrong');});
+    feed.textContent="";feed.className="sfeed";next.disabled=true;}
+  btns.forEach(b=>b.addEventListener('click',()=>{
+    if(answered)return;answered=true;const choice=b.getAttribute('data-op');
+    btns.forEach(x=>{x.disabled=true;if(x.getAttribute('data-op')===cur.op)x.classList.add('correct');});
+    if(choice===cur.op){streak++;best=Math.max(best,streak);feed.className="sfeed good";
+      feed.textContent="Correct — “"+cur.w+"” signals "+OPS[cur.op].toLowerCase()+"."+(REVWORDS.includes(cur.w)?"  ↺ heads up: this one also reverses the order.":"");}
+    else{b.classList.add('wrong');streak=0;feed.className="sfeed bad";feed.textContent="“"+cur.w+"” signals "+OPS[cur.op].toLowerCase()+".";}
+    streakEl.textContent=streak;bestEl.textContent=best;next.disabled=false;
+  }));
+  next.addEventListener('click',load);
+  load();
+}
+
+/* ---------- order-trap MC ---------- */
+const ORDER=[
+  {html:'8 <span class="kw sub">less than</span> a number',correct:"x - 8",other:"8 - x",why:"“less than” reverses: the number lands first → x − 8."},
+  {html:'a number <span class="kw sub">decreased by</span> 8',correct:"x - 8",other:"8 - x",why:"“decreased by” keeps order — start at the number, subtract 8 → x − 8."},
+  {html:'6 <span class="kw sub">subtracted from</span> a number',correct:"x - 6",other:"6 - x",why:"“subtracted from” reverses: subtract 6 FROM the number → x − 6."},
+  {html:'the <span class="kw sub">difference</span> of a number and 6',correct:"x - 6",other:"6 - x",why:"“difference of a and b” keeps order → x − 6."},
+  {html:'3 <span class="kw" style="background:#ece9fb;color:var(--op-div)">goes into</span> a number',correct:"x / 3",other:"3 / x",why:"“goes into” reverses: 3 goes into the number → number ÷ 3 → x / 3."},
+  {html:'a number <span class="kw" style="background:#ece9fb;color:var(--op-div)">divided by</span> 3',correct:"x / 3",other:"3 / x",why:"“divided by” keeps order → x ÷ 3 → x / 3."},
+  {html:'the <span class="kw" style="background:#ece9fb;color:var(--op-div)">quotient</span> of a number and 5',correct:"x / 5",other:"5 / x",why:"“quotient of a and b” keeps order → x ÷ 5."},
+  {html:'7 <span class="kw sub">less than</span> twice a number',correct:"2x - 7",other:"7 - 2x",why:"“less than” reverses: take twice the number, then subtract 7 → 2x − 7."}
+];
+function wireMC(){
+  const sec=document.querySelector("[data-mc]");
+  const phrase=sec.querySelector("[data-phrase]"),opts=sec.querySelector("[data-opts]"),fb=sec.querySelector("[data-feedback]"),next=sec.querySelector("[data-mc-next]");
+  let cur=null;
+  function load(){let n;do{n=pick(ORDER);}while(n===cur&&ORDER.length>1);cur=n;
+    phrase.innerHTML=cur.html;fb.textContent="";fb.className="feedback";
+    const order=shuffle([cur.correct,cur.other]);
+    opts.innerHTML="";
+    order.forEach(ex=>{const b=document.createElement('button');b.className="opt";b.textContent=ex;
+      b.addEventListener('click',()=>{
+        [...opts.children].forEach(c=>{c.disabled=true;if(c.textContent===cur.correct)c.classList.add('correct');});
+        if(ex===cur.correct){fb.className="feedback good";fb.textContent="Correct. "+cur.why;}
+        else{b.classList.add('wrong');fb.className="feedback bad";fb.textContent="Not quite. "+cur.why;}
+      });
+      opts.appendChild(b);});
+  }
+  next.addEventListener('click',load);load();
+}
+
+/* ---------- typed translation ---------- */
+const TRANS=[
+  {html:'the <span class="kw">sum</span> of a number and 8',target:"x+8"},
+  {html:'a number <span class="kw">increased by</span> 5',target:"x+5"},
+  {html:'7 <span class="kw">more than</span> a number',target:"x+7"},
+  {html:'the <span class="kw">total</span> of a number and 12',target:"x+12"},
+  {html:'12 <span class="kw sub">less than</span> a number',target:"x-12",wrongs:[{e:"12-x",m:"Right operation, wrong order — “less than” puts the number first: x − 12."}]},
+  {html:'a number <span class="kw sub">decreased by</span> 4',target:"x-4"},
+  {html:'9 <span class="kw sub">subtracted from</span> a number',target:"x-9",wrongs:[{e:"9-x",m:"“subtracted from” reverses — subtract 9 FROM the number: x − 9."}]},
+  {html:'the <span class="kw sub">difference</span> of a number and 6',target:"x-6",wrongs:[{e:"6-x",m:"“difference of a and b” keeps order: x − 6."}]},
+  {html:'<span class="kw" style="background:#eaf3fb;color:var(--op-mul)">triple</span> a number',target:"3x"},
+  {html:'the <span class="kw" style="background:#eaf3fb;color:var(--op-mul)">product</span> of 5 and a number',target:"5x"},
+  {html:'<span class="kw" style="background:#eaf3fb;color:var(--op-mul)">twice</span> a number',target:"2x"},
+  {html:'a number <span class="kw" style="background:#eaf3fb;color:var(--op-mul)">multiplied by</span> 4',target:"4x"},
+  {html:'the <span class="kw" style="background:#ece9fb;color:var(--op-div)">quotient</span> of a number and 4',target:"x/4",wrongs:[{e:"4/x",m:"“quotient of a and b” keeps order: x ÷ 4."}]},
+  {html:'8 <span class="kw" style="background:#ece9fb;color:var(--op-div)">divided by</span> a number',target:"8/x",wrongs:[{e:"x/8",m:"“8 divided by a number” means 8 ÷ x → 8/x."}]},
+  {html:'<span class="kw" style="background:#ece9fb;color:var(--op-div)">half of</span> a number',target:"x/2"},
+  {html:'<span class="kw" style="background:#eaf3fb;color:var(--op-mul)">twice the sum</span> of a number and 3',target:"2(x+3)",wrongs:[{e:"2x+3",m:"Use parentheses — “the sum of …” groups first: 2(x+3)."}]},
+  {html:'three <span class="kw" style="background:#eaf3fb;color:var(--op-mul)">times the difference</span> of a number and 5',target:"3(x-5)",wrongs:[{e:"3x-5",m:"Group first — “the difference of …” → 3(x−5)."}]},
+  {html:'the <span class="kw">sum of twice</span> a number and 3',target:"2x+3",wrongs:[{e:"2(x+3)",m:"No grouping here — it's (twice a number) plus 3 → 2x+3."}]},
+  {html:'5 <span class="kw">more than twice</span> a number',target:"2x+5"}
+];
+function wireTyped(){
+  const sec=document.querySelector("[data-tp]");
+  const phrase=sec.querySelector("[data-phrase]"),input=sec.querySelector("[data-input]"),fb=sec.querySelector("[data-feedback]");
+  const bC=sec.querySelector("[data-check]"),bN=sec.querySelector("[data-new]"),bS=sec.querySelector("[data-show]");
+  let cur=null;
+  function load(){let n;do{n=pick(TRANS);}while(n===cur&&TRANS.length>1);cur=n;
+    phrase.innerHTML=cur.html;input.value="";fb.textContent="";fb.className="feedback";}
+  bC.addEventListener('click',()=>{
+    if(!cur)return;const raw=input.value.trim();
+    if(!parseExpr(raw)){fb.className="feedback bad";fb.textContent="Enter a valid expression using x — for example x + 8, 3x, or 2(x+3).";return;}
+    if(equiv(raw,cur.target)){fb.className="feedback good";fb.textContent="Correct.";return;}
+    fb.className="feedback bad";
+    if(cur.wrongs){for(const w of cur.wrongs){if(equiv(raw,w.e)){fb.textContent=w.m;return;}}}
+    fb.textContent="Not quite — check the operation and the order. Try again, or Show solution.";
+  });
+  bS.addEventListener('click',()=>{if(!cur)return;fb.className="feedback";fb.innerHTML="<span class='sol'>One correct answer: <b>"+cur.target+"</b></span>";});
+  bN.addEventListener('click',load);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter')bC.click();});
+  load();
+}
+
+/* ---------- steppers ---------- */
+function wireSteppers(){
+  document.querySelectorAll(".panel").forEach(panel=>{
+    const stepper=panel.querySelector("[data-stepper]"); if(!stepper) return;
+    const steps=[...stepper.querySelectorAll(".step")];
+    const reveal=panel.querySelector("[data-reveal]"),reset=panel.querySelector("[data-reset-steps]");
+    let i=0;
+    function upd(){steps.forEach((s,idx)=>s.classList.toggle("shown",idx<i));reveal.disabled=i>=steps.length;reveal.textContent=i>=steps.length?"All steps shown":(i===0?"Reveal first step":"Reveal next step");}
+    reveal.addEventListener("click",()=>{if(i<steps.length){i++;upd();}});
+    reset.addEventListener("click",()=>{i=0;upd();});
+    upd();
+  });
+}
+
+/* ---------- nav ---------- */
+function wireNav(){
+  const links=[...document.querySelectorAll("nav.toc a")];const map={};
+  links.forEach(l=>map[l.getAttribute("href").slice(1)]=l);
+  const obs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove("active"));if(map[e.target.id])map[e.target.id].classList.add("active");}});},{rootMargin:"-45% 0px -50% 0px"});
+  ["recognize","order","translate","ref"].forEach(id=>{const el=document.getElementById(id);if(el)obs.observe(el);});
+}
+
+/* ---------- Desmos ---------- */
+function wireCalc(){
+  const toggle=document.getElementById("calcToggle"),panel=document.getElementById("calcPanel"),host=document.getElementById("desmosSci");
+  let built=false;
+  toggle.addEventListener("click",()=>{panel.classList.toggle("open");
+    if(panel.classList.contains("open")&&!built){if(window.Desmos&&Desmos.ScientificCalculator){Desmos.ScientificCalculator(host);built=true;}else{host.outerHTML="<div class='calc-msg'>The calculator needs an internet connection to load. Reconnect and reopen this panel.</div>";built=true;}}});
+}
+
+/* ---------- init ---------- */
+let inited=false;
+function init(){
+  if(inited)return;inited=true;
+  wireSteppers();
+  wireSorter();
+  wireMC();
+  wireTyped();
+  wireNav();
+  wireCalc();
+}
+</script>
+</body>
+</html>
