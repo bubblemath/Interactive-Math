@@ -1,0 +1,875 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Two Methods, One Truth — Long Division & Synthetic Division</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+<style>
+:root{
+  --paper:#f4f1e9;
+  --grid:rgba(36,33,46,0.055);
+  --ink:#211f2a;
+  --muted:#6c6878;
+  --card:#ffffff;
+  --line:#e3ddcf;
+  --long:#2f53c4;        /* long division accent (indigo-blue) */
+  --long-soft:#e6ebfb;
+  --synth:#d96a26;       /* synthetic accent (amber) */
+  --synth-soft:#fbeada;
+  --match:#0f9d6b;       /* "same number" green */
+  --match-soft:#dcf3ea;
+  --rem:#9b3ac0;         /* remainder violet */
+  --rem-soft:#f3e3fa;
+  --warn:#c0392b;
+  --ok:#0f9d6b;
+  --shadow:0 1px 2px rgba(33,31,42,.04),0 8px 24px rgba(33,31,42,.06);
+  --r:14px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background-color:var(--paper);color:var(--ink);
+  font-family:"Source Serif 4",Georgia,serif;line-height:1.62;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px 120px}
+h1,h2,h3,.ui{font-family:"Space Grotesk",system-ui,sans-serif}
+.mono,.tab{font-family:"JetBrains Mono",ui-monospace,monospace}
+
+/* ---------- header ---------- */
+header.hero{padding:64px 0 26px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.eyebrow{font-family:"Space Grotesk";text-transform:uppercase;letter-spacing:.18em;
+  font-size:.72rem;font-weight:600;color:var(--muted)}
+.eyebrow b{color:var(--long)} .eyebrow i{color:var(--synth);font-style:normal}
+h1{font-size:clamp(2rem,5vw,3.1rem);line-height:1.04;margin:.35em 0 .2em;font-weight:700;letter-spacing:-.015em}
+h1 .b{color:var(--long)} h1 .a{color:var(--synth)}
+.lede{font-size:1.12rem;max-width:60ch;color:#3a3744}
+.teaser{display:flex;gap:18px;flex-wrap:wrap;margin-top:26px}
+.teaser .mini{flex:1 1 240px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:14px 16px;box-shadow:var(--shadow)}
+.teaser .mini .cap{font-family:"Space Grotesk";font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin-bottom:8px}
+.teaser .mini.l .cap{color:var(--long)} .teaser .mini.s .cap{color:var(--synth)}
+
+/* ---------- sections ---------- */
+section{margin-top:54px}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:14px}
+.sec-num{font-family:"Space Grotesk";font-weight:700;font-size:.8rem;color:var(--muted);
+  border:1px solid var(--line);border-radius:999px;padding:3px 11px;background:var(--card)}
+h2{font-size:1.55rem;margin:0;font-weight:600;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:1rem;margin:.1em 0 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  padding:22px;box-shadow:var(--shadow)}
+p.body{max-width:68ch}
+.key{background:linear-gradient(transparent 62%,var(--match-soft) 62%);padding:0 2px}
+
+/* ---------- controls ---------- */
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+.seg button{font-family:"Space Grotesk";font-size:.85rem;font-weight:500;border:0;background:transparent;
+  color:var(--muted);padding:8px 13px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.seg.long button[aria-pressed="true"]{background:var(--long)}
+.seg.synth button[aria-pressed="true"]{background:var(--synth)}
+.btn{font-family:"Space Grotesk";font-weight:600;font-size:.9rem;border:1px solid var(--ink);
+  background:var(--ink);color:#fff;border-radius:10px;padding:9px 16px;cursor:pointer;transition:transform .06s}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:var(--card);color:var(--ink)}
+.btn.long{background:var(--long);border-color:var(--long)}
+.btn.synth{background:var(--synth);border-color:var(--synth)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+label.fld{font-family:"Space Grotesk";font-size:.82rem;color:var(--muted);display:inline-flex;flex-direction:column;gap:4px}
+select,input[type=text]{font-family:"JetBrains Mono";font-size:.92rem;border:1px solid var(--line);
+  border-radius:9px;padding:8px 10px;background:var(--card);color:var(--ink)}
+input[type=text]{width:100%}
+
+/* ---------- the dual tableau ---------- */
+.stage{display:grid;gap:18px;grid-template-columns:1fr 1fr;align-items:start}
+@media(max-width:820px){.stage{grid-template-columns:1fr}}
+.pane{border:1px solid var(--line);border-radius:12px;padding:16px 14px 18px;background:var(--card);overflow-x:auto}
+.pane.l{border-top:3px solid var(--long)}
+.pane.s{border-top:3px solid var(--synth)}
+.pane .ptitle{font-family:"Space Grotesk";font-weight:600;font-size:.82rem;letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.pane.l .ptitle{color:var(--long)} .pane.s .ptitle{color:var(--synth)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.pane.l .dot{background:var(--long)} .pane.s .dot{background:var(--synth)}
+
+.grid-row{display:grid;align-items:center;font-family:"JetBrains Mono";font-size:1.02rem;min-height:34px}
+.cell{padding:2px 4px;text-align:center;border-radius:7px;transition:background .25s,color .25s,box-shadow .25s}
+.gutter{text-align:right;padding-right:8px;color:var(--muted);font-size:.95rem}
+.hidden-step{visibility:hidden}
+.bar{height:0;border-top:2px solid var(--ink);margin:3px 0}
+.bar.part{border-top:2px solid var(--ink)}
+.qcell{color:var(--long);font-weight:700;background:var(--long-soft)}
+.pane.s .qcell{color:var(--synth);background:var(--synth-soft)}
+.remcell{color:var(--rem);font-weight:700;background:var(--rem-soft)}
+.rootbox{border:1.6px solid var(--synth);border-radius:8px;color:var(--synth);font-weight:700;
+  justify-self:end;padding:2px 9px;min-width:34px;text-align:center}
+.carry{color:var(--synth);opacity:.92}
+.prodrow .cell{color:#444}
+.subtag{font-size:.68rem;font-family:"Space Grotesk";color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.divrow .cell{font-weight:500}
+.matchpulse{box-shadow:0 0 0 2px var(--match), 0 0 14px var(--match-soft);}
+.scale-row .cell{color:var(--synth)}
+
+/* connection caption */
+.connect{margin-top:16px;border-left:3px solid var(--match);background:var(--match-soft);
+  border-radius:0 10px 10px 0;padding:12px 16px;font-size:.98rem}
+.connect b{color:var(--match)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-family:"Space Grotesk";font-size:.78rem;color:var(--muted);margin-top:14px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:13px;height:13px;border-radius:4px;display:inline-block}
+
+.steprow{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.steplabel{font-family:"Space Grotesk";font-size:.86rem;color:var(--muted);min-width:90px}
+.narr{font-size:.97rem;color:#3a3744;min-height:1.5em;flex:1 1 240px}
+
+/* worked examples */
+.wegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:18px}
+.wechip{font-family:"Space Grotesk";font-size:.84rem;text-align:left;border:1px solid var(--line);
+  background:var(--card);border-radius:11px;padding:11px 13px;cursor:pointer;line-height:1.3}
+.wechip[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink) inset}
+.wechip .tag{display:block;font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+
+/* practice + drill */
+.coef-inputs{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:14px 0}
+.coef-inputs .ci{display:flex;flex-direction:column;gap:5px;width:84px}
+.coef-inputs .ci small{font-family:"Space Grotesk";font-size:.72rem;color:var(--muted)}
+.feedback{margin-top:12px;font-size:.98rem;padding:11px 14px;border-radius:10px;display:none}
+.feedback.show{display:block}
+.feedback.good{background:var(--match-soft);color:#0a6e4c;border:1px solid #b6e3d2}
+.feedback.bad{background:#fdecea;color:#9b2c1f;border:1px solid #f2c4bd}
+.feedback.hint{background:#fff6e6;color:#8a5a14;border:1px solid #f3e0b8}
+.hintnote{font-size:.86rem;color:var(--muted);margin-top:6px}
+
+/* desmos */
+#calcToggle{position:fixed;right:20px;bottom:20px;z-index:40;border-radius:999px;
+  box-shadow:0 6px 20px rgba(33,31,42,.22)}
+#calcPanel{position:fixed;right:20px;bottom:78px;width:340px;height:430px;background:var(--card);
+  border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(33,31,42,.28);
+  z-index:41;display:none;overflow:hidden}
+#calcPanel.open{display:block}
+#calcPanel .ch{font-family:"Space Grotesk";font-weight:600;font-size:.85rem;padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+#calcPanel .ch button{border:0;background:transparent;font-size:1.1rem;cursor:pointer;color:var(--muted)}
+#desmos{width:100%;height:calc(100% - 41px)}
+@media(max-width:480px){#calcPanel{width:calc(100vw - 40px);height:60vh}}
+
+footer{margin-top:70px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:.86rem}
+a.skip{position:absolute;left:-999px}a.skip:focus{left:8px;top:8px;background:#fff;padding:8px;z-index:99;border-radius:8px}
+:focus-visible{outline:3px solid var(--long);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<a href="#main" class="skip">Skip to content</a>
+<div class="wrap" id="main">
+
+<header class="hero">
+  <div class="eyebrow">Precalculus &middot; <b>Long division</b> &harr; <i>Synthetic division</i></div>
+  <h1>Two methods,<br><span class="b">one</span> <span class="a">truth</span>.</h1>
+  <p class="lede">Synthetic division isn&rsquo;t a different trick &mdash; it&rsquo;s polynomial long division with the
+  <em>x</em>&rsquo;s erased and the subtraction turned into addition. This page lets you run both at once and watch the
+  same numbers land in the same columns.</p>
+  <div class="teaser" aria-hidden="true">
+    <div class="mini l"><div class="cap">Long division</div><div class="mono" id="teaseL"></div></div>
+    <div class="mini s"><div class="cap">Synthetic</div><div class="mono" id="teaseS"></div></div>
+  </div>
+</header>
+
+<!-- 1. BIG IDEA -->
+<section id="idea">
+  <div class="sec-head"><span class="sec-num">01</span><div><h2>The big idea</h2>
+    <p class="sub">Why the shorthand works &mdash; and when you&rsquo;re allowed to use it.</p></div></div>
+  <div class="card">
+    <p class="body">When you divide a polynomial by a <strong>linear</strong> divisor, every long-division step does the
+    same three things: <span style="color:var(--long)">divide the leading term</span>, multiply back, and subtract.
+    Because the divisor is just <span class="tab">x</span> minus a number, the &ldquo;divide the leading term&rdquo; step
+    never changes the coefficient &mdash; so you can drop the <em>x</em>&rsquo;s entirely and track only the numbers.
+    That stripped-down bookkeeping <span class="key">is</span> synthetic division.</p>
+    <p class="body">The one sign change to watch: synthetic division uses the divisor&rsquo;s <strong>root</strong>
+    <span id="rootInline" class="tab"></span> and <strong>adds</strong>, where long division writes
+    <span class="tab">x&minus;c</span> and <strong>subtracts</strong>. Flipping that sign is the whole reason the columns
+    collapse so neatly. And it only works for linear divisors &mdash; that&rsquo;s the price of the shortcut.</p>
+  </div>
+</section>
+
+<!-- 2. SIDE BY SIDE STEPPER -->
+<section id="together">
+  <div class="sec-head"><span class="sec-num">02</span><div><h2>Run them side&nbsp;by&nbsp;side</h2>
+    <p class="sub">Step through both at once. Matching numbers glow <span style="color:var(--match);font-weight:600">green</span> together.</p></div></div>
+
+  <div class="controls" id="stepPresetBar"></div>
+
+  <div class="stage" id="stage">
+    <div class="pane l"><div class="ptitle"><span class="dot"></span><span id="ldTitle"></span></div>
+      <div id="ldBody"></div></div>
+    <div class="pane s"><div class="ptitle"><span class="dot"></span><span id="syTitle"></span></div>
+      <div id="syBody"></div></div>
+  </div>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--long-soft);border:1px solid var(--long)"></i> quotient (long)</span>
+    <span><i class="sw" style="background:var(--synth-soft);border:1px solid var(--synth)"></i> quotient (synthetic)</span>
+    <span><i class="sw" style="background:var(--rem-soft);border:1px solid var(--rem)"></i> remainder</span>
+    <span><i class="sw matchpulse" style="background:#fff"></i> same number, same column</span>
+  </div>
+
+  <div class="steprow">
+    <button class="btn ghost" id="bPrev">&larr; Back</button>
+    <button class="btn" id="bNext">Step &rarr;</button>
+    <button class="btn ghost" id="bAll">Reveal all</button>
+    <button class="btn ghost" id="bReset">Reset</button>
+    <span class="steplabel" id="stepCount"></span>
+    <span class="narr" id="narr"></span>
+  </div>
+
+  <div class="connect" id="connectNote"></div>
+</section>
+
+<!-- 3. WORKED EXAMPLES -->
+<section id="examples">
+  <div class="sec-head"><span class="sec-num">03</span><div><h2>Worked examples</h2>
+    <p class="sub">One for every case: same degree, one higher, two higher &mdash; monic and non&#8209;monic.</p></div></div>
+  <div class="wegrid" id="weChips"></div>
+  <div class="card">
+    <p class="body" id="weNarr" style="margin-top:0"></p>
+    <div class="stage" id="weStage">
+      <div class="pane l"><div class="ptitle"><span class="dot"></span><span id="weLdTitle"></span></div><div id="weLdBody"></div></div>
+      <div class="pane s"><div class="ptitle"><span class="dot"></span><span id="weSyTitle"></span></div><div id="weSyBody"></div></div>
+    </div>
+    <div class="connect" id="weConnect"></div>
+  </div>
+</section>
+
+<!-- 4. PLACEHOLDER DRILL -->
+<section id="placeholder">
+  <div class="sec-head"><span class="sec-num">04</span><div><h2>Mind the gaps</h2>
+    <p class="sub">The #1 synthetic-division mistake: forgetting a zero for a missing term.</p></div></div>
+  <div class="card">
+    <p class="body" style="margin-top:0">Before you divide, you must list <em>every</em> coefficient from the highest power
+    down to the constant &mdash; including a <span class="tab">0</span> wherever a power is missing. Write the full
+    coefficient list (highest degree first) for the dividend below.</p>
+    <p class="body" style="font-size:1.25rem" id="phPoly"></p>
+    <label class="fld" style="max-width:420px;width:100%">Coefficients, comma-separated
+      <input type="text" id="phInput" placeholder="e.g. 1, 0, -3, 0, 5" autocomplete="off"></label>
+    <div class="steprow" style="margin-top:12px">
+      <button class="btn synth" id="phCheck">Check</button>
+      <button class="btn ghost" id="phNew">New polynomial</button>
+    </div>
+    <div class="feedback" id="phFeed"></div>
+  </div>
+</section>
+
+<!-- 5. PRACTICE -->
+<section id="practice">
+  <div class="sec-head"><span class="sec-num">05</span><div><h2>Your turn</h2>
+    <p class="sub">Fresh problems with answers that stay clean. Feedback tells you <em>which</em> step slipped.</p></div></div>
+  <div class="card">
+    <div class="controls">
+      <div class="seg" id="pDeg" role="group" aria-label="dividend degree">
+        <button data-v="1" aria-pressed="false">same degree</button>
+        <button data-v="2" aria-pressed="true">one higher</button>
+        <button data-v="3" aria-pressed="false">two higher</button>
+      </div>
+      <div class="seg" id="pDiv" role="group" aria-label="divisor type">
+        <button data-v="monic" aria-pressed="true">x &minus; c</button>
+        <button data-v="nonmonic" aria-pressed="false">ax &minus; b</button>
+      </div>
+      <button class="btn" id="pNew">New problem</button>
+    </div>
+
+    <p class="body" style="font-size:1.3rem;margin:6px 0 2px" id="pProblem"></p>
+    <p class="hintnote" id="pHint"></p>
+
+    <div class="coef-inputs" id="pInputs"></div>
+
+    <div class="steprow" style="margin-top:4px">
+      <button class="btn synth" id="pCheck">Check answer</button>
+      <button class="btn ghost" id="pSolve">Show full solution</button>
+      <button class="btn ghost" id="pVerify">Multiply back to check</button>
+    </div>
+    <div class="feedback" id="pFeed"></div>
+    <div id="pSolution" style="margin-top:18px;display:none">
+      <div class="stage">
+        <div class="pane l"><div class="ptitle"><span class="dot"></span><span id="pLdTitle"></span></div><div id="pLdBody"></div></div>
+        <div class="pane s"><div class="ptitle"><span class="dot"></span><span id="pSyTitle"></span></div><div id="pSyBody"></div></div>
+      </div>
+      <div class="connect" id="pVerifyNote" style="display:none"></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Built for precalculus &amp; college algebra. Divisors are linear: monic <span class="tab">(x&minus;c)</span> and
+  non&#8209;monic <span class="tab">(ax&minus;b)</span>; dividends run one, two, and three degrees. All arithmetic is exact
+  (fractions kept as fractions). &mdash; A self-contained lesson page.</p>
+</footer>
+</div>
+
+<!-- Desmos scientific calculator -->
+<button class="btn long ui" id="calcToggle" aria-expanded="false">Calculator</button>
+<div id="calcPanel" role="dialog" aria-label="Scientific calculator">
+  <div class="ch">Scientific calculator <button id="calcClose" aria-label="Close calculator">&times;</button></div>
+  <div id="desmos"></div>
+</div>
+<script src="https://www.desmos.com/api/v1.10/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+
+<!-- ===================== MATH CORE (verified in Node) ===================== -->
+<script id="math-core">
+"use strict";
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||1;}
+class Fr{
+  constructor(n,d=1){
+    if(d===0)throw new Error('den 0');
+    if(d<0){n=-n;d=-d;}
+    const g=gcd(n,d);this.n=n/g;this.d=d/g;
+  }
+  static of(x){return x instanceof Fr?x:new Fr(x,1);}
+  add(o){o=Fr.of(o);return new Fr(this.n*o.d+o.n*this.d,this.d*o.d);}
+  sub(o){o=Fr.of(o);return new Fr(this.n*o.d-o.n*this.d,this.d*o.d);}
+  mul(o){o=Fr.of(o);return new Fr(this.n*o.n,this.d*o.d);}
+  div(o){o=Fr.of(o);return new Fr(this.n*o.d,this.d*o.n);}
+  neg(){return new Fr(-this.n,this.d);}
+  abs(){return new Fr(Math.abs(this.n),this.d);}
+  isZero(){return this.n===0;}
+  isNeg(){return this.n<0;}
+  eq(o){o=Fr.of(o);return this.n===o.n&&this.d===o.d;}
+  toNumber(){return this.n/this.d;}
+}
+function deg(p){return p.length-1;}
+function Parr(a){return a.map(Fr.of);}
+
+function longDivide(dividend,divisor){
+  const a=Fr.of(divisor[0]),k=Fr.of(divisor[1]);
+  const rem=dividend.map(Fr.of);const n=deg(dividend);
+  const quotient=[],steps=[];
+  for(let i=0;i<n;i++){
+    const lead=rem[i].div(a);quotient.push(lead);
+    const prodHi=lead.mul(a),prodLo=lead.mul(k);
+    const broughtDown=rem[i+1];
+    rem[i]=rem[i].sub(prodHi);
+    rem[i+1]=rem[i+1].sub(prodLo);
+    steps.push({termCoeff:lead,termDeg:n-1-i,prodHi,prodLo,broughtDown,
+      subResult:rem[i+1],colHi:i,colLo:i+1,remAfter:rem.map(f=>new Fr(f.n,f.d))});
+  }
+  return {quotient,remainder:rem[n],steps};
+}
+
+function syntheticDivide(dividend,divisor){
+  const a=Fr.of(divisor[0]),k=Fr.of(divisor[1]);
+  const c=k.neg().div(a);
+  const coeffs=dividend.map(Fr.of);const n=deg(dividend);
+  const row=[],carries=[];row[0]=coeffs[0];carries[0]=null;
+  for(let i=1;i<=n;i++){const carry=c.mul(row[i-1]);carries[i]=carry;row[i]=coeffs[i].add(carry);}
+  const rawQuotient=row.slice(0,n);const remainder=row[n];
+  const scaled=!a.eq(new Fr(1));
+  const quotient=scaled?rawQuotient.map(q=>q.div(a)):rawQuotient.slice();
+  return {root:c,a,scaled,rawRow:row,carries,rawQuotient,quotient,remainder,coeffs};
+}
+
+function reconstruct(divisor,quotient,remainder){
+  const a=Fr.of(divisor[0]),k=Fr.of(divisor[1]);
+  const q=quotient.map(Fr.of);
+  const out=new Array(q.length+1).fill(0).map(()=>new Fr(0));
+  for(let i=0;i<q.length;i++){out[i]=out[i].add(q[i].mul(a));out[i+1]=out[i+1].add(q[i].mul(k));}
+  out[out.length-1]=out[out.length-1].add(Fr.of(remainder));
+  return out;
+}
+function polyEq(p1,p2){if(p1.length!==p2.length)return false;
+  for(let i=0;i<p1.length;i++)if(!Fr.of(p1[i]).eq(Fr.of(p2[i])))return false;return true;}
+</script>
+
+<!-- ===================== LATEX FORMATTING ===================== -->
+<script>
+function frLatex(fr){ // signed
+  if(fr.d===1)return String(fr.n);
+  return (fr.n<0?'-':'')+'\\frac{'+Math.abs(fr.n)+'}{'+fr.d+'}';
+}
+function frLatexAbs(fr){const a=fr.abs();return a.d===1?String(a.n):'\\frac{'+a.n+'}{'+a.d+'}';}
+function frText(fr){return fr.d===1?String(fr.n):fr.n+'/'+fr.d;} // plain
+
+function termLatex(absFr,d){ // magnitude only, d>=0
+  if(d===0)return frLatexAbs(absFr);
+  const xpart=(d===1)?'x':'x^{'+d+'}';
+  if(absFr.abs().eq(new Fr(1)))return xpart;
+  return frLatexAbs(absFr)+xpart;
+}
+function polyLatex(poly){
+  poly=poly.map(Fr.of);const n=deg(poly);let out='';let first=true;
+  poly.forEach((cf,i)=>{
+    if(cf.isZero())return;
+    const d=n-i;const neg=cf.isNeg();
+    if(first){out+=(neg?'-':'')+termLatex(cf,d);first=false;}
+    else out+=(neg?' - ':' + ')+termLatex(cf,d);
+  });
+  return first?'0':out;
+}
+function divisorLatex(div){ // [a,k] -> a x + k  as (a x - b) style
+  const a=Fr.of(div[0]),k=Fr.of(div[1]);
+  let s='';
+  s+=(a.eq(new Fr(1))?'x':frLatexAbs(a)+'x');
+  if(!k.isZero())s+=(k.isNeg()?' - ':' + ')+frLatexAbs(k);
+  return s;
+}
+function rootLatex(div){return frLatex(syntheticDivide([new Fr(1),new Fr(0),new Fr(0)],div).root);}
+function K(tex){try{return katex.renderToString(tex,{throwOnError:false,displayMode:false});}catch(e){return tex;}}
+function setK(el,tex){el.innerHTML=K(tex);}
+</script>
+
+<!-- ===================== TABLEAU RENDERER ===================== -->
+<script>
+/* Renders the long-division worktable and synthetic table into target nodes.
+   Returns a controller with .show(stepCount) to reveal progressively, plus
+   cell maps for the green "match" highlighting. */
+function makeCol(n){return 'minmax(46px,1fr)';}
+
+function renderLong(host,dividend,divisor){
+  host.innerHTML='';
+  const n=deg(dividend);
+  const L=longDivide(dividend,divisor);
+  const cols=n+1; // coefficient columns 0..n
+  const tmpl='34px '+Array(cols).fill('minmax(48px,1fr)').join(' '); // gutter + cols
+  const lines=[]; // {el, step}  step = which step reveals it (0 = always)
+
+  function row(cls){const r=document.createElement('div');r.className='grid-row '+(cls||'');r.style.gridTemplateColumns=tmpl;return r;}
+  function gut(txt){const g=document.createElement('div');g.className='gutter';g.textContent=txt||'';return g;}
+  function cell(tex,cls,col){const c=document.createElement('div');c.className='cell '+(cls||'');c.style.gridColumn=(col+2);if(tex!=null)c.innerHTML=K(tex);return c;}
+
+  // quotient row (top) — quotient term i at column i+1
+  const qr=row('qrow');qr.appendChild(gut(''));
+  const qcells=[];
+  L.quotient.forEach((q,i)=>{
+    const c=cell(frLatex(q),'qcell',i+1);c.dataset.q=i;qcells.push(c);qr.appendChild(c);
+  });
+  host.appendChild(qr);lines.push({el:qr,step:1,reveal:'quotient'}); // quotient appears as steps go; handled per-cell below
+
+  // division bar
+  const bar=document.createElement('div');bar.className='bar';bar.style.gridColumn='1 / -1';
+  const barWrap=row('');barWrap.appendChild(bar);host.appendChild(barWrap);lines.push({el:barWrap,step:0});
+
+  // dividend row
+  const dr=row('divrow');dr.appendChild(gut('÷'));
+  dividend.forEach((cf,i)=>{dr.appendChild(cell(frLatex(cf),'',i));});
+  host.appendChild(dr);lines.push({el:dr,step:0});
+
+  // staircase
+  const stepEls=[]; // group elements per step
+  L.steps.forEach((s,si)=>{
+    const grp=[];
+    // product row (subtract)
+    const pr=row('prodrow');pr.appendChild(gut('−'));
+    pr.appendChild(cell(frLatex(s.prodHi),'',s.colHi));
+    pr.appendChild(cell(frLatex(s.prodLo),'',s.colLo));
+    host.appendChild(pr);grp.push(pr);
+    // partial bar under colHi..colLo
+    const pb=row('');const b=document.createElement('div');b.className='bar part';
+    b.style.gridColumn=(s.colHi+2)+' / '+(s.colLo+3);pb.appendChild(b);host.appendChild(pb);grp.push(pb);
+    // result row: remAfter values from colLo..n
+    const rr=row('');rr.appendChild(gut(''));
+    for(let col=s.colLo;col<=n;col++){
+      const isRem=(si===L.steps.length-1 && col===n);
+      rr.appendChild(cell(frLatex(s.remAfter[col]),isRem?'remcell':'',col));
+    }
+    host.appendChild(rr);grp.push(rr);
+    stepEls.push(grp);
+  });
+
+  // controller
+  function show(k){ // k = number of steps revealed (0..n)
+    // quotient cells appear one per step
+    qcells.forEach((c,i)=>{c.classList.toggle('hidden-step',i>=k);});
+    stepEls.forEach((grp,si)=>{const vis=si<k;grp.forEach(el=>el.classList.toggle('hidden-step',!vis));});
+  }
+  return {show,steps:L.steps.length,result:L,qcells,
+    quotientCellByIndex:i=>qcells[i]};
+}
+
+function renderSynthetic(host,dividend,divisor){
+  host.innerHTML='';
+  const n=deg(dividend);
+  const S=syntheticDivide(dividend,divisor);
+  const cols=n+1;
+  const tmpl='40px '+Array(cols).fill('minmax(48px,1fr)').join(' ');
+  function row(cls){const r=document.createElement('div');r.className='grid-row '+(cls||'');r.style.gridTemplateColumns=tmpl;return r;}
+  function cell(tex,cls,col){const c=document.createElement('div');c.className='cell '+(cls||'');c.style.gridColumn=(col+2);if(tex!=null)c.innerHTML=K(tex);return c;}
+
+  // top row: root box + dividend coefficients
+  const tr=row('');
+  const rb=document.createElement('div');rb.className='rootbox';rb.style.gridColumn='1';rb.innerHTML=K(frLatex(S.root));
+  tr.appendChild(rb);
+  dividend.forEach((cf,i)=>tr.appendChild(cell(frLatex(cf),'',i)));
+  host.appendChild(tr);
+
+  // carry row (under cols 1..n)
+  const cr=row('');
+  const carryCells=[];
+  for(let i=1;i<=n;i++){const c=cell(S.carries[i]?frLatex(S.carries[i]):'','carry',i);carryCells.push({i,el:c});cr.appendChild(c);}
+  host.appendChild(cr);
+
+  // bar
+  const bw=row('');const bar=document.createElement('div');bar.className='bar';bar.style.gridColumn='2 / -1';bw.appendChild(bar);host.appendChild(bw);
+
+  // bottom row: r0..rn
+  const br=row('');br.appendChild(cell('','',-1)); // empty gutter cell placeholder
+  const botCells=[];
+  S.rawRow.forEach((v,i)=>{
+    const isRem=(i===n);
+    const cls=isRem?'remcell':'qcell';
+    const c=cell(frLatex(v),cls,i);br.appendChild(c);botCells.push(c);
+  });
+  host.appendChild(br);
+
+  // scaling row for non-monic
+  let scaleCells=[];
+  if(S.scaled){
+    const sr=row('scale-row');
+    const lab=document.createElement('div');lab.className='gutter';lab.style.gridColumn='1';lab.innerHTML=K('\\div '+frLatexAbs(S.a));
+    sr.appendChild(lab);
+    S.quotient.forEach((q,i)=>{const c=cell(frLatex(q),'qcell',i);scaleCells.push(c);sr.appendChild(c);});
+    host.appendChild(sr);
+  }
+
+  function show(k){
+    carryCells.forEach(o=>{o.el.classList.toggle('hidden-step',o.i>k);});
+    botCells.forEach((c,i)=>{
+      // r0 visible immediately(step0 brought down); r_i visible after step i
+      c.classList.toggle('hidden-step',i>k);
+    });
+    if(scaleCells.length)scaleCells.forEach(c=>c.classList.toggle('hidden-step',k<n));
+  }
+  return {show,steps:n,result:S,botCells,scaleCells,
+    quotientCellByIndex:i=>S.scaled?scaleCells[i]:botCells[i]};
+}
+
+/* link matching quotient cells between the two panes for the green pulse */
+function wireMatch(ldCtl,syCtl){
+  const pairs=[];
+  ldCtl.result.quotient.forEach((q,i)=>{
+    const a=ldCtl.quotientCellByIndex(i), b=syCtl.quotientCellByIndex(i);
+    if(a&&b)pairs.push([a,b]);
+  });
+  function hl(on){pairs.forEach(([a,b])=>{a.classList.toggle('matchpulse',on);b.classList.toggle('matchpulse',on);});}
+  return {pairs,hl};
+}
+</script>
+
+<!-- ===================== PAGE LOGIC ===================== -->
+<script>
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+
+/* ---- presets for the stepper ---- */
+const PRESETS=[
+  {label:'same degree · (x−2)', dividend:Parr([3,7]), divisor:[new Fr(1),new Fr(-2)]},
+  {label:'one higher · (x+2)',  dividend:Parr([1,5,6]), divisor:[new Fr(1),new Fr(2)]},
+  {label:'two higher · (x−2)',  dividend:Parr([2,-3,4,-5]), divisor:[new Fr(1),new Fr(-2)]},
+  {label:'missing terms · (x−2)',dividend:Parr([1,0,0,-8]), divisor:[new Fr(1),new Fr(-2)]},
+  {label:'non-monic · (2x−1)',  dividend:Parr([2,3,-2]), divisor:[new Fr(2),new Fr(-1)]},
+  {label:'non-monic · (3x−2)',  dividend:Parr([3,-5,8,0]), divisor:[new Fr(3),new Fr(-2)]},
+];
+let curPreset=2, curStep=0, ldCtl=null, syCtl=null, matcher=null;
+
+function buildPresetBar(){
+  const bar=$('#stepPresetBar');bar.innerHTML='';
+  const seg=document.createElement('div');seg.className='seg';
+  PRESETS.forEach((p,i)=>{
+    const b=document.createElement('button');b.textContent=p.label;b.setAttribute('aria-pressed',i===curPreset);
+    b.onclick=()=>{curPreset=i;loadPreset();[...seg.children].forEach((c,j)=>c.setAttribute('aria-pressed',j===i));};
+    seg.appendChild(b);
+  });
+  bar.appendChild(seg);
+}
+
+function narrateLong(){return '';}
+
+function loadPreset(){
+  const p=PRESETS[curPreset];curStep=0;
+  ldCtl=renderLong($('#ldBody'),p.dividend,p.divisor);
+  syCtl=renderSynthetic($('#syBody'),p.dividend,p.divisor);
+  setK($('#ldTitle'),'\\text{Long division by }('+divisorLatex(p.divisor)+')');
+  const S=syCtl.result;
+  setK($('#syTitle'),'\\text{Synthetic, root }c='+frLatex(S.root));
+  matcher=wireMatch(ldCtl,syCtl);
+  // hover to pulse matches
+  matcher.pairs.forEach(([a,b])=>{
+    [a,b].forEach(el=>{el.style.cursor='pointer';
+      el.onmouseenter=()=>matcher.hl(true);el.onmouseleave=()=>matcher.hl(false);});
+  });
+  updateStep();
+  buildConnect(p);
+}
+
+function buildConnect(p){
+  const S=syCtl.result;
+  let txt;
+  if(S.scaled){
+    txt=`<b>The link:</b> the synthetic bottom row is exactly <b>${frText(S.a)}&times;</b> the long-division quotient `+
+      `&mdash; because dividing by <span class="tab">(${frText(S.a)}x−…)</span> scales every term. Divide that row by `+
+      `<span class="tab">${frText(S.a)}</span> and you recover the same quotient long division gives. The remainder is identical, untouched.`;
+  }else{
+    txt=`<b>The link:</b> the synthetic bottom row holds the very same quotient coefficients long division writes on top `+
+      `&mdash; same numbers, same columns. The last entry, <span class="remcell" style="padding:1px 6px;border-radius:6px">`+
+      `${K(frLatex(S.remainder))}</span>, is the remainder. Hover any quotient cell to see its partner glow.`;
+  }
+  $('#connectNote').innerHTML=txt;
+}
+
+function updateStep(){
+  const total=ldCtl.steps;
+  ldCtl.show(curStep);syCtl.show(curStep);
+  $('#stepCount').textContent=`step ${curStep} / ${total}`;
+  const L=ldCtl.result;
+  if(curStep===0)$('#narr').innerHTML='Both tables start with the leading coefficient. Press <b>Step</b>.';
+  else if(curStep<=L.steps.length){
+    const s=L.steps[curStep-1];
+    $('#narr').innerHTML=`Long division: multiply back and <b>subtract</b> &rarr; <span class="tab">${K(frLatex(s.subResult))}</span>. `+
+      `Synthetic: multiply the root and <b>add</b> &rarr; same <span class="tab">${K(frLatex(syCtl.result.rawRow[curStep]))}</span>. `+
+      (curStep===total?'Last entry is the remainder.':'Bring down the next coefficient.');
+  }
+  $('#bPrev').disabled=curStep<=0;
+  $('#bNext').disabled=curStep>=total;
+}
+
+$('#bNext').onclick=()=>{if(curStep<ldCtl.steps){curStep++;updateStep();}};
+$('#bPrev').onclick=()=>{if(curStep>0){curStep--;updateStep();}};
+$('#bAll').onclick=()=>{curStep=ldCtl.steps;updateStep();matcher.hl(true);setTimeout(()=>matcher.hl(false),1400);};
+$('#bReset').onclick=()=>{curStep=0;updateStep();};
+
+/* ---------------- worked examples ---------------- */
+const WORKED=[
+  {tag:'same degree · monic', narr:'Dividend and divisor are both degree&nbsp;1. One step: the quotient is a constant, and what&rsquo;s left over is the remainder.',
+   dividend:Parr([4,9]),divisor:[new Fr(1),new Fr(-3)]},
+  {tag:'one higher · monic', narr:'A degree-2 dividend over a linear divisor gives a linear quotient. Watch the synthetic bottom row reproduce the quotient coefficients.',
+   dividend:Parr([1,1,-12]),divisor:[new Fr(1),new Fr(3)]},
+  {tag:'two higher · monic + gaps', narr:'No <em>x</em><sup>2</sup> or <em>x</em> term, so insert zeros. Synthetic division leans on those placeholders to keep the columns honest.',
+   dividend:Parr([1,0,0,-27]),divisor:[new Fr(1),new Fr(-3)]},
+  {tag:'two higher · monic + remainder', narr:'A genuine nonzero remainder. The final synthetic entry and the bottom of the long-division staircase agree.',
+   dividend:Parr([2,-3,4,-5]),divisor:[new Fr(1),new Fr(-2)]},
+  {tag:'one higher · non-monic', narr:'Divisor (2x−1). Run synthetic with the root c=½, then divide the quotient row by 2 — the remainder needs no change.',
+   dividend:Parr([2,3,-2]),divisor:[new Fr(2),new Fr(-1)]},
+  {tag:'two higher · non-monic', narr:'Divisor (3x−2), root c=⅔. The raw synthetic row is 3× the true quotient; the ÷3 step brings it back in line.',
+   dividend:Parr([3,-5,8,0]),divisor:[new Fr(3),new Fr(-2)]},
+];
+let weCur=3;
+function buildWeChips(){
+  const host=$('#weChips');host.innerHTML='';
+  WORKED.forEach((w,i)=>{
+    const b=document.createElement('button');b.className='wechip';b.setAttribute('aria-pressed',i===weCur);
+    b.innerHTML=`<span class="tag">${w.tag}</span>`+K('\\dfrac{'+polyLatex(w.dividend)+'}{'+divisorLatex(w.divisor)+'}');
+    b.onclick=()=>{weCur=i;loadWorked();$$('#weChips .wechip').forEach((c,j)=>c.setAttribute('aria-pressed',j===i));};
+    host.appendChild(b);
+  });
+}
+function loadWorked(){
+  const w=WORKED[weCur];
+  $('#weNarr').innerHTML=w.narr;
+  const l=renderLong($('#weLdBody'),w.dividend,w.divisor);
+  const s=renderSynthetic($('#weSyBody'),w.dividend,w.divisor);
+  setK($('#weLdTitle'),'\\text{Long division by }('+divisorLatex(w.divisor)+')');
+  setK($('#weSyTitle'),'\\text{Synthetic, root }c='+frLatex(s.result.root));
+  l.show(l.steps);s.show(s.steps);
+  const m=wireMatch(l,s);m.pairs.forEach(([a,b])=>{[a,b].forEach(el=>{el.style.cursor='pointer';
+    el.onmouseenter=()=>m.hl(true);el.onmouseleave=()=>m.hl(false);});});
+  const S=s.result;const q=polyLatex(S.quotient);
+  $('#weConnect').innerHTML='<b>Result:</b> '+K('\\;'+polyLatex(w.dividend)+'\\;=\\;('+divisorLatex(w.divisor)+')('+q+')'+
+    (S.remainder.isZero()?'':((S.remainder.isNeg()?'-':'+')+frLatexAbs(S.remainder)))+'.')+
+    (S.scaled?'  <span class="hintnote">Synthetic used root c='+frText(S.root)+', then ÷'+frText(S.a)+' on the quotient row.</span>':'');
+}
+
+/* ---------------- placeholder drill ---------------- */
+let phAnswer=[];
+function newPlaceholder(){
+  // build a polynomial of degree 3-5 with at least one interior zero
+  const degp=3+Math.floor(Math.random()*3);
+  const arr=[];
+  arr.push(nz(2));
+  for(let i=1;i<degp;i++)arr.push(Math.random()<0.5?0:nz(3));
+  arr.push(nz(3));
+  // force at least one interior zero
+  if(!arr.slice(1,degp).some(v=>v===0)){arr[1+Math.floor(Math.random()*(degp-1))]=0;}
+  phAnswer=arr.slice();
+  // present with gaps (skip zero terms in the printed polynomial)
+  setK($('#phPoly'),'\\text{Dividend:}\\quad '+polyLatex(Parr(arr)));
+  $('#phInput').value='';$('#phFeed').className='feedback';
+}
+function nz(m){let v=0;while(v===0)v=Math.floor(Math.random()*(2*m+1))-m;return v;}
+$('#phCheck').onclick=()=>{
+  const raw=$('#phInput').value.trim();
+  const parts=raw.split(',').map(s=>s.trim()).filter(s=>s.length);
+  const fb=$('#phFeed');
+  const nums=parts.map(Number);
+  if(parts.length===0||nums.some(x=>!Number.isFinite(x))){
+    fb.className='feedback show hint';fb.innerHTML='Enter the coefficients as numbers separated by commas.';return;
+  }
+  if(parts.length!==phAnswer.length){
+    const missing=phAnswer.length-parts.length;
+    fb.className='feedback show bad';
+    fb.innerHTML=`You listed <b>${parts.length}</b> coefficients, but this is degree ${phAnswer.length-1}, so it needs <b>${phAnswer.length}</b>. `+
+      (missing>0?`You&rsquo;re ${missing} short &mdash; did you skip a <span class="tab">0</span> for a missing power?`:`That&rsquo;s ${-missing} too many.`);
+    return;
+  }
+  const wrong=[];
+  nums.forEach((v,i)=>{if(v!==phAnswer[i])wrong.push(i);});
+  if(wrong.length===0){fb.className='feedback show good';fb.innerHTML='Exactly right &mdash; every power accounted for, zeros included.';}
+  else{
+    const i=wrong[0];const dpow=phAnswer.length-1-i;
+    fb.className='feedback show bad';
+    fb.innerHTML=`Position ${i+1} (the <span class="tab">x^${dpow}</span> coefficient) should be `+
+      `<b>${phAnswer[i]}</b>. ${phAnswer[i]===0?'That power is missing from the dividend, so its placeholder is 0.':''}`;
+  }
+};
+$('#phNew').onclick=newPlaceholder;
+
+/* ---------------- practice ---------------- */
+let pDeg=2,pDivType='monic',pProb=null;
+$$('#pDeg button').forEach(b=>b.onclick=()=>{pDeg=+b.dataset.v;press('#pDeg',b);newProblem();});
+$$('#pDiv button').forEach(b=>b.onclick=()=>{pDivType=b.dataset.v;press('#pDiv',b);newProblem();});
+function press(sel,btn){$$(sel+' button').forEach(b=>b.setAttribute('aria-pressed',b===btn));}
+
+function makeProblem(){
+  const qdeg=pDeg-1;
+  let divisor;
+  if(pDivType==='monic'){divisor=[new Fr(1),new Fr(-nz(8))];}
+  else{let a=2+Math.floor(Math.random()*4);divisor=[new Fr(a),new Fr(-nz(7))];}
+  const q=[nz(6)];for(let i=0;i<qdeg;i++)q.push(Math.floor(Math.random()*13)-6);
+  const r=Math.floor(Math.random()*19)-9;
+  const dividend=reconstruct(divisor,Parr(q),r);
+  return {divisor,quotient:Parr(q),remainder:new Fr(r),dividend};
+}
+function newProblem(){
+  pProb=makeProblem();
+  setK($('#pProblem'),'\\dfrac{'+polyLatex(pProb.dividend)+'}{'+divisorLatex(pProb.divisor)+'}\\;=\\;?');
+  const S=syntheticDivide(pProb.dividend,pProb.divisor);
+  $('#pHint').innerHTML=`Divisor root <span class="tab">c=${frText(S.root)}</span>. `+
+    `Enter the quotient&rsquo;s coefficients (highest power first) and the remainder.`+
+    (S.scaled?` &nbsp;<em>Tip: run synthetic with c=${frText(S.root)}, then divide the quotient by ${frText(S.a)}.</em>`:'');
+  // build inputs
+  const host=$('#pInputs');host.innerHTML='';
+  const qlen=pDeg; // quotient degree = pDeg-1 -> qlen coefficients
+  for(let i=0;i<qlen;i++){
+    const dpow=qlen-1-i;
+    host.appendChild(ci('q'+i,dpow===0?'constant':('x^'+dpow+' coeff')));
+  }
+  host.appendChild(ci('rem','remainder'));
+  $('#pFeed').className='feedback';
+  $('#pSolution').style.display='none';
+  $('#pVerifyNote').style.display='none';
+}
+function ci(id,label){
+  const w=document.createElement('div');w.className='ci';
+  w.innerHTML=`<small>${label}</small><input type="text" id="pin_${id}" autocomplete="off" inputmode="text">`;
+  return w;
+}
+function parseFrInput(str){
+  str=str.trim();if(!str)return null;
+  if(str.includes('/')){const[a,b]=str.split('/').map(s=>s.trim());const n=Number(a),d=Number(b);
+    if(!Number.isInteger(n)||!Number.isInteger(d)||d===0)return null;return new Fr(n,d);}
+  const v=Number(str);if(!Number.isFinite(v))return null;
+  if(Number.isInteger(v))return new Fr(v,1);
+  // decimal -> fraction (limited)
+  const d=10000;return new Fr(Math.round(v*d),d);
+}
+$('#pCheck').onclick=()=>{
+  const fb=$('#pFeed');
+  const qlen=pDeg;const userQ=[];let bad=false;
+  for(let i=0;i<qlen;i++){const f=parseFrInput($('#pin_q'+i).value);if(f===null){bad=true;break;}userQ.push(f);}
+  const ur=parseFrInput($('#pin_rem').value);
+  if(bad||ur===null){fb.className='feedback show hint';fb.innerHTML='Fill every box with a number (fractions like <span class="tab">3/2</span> are fine).';return;}
+  const trueQ=pProb.quotient, trueR=pProb.remainder;
+  const qWrong=[];userQ.forEach((v,i)=>{if(!v.eq(trueQ[i]))qWrong.push(i);});
+  const rWrong=!ur.eq(trueR);
+  if(qWrong.length===0&&!rWrong){
+    fb.className='feedback show good';fb.innerHTML='Correct on all counts. Quotient and remainder both check out.';return;
+  }
+  // targeted feedback
+  let msg='';
+  if(qWrong.length===0&&rWrong){
+    msg=`Quotient is perfect &mdash; only the <b>remainder</b> is off. You put <span class="tab">${$('#pin_rem').value}</span>; `+
+      `the remainder is the <em>last</em> number in the synthetic row. Recheck the final add.`;
+    fb.className='feedback show hint';
+  }else if(qWrong.length===1){
+    const i=qWrong[0];const dpow=qlen-1-i;
+    msg=`Most of the quotient is right. The <span class="tab">${dpow===0?'constant':'x^'+dpow}</span> coefficient is off `+
+      `&mdash; check that step&rsquo;s multiply-and-add` + (rWrong?' (and the remainder too).':'.');
+    fb.className='feedback show hint';
+  }else{
+    // many wrong: look for systematic sign / scaling error
+    const S=syntheticDivide(pProb.dividend,pProb.divisor);
+    let signFlip=userQ.every((v,i)=>v.eq(trueQ[i].neg()));
+    let usedRaw=S.scaled&&userQ.every((v,i)=>v.eq(S.rawQuotient[i]));
+    if(signFlip){msg='Every quotient term has the wrong sign &mdash; you likely used <span class="tab">x+c</span>&rsquo;s sign. Synthetic uses the <b>root</b> (the value that makes the divisor zero), then <b>adds</b>.';}
+    else if(usedRaw){msg=`Those are the <em>raw</em> synthetic numbers &mdash; for a non-monic divisor you still have to <b>divide the quotient row by ${frText(S.a)}</b>. (The remainder stays as is.)`;}
+    else{msg='Several quotient coefficients are off. Re-run the multiply-by-root-then-add chain from the top &mdash; an early slip propagates down every column.';}
+    fb.className='feedback show bad';
+  }
+  fb.innerHTML=msg;
+};
+$('#pSolve').onclick=()=>{
+  const wrap=$('#pSolution');wrap.style.display='block';
+  const l=renderLong($('#pLdBody'),pProb.dividend,pProb.divisor);
+  const s=renderSynthetic($('#pSyBody'),pProb.dividend,pProb.divisor);
+  setK($('#pLdTitle'),'\\text{Long division by }('+divisorLatex(pProb.divisor)+')');
+  setK($('#pSyTitle'),'\\text{Synthetic, root }c='+frLatex(s.result.root));
+  l.show(l.steps);s.show(s.steps);
+  const m=wireMatch(l,s);m.pairs.forEach(([a,b])=>{[a,b].forEach(el=>{el.style.cursor='pointer';
+    el.onmouseenter=()=>m.hl(true);el.onmouseleave=()=>m.hl(false);});});
+  wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
+};
+$('#pVerify').onclick=()=>{
+  const note=$('#pVerifyNote');note.style.display='block';$('#pSolution').style.display='block';
+  if(!$('#pLdBody').children.length)$('#pSolve').onclick();
+  const div=pProb.divisor,q=pProb.quotient,r=pProb.remainder;
+  const recon=reconstruct(div,q,r);
+  note.innerHTML='<b>Multiply back:</b> '+K('('+divisorLatex(div)+')('+polyLatex(q)+')'+
+    (r.isZero()?'':((r.isNeg()?'-':'+')+frLatexAbs(r)))+'='+polyLatex(recon)+'\\;\\checkmark')+
+    ' &mdash; it rebuilds the original dividend, so the division is correct.';
+};
+$('#pNew').onclick=newProblem;
+
+/* ---------------- desmos ---------------- */
+let calc=null;
+$('#calcToggle').onclick=()=>{
+  const panel=$('#calcPanel');const open=panel.classList.toggle('open');
+  $('#calcToggle').setAttribute('aria-expanded',open);
+  if(open&&!calc&&window.Desmos){calc=Desmos.ScientificCalculator($('#desmos'));}
+};
+$('#calcClose').onclick=()=>{$('#calcPanel').classList.remove('open');$('#calcToggle').setAttribute('aria-expanded',false);};
+
+/* ---------------- teaser + boot ---------------- */
+function renderTeasers(){
+  const d=Parr([2,-3,4,-5]),div=[new Fr(1),new Fr(-2)];
+  const S=syntheticDivide(d,div);
+  $('#teaseL').innerHTML=K('\\dfrac{'+polyLatex(d)+'}{x-2}='+polyLatex(S.quotient)+'\\;\\text{R}\\;'+frLatex(S.remainder));
+  $('#teaseS').innerHTML=K('\\begin{array}{r|rrrr}2&2&-3&4&-5\\\\&&4&2&12\\\\\\hline&2&1&6&\\color{#9b3ac0}{7}\\end{array}');
+  setK($('#rootInline'),'c');
+}
+
+function boot(){
+  renderTeasers();
+  buildPresetBar();loadPreset();
+  buildWeChips();loadWorked();
+  newPlaceholder();
+  newProblem();
+  if(window.renderMathInElement){
+    renderMathInElement(document.body,{delimiters:[
+      {left:'\\(',right:'\\)',display:false},{left:'$$',right:'$$',display:true}],throwOnError:false});
+  }
+}
+if(window.katex){boot();}else{window.addEventListener('load',boot);}
+</script>
+</body>
+</html>
