@@ -1,0 +1,615 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>From Zeros to Standard Form — Building Polynomials</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+<style>
+:root{
+  --paper:#f4f1e9;--grid:rgba(36,33,46,0.055);--ink:#211f2a;--muted:#6c6878;
+  --card:#ffffff;--line:#e3ddcf;
+  --zero:#cf4b18;--zero-soft:#fbe5db;      /* zeros / x-intercepts / sign flip */
+  --fac:#2f6df0;--fac-soft:#e4ecfd;        /* factors */
+  --std:#0e8f8f;--std-soft:#d6efee;        /* standard form & curve */
+  --yes:#15803d;--yes-soft:#dcf3e3;        /* verify =0 / touches */
+  --no:#c0392b;--no-soft:#fdecea;
+  --axis:#c3bcab;
+  --shadow:0 1px 2px rgba(33,31,42,.04),0 8px 24px rgba(33,31,42,.06);
+  --r:14px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background-color:var(--paper);color:var(--ink);
+  font-family:"Source Serif 4",Georgia,serif;line-height:1.62;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px 120px}
+h1,h2,h3,.ui{font-family:"Space Grotesk",system-ui,sans-serif}
+.mono,.tab{font-family:"JetBrains Mono",ui-monospace,monospace}
+
+header.hero{padding:64px 0 26px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.eyebrow{font-family:"Space Grotesk";text-transform:uppercase;letter-spacing:.18em;font-size:.72rem;font-weight:600;color:var(--muted)}
+.eyebrow b{color:var(--zero)} .eyebrow i{color:var(--std);font-style:normal}
+h1{font-size:clamp(2rem,5vw,3.05rem);line-height:1.05;margin:.35em 0 .2em;font-weight:700;letter-spacing:-.015em}
+h1 .v{color:var(--std)}
+.lede{font-size:1.12rem;max-width:62ch;color:#3a3744}
+.teaser{display:flex;gap:14px;flex-wrap:wrap;margin-top:26px;align-items:stretch}
+.teaser .mini{flex:1 1 200px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}
+.teaser .mini .cap{font-family:"Space Grotesk";font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin-bottom:8px;color:var(--zero)}
+.teaser .mini.f .cap{color:var(--fac)} .teaser .mini.s .cap{color:var(--std)}
+.teaser .note{flex-basis:100%;font-size:.86rem;color:var(--muted);margin-top:-2px}
+
+section{margin-top:54px}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:14px}
+.sec-num{font-family:"Space Grotesk";font-weight:700;font-size:.8rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 11px;background:var(--card)}
+h2{font-size:1.55rem;margin:0;font-weight:600;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:1rem;margin:.1em 0 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:var(--shadow)}
+p.body{max-width:68ch}
+.key{background:linear-gradient(transparent 62%,var(--zero-soft) 62%);padding:0 2px}
+
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+.seg button{font-family:"Space Grotesk";font-size:.85rem;font-weight:500;border:0;background:transparent;color:var(--muted);padding:8px 13px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.seg.zero button[aria-pressed="true"]{background:var(--zero)}
+.btn{font-family:"Space Grotesk";font-weight:600;font-size:.9rem;border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:10px;padding:9px 16px;cursor:pointer;transition:transform .06s}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:var(--card);color:var(--ink)}
+.btn.zero{background:var(--zero);border-color:var(--zero)}
+.btn.fac{background:var(--fac);border-color:var(--fac)}
+.btn.std{background:var(--std);border-color:var(--std)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sm{font-size:.8rem;padding:5px 10px;border-radius:8px}
+select,input[type=text]{font-family:"JetBrains Mono";font-size:.92rem;border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:var(--card);color:var(--ink)}
+
+/* zeros -> factors flow */
+.flow{display:flex;flex-direction:column;gap:14px}
+.flowlabel{font-family:"Space Grotesk";font-weight:600;font-size:.8rem;letter-spacing:.02em}
+.zline{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.zchip{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:10px 12px;min-width:120px;text-align:center}
+.zchip .ztop{font-family:"JetBrains Mono";font-size:1.05rem;color:var(--zero);font-weight:700}
+.zchip .zarrow{color:var(--muted);font-size:.85rem;margin:3px 0}
+.zchip .zfac{font-family:"JetBrains Mono";font-size:1.1rem;color:var(--fac)}
+.zchip .zflip{font-size:.72rem;color:var(--zero);margin-top:4px;font-family:"Space Grotesk"}
+.opsign{color:var(--zero);font-weight:700}
+
+.steps{display:flex;flex-direction:column;gap:12px;margin-top:8px}
+.step{border:1px solid var(--line);border-left:3px solid var(--fac);border-radius:0 12px 12px 0;padding:12px 16px;background:var(--card);transition:opacity .25s,transform .25s}
+.step.hide{display:none}
+.step .seq{font-size:1.06rem}
+.step .num{font-family:"Space Grotesk";font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px}
+.dist{margin-top:10px;border-top:1px dashed var(--line);padding-top:9px;font-size:.97rem;display:none}
+.dist.open{display:block}
+.dist .dl{margin:3px 0;color:#403d4a}
+.stdcard{border:1px solid var(--std);background:var(--std-soft);border-radius:12px;padding:16px 18px;margin-top:6px}
+.stdcard.hide{display:none}
+.stdcard .lab{font-family:"Space Grotesk";font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--std);margin-bottom:6px}
+.stdcard .bigpoly{font-size:1.25rem;color:var(--std)}
+.verify{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.vchip{font-family:"JetBrains Mono";font-size:.84rem;background:var(--zero-soft);color:#9c3a14;border-radius:999px;padding:4px 11px}
+.steprow{display:flex;align-items:center;gap:10px;margin:14px 0 2px;flex-wrap:wrap}
+.steplabel{font-family:"Space Grotesk";font-size:.86rem;color:var(--muted)}
+
+.graphwrap{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:14px 16px 6px;background:var(--card)}
+.graphwrap .plabel{font-family:"Space Grotesk";font-weight:600;font-size:.82rem;color:var(--muted);margin-bottom:6px}
+svg.plot{width:100%;height:auto;display:block;overflow:hidden;font-family:"JetBrains Mono"}
+.connect{margin-top:16px;border-left:3px solid var(--zero);background:var(--zero-soft);border-radius:0 10px 10px 0;padding:12px 16px;font-size:.98rem}
+.connect b{color:var(--zero)}
+
+/* worked examples */
+.wegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:18px}
+.wechip{font-family:"Space Grotesk";font-size:.84rem;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:11px;padding:11px 13px;cursor:pointer;line-height:1.3}
+.wechip[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--ink) inset}
+.wechip .tag{display:block;font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.wechip .tag.zero{color:var(--zero)} .wechip .tag.std{color:var(--std)} .wechip .tag.yes{color:var(--yes)}
+
+/* practice */
+.facboxes{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:10px 0}
+.facbox{display:flex;flex-direction:column;gap:4px;font-family:"Space Grotesk";font-size:.78rem;color:var(--muted)}
+.facbox .zlab{color:var(--zero);font-weight:600}
+.facbox input{width:110px;text-align:center}
+.coefrow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:10px 0}
+.coefbox{display:flex;flex-direction:column;gap:4px;font-family:"JetBrains Mono";font-size:.78rem;color:var(--muted);align-items:center}
+.coefbox input{width:74px;text-align:center}
+.cin{font-family:"JetBrains Mono";font-size:1rem;border:1px solid var(--line);border-radius:8px;padding:7px 6px;background:#fff}
+.cin.good{border-color:var(--yes);background:var(--yes-soft)}
+.cin.bad{border-color:var(--no);background:var(--no-soft)}
+.stagehd{font-family:"Space Grotesk";font-weight:600;font-size:.95rem;margin:16px 0 2px;display:flex;gap:8px;align-items:center}
+.stagehd .n{background:var(--ink);color:#fff;border-radius:999px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem}
+.feedback{margin-top:14px;font-size:.98rem;padding:11px 14px;border-radius:10px;display:none}
+.feedback.show{display:block}
+.feedback.good{background:var(--yes-soft);color:#0a6e4c;border:1px solid #b6e3d2}
+.feedback.bad{background:var(--no-soft);color:#9b2c1f;border:1px solid #f2c4bd}
+.feedback.hint{background:#fff6e6;color:#8a5a14;border:1px solid #f3e0b8}
+.hintnote{font-size:.86rem;color:var(--muted);margin-top:4px}
+
+/* desmos */
+#calcToggle{position:fixed;right:20px;bottom:20px;z-index:40;border-radius:999px;box-shadow:0 6px 20px rgba(33,31,42,.22)}
+#calcPanel{position:fixed;right:20px;bottom:78px;width:340px;height:430px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(33,31,42,.28);z-index:41;display:none;overflow:hidden}
+#calcPanel.open{display:block}
+#calcPanel .ch{font-family:"Space Grotesk";font-weight:600;font-size:.85rem;padding:10px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+#calcPanel .ch button{border:0;background:transparent;font-size:1.1rem;cursor:pointer;color:var(--muted)}
+#desmos{width:100%;height:calc(100% - 41px)}
+@media(max-width:480px){#calcPanel{width:calc(100vw - 40px);height:60vh}}
+
+footer{margin-top:70px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:.86rem}
+a.skip{position:absolute;left:-999px}a.skip:focus{left:8px;top:8px;background:#fff;padding:8px;z-index:99;border-radius:8px}
+:focus-visible{outline:3px solid var(--fac);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<a href="#main" class="skip">Skip to content</a>
+<div class="wrap" id="main">
+
+<header class="hero">
+  <div class="eyebrow">Precalculus &middot; <b>zeros</b> &rarr; factors &rarr; <i>standard form</i></div>
+  <h1>From the zeros, the <span class="v">whole polynomial</span>.</h1>
+  <p class="lede">Each zero <span class="tab">r</span> is really a factor <span class="tab">(x &minus; r)</span> in disguise.
+  Turn every zero into its factor &mdash; minding the sign flip &mdash; then multiply the factors together to land on
+  the polynomial in standard form.</p>
+  <div class="teaser" aria-hidden="true">
+    <div class="mini"><div class="cap">Zeros</div><div class="mono" id="tZeros"></div></div>
+    <div class="mini f"><div class="cap">Factored form</div><div class="mono" id="tFac"></div></div>
+    <div class="mini s"><div class="cap">Standard form</div><div class="mono" id="tStd"></div></div>
+    <div class="note" id="tNote"></div>
+  </div>
+</header>
+
+<!-- 1. BIG IDEA -->
+<section id="idea">
+  <div class="sec-head"><span class="sec-num">01</span><div><h2>Every zero is a factor</h2>
+    <p class="sub">And the sign flips on the way in.</p></div></div>
+  <div class="card">
+    <p class="body">If <span class="tab">r</span> is a zero of a polynomial, then <span class="tab">(x &minus; r)</span> is a factor &mdash;
+    this is the Factor Theorem read backwards. So a list of zeros hands you a list of factors, and a monic polynomial with
+    exactly those zeros is just their product: <span id="bi1" class="tab"></span>.</p>
+    <p class="body">The one thing to watch is the <span class="key">sign flip</span>. A zero of <span class="tab">3</span> gives the
+    factor <span class="tab">(x &minus; 3)</span>, but a zero of <span class="tab">&minus;2</span> gives
+    <span class="tab">(x + 2)</span>, because <span class="tab">x &minus; (&minus;2) = x + 2</span>. After that, multiplying the
+    factors two at a time and collecting like terms gives the standard form.</p>
+  </div>
+</section>
+
+<!-- 2. SIGNATURE: BUILD-UP MULTIPLIER -->
+<section id="build">
+  <div class="sec-head"><span class="sec-num">02</span><div><h2>Build it up, two factors at a time</h2>
+    <p class="sub">Zeros become factors; the factors multiply into standard form; the zeros reappear as x&#8209;intercepts.</p></div></div>
+
+  <div class="controls">
+    <div class="seg" id="presetBar" role="group" aria-label="example"></div>
+    <button class="btn ghost" id="randBtn">Randomize</button>
+  </div>
+
+  <div class="card">
+    <div class="flow">
+      <div><div class="flowlabel" style="color:var(--zero)">Given zeros &rarr; their factors</div>
+        <div class="zline" id="facRow"></div></div>
+    </div>
+
+    <div class="steprow">
+      <button class="btn ghost" id="bPrev">&larr; Back</button>
+      <button class="btn fac" id="bNext">Multiply &rarr;</button>
+      <button class="btn ghost" id="bAll">Reveal all</button>
+      <span class="steplabel" id="stepCount"></span>
+    </div>
+
+    <div class="steps" id="stepBody"></div>
+    <div class="stdcard hide" id="stdCard">
+      <div class="lab">Standard form</div>
+      <div class="bigpoly" id="stdPoly"></div>
+      <div class="verify" id="verifyRow"></div>
+    </div>
+
+    <div class="graphwrap"><div class="plabel" id="graphLabel">y = f(x) &mdash; the zeros are the x&#8209;intercepts</div><div id="graphBody"></div></div>
+    <div class="connect" id="connectNote"></div>
+  </div>
+</section>
+
+<!-- 3. WORKED EXAMPLES -->
+<section id="examples">
+  <div class="sec-head"><span class="sec-num">03</span><div><h2>Worked examples</h2>
+    <p class="sub">Two, three, and four zeros &mdash; including a negative, a fraction, and a repeat.</p></div></div>
+  <div class="wegrid" id="weChips"></div>
+  <div class="card">
+    <p class="body" id="weNarr" style="margin-top:0"></p>
+    <div class="flow"><div><div class="flowlabel" style="color:var(--zero)">Zeros &rarr; factors</div><div class="zline" id="weFacRow"></div></div></div>
+    <div class="steps" id="weStepBody" style="margin-top:14px"></div>
+    <div class="stdcard" id="weStdCard"><div class="lab">Standard form</div><div class="bigpoly" id="weStdPoly"></div><div class="verify" id="weVerify"></div></div>
+    <div class="graphwrap"><div class="plabel">y = f(x)</div><div id="weGraphBody"></div></div>
+  </div>
+</section>
+
+<!-- 4. PRACTICE -->
+<section id="practice">
+  <div class="sec-head"><span class="sec-num">04</span><div><h2>Show your work</h2>
+    <p class="sub">Write the factors from the zeros, then multiply out to standard form. Every box is checked.</p></div></div>
+  <div class="card">
+    <div class="controls">
+      <div class="seg" id="pCount" role="group" aria-label="number of zeros">
+        <button data-v="2" aria-pressed="true">2 zeros</button>
+        <button data-v="3" aria-pressed="false">3 zeros</button>
+        <button data-v="4" aria-pressed="false">4 zeros</button>
+      </div>
+      <div class="seg zero" id="pFlavor" role="group" aria-label="kind">
+        <button data-v="int" aria-pressed="true">integers</button>
+        <button data-v="frac" aria-pressed="false">include a fraction</button>
+        <button data-v="rep" aria-pressed="false">include a repeat</button>
+      </div>
+      <button class="btn" id="pNew">New problem</button>
+    </div>
+
+    <p class="body" style="font-size:1.15rem;margin:6px 0 0" id="pPrompt"></p>
+
+    <div class="stagehd"><span class="n">1</span> Write each factor</div>
+    <p class="hintnote">A zero of <span class="tab">r</span> gives the factor <span class="tab">(x &minus; r)</span>. Type each like <span class="tab">x-3</span> or <span class="tab">x+2</span>.</p>
+    <div class="facboxes" id="pFacBoxes"></div>
+
+    <div class="stagehd"><span class="n">2</span> Multiply out to standard form</div>
+    <p class="hintnote" id="pCoefHint"></p>
+    <div class="coefrow" id="pCoefRow"></div>
+
+    <div class="steprow" style="margin-top:6px">
+      <button class="btn zero" id="pCheck">Check my work</button>
+      <button class="btn ghost" id="pSolve">Show solution</button>
+    </div>
+    <div class="feedback" id="pFeed"></div>
+
+    <div id="pSolution" style="margin-top:18px;display:none">
+      <div class="flow"><div><div class="flowlabel" style="color:var(--zero)">Zeros &rarr; factors</div><div class="zline" id="pSolFacRow"></div></div></div>
+      <div class="steps" id="pSolStepBody" style="margin-top:12px"></div>
+      <div class="stdcard" id="pSolStdCard"><div class="lab">Standard form</div><div class="bigpoly" id="pSolStdPoly"></div></div>
+      <div class="graphwrap"><div class="plabel">y = f(x)</div><div id="pSolGraphBody"></div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Building monic polynomials from their zeros, for precalculus &amp; college algebra. Each zero <span class="tab">r</span>
+  contributes the factor <span class="tab">(x &minus; r)</span>; multiplying the factors gives standard form, and the zeros are
+  the x&#8209;intercepts of the graph. Zeros may be integers, simple fractions, or repeated (multiplicity); all arithmetic is exact.</p>
+</footer>
+</div>
+
+<button class="btn std ui" id="calcToggle" aria-expanded="false">Calculator</button>
+<div id="calcPanel" role="dialog" aria-label="Scientific calculator">
+  <div class="ch">Scientific calculator <button id="calcClose" aria-label="Close calculator">&times;</button></div>
+  <div id="desmos"></div>
+</div>
+<script src="https://www.desmos.com/api/v1.10/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+
+<!-- ===================== MATH CORE ===================== -->
+<script id="math-core">
+"use strict";
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||1;}
+class Fr{
+  constructor(n,d=1){if(d===0)throw new Error('den0');if(d<0){n=-n;d=-d;}const g=gcd(n,d);this.n=n/g;this.d=d/g;}
+  static of(x){return x instanceof Fr?x:new Fr(x,1);}
+  add(o){o=Fr.of(o);return new Fr(this.n*o.d+o.n*this.d,this.d*o.d);}
+  sub(o){o=Fr.of(o);return new Fr(this.n*o.d-o.n*this.d,this.d*o.d);}
+  mul(o){o=Fr.of(o);return new Fr(this.n*o.n,this.d*o.d);}
+  div(o){o=Fr.of(o);return new Fr(this.n*o.d,this.d*o.n);}
+  neg(){return new Fr(-this.n,this.d);}
+  abs(){return new Fr(Math.abs(this.n),this.d);}
+  isZero(){return this.n===0;}
+  isNeg(){return this.n<0;}
+  eq(o){o=Fr.of(o);return this.n===o.n&&this.d===o.d;}
+  toNumber(){return this.n/this.d;}
+}
+function deg(p){return p.length-1;}
+function Parr(a){return a.map(Fr.of);}
+function evalPoly(poly,x){x=Fr.of(x);let acc=new Fr(0);for(const c of poly)acc=acc.mul(x).add(c);return acc;}
+function polyEq(p1,p2){if(p1.length!==p2.length)return false;for(let i=0;i<p1.length;i++)if(!Fr.of(p1[i]).eq(Fr.of(p2[i])))return false;return true;}
+function polyMul(a,b){a=a.map(Fr.of);b=b.map(Fr.of);const out=Array(a.length+b.length-1).fill(0).map(()=>new Fr(0));
+  for(let i=0;i<a.length;i++)for(let j=0;j<b.length;j++)out[i+j]=out[i+j].add(a[i].mul(b[j]));return out;}
+function factorOf(r){return [new Fr(1),Fr.of(r).neg()];}          /* (x - r) */
+function buildFromZeros(zeros){let P=[new Fr(1)];for(const r of zeros)P=polyMul(P,factorOf(r));return P;}
+function runningProducts(zeros){
+  const facs=zeros.map(factorOf);let P=facs[0].slice();const steps=[];
+  for(let i=1;i<facs.length;i++){const before=P.slice();const r=Fr.of(zeros[i]);
+    const xP=before.concat([new Fr(0)]);                  /* x * before  (shift up) */
+    const nrP=before.map(c=>c.mul(r.neg()));              /* -r * before */
+    P=polyMul(before,facs[i]);
+    steps.push({before,r,factor:facs[i],xP,nrP,after:P.slice()});}
+  return {facs,steps,final:P};
+}
+</script>
+
+<!-- ===================== LATEX HELPERS ===================== -->
+<script>
+function frLatex(fr){if(fr.d===1)return String(fr.n);return (fr.n<0?'-':'')+'\\frac{'+Math.abs(fr.n)+'}{'+fr.d+'}';}
+function frLatexAbs(fr){const a=fr.abs();return a.d===1?String(a.n):'\\frac{'+a.n+'}{'+a.d+'}';}
+function frText(fr){return fr.d===1?String(fr.n):fr.n+'/'+fr.d;}
+function termLatex(absFr,d){if(d===0)return frLatexAbs(absFr);const xp=(d===1)?'x':'x^{'+d+'}';if(absFr.abs().eq(new Fr(1)))return xp;return frLatexAbs(absFr)+xp;}
+function polyLatex(poly){poly=poly.map(Fr.of);const n=deg(poly);let out='';let first=true;
+  poly.forEach((cf,i)=>{if(cf.isZero())return;const d=n-i;const neg=cf.isNeg();
+    if(first){out+=(neg?'-':'')+termLatex(cf,d);first=false;}else out+=(neg?' - ':' + ')+termLatex(cf,d);});
+  return first?'0':out;}
+function factorLatex(r){r=Fr.of(r);const k=r.neg();             /* (x - r) = x + (−r) */
+  if(k.isZero())return 'x';
+  return 'x'+(k.isNeg()?' - '+frLatexAbs(k):' + '+frLatexAbs(k));}
+function K(tex){try{return katex.renderToString(tex,{throwOnError:false,displayMode:false});}catch(e){return tex;}}
+function setK(el,tex){el.innerHTML=K(tex);}
+/* group repeated zeros into (x - r)^m, order of first appearance */
+function multiplicities(zeros){const map=[];zeros.forEach(z=>{z=Fr.of(z);const hit=map.find(m=>m.r.eq(z));if(hit)hit.m++;else map.push({r:z,m:1});});return map;}
+function factoredFormLatex(zeros){return multiplicities(zeros).map(({r,m})=>{const f='\\left('+factorLatex(r)+'\\right)';return m>1?f+'^{'+m+'}':f;}).join('');}
+</script>
+
+<!-- ===================== GRAPH (zeros as x-intercepts) ===================== -->
+<script>
+function renderZeroGraph(host,poly,zeros){
+  const nums=poly.map(f=>f.toNumber());
+  const f=x=>{let a=0;for(const k of nums)a=a*x+k;return a;};
+  const mult=multiplicities(zeros);
+  const zx=mult.map(m=>m.r.toNumber());
+  let xLo=Math.min(...zx,0)-1.3, xHi=Math.max(...zx,0)+1.3;
+  if(xHi-xLo<3){const m=(xLo+xHi)/2;xLo=m-1.6;xHi=m+1.6;}
+  const N=300;const xs=[],ys=[];
+  for(let i=0;i<=N;i++){const x=xLo+(xHi-xLo)*i/N;xs.push(x);ys.push(f(x));}
+  let yMin=Math.min(...ys,0),yMax=Math.max(...ys,0);
+  const span=(yMax-yMin)||1;yMin-=span*0.14;yMax+=span*0.14;
+  const W=560,H=300,padL=10,padR=10,padT=12,padB=12;
+  const px=x=>padL+(x-xLo)/(xHi-xLo)*(W-padL-padR);
+  const py=y=>padT+(yMax-y)/(yMax-yMin)*(H-padT-padB);
+  const x0=(0>=xLo&&0<=xHi)?px(0):null, y0=(0>=yMin&&0<=yMax)?py(0):null;
+  const axisY=y0!==null?y0:py(0);
+  let d='';for(let i=0;i<=N;i++){const X=px(xs[i]);let Y=py(ys[i]);if(!isFinite(Y))continue;Y=Math.max(-400,Math.min(H+400,Y));d+=(i?'L':'M')+X.toFixed(1)+' '+Y.toFixed(1)+' ';}
+  let svg=`<svg class="plot" viewBox="0 0 ${W} ${H}" role="img" aria-label="graph crossing the x-axis at the zeros">`;
+  svg+=`<rect x="0" y="0" width="${W}" height="${H}" fill="#fff"/>`;
+  if(y0!==null)svg+=`<line x1="${padL}" y1="${y0.toFixed(1)}" x2="${W-padR}" y2="${y0.toFixed(1)}" stroke="var(--axis)" stroke-width="1.2"/>`;
+  if(x0!==null)svg+=`<line x1="${x0.toFixed(1)}" y1="${padT}" x2="${x0.toFixed(1)}" y2="${H-padB}" stroke="var(--axis)" stroke-width="1.2"/>`;
+  svg+=`<path d="${d}" fill="none" stroke="var(--std)" stroke-width="2.4" stroke-linejoin="round"/>`;
+  mult.forEach(({r,m})=>{const X=px(r.toNumber());
+    svg+=`<circle cx="${X.toFixed(1)}" cy="${axisY.toFixed(1)}" r="5.5" fill="var(--zero)"/>`;
+    const touch=(m%2===0);
+    svg+=`<text x="${X.toFixed(1)}" y="${(axisY+19).toFixed(1)}" fill="var(--zero)" stroke="#fff" stroke-width="3.5" paint-order="stroke" font-size="13" font-weight="700" text-anchor="middle">${frText(r)}</text>`;
+    if(m>1)svg+=`<text x="${X.toFixed(1)}" y="${(axisY-10).toFixed(1)}" fill="var(--yes)" stroke="#fff" stroke-width="3.5" paint-order="stroke" font-size="11" text-anchor="middle">${touch?'touches (m='+m+')':'flattens (m='+m+')'}</text>`;
+  });
+  svg+=`</svg>`;host.innerHTML=svg;
+}
+</script>
+
+<!-- ===================== RENDER: factor row + build-up steps ===================== -->
+<script>
+function renderFacRow(host,zeros){
+  host.innerHTML='';
+  zeros.forEach(z=>{z=Fr.of(z);const k=z.neg();
+    const chip=document.createElement('div');chip.className='zchip';
+    const flip = z.isNeg()
+      ? 'x \u2212 ('+frText(z)+') = x + '+frText(z.abs())
+      : (z.isZero()? 'x \u2212 0 = x' : 'x \u2212 '+frText(z));
+    chip.innerHTML='<div class="ztop">r = '+frText(z)+'</div><div class="zarrow">\u2193 sign flip</div>'+
+      '<div class="zfac">'+K('\\left('+factorLatex(z)+'\\right)')+'</div>'+
+      '<div class="zflip">'+flip+'</div>';
+    host.appendChild(chip);
+  });
+}
+function renderSteps(host,zeros){
+  host.innerHTML='';
+  const rp=runningProducts(zeros);
+  const stepEls=[];
+  rp.steps.forEach((st,idx)=>{
+    const el=document.createElement('div');el.className='step hide';
+    const lhs=(idx===0)?'\\left('+factorLatex(zeros[0])+'\\right)':'\\left('+polyLatex(st.before)+'\\right)';
+    const seq=lhs+'\\left('+factorLatex(zeros[idx+1])+'\\right) = '+polyLatex(st.after);
+    el.innerHTML='<div class="num">Step '+(idx+1)+' &middot; multiply by '+K('\\left('+factorLatex(zeros[idx+1])+'\\right)')+'</div>'+
+      '<div class="seq">'+K(seq)+'</div>'+
+      '<button class="btn ghost sm" data-d="'+idx+'" style="margin-top:9px">Show the distribution</button>'+
+      '<div class="dist" id="dist-'+host.id+'-'+idx+'">'+
+        '<div class="dl">'+K('x\\left('+polyLatex(st.before)+'\\right) = '+polyLatex(st.xP))+'</div>'+
+        '<div class="dl">'+K(frLatex(st.r.neg())+'\\left('+polyLatex(st.before)+'\\right) = '+polyLatex(st.nrP))+'</div>'+
+        '<div class="dl" style="border-top:1px solid var(--line);padding-top:6px;margin-top:6px">'+K('\\text{combine: } '+polyLatex(st.after))+'</div>'+
+      '</div>';
+    host.appendChild(el);stepEls.push(el);
+    el.querySelector('[data-d]').onclick=(e)=>{const dd=el.querySelector('.dist');dd.classList.toggle('open');e.target.textContent=dd.classList.contains('open')?'Hide the distribution':'Show the distribution';};
+  });
+  return {stepEls,count:rp.steps.length,final:rp.final};
+}
+function renderVerify(host,poly,zeros){
+  host.innerHTML='';
+  multiplicities(zeros).forEach(({r})=>{const v=evalPoly(poly,r);
+    const chip=document.createElement('span');chip.className='vchip';
+    chip.innerHTML=K('f('+frLatex(r)+') = '+frLatex(v));host.appendChild(chip);});
+}
+</script>
+
+<!-- ===================== PAGE LOGIC ===================== -->
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+
+const PRESETS=[
+  [new Fr(-1),new Fr(2),new Fr(3)],
+  [new Fr(-2),new Fr(2)],
+  [new Fr(1,2),new Fr(3)],
+  [new Fr(2),new Fr(2),new Fr(-1)],
+  [new Fr(-3),new Fr(-1),new Fr(1),new Fr(2)],
+];
+let curP=0,curStep=0,buildCtl=null,curZeros=null;
+
+function buildPresetBar(){const bar=$('#presetBar');bar.innerHTML='';const seg=document.createElement('div');seg.className='seg';
+  PRESETS.forEach((z,i)=>{const b=document.createElement('button');b.innerHTML=K('\\{'+z.map(frLatex).join(',\\,')+'\\}');
+    b.setAttribute('aria-pressed',i===curP);b.onclick=()=>{curP=i;[...seg.children].forEach((c,j)=>c.setAttribute('aria-pressed',j===i));loadBuild();};seg.appendChild(b);});
+  bar.appendChild(seg);}
+
+function loadBuild(){
+  curZeros=PRESETS[curP];curStep=0;
+  renderFacRow($('#facRow'),curZeros);
+  buildCtl=renderSteps($('#stepBody'),curZeros);
+  const poly=buildFromZeros(curZeros);
+  $('#stdPoly').innerHTML=K('f(x) = '+polyLatex(poly));
+  renderVerify($('#verifyRow'),poly,curZeros);
+  renderZeroGraph($('#graphBody'),poly,curZeros);
+  const reps=multiplicities(curZeros).some(m=>m.m>1);
+  $('#connectNote').innerHTML='<b>Zeros are x&#8209;intercepts.</b> Every factor '+K('(x-r)')+' makes the curve cross the axis at '+K('x=r')+'. '+
+    (reps?'A repeated zero makes the curve <i>touch</i> the axis (even multiplicity) instead of crossing. ':'')+
+    'Plugging any zero back into the standard form gives 0 &mdash; the chips above confirm it.';
+  updateStep();
+}
+function updateStep(){
+  buildCtl.stepEls.forEach((el,i)=>el.classList.toggle('hide',i>=curStep+1?true:false));
+  // show steps 0..curStep-1 revealed; curStep is "next to multiply"
+  buildCtl.stepEls.forEach((el,i)=>el.classList.toggle('hide',i>curStep-1));
+  $('#stdCard').classList.toggle('hide',curStep<buildCtl.count);
+  $('#stepCount').textContent='step '+Math.min(curStep,buildCtl.count)+' / '+buildCtl.count;
+  $('#bPrev').disabled=curStep<=0;$('#bNext').disabled=curStep>=buildCtl.count;
+}
+$('#bNext').onclick=()=>{if(curStep<buildCtl.count){curStep++;updateStep();}};
+$('#bPrev').onclick=()=>{if(curStep>0){curStep--;updateStep();}};
+$('#bAll').onclick=()=>{curStep=buildCtl.count;updateStep();};
+
+function randZero(kind){const nz=m=>{let v=0;while(v===0)v=Math.floor(Math.random()*(2*m+1))-m;return v;};
+  if(kind==='frac'){const q=[2,3][Math.floor(Math.random()*2)];let p;do{p=nz(5);}while(p%q===0);return new Fr(p,q);}
+  return new Fr(nz(6));}
+function makeZeros(count,flavor){
+  const nz=m=>{let v=0;while(v===0)v=Math.floor(Math.random()*(2*m+1))-m;return v;};
+  let zeros=[];
+  if(flavor==='rep'){
+    const distinct=Math.max(1,count-1);const base=[];
+    while(base.length<distinct){const z=new Fr(nz(6));if(!base.some(b=>b.eq(z)))base.push(z);}
+    zeros=base.slice();zeros.push(base[Math.floor(Math.random()*base.length)]);
+    while(zeros.length<count){const z=new Fr(nz(6));zeros.push(z);}
+    zeros=zeros.slice(0,count);
+  }else{
+    while(zeros.length<count){const z=randZero(flavor==='frac'&&zeros.length===0?'frac':(flavor==='frac'&&Math.random()<0.4?'frac':'int'));
+      if(!zeros.some(b=>b.eq(z)))zeros.push(z);}
+    if(flavor==='frac'&&!zeros.some(z=>z.d!==1))zeros[0]=randZero('frac');
+  }
+  return zeros;
+}
+$('#randBtn').onclick=()=>{const count=2+Math.floor(Math.random()*3);const fl=['int','int','frac','rep'][Math.floor(Math.random()*4)];
+  PRESETS[curP]=makeZeros(count,fl);buildPresetBar();loadBuild();};
+
+/* ---------------- worked examples ---------------- */
+const WORKED=[
+  {tag:'two zeros',tagcls:'zero',zeros:[new Fr(-1),new Fr(4)],
+   narr:'Two zeros, &minus;1 and 4. The &minus;1 flips to (x + 1); the 4 gives (x &minus; 4). One multiplication (a FOIL) lands the quadratic.'},
+  {tag:'three zeros · a negative',tagcls:'zero',zeros:[new Fr(-1),new Fr(2),new Fr(3)],
+   narr:'Three zeros. Multiply two at a time: (x + 1)(x &minus; 2) first, then times (x &minus; 3). This is exactly the cubic whose factor we tested on the previous page.'},
+  {tag:'a fractional zero',tagcls:'std',zeros:[new Fr(1,2),new Fr(-3)],
+   narr:'A zero of &frac12; gives the factor (x &minus; &frac12;). Because we keep the polynomial monic, the standard form carries fractions &mdash; that is expected here.'},
+  {tag:'a repeated zero',tagcls:'yes',zeros:[new Fr(2),new Fr(2),new Fr(-1)],
+   narr:'The zero 2 appears twice, so its factor is squared: (x &minus; 2)&sup2;. On the graph the curve <em>touches</em> the x&#8209;axis at x = 2 instead of crossing it.'},
+  {tag:'four zeros',tagcls:'zero',zeros:[new Fr(-3),new Fr(-1),new Fr(1),new Fr(2)],
+   narr:'Four factors, multiplied in pairs and then combined, give a quartic. Each given value reappears as an x&#8209;intercept.'},
+];
+let weCur=1;
+function buildWeChips(){const host=$('#weChips');host.innerHTML='';
+  WORKED.forEach((w,i)=>{const b=document.createElement('button');b.className='wechip';b.setAttribute('aria-pressed',i===weCur);
+    b.innerHTML='<span class="tag '+w.tagcls+'">'+w.tag+'</span>'+K('\\{'+w.zeros.map(frLatex).join(',\\,')+'\\}\\;\\rightarrow\\;'+factoredFormLatex(w.zeros));
+    b.onclick=()=>{weCur=i;$$('#weChips .wechip').forEach((c,j)=>c.setAttribute('aria-pressed',j===i));loadWorked();};host.appendChild(b);});}
+function loadWorked(){
+  const w=WORKED[weCur];$('#weNarr').innerHTML=w.narr;
+  renderFacRow($('#weFacRow'),w.zeros);
+  const ctl=renderSteps($('#weStepBody'),w.zeros);ctl.stepEls.forEach(el=>el.classList.remove('hide'));
+  const poly=buildFromZeros(w.zeros);
+  $('#weStdPoly').innerHTML=K('f(x) = '+polyLatex(poly));
+  renderVerify($('#weVerify'),poly,w.zeros);
+  renderZeroGraph($('#weGraphBody'),poly,w.zeros);
+}
+
+/* ---------------- practice ---------------- */
+let pCount=2,pFlavor='int',pZeros=null,pPoly=null;
+function parseFrInput(str){str=(str||'').trim().replace(/[\u2212\u2013\u2014]/g,'-');if(!str)return null;
+  if(str.includes('/')){const[a,b]=str.split('/').map(s=>s.trim());const n=Number(a),d=Number(b);if(!Number.isInteger(n)||!Number.isInteger(d)||d===0)return null;return new Fr(n,d);}
+  const v=Number(str);if(!Number.isFinite(v))return null;if(Number.isInteger(v))return new Fr(v,1);return new Fr(Math.round(v*10000),10000);}
+function parseFactor(str){ // returns Fr k where factor = x + k, or null
+  let s=(str||'').trim().toLowerCase().replace(/\s+/g,'').replace(/[()]/g,'').replace(/[\u2212\u2013\u2014]/g,'-').replace(/\u00d7|\*/g,'');
+  if(s[0]!=='x')return null;s=s.slice(1);
+  if(s==='')return new Fr(0);
+  if(s[0]!=='+'&&s[0]!=='-')return null;
+  return parseFrInput(s);
+}
+$$('#pCount button').forEach(b=>b.onclick=()=>{pCount=+b.dataset.v;$$('#pCount button').forEach(x=>x.setAttribute('aria-pressed',x===b));pNew();});
+$$('#pFlavor button').forEach(b=>b.onclick=()=>{pFlavor=b.dataset.v;$$('#pFlavor button').forEach(x=>x.setAttribute('aria-pressed',x===b));pNew();});
+
+function pNew(){
+  pZeros=makeZeros(pCount,pFlavor);pPoly=buildFromZeros(pZeros);
+  $('#pPrompt').innerHTML='Build the monic polynomial with zeros &nbsp;'+K('\\{'+pZeros.map(frLatex).join(',\\,')+'\\}')+'.';
+  // stage 1 factor boxes
+  const fb=$('#pFacBoxes');fb.innerHTML='';
+  pZeros.forEach((z,i)=>{const w=document.createElement('div');w.className='facbox';
+    w.innerHTML='<span class="zlab">zero r = '+frText(z)+'</span><input type="text" class="cin" id="pf'+i+'" autocomplete="off" placeholder="x \u2212 r">';fb.appendChild(w);});
+  // stage 2 coefficient boxes (degree+1)
+  const n=deg(pPoly);const cr=$('#pCoefRow');cr.innerHTML='';
+  const names=[];for(let d=n;d>=0;d--)names.push(d);
+  names.forEach((d,idx)=>{const w=document.createElement('div');w.className='coefbox';
+    const lab=d===0?'constant':(d===1?'x':'x^{'+d+'}');
+    w.innerHTML='<span>'+K(lab)+'</span><input type="text" class="cin" id="pc'+idx+'" autocomplete="off">';cr.appendChild(w);
+    if(idx<names.length-1){const plus=document.createElement('div');plus.className='coefbox';plus.style.justifyContent='flex-end';plus.innerHTML='<span>&nbsp;</span><span style="padding:7px 0">+</span>';cr.appendChild(plus);}
+  });
+  $('#pCoefHint').innerHTML='Leading coefficient is 1 (monic). Enter each coefficient &mdash; fractions like <span class="tab">3/2</span> are allowed. Use 0 for any missing term.';
+  $('#pFeed').className='feedback';$('#pSolution').style.display='none';
+}
+$('#pCheck').onclick=()=>{
+  const fb=$('#pFeed');let firstFac=null,facAllOK=true;
+  // stage 1
+  pZeros.forEach((z,i)=>{const inp=$('#pf'+i);const k=parseFactor(inp.value);const want=Fr.of(z).neg(); // factor x + (−z)
+    const ok=k!==null&&k.eq(want);inp.classList.toggle('good',ok);inp.classList.toggle('bad',!ok);
+    if(!ok){facAllOK=false;if(firstFac===null)firstFac={i,z:Fr.of(z),k};}});
+  // stage 2
+  const n=deg(pPoly);let firstCoef=null,coefAllOK=true;
+  for(let idx=0;idx<=n;idx++){const inp=$('#pc'+idx);const val=parseFrInput(inp.value);const want=pPoly[idx];
+    const ok=val!==null&&val.eq(want);inp.classList.toggle('good',ok);inp.classList.toggle('bad',!ok);
+    if(!ok){coefAllOK=false;if(firstCoef===null)firstCoef={idx,d:n-idx,want};}}
+  if(facAllOK&&coefAllOK){fb.className='feedback show good';
+    fb.innerHTML='Correct \u2014 factors and every coefficient check out. '+K('f(x)='+polyLatex(pPoly))+', with zeros exactly where you started.';return;}
+  let msg='';
+  if(!facAllOK){const e=firstFac;
+    if(e.k===null)msg='For the zero '+frText(e.z)+', write a linear factor like '+'<span class="tab">x'+(e.z.isNeg()?'+'+frText(e.z.abs()):'-'+frText(e.z))+'</span>.';
+    else msg='Sign flip: a zero of '+frText(e.z)+' gives the factor '+K('\\left('+factorLatex(e.z)+'\\right)')+(e.z.isNeg()?' (because subtracting a negative adds).':'.');
+    fb.className='feedback show hint';fb.innerHTML=msg;return;}
+  if(!coefAllOK){const e=firstCoef;
+    const place=e.d===0?'the constant term':(e.d===1?'the x coefficient':'the x^{'+e.d+'} coefficient');
+    msg='Check '+place.replace('x^{'+e.d+'}',' ')+': it should be '+K(frLatex(e.want))+'. '+
+      (e.d===0?'The constant is the product of the negated zeros, '+K('('+pZeros.map(z=>frParenNeg(z)).join(')(')+')')+'.':'Re-multiply the factors and collect like terms carefully.');
+    fb.className='feedback show hint';fb.innerHTML=msg;return;}
+};
+function frParenNeg(z){z=Fr.of(z).neg();return frLatex(z);}
+$('#pSolve').onclick=()=>{
+  $('#pSolution').style.display='block';
+  renderFacRow($('#pSolFacRow'),pZeros);
+  const ctl=renderSteps($('#pSolStepBody'),pZeros);ctl.stepEls.forEach(el=>el.classList.remove('hide'));
+  $('#pSolStdPoly').innerHTML=K('f(x) = '+polyLatex(pPoly));
+  renderZeroGraph($('#pSolGraphBody'),pPoly,pZeros);
+  $('#pSolution').scrollIntoView({behavior:'smooth',block:'nearest'});
+};
+$('#pNew').onclick=pNew;
+
+/* ---------------- desmos ---------------- */
+let calc=null;
+$('#calcToggle').onclick=()=>{const panel=$('#calcPanel');const open=panel.classList.toggle('open');$('#calcToggle').setAttribute('aria-expanded',open);
+  if(open&&!calc&&window.Desmos){calc=Desmos.ScientificCalculator($('#desmos'));}};
+$('#calcClose').onclick=()=>{$('#calcPanel').classList.remove('open');$('#calcToggle').setAttribute('aria-expanded',false);};
+
+/* ---------------- boot ---------------- */
+function renderTeasers(){
+  const z=[new Fr(-1),new Fr(2),new Fr(3)];const poly=buildFromZeros(z);
+  $('#tZeros').innerHTML=K('\\{-1,\\,2,\\,3\\}');
+  $('#tFac').innerHTML=K(factoredFormLatex(z));
+  $('#tStd').innerHTML=K(polyLatex(poly));
+  $('#tNote').innerHTML='Same polynomial whose factor we tested on the previous page &mdash; now built from its zeros.';
+  setK($('#bi1'),'f(x)=(x-r_1)(x-r_2)\\cdots(x-r_n)');
+}
+function boot(){
+  renderTeasers();
+  buildPresetBar();loadBuild();
+  buildWeChips();loadWorked();
+  pNew();
+  if(window.renderMathInElement){renderMathInElement(document.body,{delimiters:[{left:'\\(',right:'\\)',display:false},{left:'$$',right:'$$',display:true}],throwOnError:false});}
+}
+if(window.katex){boot();}else{window.addEventListener('load',boot);}
+</script>
+</body>
+</html>
