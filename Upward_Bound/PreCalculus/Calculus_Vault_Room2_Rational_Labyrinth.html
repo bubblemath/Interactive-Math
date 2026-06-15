@@ -1,0 +1,2195 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Calculus Vault - Room 2: The Rational Labyrinth</title>
+    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --bg-dungeon: #0f1419;
+            --bg-stone: #1a2332;
+            --bg-darker: #0a0e14;
+            --teal: #14b8a6;
+            --teal-dim: #0d9488;
+            --teal-glow: #2dd4bf;
+            --cyan: #06b6d4;
+            --cyan-dim: #0891b2;
+            --gold: #ffd700;
+            --gold-dim: #b8860b;
+            --parchment: #f4e4bc;
+            --parchment-dark: #d4c4a0;
+            --text-light: #e8e8e8;
+            --text-dim: #a0a0b0;
+            --success: #10b981;
+            --error: #ef4444;
+            --purple-magic: #8b5cf6;
+            --warning: #f59e0b;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dungeon);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Maze Pattern Background */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(20, 184, 166, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(20, 184, 166, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        /* Animations */
+        @keyframes flicker {
+            0%, 100% { opacity: 1; filter: brightness(1); }
+            50% { opacity: 0.8; filter: brightness(0.9); }
+        }
+        @keyframes mazeGlow {
+            0%, 100% { box-shadow: 0 0 20px var(--teal), 0 0 40px rgba(20, 184, 166, 0.4); }
+            50% { box-shadow: 0 0 30px var(--teal-glow), 0 0 60px rgba(45, 212, 191, 0.6); }
+        }
+        @keyframes slashThrough {
+            0% { width: 0; }
+            100% { width: 100%; }
+        }
+        @keyframes factorPop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Header */
+        .dungeon-header {
+            background: linear-gradient(180deg, #050810 0%, var(--bg-dungeon) 100%);
+            border-bottom: 4px solid var(--teal-dim);
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        .dungeon-header::before,
+        .dungeon-header::after {
+            content: "🌀";
+            position: absolute;
+            top: 20px;
+            font-size: 2rem;
+            animation: flicker 3s infinite;
+        }
+        .dungeon-header::before { left: 30px; }
+        .dungeon-header::after { right: 30px; }
+        
+        .dungeon-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            color: var(--teal-glow);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8), 0 0 20px rgba(20, 184, 166, 0.5);
+            margin-bottom: 5px;
+        }
+        .dungeon-subtitle {
+            font-family: 'MedievalSharp', cursive;
+            color: var(--text-dim);
+            font-size: 1.1rem;
+        }
+        .room-indicator {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--teal-dim), var(--teal));
+            color: var(--bg-dungeon);
+            padding: 5px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+        
+        /* Progress Bar */
+        .progress-container {
+            background: var(--bg-darker);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 2px solid var(--bg-stone);
+            position: relative;
+            z-index: 1;
+        }
+        .progress-label {
+            font-family: 'Cinzel', serif;
+            color: var(--teal);
+            font-size: 0.9rem;
+        }
+        .progress-bar {
+            flex: 1;
+            height: 20px;
+            background: var(--bg-stone);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid var(--teal-dim);
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--teal-dim), var(--teal-glow));
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        .progress-text {
+            color: var(--teal);
+            font-weight: bold;
+            min-width: 50px;
+        }
+        
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            background: var(--bg-darker);
+            border-bottom: 3px solid var(--teal-dim);
+            overflow-x: auto;
+            position: relative;
+            z-index: 1;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 15px 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-right: 1px solid var(--bg-stone);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .tab-btn:last-child { border-right: none; }
+        .tab-btn:hover {
+            background: var(--bg-stone);
+            color: var(--teal);
+        }
+        .tab-btn.active {
+            background: linear-gradient(180deg, var(--bg-stone), var(--bg-dungeon));
+            color: var(--teal-glow);
+            border-bottom: 3px solid var(--teal);
+            margin-bottom: -3px;
+        }
+        .tab-btn.completed::after {
+            content: "✓";
+            color: var(--success);
+            font-size: 0.8rem;
+        }
+        .tab-icon {
+            font-size: 1.5rem;
+        }
+        
+        /* Main Content */
+        .content-area {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Stone Card - Teal Theme */
+        .stone-card {
+            background: linear-gradient(145deg, var(--bg-stone), var(--bg-darker));
+            border: 2px solid var(--teal-dim);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(20, 184, 166, 0.1);
+        }
+        .stone-card-title {
+            font-family: 'Cinzel', serif;
+            color: var(--teal-glow);
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Parchment Style */
+        .parchment {
+            background: linear-gradient(135deg, var(--parchment), var(--parchment-dark));
+            border: 3px solid var(--teal-dim);
+            border-radius: 8px;
+            padding: 20px;
+            color: #2d2d2d;
+            font-family: 'MedievalSharp', cursive;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+        }
+        
+        /* Dungeon Map */
+        .dungeon-map {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .map-room {
+            aspect-ratio: 1;
+            background: var(--bg-darker);
+            border: 2px solid var(--bg-stone);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            text-align: center;
+            padding: 5px;
+            transition: all 0.3s ease;
+        }
+        .map-room.completed {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+        .map-room.completed .room-icon::after {
+            content: " ✓";
+            color: var(--success);
+        }
+        .map-room.current {
+            border-color: var(--teal);
+            background: linear-gradient(135deg, var(--bg-stone), var(--bg-dungeon));
+            animation: mazeGlow 2s infinite;
+        }
+        .map-room.locked {
+            opacity: 0.4;
+        }
+        .map-room .room-icon {
+            font-size: 1.5rem;
+            margin-bottom: 3px;
+        }
+        
+        /* Puzzle Styles */
+        .puzzle-container {
+            background: var(--bg-darker);
+            border: 3px solid var(--teal-dim);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+            position: relative;
+        }
+        .puzzle-container::before {
+            content: "🌀";
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-dungeon);
+            padding: 0 10px;
+            font-size: 1.5rem;
+        }
+        .puzzle-title {
+            font-family: 'Cinzel', serif;
+            color: var(--teal-glow);
+            font-size: 1.2rem;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .puzzle-problem {
+            background: var(--bg-stone);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            border: 2px solid var(--cyan);
+        }
+        
+        /* Illegal Cancel Game - FIXED */
+        .cancel-game {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .cancel-card {
+            background: var(--bg-stone);
+            border: 3px solid var(--teal-dim);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .cancel-card:hover {
+            border-color: var(--teal);
+            transform: translateY(-3px);
+        }
+        .cancel-card.selected {
+            border-color: var(--warning);
+            background: rgba(245, 158, 11, 0.1);
+        }
+        .cancel-card.correct {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.2);
+        }
+        .cancel-card.incorrect {
+            border-color: var(--error);
+            background: rgba(239, 68, 68, 0.2);
+        }
+        .cancel-card .expression {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+        .cancel-card .label {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        
+        /* Factor Slash Visualizer */
+        .factor-slash-container {
+            background: var(--bg-stone);
+            border: 2px solid var(--teal-dim);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .fraction-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            font-size: 1.3rem;
+        }
+        .fraction-num, .fraction-den {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .fraction-line {
+            width: 100%;
+            max-width: 300px;
+            height: 3px;
+            background: var(--teal);
+        }
+        .factor-chip {
+            background: var(--bg-darker);
+            border: 2px solid var(--cyan);
+            border-radius: 8px;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .factor-chip:hover {
+            border-color: var(--teal-glow);
+            background: rgba(20, 184, 166, 0.1);
+        }
+        .factor-chip.selected {
+            border-color: var(--warning);
+            background: rgba(245, 158, 11, 0.2);
+        }
+        .factor-chip.slashed {
+            opacity: 0.4;
+            text-decoration: line-through;
+            border-color: var(--error);
+        }
+        .factor-chip.slashed::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--error);
+            animation: slashThrough 0.3s ease forwards;
+        }
+        
+        /* LCD Visualizer */
+        .lcd-visualizer {
+            background: var(--bg-stone);
+            border: 2px solid var(--teal-dim);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .lcd-step {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--bg-darker);
+            border-radius: 8px;
+            border-left: 4px solid var(--teal);
+        }
+        .lcd-step-title {
+            font-weight: bold;
+            color: var(--teal-glow);
+            margin-bottom: 10px;
+        }
+        .factor-pool {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+            min-height: 50px;
+            padding: 15px;
+            background: var(--bg-darker);
+            border: 2px dashed var(--teal-dim);
+            border-radius: 8px;
+        }
+        .factor-tile {
+            background: linear-gradient(135deg, var(--teal-dim), var(--teal));
+            color: var(--bg-dungeon);
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: factorPop 0.4s ease;
+        }
+        .factor-tile:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(20, 184, 166, 0.5);
+        }
+        .factor-tile.used {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .lcd-result {
+            text-align: center;
+            font-size: 1.3rem;
+            padding: 15px;
+            background: rgba(20, 184, 166, 0.1);
+            border: 2px solid var(--teal);
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        
+        /* Fraction Input Builder */
+        .fraction-builder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 20px;
+            background: var(--bg-darker);
+            border: 2px solid var(--teal-dim);
+            border-radius: 10px;
+        }
+        .fraction-builder-title {
+            color: var(--teal-glow);
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .fraction-input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .fraction-input-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .fraction-input-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+        .fraction-input-boxes {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .factor-input-box {
+            width: 80px;
+            padding: 10px;
+            background: var(--bg-stone);
+            border: 2px solid var(--cyan);
+            border-radius: 6px;
+            color: var(--teal-glow);
+            font-size: 1rem;
+            text-align: center;
+        }
+        .factor-input-box:focus {
+            outline: none;
+            border-color: var(--teal-glow);
+            box-shadow: 0 0 10px rgba(20, 184, 166, 0.3);
+        }
+        .fraction-input-line {
+            width: 200px;
+            height: 3px;
+            background: var(--teal);
+            margin: 5px 0;
+        }
+        .symbol-bar {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .symbol-btn {
+            padding: 8px 15px;
+            background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+            border: 2px solid var(--teal);
+            border-radius: 8px;
+            color: var(--bg-dungeon);
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .symbol-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(20, 184, 166, 0.5);
+        }
+        .symbol-btn.exponent {
+            background: linear-gradient(135deg, var(--purple-magic), #7c3aed);
+            border-color: var(--purple-magic);
+        }
+        .symbol-btn.exponent:hover {
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.5);
+        }
+        .plus-symbol {
+            font-size: 1.5rem;
+            color: var(--teal);
+            font-weight: bold;
+        }
+        
+        /* Domain Restriction Checkboxes */
+        .domain-section {
+            background: rgba(239, 68, 68, 0.1);
+            border: 2px solid var(--error);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .domain-title {
+            color: var(--error);
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .domain-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .domain-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-darker);
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .domain-option:hover {
+            background: var(--bg-stone);
+        }
+        .domain-option input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--teal);
+        }
+        .domain-option.correct {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid var(--success);
+        }
+        .domain-option.incorrect {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid var(--error);
+        }
+        
+        /* Input Styles */
+        .input-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+        .answer-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px;
+            background: var(--bg-stone);
+            border: 3px solid var(--teal-dim);
+            border-radius: 8px;
+            color: var(--teal-glow);
+            font-size: 1.2rem;
+            text-align: center;
+            font-family: 'Inter', sans-serif;
+            margin: 10px auto;
+            display: block;
+        }
+        .answer-input:focus {
+            outline: none;
+            border-color: var(--teal);
+            box-shadow: 0 0 20px rgba(20, 184, 166, 0.3);
+        }
+        .answer-input.correct {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.2);
+        }
+        .answer-input.incorrect {
+            border-color: var(--error);
+            background: rgba(239, 68, 68, 0.2);
+        }
+        
+        /* Buttons */
+        .dungeon-btn {
+            padding: 12px 30px;
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .dungeon-btn.primary {
+            background: linear-gradient(135deg, var(--teal-dim), var(--teal-glow));
+            color: var(--bg-dungeon);
+            box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3);
+        }
+        .dungeon-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(20, 184, 166, 0.5);
+        }
+        .dungeon-btn.secondary {
+            background: var(--bg-stone);
+            color: var(--teal);
+            border: 2px solid var(--teal-dim);
+        }
+        .dungeon-btn.secondary:hover {
+            background: var(--teal-dim);
+            color: var(--bg-dungeon);
+        }
+        
+        /* Feedback Messages */
+        .feedback {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        .feedback.success {
+            background: rgba(16, 185, 129, 0.2);
+            border: 2px solid var(--success);
+            color: var(--success);
+            display: block;
+        }
+        .feedback.error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 2px solid var(--error);
+            color: var(--error);
+            display: block;
+        }
+        .feedback.hint {
+            background: rgba(20, 184, 166, 0.2);
+            border: 2px solid var(--teal);
+            color: var(--teal-glow);
+            display: block;
+        }
+        
+        /* Hint System */
+        .hint-btn {
+            background: var(--cyan);
+            color: var(--bg-dungeon);
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .hint-btn:hover {
+            background: var(--cyan-dim);
+        }
+        .hint-content {
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid var(--cyan);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            display: none;
+        }
+        .hint-content.visible {
+            display: block;
+        }
+        
+        /* Scaffolding Section */
+        .scaffolding-box {
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.1), rgba(6, 182, 212, 0.1));
+            border: 2px solid var(--teal);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .scaffolding-title {
+            font-family: 'Cinzel', serif;
+            color: var(--teal-glow);
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .scaffolding-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: var(--bg-darker);
+            border-radius: 8px;
+        }
+        .step-number {
+            width: 30px;
+            height: 30px;
+            background: var(--teal);
+            color: var(--bg-dungeon);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .step-content {
+            flex: 1;
+        }
+        .step-input {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-stone);
+            border: 2px solid var(--teal-dim);
+            border-radius: 6px;
+            color: var(--teal-glow);
+            font-size: 1rem;
+            margin-top: 8px;
+        }
+        
+        /* Streak Tracker */
+        .streak-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px;
+            background: var(--bg-darker);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .streak-flames {
+            font-size: 1.5rem;
+        }
+        .streak-count {
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            color: var(--teal-glow);
+        }
+        .streak-label {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+        .badge-container {
+            display: flex;
+            gap: 10px;
+        }
+        .badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+        .badge.earned {
+            opacity: 1;
+            animation: factorPop 0.5s ease;
+        }
+        .badge.bronze { background: #cd7f32; }
+        .badge.silver { background: #c0c0c0; }
+        .badge.gold { background: var(--gold); }
+        .badge.diamond { background: linear-gradient(135deg, #b9f2ff, #e0e0e0); }
+        
+        /* Scrolls Reference */
+        .scroll-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        .scroll-item {
+            background: linear-gradient(135deg, var(--parchment), var(--parchment-dark));
+            border: 2px solid var(--teal-dim);
+            border-radius: 8px;
+            padding: 15px;
+            color: #2d2d2d;
+        }
+        .scroll-item h4 {
+            font-family: 'Cinzel', serif;
+            color: #1a4a4a;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--teal-dim);
+            padding-bottom: 5px;
+        }
+        .scroll-item p, .scroll-item li {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .warning-box {
+            background: #fee2e2;
+            border: 2px solid #dc2626;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        .warning-box .title {
+            color: #dc2626;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        /* Exit Ticket */
+        .exit-question {
+            background: var(--bg-stone);
+            border: 2px solid var(--teal-dim);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .exit-question.correct {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.1);
+        }
+        .exit-question.incorrect {
+            border-color: var(--error);
+            background: rgba(239, 68, 68, 0.1);
+        }
+        .question-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: var(--teal);
+            color: var(--bg-dungeon);
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        /* Victory Screen */
+        .victory-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .victory-overlay.active {
+            display: flex;
+        }
+        .victory-content {
+            background: linear-gradient(145deg, var(--bg-stone), var(--bg-darker));
+            border: 4px solid var(--teal-glow);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            animation: factorPop 0.5s ease;
+        }
+        .victory-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        .victory-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            color: var(--teal-glow);
+            margin-bottom: 15px;
+        }
+        .victory-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background: var(--bg-darker);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--teal-dim);
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            color: var(--teal-glow);
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+        
+        /* Practice Level Tags */
+        .practice-level {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .practice-level.easy { background: var(--success); color: white; }
+        .practice-level.medium { background: var(--warning); color: var(--bg-dungeon); }
+        .practice-level.hard { background: var(--error); color: white; }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dungeon-title { font-size: 1.5rem; }
+            .tab-btn { padding: 10px 5px; font-size: 0.75rem; }
+            .tab-icon { font-size: 1.2rem; }
+            .dungeon-map { grid-template-columns: repeat(3, 1fr); }
+            .cancel-game { grid-template-columns: 1fr; }
+            .symbol-bar { gap: 5px; }
+            .symbol-btn { padding: 6px 10px; font-size: 0.9rem; }
+            .fraction-input-boxes { flex-wrap: wrap; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="dungeon-header">
+        <h1 class="dungeon-title">🌀 The Calculus Vault 🌀</h1>
+        <p class="dungeon-subtitle">Navigate the twisting paths of rational expressions</p>
+        <span class="room-indicator">🌀 Room 2: The Rational Labyrinth</span>
+    </header>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <span class="progress-label">Labyrinth Progress:</span>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <span class="progress-text" id="progressText">0%</span>
+    </div>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="entrance">
+            <span class="tab-icon">🏰</span>
+            <span>Maze Entrance</span>
+        </button>
+        <button class="tab-btn" data-tab="supplies">
+            <span class="tab-icon">🎒</span>
+            <span>Supplies Check</span>
+        </button>
+        <button class="tab-btn" data-tab="gates">
+            <span class="tab-icon">🚪</span>
+            <span>The Three Gates</span>
+        </button>
+        <button class="tab-btn" data-tab="scrolls">
+            <span class="tab-icon">📜</span>
+            <span>Maze Scrolls</span>
+        </button>
+        <button class="tab-btn" data-tab="arena">
+            <span class="tab-icon">👹</span>
+            <span>Monster Arena</span>
+        </button>
+        <button class="tab-btn" data-tab="portal">
+            <span class="tab-icon">🌀</span>
+            <span>Exit Portal</span>
+        </button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="content-area">
+        
+        <!-- TAB 1: MAZE ENTRANCE -->
+        <section class="tab-content active" id="entrance">
+            <div class="stone-card">
+                <h2 class="stone-card-title">🗺️ The Labyrinth Awaits</h2>
+                <div class="parchment">
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;">
+                        <em>You have proven your worth in the Algebraic Armory. Now you must navigate 
+                        the twisting corridors of the Rational Labyrinth — where fractions hold secrets 
+                        and extraneous solutions lurk in the shadows.</em>
+                    </p>
+                    <p style="font-size: 1rem;">
+                        <strong>Your Mission:</strong> Master the arts of <span style="color: #0d9488;">Simplifying Rational Expressions</span>, 
+                        <span style="color: #0d9488;">Building LCDs</span>, and <span style="color: #0d9488;">Detecting Extraneous Solutions</span> 
+                        to escape the labyrinth.
+                    </p>
+                </div>
+            </div>
+
+            <div class="stone-card">
+                <h2 class="stone-card-title">🗺️ Dungeon Map</h2>
+                <div class="dungeon-map">
+                    <div class="map-room completed">
+                        <span class="room-icon">🗡️</span>
+                        <span>Algebraic Armory</span>
+                    </div>
+                    <div class="map-room current">
+                        <span class="room-icon">🌀</span>
+                        <span>Rational Labyrinth</span>
+                    </div>
+                    <div class="map-room locked">
+                        <span class="room-icon">⚡</span>
+                        <span>Power Chamber</span>
+                    </div>
+                    <div class="map-room locked">
+                        <span class="room-icon">🖼️</span>
+                        <span>Transform Gallery</span>
+                    </div>
+                    <div class="map-room locked">
+                        <span class="room-icon">🔮</span>
+                        <span>Circular Sanctum</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stone-card">
+                <h2 class="stone-card-title">🎯 Learning Objectives</h2>
+                <ul style="margin-left: 20px; line-height: 2;">
+                    <li>Identify domain restrictions (values that make the denominator zero)</li>
+                    <li>Simplify rational expressions by factoring and canceling</li>
+                    <li>Find the Least Common Denominator (LCD) of rational expressions</li>
+                    <li>Add and subtract rational expressions</li>
+                    <li>Identify and reject extraneous solutions</li>
+                </ul>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="dungeon-btn primary" onclick="switchTab('supplies')">
+                    Enter the Labyrinth →
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB 2: SUPPLIES CHECK -->
+        <section class="tab-content" id="supplies">
+            <div class="stone-card">
+                <h2 class="stone-card-title">🎒 Supplies Check</h2>
+                <p style="margin-bottom: 20px;">Before venturing deeper, let's ensure you can spot the traps that await. 
+                The labyrinth is full of <strong style="color: var(--error);">illegal cancellations</strong> — can you identify them?</p>
+            </div>
+
+            <!-- Spot the Illegal Cancel Game - FIXED: Only (x+5)/x is illegal -->
+            <div class="puzzle-container">
+                <h3 class="puzzle-title">🚫 Spot the Illegal Cancel!</h3>
+                <p style="text-align: center; margin-bottom: 20px;">
+                    Which of these cancellations is <strong style="color: var(--error);">ILLEGAL</strong>? Click to select the ONE illegal operation.
+                </p>
+                
+                <div class="cancel-game" id="cancelGame1">
+                    <div class="cancel-card" data-correct="false" onclick="selectCancelCard(this, 'cancelGame1')">
+                        <div class="expression">\(\frac{(x+3)(x-2)}{(x+3)(x+5)} = \frac{x-2}{x+5}\)</div>
+                        <div class="label">Cancel common factor (x+3)</div>
+                    </div>
+                    <div class="cancel-card" data-correct="true" onclick="selectCancelCard(this, 'cancelGame1')">
+                        <div class="expression">\(\frac{x+5}{x} = 5\)</div>
+                        <div class="label">Cancel the x's</div>
+                    </div>
+                    <div class="cancel-card" data-correct="false" onclick="selectCancelCard(this, 'cancelGame1')">
+                        <div class="expression">\(\frac{3x}{6x^2} = \frac{1}{2x}\)</div>
+                        <div class="label">Cancel 3x from top and bottom</div>
+                    </div>
+                    <div class="cancel-card" data-correct="false" onclick="selectCancelCard(this, 'cancelGame1')">
+                        <div class="expression">\(\frac{x^2 + 4}{4} = \frac{x^2}{4} + 1\)</div>
+                        <div class="label">Split the fraction (divide each term by 4)</div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="dungeon-btn primary" onclick="checkCancelGame('cancelGame1')">Check Selection</button>
+                </div>
+                <div id="cancelGame1Feedback" class="feedback"></div>
+            </div>
+
+            <!-- Domain Restriction Check -->
+            <div class="puzzle-container">
+                <h3 class="puzzle-title">⚠️ Domain Restriction Check</h3>
+                <p style="text-align: center; margin-bottom: 15px;">
+                    For the expression \(\frac{x+2}{x^2-9}\), which values must be <strong>excluded</strong> from the domain?
+                </p>
+                
+                <div class="domain-section">
+                    <div class="domain-title">⚠️ Select ALL values that make the denominator = 0:</div>
+                    <div class="domain-checkboxes" id="domainCheck1">
+                        <label class="domain-option">
+                            <input type="checkbox" value="-3"> \(x = -3\)
+                        </label>
+                        <label class="domain-option">
+                            <input type="checkbox" value="3"> \(x = 3\)
+                        </label>
+                        <label class="domain-option">
+                            <input type="checkbox" value="-2"> \(x = -2\)
+                        </label>
+                        <label class="domain-option">
+                            <input type="checkbox" value="0"> \(x = 0\)
+                        </label>
+                        <label class="domain-option">
+                            <input type="checkbox" value="9"> \(x = 9\)
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="dungeon-btn primary" onclick="checkDomainRestrictions()">Check Restrictions</button>
+                </div>
+                <div id="domainFeedback" class="feedback"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="dungeon-btn secondary" onclick="switchTab('scrolls')">📜 Review the Scrolls First</button>
+                <button class="dungeon-btn primary" onclick="switchTab('gates')" style="margin-left: 10px;">Proceed to The Three Gates →</button>
+            </div>
+        </section>
+
+        <!-- TAB 3: THE THREE GATES -->
+        <section class="tab-content" id="gates">
+            <div class="stone-card">
+                <h2 class="stone-card-title">🚪 The Three Gates</h2>
+                <p>To escape the labyrinth, you must unlock three magical gates. Each gate tests a different skill. 
+                Solve all three to reveal the escape code!</p>
+            </div>
+
+            <!-- GATE 1: Factor & Slash - GENERIC PLACEHOLDERS -->
+            <div class="puzzle-container" id="gate1Box">
+                <h3 class="puzzle-title">🚪 Gate 1: Factor & Slash</h3>
+                <p style="text-align: center; margin-bottom: 10px;">Simplify this rational expression by factoring and canceling common factors.</p>
+                
+                <div class="puzzle-problem">
+                    \(\frac{x^2 - 9}{x^2 + 5x + 6}\)
+                </div>
+
+                <!-- Scaffolding Section - GENERIC PLACEHOLDERS -->
+                <div class="scaffolding-box">
+                    <div class="scaffolding-title">📝 Step-by-Step Guide</div>
+                    
+                    <div class="scaffolding-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <strong>Factor the numerator:</strong> \(x^2 - 9\) is a difference of squares!
+                            <input type="text" class="step-input" id="gate1Step1" placeholder="(x+#)(x-#)">
+                        </div>
+                    </div>
+                    
+                    <div class="scaffolding-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <strong>Factor the denominator:</strong> \(x^2 + 5x + 6\) — find factors of 6 that add to 5.
+                            <input type="text" class="step-input" id="gate1Step2" placeholder="(x+#)(x+#)">
+                        </div>
+                    </div>
+                    
+                    <div class="scaffolding-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <strong>Identify common factors:</strong> What factor appears in BOTH numerator and denominator?
+                            <input type="text" class="step-input" id="gate1Step3" placeholder="(x+#)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Factor Slash Visualizer -->
+                <div class="factor-slash-container">
+                    <p style="text-align: center; margin-bottom: 15px; color: var(--teal-glow);">
+                        <strong>Click matching factors to cancel them:</strong>
+                    </p>
+                    <div class="fraction-display">
+                        <div class="fraction-num" id="gate1Num">
+                            <span class="factor-chip" data-factor="x+3" onclick="toggleFactor(this, 'gate1')">x + 3</span>
+                            <span class="factor-chip" data-factor="x-3" onclick="toggleFactor(this, 'gate1')">x - 3</span>
+                        </div>
+                        <div class="fraction-line"></div>
+                        <div class="fraction-den" id="gate1Den">
+                            <span class="factor-chip" data-factor="x+2" onclick="toggleFactor(this, 'gate1')">x + 2</span>
+                            <span class="factor-chip" data-factor="x+3" onclick="toggleFactor(this, 'gate1')">x + 3</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button class="dungeon-btn secondary" onclick="slashFactors('gate1')">✂️ Slash Selected Factors</button>
+                    </div>
+                </div>
+
+                <!-- Domain Restrictions -->
+                <div class="domain-section">
+                    <div class="domain-title">⚠️ Domain Restrictions (check all that apply):</div>
+                    <div class="domain-checkboxes" id="gate1Domain">
+                        <label class="domain-option">
+                            <input type="checkbox" value="-3"> \(x \neq -3\)
+                        </label>
+                        <label class="domain-option">
+                            <input type="checkbox" value="-2"> \(x \neq -2\)
+                        </label>
+                        <label class="domain-option">
+                            <input type="checkbox" value="3"> \(x \neq 3\)
+                        </label>
+                    </div>
+                </div>
+
+                <p style="text-align: center; margin: 15px 0;">Final simplified form:</p>
+                <input type="text" class="answer-input" id="gate1Answer" placeholder="(x+#)/(x+#)">
+                
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="dungeon-btn primary" onclick="checkGate1()">Unlock Gate 1</button>
+                    <button class="hint-btn" onclick="toggleHint('hint1')">💡 Need a Hint?</button>
+                </div>
+                <div id="hint1" class="hint-content">
+                    <strong>Hint:</strong> After factoring:<br>
+                    • Numerator: \((x+3)(x-3)\) — difference of squares!<br>
+                    • Denominator: \((x+2)(x+3)\) — factors of 6 that add to 5 are 2 and 3<br>
+                    • The common factor is \((x+3)\)<br>
+                    • Don't forget: even though we cancel \((x+3)\), the restriction \(x \neq -3\) still applies!
+                </div>
+                <div id="gate1Feedback" class="feedback"></div>
+                <div id="code1" style="display: none; text-align: center; margin-top: 15px;">
+                    <span style="font-family: 'Cinzel', serif; color: var(--teal-glow); font-size: 1.2rem;">
+                        🔑 Code Fragment #1: <strong id="codeValue1"></strong>
+                    </span>
+                </div>
+            </div>
+
+            <!-- GATE 2: LCD Bridge Builder - GENERIC PLACEHOLDERS -->
+            <div class="puzzle-container" id="gate2Box">
+                <h3 class="puzzle-title">🚪 Gate 2: The LCD Bridge Builder</h3>
+                <p style="text-align: center; margin-bottom: 10px;">Build the LCD to add these fractions and cross the bridge!</p>
+                
+                <div class="puzzle-problem">
+                    \(\frac{3}{x-2} + \frac{5}{x+4}\)
+                </div>
+
+                <!-- LCD Visualizer -->
+                <div class="lcd-visualizer">
+                    <div class="lcd-step">
+                        <div class="lcd-step-title">Step 1: Identify the denominators</div>
+                        <p>Denominator 1: \(x - 2\) &nbsp;&nbsp;&nbsp; Denominator 2: \(x + 4\)</p>
+                    </div>
+                    
+                    <div class="lcd-step">
+                        <div class="lcd-step-title">Step 2: Build the LCD</div>
+                        <p>The LCD must contain ALL unique factors. Click the factors to add them to the LCD:</p>
+                        <div class="factor-pool" id="lcdFactorPool">
+                            <div class="factor-tile" data-factor="x-2" onclick="addToLCD(this)">(x - 2)</div>
+                            <div class="factor-tile" data-factor="x+4" onclick="addToLCD(this)">(x + 4)</div>
+                        </div>
+                        <div class="lcd-result">
+                            LCD = <span id="lcdResult">[ Click factors above ]</span>
+                        </div>
+                    </div>
+                    
+                    <div class="lcd-step">
+                        <div class="lcd-step-title">Step 3: Build equivalent fractions</div>
+                        <p style="margin-bottom: 15px;">Enter the numerator and denominator for each equivalent fraction:</p>
+                        
+                        <!-- Symbol Bar for Exponents -->
+                        <div class="symbol-bar" style="margin-bottom: 15px;">
+                            <button class="symbol-btn" onclick="insertSymbolToFocused('(')">(</button>
+                            <button class="symbol-btn" onclick="insertSymbolToFocused(')')">)</button>
+                            <button class="symbol-btn" onclick="insertSymbolToFocused('x')">x</button>
+                            <button class="symbol-btn" onclick="insertSymbolToFocused('+')">+</button>
+                            <button class="symbol-btn" onclick="insertSymbolToFocused('-')">−</button>
+                            <button class="symbol-btn exponent" onclick="insertSymbolToFocused('^')">xⁿ</button>
+                            <button class="symbol-btn exponent" onclick="insertSymbolToFocused('²')">x²</button>
+                            <button class="symbol-btn exponent" onclick="insertSymbolToFocused('³')">x³</button>
+                        </div>
+                        
+                        <!-- Fraction 1 Builder - GENERIC PLACEHOLDERS -->
+                        <div class="fraction-builder">
+                            <div class="fraction-builder-title">First Fraction: \(\frac{3}{x-2} = \frac{?}{LCD}\)</div>
+                            <div class="fraction-input-stack">
+                                <div class="fraction-input-label">Numerator</div>
+                                <div class="fraction-input-boxes">
+                                    <input type="text" class="factor-input-box" id="frac1Num" placeholder="#(x+#)" onfocus="setFocusedInput(this)">
+                                </div>
+                                <div class="fraction-input-line"></div>
+                                <div class="fraction-input-label">Denominator</div>
+                                <div class="fraction-input-boxes">
+                                    <input type="text" class="factor-input-box" id="frac1Den1" placeholder="(x+#)" onfocus="setFocusedInput(this)">
+                                    <input type="text" class="factor-input-box" id="frac1Den2" placeholder="(x+#)" onfocus="setFocusedInput(this)">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="plus-symbol" style="text-align: center; margin: 10px 0;">+</div>
+                        
+                        <!-- Fraction 2 Builder - GENERIC PLACEHOLDERS -->
+                        <div class="fraction-builder">
+                            <div class="fraction-builder-title">Second Fraction: \(\frac{5}{x+4} = \frac{?}{LCD}\)</div>
+                            <div class="fraction-input-stack">
+                                <div class="fraction-input-label">Numerator</div>
+                                <div class="fraction-input-boxes">
+                                    <input type="text" class="factor-input-box" id="frac2Num" placeholder="#(x+#)" onfocus="setFocusedInput(this)">
+                                </div>
+                                <div class="fraction-input-line"></div>
+                                <div class="fraction-input-label">Denominator</div>
+                                <div class="fraction-input-boxes">
+                                    <input type="text" class="factor-input-box" id="frac2Den1" placeholder="(x+#)" onfocus="setFocusedInput(this)">
+                                    <input type="text" class="factor-input-box" id="frac2Den2" placeholder="(x+#)" onfocus="setFocusedInput(this)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p style="text-align: center; margin: 15px 0;">Final answer (combined over LCD):</p>
+                
+                <!-- Final Answer with Numerator/Denominator boxes - GENERIC PLACEHOLDERS -->
+                <div class="fraction-builder">
+                    <div class="fraction-builder-title">Combined Fraction:</div>
+                    <div class="fraction-input-stack">
+                        <div class="fraction-input-label">Numerator (simplified)</div>
+                        <input type="text" class="factor-input-box" id="gate2NumAnswer" placeholder="#x + #" style="width: 150px;" onfocus="setFocusedInput(this)">
+                        <div class="fraction-input-line"></div>
+                        <div class="fraction-input-label">Denominator (factored form OK)</div>
+                        <div class="fraction-input-boxes">
+                            <input type="text" class="factor-input-box" id="gate2DenAnswer1" placeholder="(x+#)" onfocus="setFocusedInput(this)">
+                            <input type="text" class="factor-input-box" id="gate2DenAnswer2" placeholder="(x+#)" onfocus="setFocusedInput(this)">
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="dungeon-btn primary" onclick="checkGate2()">Unlock Gate 2</button>
+                    <button class="hint-btn" onclick="toggleHint('hint2')">💡 Need a Hint?</button>
+                </div>
+                <div id="hint2" class="hint-content">
+                    <strong>Hint:</strong><br>
+                    • LCD = \((x-2)(x+4)\)<br>
+                    • First fraction: multiply top and bottom by \((x+4)\) → numerator becomes \(3(x+4) = 3x + 12\)<br>
+                    • Second fraction: multiply top and bottom by \((x-2)\) → numerator becomes \(5(x-2) = 5x - 10\)<br>
+                    • Combine numerators: \((3x + 12) + (5x - 10) = 8x + 2\)
+                </div>
+                <div id="gate2Feedback" class="feedback"></div>
+                <div id="code2" style="display: none; text-align: center; margin-top: 15px;">
+                    <span style="font-family: 'Cinzel', serif; color: var(--teal-glow); font-size: 1.2rem;">
+                        🔑 Code Fragment #2: <strong id="codeValue2"></strong>
+                    </span>
+                </div>
+            </div>
+
+            <!-- GATE 3: Extraneous Trap - GENERIC PLACEHOLDERS -->
+            <div class="puzzle-container" id="gate3Box">
+                <h3 class="puzzle-title">🚪 Gate 3: The Extraneous Trap</h3>
+                <p style="text-align: center; margin-bottom: 10px;">Solve this equation — but beware! One solution may be a trap!</p>
+                
+                <div class="puzzle-problem">
+                    \(\frac{x}{x-3} - \frac{2}{x} = \frac{6}{x(x-3)}\)
+                </div>
+
+                <!-- Scaffolding - GENERIC PLACEHOLDERS -->
+                <div class="scaffolding-box">
+                    <div class="scaffolding-title">📝 Step-by-Step Guide</div>
+                    
+                    <div class="scaffolding-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <strong>Find the LCD:</strong> What is the LCD of all three fractions?
+                            <input type="text" class="step-input" id="gate3LCD" placeholder="x(x+#)">
+                        </div>
+                    </div>
+                    
+                    <div class="scaffolding-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <strong>Multiply both sides by LCD:</strong> This clears all denominators.
+                            <p style="margin-top: 5px; font-size: 0.9rem; color: var(--text-dim);">
+                                \(\frac{x}{x-3} \cdot x(x-3) - \frac{2}{x} \cdot x(x-3) = \frac{6}{x(x-3)} \cdot x(x-3)\)
+                            </p>
+                            <input type="text" class="step-input" id="gate3Cleared" placeholder="x·x - #(x+#) = #">
+                        </div>
+                    </div>
+                    
+                    <div class="scaffolding-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <strong>Simplify and solve:</strong>
+                            <p style="margin-top: 5px; font-size: 0.9rem; color: var(--text-dim);">
+                                \(x^2 - 2x + 6 = 6\) → \(x^2 - 2x = 0\) → \(x(x-2) = 0\)
+                            </p>
+                            <input type="text" class="step-input" id="gate3Solutions" placeholder="x = # or x = #">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Domain Check -->
+                <div class="domain-section">
+                    <div class="domain-title">⚠️ CRITICAL: Check for extraneous solutions!</div>
+                    <p style="margin: 10px 0;">Which values would make a denominator = 0 in the ORIGINAL equation?</p>
+                    <div class="domain-checkboxes" id="gate3Domain">
+                        <label class="domain-option">
+                            <input type="checkbox" value="0"> \(x = 0\) is excluded
+                        </label>
+                        <label class="domain-option">
+                            <input type="checkbox" value="3"> \(x = 3\) is excluded
+                        </label>
+                        <label class="domain-option">
+                            <input type="checkbox" value="-3"> \(x = -3\) is excluded
+                        </label>
+                        <label class="domain-option">
+                            <input type="checkbox" value="2"> \(x = 2\) is excluded
+                        </label>
+                    </div>
+                </div>
+
+                <p style="text-align: center; margin: 15px 0; font-weight: bold; color: var(--warning);">
+                    Enter ONLY the valid solution(s):
+                </p>
+                <input type="text" class="answer-input" id="gate3Answer" placeholder="x = #">
+                
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="dungeon-btn primary" onclick="checkGate3()">Unlock Gate 3</button>
+                    <button class="hint-btn" onclick="toggleHint('hint3')">💡 Need a Hint?</button>
+                </div>
+                <div id="hint3" class="hint-content">
+                    <strong>Hint:</strong><br>
+                    • LCD = \(x(x-3)\)<br>
+                    • After multiplying: \(x \cdot x - 2(x-3) = 6\)<br>
+                    • Simplify: \(x^2 - 2x + 6 = 6\) → \(x^2 - 2x = 0\)<br>
+                    • Factor: \(x(x - 2) = 0\) → \(x = 0\) or \(x = 2\)<br>
+                    • BUT \(x = 0\) makes the original denominators undefined!<br>
+                    • So \(x = 0\) is <strong>EXTRANEOUS</strong> — reject it!<br>
+                    • Valid solution: \(x = 2\)
+                </div>
+                <div id="gate3Feedback" class="feedback"></div>
+                <div id="code3" style="display: none; text-align: center; margin-top: 15px;">
+                    <span style="font-family: 'Cinzel', serif; color: var(--teal-glow); font-size: 1.2rem;">
+                        🔑 Code Fragment #3: <strong id="codeValue3"></strong>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Master Code Entry -->
+            <div class="stone-card" id="masterCodeSection" style="display: none;">
+                <h2 class="stone-card-title">🗝️ Enter the Escape Code</h2>
+                <p style="text-align: center; margin-bottom: 20px;">Combine your code fragments to escape the labyrinth!</p>
+                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+                    <input type="text" id="masterCode1" style="width: 60px; height: 60px; font-size: 1.5rem; text-align: center; background: var(--bg-darker); border: 3px solid var(--teal-dim); color: var(--teal-glow); border-radius: 8px;" maxlength="2">
+                    <span style="font-size: 2rem; color: var(--teal);">-</span>
+                    <input type="text" id="masterCode2" style="width: 60px; height: 60px; font-size: 1.5rem; text-align: center; background: var(--bg-darker); border: 3px solid var(--teal-dim); color: var(--teal-glow); border-radius: 8px;" maxlength="2">
+                    <span style="font-size: 2rem; color: var(--teal);">-</span>
+                    <input type="text" id="masterCode3" style="width: 60px; height: 60px; font-size: 1.5rem; text-align: center; background: var(--bg-darker); border: 3px solid var(--teal-dim); color: var(--teal-glow); border-radius: 8px;" maxlength="2">
+                </div>
+                <div style="text-align: center;">
+                    <button class="dungeon-btn primary" onclick="checkMasterCode()">🌀 Escape the Labyrinth</button>
+                </div>
+                <div id="masterFeedback" class="feedback"></div>
+            </div>
+        </section>
+
+        <!-- TAB 4: MAZE SCROLLS -->
+        <section class="tab-content" id="scrolls">
+            <div class="stone-card">
+                <h2 class="stone-card-title">📜 The Maze Scrolls</h2>
+                <p>Study these ancient texts to navigate the labyrinth safely.</p>
+            </div>
+
+            <div class="scroll-grid">
+                <div class="scroll-item">
+                    <h4>🚫 The Golden Rule: Factors vs. Terms</h4>
+                    <p><strong>You can ONLY cancel FACTORS, never TERMS!</strong></p>
+                    <p style="margin-top: 10px;">
+                        ✅ <strong>Legal:</strong> \(\frac{(x+3)(x-2)}{(x+3)} = (x-2)\)<br>
+                        <em>The (x+3) is a FACTOR of both.</em>
+                    </p>
+                    <p style="margin-top: 10px;">
+                        ✅ <strong>Also Legal:</strong> \(\frac{x^2+4}{4} = \frac{x^2}{4} + 1\)<br>
+                        <em>Splitting a fraction by dividing each term is OK!</em>
+                    </p>
+                    <div class="warning-box">
+                        <div class="title">🚫 ILLEGAL:</div>
+                        <p>\(\frac{x+5}{x} \neq 5\)</p>
+                        <p><em>The x is a TERM in the numerator, not a factor!</em></p>
+                    </div>
+                </div>
+
+                <div class="scroll-item">
+                    <h4>⚠️ Domain Restrictions</h4>
+                    <p>A rational expression is <strong>undefined</strong> when the denominator equals zero.</p>
+                    <p style="margin-top: 10px;">
+                        <strong>To find restrictions:</strong>
+                    </p>
+                    <ol style="margin-left: 20px; margin-top: 5px;">
+                        <li>Set denominator = 0</li>
+                        <li>Solve for x</li>
+                        <li>These values are EXCLUDED</li>
+                    </ol>
+                    <p style="margin-top: 10px; background: #e8dcc8; padding: 8px; border-radius: 4px;">
+                        <strong>Example:</strong> \(\frac{x+1}{x^2-4}\)<br>
+                        \(x^2 - 4 = 0\) → \(x = \pm 2\)<br>
+                        Domain: \(x \neq 2, x \neq -2\)
+                    </p>
+                </div>
+
+                <div class="scroll-item">
+                    <h4>🔧 The LCD Recipe</h4>
+                    <p>To find the Least Common Denominator:</p>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>Factor</strong> all denominators completely</li>
+                        <li><strong>List</strong> all unique factors</li>
+                        <li><strong>Use</strong> the highest power of each factor</li>
+                    </ol>
+                    <p style="margin-top: 10px; background: #e8dcc8; padding: 8px; border-radius: 4px;">
+                        <strong>Example:</strong><br>
+                        \(\frac{1}{x-3}\) and \(\frac{1}{x+2}\)<br>
+                        LCD = \((x-3)(x+2)\)
+                    </p>
+                </div>
+
+                <div class="scroll-item">
+                    <h4>🔥 Extraneous Solutions</h4>
+                    <p>When solving rational equations, <strong>always check your answers!</strong></p>
+                    <p style="margin-top: 10px;">
+                        An <strong>extraneous solution</strong> is a value that:
+                    </p>
+                    <ul style="margin-left: 20px; margin-top: 5px;">
+                        <li>Appears when solving algebraically</li>
+                        <li>BUT makes a denominator = 0</li>
+                        <li>Must be REJECTED!</li>
+                    </ul>
+                    <div class="warning-box">
+                        <div class="title">⚠️ The Trap:</div>
+                        <p>If your solution equals a domain restriction, it's EXTRANEOUS — throw it out!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="dungeon-btn primary" onclick="switchTab('gates')">Return to The Three Gates →</button>
+            </div>
+        </section>
+
+        <!-- TAB 5: MONSTER ARENA -->
+        <section class="tab-content" id="arena">
+            <div class="stone-card">
+                <h2 class="stone-card-title">👹 The Monster Arena</h2>
+                <p>Battle through increasingly difficult challenges. Build your streak to earn badges!</p>
+            </div>
+
+            <div class="streak-container">
+                <span class="streak-flames" id="streakFlames">💨</span>
+                <div>
+                    <span class="streak-count" id="streakCount">0</span>
+                    <span class="streak-label">Streak</span>
+                </div>
+                <div class="badge-container">
+                    <div class="badge bronze" id="badgeBronze" title="3 Streak">🥉</div>
+                    <div class="badge silver" id="badgeSilver" title="5 Streak">🥈</div>
+                    <div class="badge gold" id="badgeGold" title="7 Streak">🥇</div>
+                    <div class="badge diamond" id="badgeDiamond" title="10 Streak">💎</div>
+                </div>
+            </div>
+
+            <div id="arenaQuestion" class="puzzle-container">
+                <h3 class="puzzle-title" id="arenaTitle">Monster #1</h3>
+                <span class="practice-level" id="arenaLevel">Easy</span>
+                <div class="puzzle-problem" id="arenaProblem">
+                    Loading...
+                </div>
+                
+                <input type="text" class="answer-input" id="arenaAnswer" placeholder="Enter your answer">
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="dungeon-btn primary" onclick="checkArenaAnswer()">Attack!</button>
+                    <button class="dungeon-btn secondary" onclick="skipArenaQuestion()" style="margin-left: 10px;">Flee</button>
+                </div>
+                <div id="arenaFeedback" class="feedback"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="dungeon-btn secondary" onclick="switchTab('portal')">Proceed to Exit Portal →</button>
+            </div>
+        </section>
+
+        <!-- TAB 6: EXIT PORTAL -->
+        <section class="tab-content" id="portal">
+            <div class="stone-card">
+                <h2 class="stone-card-title">🌀 The Exit Portal</h2>
+                <p>Answer these 5 questions correctly to escape the Rational Labyrinth and unlock the Power Chamber!</p>
+            </div>
+
+            <div id="exitTicket">
+                <!-- Question 1 -->
+                <div class="exit-question" id="eq1">
+                    <p><span class="question-number">1</span> Simplify: \(\frac{x^2 - 4}{x^2 + 4x + 4}\)</p>
+                    <input type="text" class="answer-input" id="exit1" placeholder="(x+#)/(x+#)">
+                </div>
+
+                <!-- Question 2 -->
+                <div class="exit-question" id="eq2">
+                    <p><span class="question-number">2</span> What values must be excluded from the domain of \(\frac{x+1}{x^2-x-6}\)?</p>
+                    <input type="text" class="answer-input" id="exit2" placeholder="x ≠ # and x ≠ #">
+                </div>
+
+                <!-- Question 3 -->
+                <div class="exit-question" id="eq3">
+                    <p><span class="question-number">3</span> Find the LCD of \(\frac{2}{x+3}\) and \(\frac{5}{x-1}\)</p>
+                    <input type="text" class="answer-input" id="exit3" placeholder="(x+#)(x+#)">
+                </div>
+
+                <!-- Question 4 -->
+                <div class="exit-question" id="eq4">
+                    <p><span class="question-number">4</span> Add: \(\frac{2}{x} + \frac{3}{x+1}\)</p>
+                    <input type="text" class="answer-input" id="exit4" placeholder="(#x+#)/(x(x+#))">
+                </div>
+
+                <!-- Question 5 -->
+                <div class="exit-question" id="eq5">
+                    <p><span class="question-number">5</span> Solve: \(\frac{3}{x-2} = \frac{6}{x}\). If a solution is extraneous, write "no solution".</p>
+                    <input type="text" class="answer-input" id="exit5" placeholder="x = #">
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="dungeon-btn primary" onclick="submitExitTicket()">🌀 Activate the Portal</button>
+            </div>
+            <div id="exitFeedback" class="feedback"></div>
+            <div id="exitResults" style="display: none; margin-top: 20px;"></div>
+        </section>
+    </main>
+
+    <!-- Victory Overlay -->
+    <div class="victory-overlay" id="victoryOverlay">
+        <div class="victory-content">
+            <div class="victory-icon">🏆</div>
+            <h2 class="victory-title">Labyrinth Escaped!</h2>
+            <p style="color: var(--text-dim); margin-bottom: 20px;">
+                You have navigated the Rational Labyrinth!
+            </p>
+            <div class="victory-stats">
+                <div class="stat-box">
+                    <div class="stat-value" id="finalScore">0/5</div>
+                    <div class="stat-label">Exit Score</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="finalStreak">0</div>
+                    <div class="stat-label">Best Streak</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="finalBadges">0</div>
+                    <div class="stat-label">Badges Earned</div>
+                </div>
+            </div>
+            <p style="color: var(--teal-glow); font-family: 'Cinzel', serif; margin: 20px 0;">
+                ⚡ The Power Chamber awaits...
+            </p>
+            <button class="dungeon-btn primary" onclick="closeVictory()">Continue Your Quest</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        let gameState = {
+            progress: 0,
+            gatesSolved: [false, false, false],
+            streak: 0,
+            bestStreak: 0,
+            badgesEarned: 0,
+            arenaIndex: 0,
+            exitScore: 0,
+            selectedFactors: { gate1: [] },
+            lcdFactors: [],
+            focusedInput: null
+        };
+
+        // Focused Input Tracking for Symbol Bar
+        function setFocusedInput(input) {
+            gameState.focusedInput = input;
+        }
+
+        function insertSymbolToFocused(symbol) {
+            if (gameState.focusedInput) {
+                const input = gameState.focusedInput;
+                const start = input.selectionStart;
+                const end = input.selectionEnd;
+                const text = input.value;
+                input.value = text.substring(0, start) + symbol + text.substring(end);
+                input.selectionStart = input.selectionEnd = start + symbol.length;
+                input.focus();
+            }
+        }
+
+        // Tab Navigation
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+            
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        }
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                switchTab(btn.dataset.tab);
+            });
+        });
+
+        // Progress Update
+        function updateProgress(amount) {
+            gameState.progress = Math.min(100, gameState.progress + amount);
+            document.getElementById('progressFill').style.width = gameState.progress + '%';
+            document.getElementById('progressText').textContent = gameState.progress + '%';
+        }
+
+        // Hint Toggle
+        function toggleHint(hintId) {
+            const hint = document.getElementById(hintId);
+            hint.classList.toggle('visible');
+        }
+
+        // Normalize answer
+        function normalizeAnswer(answer) {
+            return answer.toLowerCase()
+                .replace(/\s+/g, '')
+                .replace(/\*/g, '')
+                .replace(/×/g, '')
+                .replace(/·/g, '')
+                .replace(/≠/g, '!=')
+                .replace(/\^/g, '')
+                .replace(/\{|\}/g, '');
+        }
+
+        function checkAnswer(userAnswer, correctAnswers) {
+            const normalized = normalizeAnswer(userAnswer);
+            return correctAnswers.some(ans => normalizeAnswer(ans) === normalized);
+        }
+
+        // Cancel Game - FIXED: Only (x+5)/x = 5 is illegal
+        function selectCancelCard(card, gameId) {
+            // Deselect all other cards first (single selection)
+            const cards = document.querySelectorAll(`#${gameId} .cancel-card`);
+            cards.forEach(c => c.classList.remove('selected'));
+            // Select this card
+            card.classList.add('selected');
+        }
+
+        function checkCancelGame(gameId) {
+            const cards = document.querySelectorAll(`#${gameId} .cancel-card`);
+            const feedback = document.getElementById(`${gameId}Feedback`);
+            let selectedCard = null;
+            
+            cards.forEach(card => {
+                if (card.classList.contains('selected')) {
+                    selectedCard = card;
+                }
+            });
+            
+            if (!selectedCard) {
+                feedback.className = 'feedback error';
+                feedback.textContent = 'Please select one card before checking.';
+                return;
+            }
+            
+            // Check if the selected card is the correct (illegal) one
+            if (selectedCard.dataset.correct === 'true') {
+                selectedCard.classList.add('correct');
+                feedback.className = 'feedback success';
+                feedback.textContent = '✓ Correct! (x+5)/x ≠ 5 is ILLEGAL because you cannot cancel a TERM — only FACTORS can be canceled!';
+                updateProgress(5);
+            } else {
+                selectedCard.classList.add('incorrect');
+                // Highlight the correct answer
+                cards.forEach(card => {
+                    if (card.dataset.correct === 'true') {
+                        card.style.border = '3px dashed var(--success)';
+                    }
+                });
+                feedback.className = 'feedback error';
+                feedback.textContent = '✗ Not quite. The ONLY illegal cancellation is (x+5)/x = 5. The x in the numerator is a TERM, not a FACTOR, so it cannot be canceled!';
+            }
+        }
+
+        // Domain Restrictions Check
+        function checkDomainRestrictions() {
+            const checkboxes = document.querySelectorAll('#domainCheck1 input[type="checkbox"]');
+            const feedback = document.getElementById('domainFeedback');
+            const correctValues = ['-3', '3'];
+            let userCorrect = true;
+            
+            checkboxes.forEach(cb => {
+                const option = cb.parentElement;
+                if (correctValues.includes(cb.value)) {
+                    if (cb.checked) {
+                        option.classList.add('correct');
+                    } else {
+                        option.classList.add('incorrect');
+                        userCorrect = false;
+                    }
+                } else {
+                    if (cb.checked) {
+                        option.classList.add('incorrect');
+                        userCorrect = false;
+                    }
+                }
+            });
+            
+            if (userCorrect) {
+                feedback.className = 'feedback success';
+                feedback.textContent = '✓ Correct! x² - 9 = (x+3)(x-3) = 0 when x = -3 or x = 3. These values are excluded from the domain.';
+                updateProgress(5);
+            } else {
+                feedback.className = 'feedback error';
+                feedback.textContent = '✗ Not quite. Factor the denominator: x² - 9 = (x+3)(x-3). Set each factor = 0 to find x = -3 and x = 3.';
+            }
+        }
+
+        // Factor Slash Visualizer
+        function toggleFactor(chip, gateId) {
+            chip.classList.toggle('selected');
+        }
+
+        function slashFactors(gateId) {
+            const numChips = document.querySelectorAll(`#${gateId}Num .factor-chip.selected`);
+            const denChips = document.querySelectorAll(`#${gateId}Den .factor-chip.selected`);
+            
+            numChips.forEach(numChip => {
+                denChips.forEach(denChip => {
+                    if (numChip.dataset.factor === denChip.dataset.factor) {
+                        numChip.classList.add('slashed');
+                        denChip.classList.add('slashed');
+                        numChip.classList.remove('selected');
+                        denChip.classList.remove('selected');
+                    }
+                });
+            });
+        }
+
+        // LCD Builder
+        function addToLCD(tile) {
+            if (tile.classList.contains('used')) return;
+            
+            tile.classList.add('used');
+            gameState.lcdFactors.push(tile.dataset.factor);
+            
+            const result = document.getElementById('lcdResult');
+            result.textContent = gameState.lcdFactors.map(f => `(${f})`).join(' × ') || '[ Click factors above ]';
+        }
+
+        // Gate Checks
+        function checkGate1() {
+            const answer = document.getElementById('gate1Answer').value;
+            const feedback = document.getElementById('gate1Feedback');
+            const correct = ['(x-3)/(x+2)', 'x-3/x+2', '(x-3)/(x+2)'];
+            
+            // Check domain restrictions
+            const domainChecks = document.querySelectorAll('#gate1Domain input[type="checkbox"]');
+            let domainCorrect = true;
+            domainChecks.forEach(cb => {
+                if ((cb.value === '-3' || cb.value === '-2') && !cb.checked) domainCorrect = false;
+                if (cb.value === '3' && cb.checked) domainCorrect = false;
+            });
+            
+            if (checkAnswer(answer, correct) && domainCorrect) {
+                feedback.className = 'feedback success';
+                feedback.textContent = '🚪 Gate 1 Opened! The (x+3) factors cancel, leaving (x-3)/(x+2) with restrictions x ≠ -3, -2.';
+                document.getElementById('gate1Answer').classList.add('correct');
+                document.getElementById('code1').style.display = 'block';
+                document.getElementById('codeValue1').textContent = '3';
+                gameState.gatesSolved[0] = true;
+                updateProgress(10);
+                checkAllGates();
+            } else if (checkAnswer(answer, correct)) {
+                feedback.className = 'feedback hint';
+                feedback.textContent = 'Almost! Your simplified form is correct, but check your domain restrictions. Remember: x ≠ -3 (from canceled factor) AND x ≠ -2 (from remaining denominator).';
+            } else {
+                feedback.className = 'feedback error';
+                feedback.textContent = '✗ The gate remains sealed. Factor both: numerator is (x+3)(x-3), denominator is (x+2)(x+3). Cancel the common (x+3).';
+            }
+        }
+
+        function checkGate2() {
+            const numAnswer = document.getElementById('gate2NumAnswer').value;
+            const feedback = document.getElementById('gate2Feedback');
+            const correctNum = ['8x+2', '2(4x+1)', '8x + 2'];
+            
+            if (checkAnswer(numAnswer, correctNum)) {
+                feedback.className = 'feedback success';
+                feedback.textContent = '🚪 Gate 2 Opened! 3(x+4) + 5(x-2) = 3x + 12 + 5x - 10 = 8x + 2 over LCD (x-2)(x+4).';
+                document.getElementById('gate2NumAnswer').classList.add('correct');
+                document.getElementById('code2').style.display = 'block';
+                document.getElementById('codeValue2').textContent = '8';
+                gameState.gatesSolved[1] = true;
+                updateProgress(10);
+                checkAllGates();
+            } else {
+                feedback.className = 'feedback error';
+                feedback.textContent = '✗ The bridge remains incomplete. Expand: 3(x+4) = 3x+12 and 5(x-2) = 5x-10. Add: (3x+12) + (5x-10) = 8x + 2.';
+            }
+        }
+
+        function checkGate3() {
+            const answer = document.getElementById('gate3Answer').value;
+            const feedback = document.getElementById('gate3Feedback');
+            const correct = ['x=2', '2', 'x = 2'];
+            
+            // Check domain understanding
+            const domainChecks = document.querySelectorAll('#gate3Domain input[type="checkbox"]');
+            let understoodDomain = true;
+            domainChecks.forEach(cb => {
+                if ((cb.value === '0' || cb.value === '3') && !cb.checked) understoodDomain = false;
+                if ((cb.value === '-3' || cb.value === '2') && cb.checked) understoodDomain = false;
+            });
+            
+            if (checkAnswer(answer, correct)) {
+                feedback.className = 'feedback success';
+                feedback.textContent = '🚪 Gate 3 Opened! x = 0 is EXTRANEOUS (makes denominator 0). The only valid solution is x = 2!';
+                document.getElementById('gate3Answer').classList.add('correct');
+                document.getElementById('code3').style.display = 'block';
+                document.getElementById('codeValue3').textContent = '2';
+                gameState.gatesSolved[2] = true;
+                updateProgress(10);
+                checkAllGates();
+            } else {
+                feedback.className = 'feedback error';
+                feedback.textContent = '✗ Careful! Solving gives x = 0 or x = 2, but x = 0 makes the original denominators undefined. Only x = 2 is valid!';
+            }
+        }
+
+        function checkAllGates() {
+            if (gameState.gatesSolved.every(g => g)) {
+                document.getElementById('masterCodeSection').style.display = 'block';
+                document.getElementById('masterCodeSection').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function checkMasterCode() {
+            const c1 = document.getElementById('masterCode1').value;
+            const c2 = document.getElementById('masterCode2').value;
+            const c3 = document.getElementById('masterCode3').value;
+            const feedback = document.getElementById('masterFeedback');
+            
+            // Code: 3-8-2
+            if (c1 === '3' && c2 === '8' && c3 === '2') {
+                feedback.className = 'feedback success';
+                feedback.innerHTML = '🎉 <strong>THE LABYRINTH IS ESCAPED!</strong> Proceed to the Monster Arena to test your skills!';
+                updateProgress(15);
+                document.querySelector('[data-tab="gates"]').classList.add('completed');
+            } else {
+                feedback.className = 'feedback error';
+                feedback.textContent = '✗ Incorrect code. Review your code fragments from each gate!';
+            }
+        }
+
+        // Arena Questions
+        const arenaQuestions = [
+            { problem: '\\text{Simplify: } \\frac{x^2-1}{x+1}', answers: ['x-1', '(x-1)'], level: 'Easy' },
+            { problem: '\\text{Domain restriction for } \\frac{5}{x-7}', answers: ['x!=7', 'x≠7', '7', 'x=7'], level: 'Easy' },
+            { problem: '\\text{Simplify: } \\frac{2x}{4x^2}', answers: ['1/(2x)', '1/2x'], level: 'Easy' },
+            { problem: '\\text{LCD of } \\frac{1}{x} \\text{ and } \\frac{1}{x+2}', answers: ['x(x+2)', '(x)(x+2)'], level: 'Medium' },
+            { problem: '\\text{Simplify: } \\frac{x^2-4x+4}{x^2-4}', answers: ['(x-2)/(x+2)', 'x-2/x+2'], level: 'Medium' },
+            { problem: '\\text{Add: } \\frac{1}{x} + \\frac{1}{x}', answers: ['2/x'], level: 'Medium' },
+            { problem: '\\text{Simplify: } \\frac{x^2+5x+6}{x^2+2x}', answers: ['(x+3)/x', 'x+3/x'], level: 'Hard' },
+            { problem: '\\text{LCD of } \\frac{1}{x^2-1} \\text{ and } \\frac{1}{x+1}', answers: ['(x+1)(x-1)', 'x^2-1', '(x-1)(x+1)'], level: 'Hard' },
+        ];
+
+        function loadArenaQuestion() {
+            if (gameState.arenaIndex >= arenaQuestions.length) {
+                gameState.arenaIndex = 0;
+            }
+            const q = arenaQuestions[gameState.arenaIndex];
+            document.getElementById('arenaTitle').textContent = `Monster #${gameState.arenaIndex + 1}`;
+            document.getElementById('arenaLevel').textContent = q.level;
+            document.getElementById('arenaLevel').className = 'practice-level ' + q.level.toLowerCase();
+            document.getElementById('arenaProblem').innerHTML = `\\(${q.problem}\\)`;
+            document.getElementById('arenaAnswer').value = '';
+            document.getElementById('arenaAnswer').className = 'answer-input';
+            document.getElementById('arenaFeedback').className = 'feedback';
+            
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        }
+
+        function checkArenaAnswer() {
+            const answer = document.getElementById('arenaAnswer').value;
+            const feedback = document.getElementById('arenaFeedback');
+            const q = arenaQuestions[gameState.arenaIndex];
+            
+            if (checkAnswer(answer, q.answers)) {
+                feedback.className = 'feedback success';
+                feedback.textContent = '👹 Monster defeated! +1 Streak';
+                document.getElementById('arenaAnswer').classList.add('correct');
+                gameState.streak++;
+                updateStreak();
+                updateProgress(3);
+                
+                setTimeout(() => {
+                    gameState.arenaIndex++;
+                    loadArenaQuestion();
+                }, 1500);
+            } else {
+                feedback.className = 'feedback error';
+                feedback.textContent = '💀 The monster strikes back! Streak reset. Answer: ' + q.answers[0];
+                document.getElementById('arenaAnswer').classList.add('incorrect');
+                gameState.streak = 0;
+                updateStreak();
+                
+                setTimeout(() => {
+                    gameState.arenaIndex++;
+                    loadArenaQuestion();
+                }, 2500);
+            }
+        }
+
+        function skipArenaQuestion() {
+            gameState.streak = 0;
+            updateStreak();
+            gameState.arenaIndex++;
+            loadArenaQuestion();
+        }
+
+        function updateStreak() {
+            document.getElementById('streakCount').textContent = gameState.streak;
+            
+            if (gameState.streak > gameState.bestStreak) {
+                gameState.bestStreak = gameState.streak;
+            }
+            
+            const flames = document.getElementById('streakFlames');
+            if (gameState.streak >= 10) flames.textContent = '🔥🔥🔥';
+            else if (gameState.streak >= 5) flames.textContent = '🔥🔥';
+            else if (gameState.streak >= 3) flames.textContent = '🔥';
+            else flames.textContent = '💨';
+            
+            if (gameState.streak >= 3) {
+                document.getElementById('badgeBronze').classList.add('earned');
+                gameState.badgesEarned = Math.max(gameState.badgesEarned, 1);
+            }
+            if (gameState.streak >= 5) {
+                document.getElementById('badgeSilver').classList.add('earned');
+                gameState.badgesEarned = Math.max(gameState.badgesEarned, 2);
+            }
+            if (gameState.streak >= 7) {
+                document.getElementById('badgeGold').classList.add('earned');
+                gameState.badgesEarned = Math.max(gameState.badgesEarned, 3);
+            }
+            if (gameState.streak >= 10) {
+                document.getElementById('badgeDiamond').classList.add('earned');
+                gameState.badgesEarned = Math.max(gameState.badgesEarned, 4);
+            }
+        }
+
+        // Exit Ticket
+        const exitAnswers = [
+            ['(x-2)/(x+2)', 'x-2/x+2'],
+            ['x!=3,-2', 'x!=-2,3', '3and-2', '-2and3', 'x≠3,x≠-2', '3,-2', '-2,3'],
+            ['(x+3)(x-1)', '(x-1)(x+3)'],
+            ['(5x+2)/(x(x+1))', '(5x+2)/x(x+1)', '5x+2/(x)(x+1)'],
+            ['x=4', '4']
+        ];
+
+        function submitExitTicket() {
+            let score = 0;
+            const results = [];
+            
+            for (let i = 1; i <= 5; i++) {
+                const answer = document.getElementById(`exit${i}`).value;
+                const questionEl = document.getElementById(`eq${i}`);
+                const inputEl = document.getElementById(`exit${i}`);
+                
+                if (checkAnswer(answer, exitAnswers[i-1])) {
+                    score++;
+                    questionEl.classList.add('correct');
+                    inputEl.classList.add('correct');
+                    results.push(`Q${i}: ✓ Correct`);
+                } else {
+                    questionEl.classList.add('incorrect');
+                    inputEl.classList.add('incorrect');
+                    results.push(`Q${i}: ✗ Expected ${exitAnswers[i-1][0]}`);
+                }
+            }
+            
+            gameState.exitScore = score;
+            
+            const feedback = document.getElementById('exitFeedback');
+            const resultsDiv = document.getElementById('exitResults');
+            
+            if (score >= 4) {
+                feedback.className = 'feedback success';
+                feedback.innerHTML = `🎉 <strong>Portal Activated!</strong> You scored ${score}/5. Room 2 Complete!`;
+                updateProgress(20);
+                
+                setTimeout(() => {
+                    showVictory();
+                }, 2000);
+            } else {
+                feedback.className = 'feedback error';
+                feedback.innerHTML = `You scored ${score}/5. You need at least 4/5 to activate the portal. Review and try again!`;
+            }
+            
+            resultsDiv.style.display = 'block';
+            resultsDiv.innerHTML = '<div class="stone-card"><h3 style="color: var(--teal-glow); margin-bottom: 10px;">Results:</h3>' + 
+                results.map(r => `<p>${r}</p>`).join('') + '</div>';
+        }
+
+        function showVictory() {
+            document.getElementById('finalScore').textContent = gameState.exitScore + '/5';
+            document.getElementById('finalStreak').textContent = gameState.bestStreak;
+            document.getElementById('finalBadges').textContent = gameState.badgesEarned;
+            document.getElementById('victoryOverlay').classList.add('active');
+        }
+
+        function closeVictory() {
+            document.getElementById('victoryOverlay').classList.remove('active');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadArenaQuestion();
+            if (window.MathJax) {
+                MathJax.typesetPromise();
+            }
+        });
+    </script>
+</body>
+</html>
