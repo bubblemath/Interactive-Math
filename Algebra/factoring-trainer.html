@@ -1,0 +1,521 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Area — a factoring trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F3EA; --paper2:#FEFCF7; --ink:#1B2A27; --ink-soft:#566460;
+    --line:#DBD5C6; --line-strong:#C7C0AD;
+    --teal:#0F6E56; --teal-mid:#5DBFA0; --teal-soft:#DDEFE8;
+    --amber:#B06E12; --amber-soft:#F7EAD3;
+    --green:#2E7D33; --green-soft:#E5F1E2;
+    --coral:#BC4327; --coral-soft:#F8E6DF;
+    --font-display:"Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    --font-body:ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-math:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --r:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;}
+  body{
+    font-family:var(--font-body); color:var(--ink); background-color:var(--paper);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:26px 26px;
+    background-position:center top;
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+    padding:0 18px 64px;
+  }
+  .wrap{max-width:940px; margin:0 auto;}
+
+  header{padding:34px 0 18px;}
+  .brand{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;}
+  .logo{font-family:var(--font-display); font-weight:700; font-size:30px; letter-spacing:-0.5px; color:var(--ink); display:inline-flex; align-items:center; gap:12px;}
+  .logo .mark{width:26px; height:26px; border:2.5px solid var(--teal); border-radius:5px; position:relative; flex:none;}
+  .logo .mark::after{content:""; position:absolute; left:9px; top:-2px; bottom:-2px; width:2px; background:var(--teal);}
+  .tagline{font-family:var(--font-body); color:var(--ink-soft); font-size:15px;}
+
+  /* level rail */
+  .rail{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:22px 0 8px;}
+  .lvl{
+    text-align:left; cursor:pointer; background:var(--paper2); border:1.5px solid var(--line);
+    border-radius:var(--r); padding:12px 14px; font-family:var(--font-body); color:var(--ink-soft);
+    transition:border-color .15s, background .15s, transform .08s; display:flex; flex-direction:column; gap:3px;
+  }
+  .lvl:hover{border-color:var(--line-strong);}
+  .lvl .num{font-family:var(--font-display); font-weight:700; font-size:13px; letter-spacing:1px; color:var(--teal-mid);}
+  .lvl .name{font-family:var(--font-display); font-weight:600; font-size:15px; color:var(--ink); line-height:1.2;}
+  .lvl .sub{font-size:12.5px;}
+  .lvl[aria-current="true"]{border-color:var(--teal); background:var(--paper2);}
+  .lvl[aria-current="true"] .num{color:var(--teal);}
+  .lvl .tick{font-size:12px; color:var(--green); font-weight:600; min-height:15px;}
+
+  /* main card */
+  .card{
+    background:var(--paper2); border:1.5px solid var(--line); border-radius:18px;
+    padding:24px; margin-top:14px; display:grid; grid-template-columns:1fr 320px; gap:26px; align-items:start;
+  }
+  .goal{font-size:14px; color:var(--ink-soft); margin:0 0 14px;}
+  .goal b{color:var(--ink); font-weight:600;}
+  .prompt-label{font-family:var(--font-display); font-weight:600; font-size:13px; letter-spacing:.5px; text-transform:uppercase; color:var(--teal-mid); margin:0 0 8px;}
+  .prompt{font-family:var(--font-math); font-weight:500; font-size:30px; color:var(--ink); margin:0 0 18px; line-height:1.25; word-spacing:1px;}
+
+  .answer{display:flex; align-items:center; flex-wrap:wrap; gap:6px; font-family:var(--font-math); font-size:24px; color:var(--ink);}
+  input.box-in{
+    width:62px; font-family:var(--font-math); font-size:22px; text-align:center; color:var(--ink);
+    padding:8px 4px; border:1.5px solid var(--line-strong); border-radius:9px; background:var(--paper);
+  }
+  input.box-in:focus{outline:none; border-color:var(--teal); background:var(--teal-soft);}
+  input.wide{width:78px;}
+
+  .controls{display:flex; flex-wrap:wrap; gap:9px; margin-top:18px;}
+  button.btn{font-family:var(--font-display); font-weight:600; font-size:14.5px; cursor:pointer; border-radius:10px; padding:10px 16px; border:1.5px solid transparent; transition:transform .08s, background .15s, border-color .15s;}
+  button.btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--teal); color:#fff;}
+  .btn-primary:hover{background:#0c5b47;}
+  .btn-ghost{background:transparent; color:var(--ink); border-color:var(--line-strong);}
+  .btn-ghost:hover{border-color:var(--ink-soft);}
+  .btn-quiet{background:transparent; color:var(--ink-soft); border-color:transparent; padding:10px 8px;}
+  .btn-quiet:hover{color:var(--ink);}
+
+  .feedback{margin-top:16px; min-height:26px; font-size:15.5px; font-weight:500; display:flex; align-items:center; gap:8px;}
+  .feedback .badge{font-family:var(--font-math); font-size:13px; padding:2px 8px; border-radius:6px;}
+  .feedback.ok{color:var(--green);}
+  .feedback.ok .badge{background:var(--green-soft);}
+  .feedback.no{color:var(--coral);}
+  .feedback.no .badge{background:var(--coral-soft);}
+  .feedback.hint{color:var(--amber);}
+  .feedback.hint .badge{background:var(--amber-soft);}
+
+  /* box stage */
+  .stage{background:var(--paper); border:1.5px solid var(--line); border-radius:14px; padding:14px; }
+  .stage h3{font-family:var(--font-display); font-weight:600; font-size:13px; letter-spacing:.4px; text-transform:uppercase; color:var(--ink-soft); margin:0 0 8px;}
+  .stage svg{width:100%; height:auto; display:block;}
+  .stage .hint-line{font-size:12.5px; color:var(--ink-soft); margin-top:8px; font-family:var(--font-body); min-height:16px;}
+
+  /* chips (level 1) */
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 4px;}
+  .chip{font-family:var(--font-math); font-size:16px; padding:7px 12px; border-radius:9px; background:var(--teal-soft); color:var(--teal); border:1.5px solid transparent;}
+  .chip.btnchip{cursor:pointer; background:var(--paper); border-color:var(--line-strong); color:var(--ink);}
+  .chip.btnchip:hover{border-color:var(--teal); background:var(--teal-soft); color:var(--teal);}
+  .progress-txt{font-size:14px; color:var(--ink-soft); margin-top:4px;}
+
+  /* footer stats */
+  .stats{display:flex; align-items:center; gap:22px; flex-wrap:wrap; margin-top:20px; padding-top:6px;}
+  .stat{display:flex; align-items:baseline; gap:7px;}
+  .stat .v{font-family:var(--font-display); font-weight:700; font-size:22px; color:var(--ink);}
+  .stat .k{font-size:13px; color:var(--ink-soft);}
+  .streakdots{display:inline-flex; gap:4px; margin-left:2px;}
+  .streakdots i{width:9px; height:9px; border-radius:50%; background:var(--line-strong); display:inline-block;}
+  .streakdots i.on{background:var(--teal);}
+  .toggle{display:inline-flex; align-items:center; gap:8px; margin-left:auto; font-size:14px; color:var(--ink-soft); cursor:pointer; user-select:none;}
+  .toggle input{appearance:none; width:38px; height:22px; border-radius:11px; background:var(--line-strong); position:relative; cursor:pointer; transition:background .15s; flex:none;}
+  .toggle input:checked{background:var(--amber);}
+  .toggle input::after{content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .15s;}
+  .toggle input:checked::after{transform:translateX(16px);}
+
+  .levelup{margin-top:14px;}
+  .note{font-size:13px; color:var(--ink-soft); margin-top:18px; line-height:1.6;}
+  .note a{color:var(--teal);}
+
+  :focus-visible{outline:3px solid var(--teal-mid); outline-offset:2px; border-radius:6px;}
+
+  @media (max-width:720px){
+    .card{grid-template-columns:1fr;}
+    .rail{grid-template-columns:1fr 1fr;}
+    .prompt{font-size:25px;}
+    body{padding:0 12px 48px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important; animation:none !important;}
+  }
+  @keyframes pop{0%{transform:scale(.92); opacity:0;}100%{transform:scale(1); opacity:1;}}
+  .cell-in{animation:pop .22s ease-out;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="logo"><span class="mark" aria-hidden="true"></span>Area</span>
+      <span class="tagline">factoring, built one rectangle at a time</span>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Levels">
+    <button class="lvl" data-level="1" aria-current="true">
+      <span class="num">01</span><span class="name">Hunt the rectangles</span>
+      <span class="sub">factor pairs</span><span class="tick" id="tick1"></span>
+    </button>
+    <button class="lvl" data-level="2">
+      <span class="num">02</span><span class="name">Build the box</span>
+      <span class="sub">multiply it out</span><span class="tick" id="tick2"></span>
+    </button>
+    <button class="lvl" data-level="3">
+      <span class="num">03</span><span class="name">Reverse the box</span>
+      <span class="sub">factor · lead 1</span><span class="tick" id="tick3"></span>
+    </button>
+    <button class="lvl" data-level="4">
+      <span class="num">04</span><span class="name">Stack the box</span>
+      <span class="sub">factor · lead ≠ 1</span><span class="tick" id="tick4"></span>
+    </button>
+  </nav>
+
+  <section class="card">
+    <div class="left">
+      <p class="goal" id="goal"></p>
+      <p class="prompt-label" id="promptLabel">Problem</p>
+      <div class="prompt" id="prompt"></div>
+      <div id="answerArea"></div>
+      <div class="controls" id="controls"></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+    <aside class="stage">
+      <h3>The box</h3>
+      <div id="boxStage"></div>
+      <div class="hint-line" id="boxHint"></div>
+    </aside>
+  </section>
+
+  <div class="stats">
+    <div class="stat"><span class="v" id="streakV">0</span><span class="k">in a row
+      <span class="streakdots" id="dots"><i></i><i></i><i></i><i></i><i></i></span></span></div>
+    <div class="stat"><span class="v" id="solvedV">0</span><span class="k">solved on this level</span></div>
+    <div class="stat"><span class="v" id="bestV">0</span><span class="k">best streak</span></div>
+    <label class="toggle" id="negToggleWrap" style="display:none;">
+      Allow negatives
+      <input type="checkbox" id="negToggle" aria-label="Allow negative numbers in problems">
+    </label>
+  </div>
+
+  <p class="note" id="footNote">
+    Tip: stay on a level until factoring feels automatic, then move up when <em>you</em> decide you're ready —
+    the level buttons are always open. Your streak and progress save on this device.
+  </p>
+</div>
+
+<script>
+"use strict";
+/* ---------------- storage (works offline; degrades gracefully) ---------------- */
+const KEY="area_factoring_trainer_v1";
+let store;
+function loadState(){
+  const d={level:1,neg:false,solved:{1:0,2:0,3:0,4:0},best:0};
+  try{ const raw=localStorage.getItem(KEY); store=localStorage; if(raw) return Object.assign(d,JSON.parse(raw)); }
+  catch(e){ store=null; }
+  return d;
+}
+function saveState(){ if(!store) return; try{ store.setItem(KEY,JSON.stringify({level:S.level,neg:S.neg,solved:S.solved,best:S.best})); }catch(e){} }
+
+const S=loadState();
+S.streak=0; S.cur=null; S.hintStage=0; S.boxRevealed=false;
+
+/* ---------------- helpers ---------------- */
+const $=id=>document.getElementById(id);
+const randInt=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const choice=a=>a[Math.floor(Math.random()*a.length)];
+function factorPairs(n){const o=[];for(let i=1;i*i<=n;i++){if(n%i===0)o.push([i,n/i]);}return o;}
+function parseI(elId){const v=$(elId).value.trim(); if(!/^-?\d+$/.test(v))return null; return parseInt(v,10);}
+function fmtTri(a,b,c){
+  let s=a===1?"x\u00B2":(a===-1?"-x\u00B2":a+"x\u00B2");
+  if(b!==0)s+=(b>0?" + ":" \u2212 ")+(Math.abs(b)===1?"":Math.abs(b))+"x";
+  if(c!==0)s+=(c>0?" + ":" \u2212 ")+Math.abs(c);
+  return s;
+}
+const sgn=n=>n<0?"\u2212 "+Math.abs(n):"+ "+n; // "+ 3" or "− 3"
+
+/* ---------------- SVG: the box ---------------- */
+const PAL={teal:"#0F6E56",tealSoft:"#DDEFE8",tealMid:"#BfE3D6",amber:"#B06E12",amberSoft:"#F7EAD3",ink:"#1B2A27",inkSoft:"#566460",line:"#C7C0AD",paper:"#FEFCF7"};
+
+function productBoxSVG(top,left,cells,reveal,fills){
+  // 2x2 generic rectangle. top=[t1,t2] left=[l1,l2] cells=[[tl,tr],[bl,br]]
+  fills=fills||[["tealSoft","tealMid"],["tealMid","amberSoft"]];
+  const gx=78,gy=46,cw=98,ch=78;
+  function cell(r,c){
+    const x=gx+c*cw,y=gy+r*ch;
+    const f=PAL[fills[r][c]];
+    const txt=reveal?cells[r][c]:"";
+    return `<rect x="${x}" y="${y}" width="${cw}" height="${ch}" fill="${f}" stroke="${PAL.line}" stroke-width="1.5"/>`+
+      (txt!==""?`<text class="cell-in" x="${x+cw/2}" y="${y+ch/2}" text-anchor="middle" dominant-baseline="central" font-family="var(--font-math)" font-size="22" font-weight="500" fill="${PAL.ink}">${txt}</text>`:"");
+  }
+  const topLab=(c,t)=>`<text x="${gx+c*cw+cw/2}" y="${gy-14}" text-anchor="middle" font-family="var(--font-math)" font-size="20" font-weight="500" fill="${PAL.teal}">${t}</text>`;
+  const leftLab=(r,t)=>`<text x="${gx-16}" y="${gy+r*ch+ch/2}" text-anchor="end" dominant-baseline="central" font-family="var(--font-math)" font-size="20" font-weight="500" fill="${PAL.teal}">${t}</text>`;
+  return `<svg viewBox="0 0 300 220" role="img" aria-label="Area model box">
+    ${topLab(0,top[0])}${topLab(1,top[1])}
+    ${leftLab(0,left[0])}${leftLab(1,left[1])}
+    ${cell(0,0)}${cell(0,1)}${cell(1,0)}${cell(1,1)}
+  </svg>`;
+}
+
+function areaGridSVG(a,b,n){
+  // draw an a-by-b rectangle subdivided into unit squares
+  const maxU=170, unit=Math.max(12,Math.floor(maxU/Math.max(a,b)));
+  const W=a*unit, H=b*unit, ox=(300-W)/2, oy=18;
+  let lines="";
+  for(let i=0;i<=a;i++){lines+=`<line x1="${ox+i*unit}" y1="${oy}" x2="${ox+i*unit}" y2="${oy+H}" stroke="${PAL.teal}" stroke-width="${i===0||i===a?2:1}" opacity="${i===0||i===a?1:.4}"/>`;}
+  for(let j=0;j<=b;j++){lines+=`<line x1="${ox}" y1="${oy+j*unit}" x2="${ox+W}" y2="${oy+j*unit}" stroke="${PAL.teal}" stroke-width="${j===0||j===b?2:1}" opacity="${j===0||j===b?1:.4}"/>`;}
+  return `<svg viewBox="0 0 300 ${oy+H+44}" role="img" aria-label="${a} by ${b} rectangle">
+    <rect x="${ox}" y="${oy}" width="${W}" height="${H}" fill="${PAL.tealSoft}"/>
+    ${lines}
+    <text x="${ox+W/2}" y="${oy+H+18}" text-anchor="middle" font-family="var(--font-math)" font-size="17" fill="${PAL.ink}">${a} \u00D7 ${b}</text>
+    <text x="${ox+W/2}" y="${oy+H+38}" text-anchor="middle" font-family="var(--font-math)" font-size="14" fill="${PAL.inkSoft}">area = ${n}</text>
+  </svg>`;
+}
+function emptyBoxSVG(msg){
+  return `<svg viewBox="0 0 300 220" role="img" aria-label="Box placeholder">
+    <rect x="78" y="46" width="196" height="156" fill="none" stroke="${PAL.line}" stroke-width="1.5" stroke-dasharray="6 6"/>
+    <text x="176" y="124" text-anchor="middle" font-family="var(--font-body)" font-size="13" fill="${PAL.inkSoft}">${msg||""}</text>
+  </svg>`;
+}
+
+/* ---------------- feedback + stats ---------------- */
+function fb(msg,type){const el=$("feedback");el.className="feedback "+(type||"");el.innerHTML=msg?`<span class="badge">${type==="ok"?"✓":type==="no"?"try again":"hint"}</span><span>${msg}</span>`:"";}
+function renderStats(){
+  $("streakV").textContent=S.streak; $("bestV").textContent=S.best; $("solvedV").textContent=S.solved[S.level]||0;
+  const dots=$("dots").children; for(let i=0;i<5;i++)dots[i].className=i<Math.min(S.streak,5)?"on":"";
+  for(let l=1;l<=4;l++)$("tick"+l).textContent=(S.solved[l]||0)>=5?"mastered ✓":((S.solved[l]||0)>0?(S.solved[l]+" solved"):"");
+}
+function correct(){
+  S.streak++; if(S.streak>S.best)S.best=S.streak; S.solved[S.level]=(S.solved[S.level]||0)+1; saveState(); renderStats();
+}
+function wrongStreakReset(){ S.streak=0; renderStats(); }
+
+/* ---------------- level definitions ---------------- */
+const GOALS={
+  1:'<b>Find every rectangle</b> with the given area. Each rectangle is a pair of numbers that multiply to it — the same pairs you\'ll hunt for when factoring.',
+  2:'<b>Multiply it out</b> with the box. Each cell is one piece of the area; the middle term is the two side-strips added together.',
+  3:'<b>Run the box backward.</b> You\'re given the area — find the side lengths. Two numbers that multiply to the constant and add to the middle.',
+  4:'<b>Same box, more tiles.</b> When the lead coefficient isn\'t 1 the rectangle still closes — no new trick, just two x-terms instead of one.'
+};
+
+function setControls(buttons){
+  const c=$("controls"); c.innerHTML="";
+  buttons.forEach(b=>{const el=document.createElement("button");el.className="btn "+b.cls;el.textContent=b.label;el.onclick=b.fn;c.appendChild(el);});
+}
+
+/* ---- LEVEL 1 ---- */
+const L1AREAS=[12,16,18,20,24,28,30,36,40,42,48];
+function newL1(){
+  const n=choice(L1AREAS), pairs=factorPairs(n);
+  // pick a target sum that is unique among pairs for the bridge step
+  const sums=pairs.map(p=>p[0]+p[1]);
+  let targetPair=pairs.find((p,i)=>sums.indexOf(sums[i])===sums.lastIndexOf(sums[i]) && p[0]!==p[1]) || pairs[pairs.length-1];
+  S.cur={n,pairs,found:[],phase:"hunt",target:targetPair[0]+targetPair[1],targetPair};
+  $("promptLabel").textContent="Find the rectangles";
+  $("prompt").innerHTML=`area = ${n}`;
+  $("answerArea").innerHTML=
+    `<div class="answer"><input class="box-in" id="p1a" inputmode="numeric" aria-label="first factor"> <span>\u00D7</span> `+
+    `<input class="box-in" id="p1b" inputmode="numeric" aria-label="second factor"></div>`+
+    `<div class="chips" id="found"></div><div class="progress-txt" id="prog"></div>`;
+  setControls([
+    {label:"Add pair",cls:"btn-primary",fn:addL1},
+    {label:"New problem",cls:"btn-ghost",fn:newL1}
+  ]);
+  $("boxStage").innerHTML=emptyBoxSVG("enter a pair to see its rectangle");
+  $("boxHint").textContent="";
+  renderL1found(); fb(""); 
+  $("p1a").addEventListener("keydown",e=>{if(e.key==="Enter")addL1();});
+  $("p1b").addEventListener("keydown",e=>{if(e.key==="Enter")addL1();});
+  $("p1a").focus();
+}
+function renderL1found(){
+  const c=$("found"); c.innerHTML=S.cur.found.map(p=>`<span class="chip">${p[0]} \u00D7 ${p[1]}</span>`).join("");
+  $("prog").textContent=`found ${S.cur.found.length} of ${S.cur.pairs.length}`;
+}
+function addL1(){
+  const a=parseI("p1a"), b=parseI("p1b");
+  if(a===null||b===null){fb("Type a whole number in each box.","hint");return;}
+  if(a<=0||b<=0){fb("Rectangles use positive whole numbers here.","hint");return;}
+  if(a*b!==S.cur.n){fb(`${a} \u00D7 ${b} = ${a*b}, not ${S.cur.n}. Close — adjust one number.`,"no");return;}
+  const key=[Math.min(a,b),Math.max(a,b)];
+  if(S.cur.found.some(p=>p[0]===key[0]&&p[1]===key[1])){fb("You already have that one — find a different pair.","hint");return;}
+  S.cur.found.push(key); S.cur.found.sort((x,y)=>x[0]-y[0]); renderL1found();
+  $("boxStage").innerHTML=areaGridSVG(key[0],key[1],S.cur.n);
+  $("p1a").value="";$("p1b").value="";$("p1a").focus();
+  if(S.cur.found.length===S.cur.pairs.length){ beginL1bridge(); }
+  else fb("Got it. Keep going — there are more.","ok");
+}
+function beginL1bridge(){
+  S.cur.phase="bridge"; correct();
+  $("promptLabel").textContent="Now the factoring move";
+  $("prompt").innerHTML=`which pair adds to ${S.cur.target}?`;
+  $("answerArea").innerHTML=`<div class="chips" id="picks">`+
+    S.cur.pairs.map((p,i)=>`<button class="chip btnchip" data-i="${i}">${p[0]} + ${p[1]}</button>`).join("")+`</div>`;
+  Array.from(document.querySelectorAll("#picks .btnchip")).forEach(b=>{
+    b.onclick=()=>{const p=S.cur.pairs[+b.dataset.i];
+      if(p[0]+p[1]===S.cur.target){fb(`Yes — ${p[0]} and ${p[1]} multiply to ${S.cur.n} and add to ${S.cur.target}. That pair is exactly what factoring hunts for.`,"ok");
+        setControls([{label:"Next problem",cls:"btn-primary",fn:newL1},{label:"Go to level 2 \u2192",cls:"btn-ghost",fn:()=>selectLevel(2)}]);}
+      else fb(`${p[0]} + ${p[1]} = ${p[0]+p[1]}. You want a sum of ${S.cur.target}.`,"no");
+    };
+  });
+  setControls([{label:"New problem",cls:"btn-ghost",fn:newL1}]);
+  fb("All rectangles found. One more move \u2014 pick the pair with the right sum.","ok");
+}
+
+/* ---- LEVEL 2 ---- */
+function newL2(){
+  const a=randInt(1,9), b=randInt(1,9);
+  S.cur={a,b}; S.boxRevealed=false;
+  $("promptLabel").textContent="Multiply it out";
+  $("prompt").innerHTML=`(x + ${a})(x + ${b})`;
+  $("answerArea").innerHTML=`<div class="answer">x\u00B2 + <input class="box-in" id="mid" inputmode="numeric" aria-label="middle coefficient"> x + <input class="box-in" id="con" inputmode="numeric" aria-label="constant"></div>`;
+  setControls([
+    {label:"Check",cls:"btn-primary",fn:checkL2},
+    {label:"Show the box",cls:"btn-ghost",fn:()=>{S.boxRevealed=true;drawL2box();$("boxHint").textContent="The two middle cells are the x-strips: add them for the middle term.";}},
+    {label:"New problem",cls:"btn-ghost",fn:newL2}
+  ]);
+  drawL2box(); $("boxHint").textContent=""; fb("");
+  ["mid","con"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")checkL2();}));
+  $("mid").focus();
+}
+function drawL2box(){
+  const {a,b}=S.cur;
+  $("boxStage").innerHTML=productBoxSVG(["x","+"+a],["x","+"+b],[["x\u00B2",a+"x"],[b+"x",a*b]],S.boxRevealed);
+}
+function checkL2(){
+  const {a,b}=S.cur; const mid=parseI("mid"), con=parseI("con");
+  if(mid===null||con===null){fb("Fill in both blanks with whole numbers.","hint");return;}
+  if(mid===a+b&&con===a*b){S.boxRevealed=true;drawL2box();correct();
+    fb(`Exactly: x\u00B2 + ${a+b}x + ${a*b}. Middle = ${a}+${b}, constant = ${a}\u00D7${b}.`,"ok");
+    setControls([{label:"Next problem",cls:"btn-primary",fn:newL2},{label:"Go to level 3 \u2192",cls:"btn-ghost",fn:()=>selectLevel(3)}]);return;}
+  if(con===a*b&&mid!==a+b){fb(`Constant's right. The middle term is the two x-strips added: ${a}x + ${b}x.`,"no");wrongStreakReset();return;}
+  if(mid===a+b&&con!==a*b){fb(`Middle's right. The last cell is ${a}\u00D7${b} \u2014 the bottom-right corner.`,"no");wrongStreakReset();return;}
+  fb("Not yet. Tap \u201CShow the box\u201D to see each piece of the area.","no");wrongStreakReset();
+}
+
+/* ---- LEVEL 3 ---- */
+function genRoot3(){
+  if(S.neg){let q=0;while(q===0)q=randInt(-9,9);let p=0;while(p===0)p=randInt(-9,9);return [p,q];}
+  return [randInt(1,9),randInt(1,9)];
+}
+function newL3(){
+  const [p,q]=genRoot3(); S.cur={p,q,b:p+q,c:p*q}; S.hintStage=0; S.boxRevealed=false;
+  $("promptLabel").textContent="Factor";
+  $("prompt").innerHTML=fmtTri(1,p+q,p*q);
+  $("answerArea").innerHTML=`<div class="answer">( x <input class="box-in" id="u" inputmode="numeric" aria-label="first number" placeholder="?"> )( x <input class="box-in" id="v" inputmode="numeric" aria-label="second number" placeholder="?"> )</div><div class="progress-txt">Enter each number with its sign, e.g. <span style="font-family:var(--font-math)">-3</span> for (x − 3).</div>`;
+  setControls([
+    {label:"Check",cls:"btn-primary",fn:checkL3},
+    {label:"Hint",cls:"btn-ghost",fn:hintL3},
+    {label:"Reveal answer",cls:"btn-quiet",fn:revealL3},
+    {label:"New problem",cls:"btn-ghost",fn:newL3}
+  ]);
+  drawL3box(); $("boxHint").textContent=""; fb("");
+  ["u","v"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")checkL3();}));
+  $("u").focus();
+}
+function drawL3box(){
+  const {p,q,c}=S.cur;
+  const reveal=S.boxRevealed;
+  const top=reveal?["x",sgn(q)]:["x","?"], left=reveal?["x",sgn(p)]:["x","?"];
+  const cArr=[["x\u00B2", reveal?(q<0?"\u2212"+Math.abs(q)+"x":q+"x"):""],
+              [reveal?(p<0?"\u2212"+Math.abs(p)+"x":p+"x"):"", (S.hintStage>=1||reveal)?c:""]];
+  $("boxStage").innerHTML=productBoxSVG(top,left,cArr,true,[["tealSoft","tealMid"],["tealMid","amberSoft"]]);
+}
+function hintL3(){
+  const {b,c,p,q}=S.cur; S.hintStage++;
+  if(S.hintStage===1){fb(`Find two numbers that multiply to ${c} and add to ${b}.`,"hint");drawL3box();
+    $("boxHint").textContent="The corners are fixed: x² and the constant. You're hunting the two side numbers.";}
+  else if(S.hintStage===2){
+    const pairs=factorPairs(Math.abs(c)).map(pr=>pr.join("\u00D7")).join(",  ");
+    fb(`Factor pairs of ${Math.abs(c)}: ${pairs}. ${c<0?"One number is negative.":"They share the sign that makes the sum work."}`,"hint");}
+  else{fb("Last nudge: try the pair, then check whether their sum matches the middle term.","hint");}
+}
+function revealL3(){
+  const {p,q,b,c}=S.cur; S.boxRevealed=true; S.hintStage=2; drawL3box();
+  fb(`(x ${sgn(p)})(x ${sgn(q)})  \u2014 because ${p}\u00D7${q}=${c} and ${p}+${q}=${b}.`,"hint");
+  $("boxHint").textContent="Study the filled box, then try a fresh one from memory.";
+  wrongStreakReset();
+  setControls([{label:"New problem",cls:"btn-primary",fn:newL3},{label:"Hint",cls:"btn-ghost",fn:hintL3},{label:"Check",cls:"btn-ghost",fn:checkL3}]);
+}
+function checkL3(){
+  const {b,c,p,q}=S.cur; const u=parseI("u"), v=parseI("v");
+  if(u===null||v===null){fb("Put a number (with sign) in each blank.","hint");return;}
+  if(u+v===b&&u*v===c){S.boxRevealed=true;drawL3box();correct();
+    fb(`Nailed it: (x ${sgn(u)})(x ${sgn(v)}).`,"ok");
+    setControls([{label:"Next problem",cls:"btn-primary",fn:newL3},{label:"Go to level 4 \u2192",cls:"btn-ghost",fn:()=>selectLevel(4)},{label:"New problem",cls:"btn-quiet",fn:newL3}]);return;}
+  if(u*v===c&&u+v!==b){fb(`Those multiply to ${c} \u2713 but add to ${u+v}, and you need ${b}.`,"no");wrongStreakReset();return;}
+  if(u+v===b&&u*v!==c){fb(`Those add to ${b} \u2713 but multiply to ${u*v}, and you need ${c}.`,"no");wrongStreakReset();return;}
+  fb(`Not those two. They\u2019d need to multiply to ${c} and add to ${b}. Tap Hint if you\u2019re stuck.`,"no");wrongStreakReset();
+}
+
+/* ---- LEVEL 4 ---- */
+function newL4(){
+  let m,n,p,q;
+  for(;;){m=choice([1,2,3]);n=choice([1,2,3]);if(m*n===1)continue;
+    if(S.neg){p=randInt(-6,6);q=randInt(-6,6);if(p===0||q===0)continue;}else{p=randInt(1,6);q=randInt(1,6);}break;}
+  S.cur={m,n,p,q,a:m*n,b:m*q+n*p,c:p*q}; S.hintStage=0; S.boxRevealed=false;
+  $("promptLabel").textContent="Factor";
+  $("prompt").innerHTML=fmtTri(S.cur.a,S.cur.b,S.cur.c);
+  $("answerArea").innerHTML=`<div class="answer">( <input class="box-in" id="A" inputmode="numeric" aria-label="first x coefficient" placeholder="?">x <input class="box-in" id="B" inputmode="numeric" aria-label="first number" placeholder="?"> )( <input class="box-in" id="C" inputmode="numeric" aria-label="second x coefficient" placeholder="?">x <input class="box-in" id="D" inputmode="numeric" aria-label="second number" placeholder="?"> )</div><div class="progress-txt">Fill all four: the x-coefficients and the numbers (with signs).</div>`;
+  setControls([
+    {label:"Check",cls:"btn-primary",fn:checkL4},
+    {label:"Hint",cls:"btn-ghost",fn:hintL4},
+    {label:"Reveal answer",cls:"btn-quiet",fn:revealL4},
+    {label:"New problem",cls:"btn-ghost",fn:newL4}
+  ]);
+  drawL4box(); $("boxHint").textContent=""; fb("");
+  ["A","B","C","D"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")checkL4();}));
+  $("A").focus();
+}
+function drawL4box(){
+  const {m,n,p,q,a,c}=S.cur; const r=S.boxRevealed;
+  const top=r?[m+"x",sgn(p)]:["?x","?"], left=r?[n+"x",sgn(q)]:["?x","?"];
+  const np=n*p, mq=m*q;
+  const cells=[[a+"x\u00B2", r?((np<0?"\u2212"+Math.abs(np):""+np)+"x"):""],
+               [r?((mq<0?"\u2212"+Math.abs(mq):""+mq)+"x"):"", (S.hintStage>=1||r)?c:""]];
+  $("boxStage").innerHTML=productBoxSVG(top,left,cells,true,[["tealSoft","tealMid"],["tealMid","amberSoft"]]);
+}
+function hintL4(){
+  const {a,b,c}=S.cur; S.hintStage++;
+  if(S.hintStage===1){fb(`Corners are set: ${a}x\u00B2 and ${c}. The two x-strips must add to ${b}x.`,"hint");drawL4box();
+    $("boxHint").textContent="Split the middle term into two pieces that multiply (via the corners) to the same product as a\u00D7c.";}
+  else if(S.hintStage===2){fb(`Look for two numbers multiplying to a\u00D7c = ${a*c} that add to ${b}. They become the two x-strips.`,"hint");}
+  else{fb("Then read the shared side-lengths off the rows and columns of the box.","hint");}
+}
+function revealL4(){
+  const {m,n,p,q,a,b,c}=S.cur; S.boxRevealed=true; S.hintStage=2; drawL4box();
+  fb(`(${m}x ${sgn(p)})(${n}x ${sgn(q)}).`,"hint");
+  $("boxHint").textContent="Same rectangle as level 3 \u2014 just two x-terms instead of one. Try a fresh one.";
+  wrongStreakReset();
+  setControls([{label:"New problem",cls:"btn-primary",fn:newL4},{label:"Hint",cls:"btn-ghost",fn:hintL4},{label:"Check",cls:"btn-ghost",fn:checkL4}]);
+}
+function checkL4(){
+  const {a,b,c}=S.cur; const A=parseI("A"),B=parseI("B"),C=parseI("C"),D=parseI("D");
+  if([A,B,C,D].some(v=>v===null)){fb("All four blanks need a number.","hint");return;}
+  if(A*C===a&&A*D+B*C===b&&B*D===c){S.boxRevealed=true;drawL4box();correct();
+    fb(`Yes! (${A}x ${sgn(B)})(${C}x ${sgn(D)}) expands right back to the area.`,"ok");
+    setControls([{label:"Next problem",cls:"btn-primary",fn:newL4},{label:"New problem",cls:"btn-quiet",fn:newL4}]);return;}
+  const gotA=A*C===a, gotC=B*D===c, gotB=A*D+B*C===b;
+  let msg="Not yet. ";
+  if(!gotA)msg+=`The x\u00B2 corner needs ${A}\u00D7${C} to equal ${a}. `;
+  else if(!gotC)msg+=`The constant corner needs ${B}\u00D7${D} to equal ${c}. `;
+  else if(!gotB)msg+=`Corners are right \u2014 but the x-strips add to ${A*D+B*C}x, not ${b}x. `;
+  fb(msg+"Tap Hint for the box logic.","no");wrongStreakReset();
+}
+
+/* ---------------- level switching ---------------- */
+const STARTERS={1:newL1,2:newL2,3:newL3,4:newL4};
+function selectLevel(n){
+  S.level=n; saveState();
+  Array.from(document.querySelectorAll(".lvl")).forEach(b=>b.setAttribute("aria-current", (+b.dataset.level===n)?"true":"false"));
+  $("goal").innerHTML=GOALS[n];
+  $("negToggleWrap").style.display=(n===3||n===4)?"inline-flex":"none";
+  $("negToggle").checked=S.neg;
+  renderStats();
+  STARTERS[n]();
+}
+Array.from(document.querySelectorAll(".lvl")).forEach(b=>b.onclick=()=>selectLevel(+b.dataset.level));
+$("negToggle").addEventListener("change",e=>{S.neg=e.target.checked;saveState();STARTERS[S.level]();});
+
+/* boot */
+selectLevel(S.level||1);
+</script>
+</body>
+</html>
