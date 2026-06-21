@@ -73,6 +73,8 @@
     padding:8px 4px; border:1.5px solid var(--line-strong); border-radius:9px; background:var(--paper);
   }
   input.box-in:focus{outline:none; border-color:var(--teal); background:var(--teal-soft);}
+  input.box-in.needsign{border-color:var(--amber); background:var(--amber-soft);}
+  input.box-in.needsign:focus{border-color:var(--amber); background:var(--amber-soft);}
   input.wide{width:78px;}
 
   .controls{display:flex; flex-wrap:wrap; gap:9px; margin-top:18px;}
@@ -223,6 +225,13 @@ const randInt=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const choice=a=>a[Math.floor(Math.random()*a.length)];
 function factorPairs(n){const o=[];for(let i=1;i*i<=n;i++){if(n%i===0)o.push([i,n/i]);}return o;}
 function parseI(elId){const v=$(elId).value.trim(); if(!/^-?\d+$/.test(v))return null; return parseInt(v,10);}
+function parseSigned(elId){
+  const v=$(elId).value.trim();
+  if(v==="") return {err:"empty"};
+  if(/^\d+$/.test(v)) return {err:"nosign"};
+  if(/^[+-]\d+$/.test(v)) return {val:parseInt(v,10)};
+  return {err:"bad"};
+}
 function fmtTri(a,b,c){
   let s=a===1?"x\u00B2":(a===-1?"-x\u00B2":a+"x\u00B2");
   if(b!==0)s+=(b>0?" + ":" \u2212 ")+(Math.abs(b)===1?"":Math.abs(b))+"x";
@@ -399,7 +408,7 @@ function newL3(){
   const [p,q]=genRoot3(); S.cur={p,q,b:p+q,c:p*q}; S.hintStage=0; S.boxRevealed=false;
   $("promptLabel").textContent="Factor";
   $("prompt").innerHTML=fmtTri(1,p+q,p*q);
-  $("answerArea").innerHTML=`<div class="answer">( x <input class="box-in" id="u" inputmode="numeric" aria-label="first number" placeholder="?"> )( x <input class="box-in" id="v" inputmode="numeric" aria-label="second number" placeholder="?"> )</div><div class="progress-txt">Enter each number with its sign, e.g. <span style="font-family:var(--font-math)">-3</span> for (x − 3).</div>`;
+  $("answerArea").innerHTML=`<div class="answer">( x <input class="box-in" id="u" inputmode="text" aria-label="first number, include its sign" placeholder="\u00B1"> )( x <input class="box-in" id="v" inputmode="text" aria-label="second number, include its sign" placeholder="\u00B1"> )</div><div class="progress-txt">Type each number <b>with its sign</b>: <span style="font-family:var(--font-math)">+2</span> for (x + 2), <span style="font-family:var(--font-math)">-3</span> for (x \u2212 3).</div>`;
   setControls([
     {label:"Check",cls:"btn-primary",fn:checkL3},
     {label:"Hint",cls:"btn-ghost",fn:hintL3},
@@ -407,7 +416,10 @@ function newL3(){
     {label:"New problem",cls:"btn-ghost",fn:newL3}
   ]);
   drawL3box(); $("boxHint").textContent=""; fb("");
-  ["u","v"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")checkL3();}));
+  ["u","v"].forEach(id=>{
+    $(id).addEventListener("keydown",e=>{if(e.key==="Enter")checkL3();});
+    $(id).addEventListener("input",e=>{const t=e.target; t.classList.toggle("needsign", /^\d+$/.test(t.value.trim()));});
+  });
   $("u").focus();
 }
 function drawL3box(){
@@ -435,8 +447,14 @@ function revealL3(){
   setControls([{label:"New problem",cls:"btn-primary",fn:newL3},{label:"Hint",cls:"btn-ghost",fn:hintL3},{label:"Check",cls:"btn-ghost",fn:checkL3}]);
 }
 function checkL3(){
-  const {b,c,p,q}=S.cur; const u=parseI("u"), v=parseI("v");
-  if(u===null||v===null){fb("Put a number (with sign) in each blank.","hint");return;}
+  const {b,c,p,q}=S.cur; const ru=parseSigned("u"), rv=parseSigned("v");
+  if(ru.err||rv.err){
+    if(ru.err==="nosign"||rv.err==="nosign") fb("Include the sign \u2014 type +2 for a plus, not just 2.","hint");
+    else if(ru.err==="empty"||rv.err==="empty") fb("Put a signed number in each blank, like +4 or -5.","hint");
+    else fb("Use a signed whole number, like +4 or -5.","hint");
+    return;
+  }
+  const u=ru.val, v=rv.val;
   if(u+v===b&&u*v===c){S.boxRevealed=true;drawL3box();correct();
     fb(`Nailed it: (x ${sgn(u)})(x ${sgn(v)}).`,"ok");
     setControls([{label:"Next problem",cls:"btn-primary",fn:newL3},{label:"Go to level 4 \u2192",cls:"btn-ghost",fn:()=>selectLevel(4)},{label:"New problem",cls:"btn-quiet",fn:newL3}]);return;}
@@ -453,7 +471,7 @@ function newL4(){
   S.cur={m,n,p,q,a:m*n,b:m*q+n*p,c:p*q}; S.hintStage=0; S.boxRevealed=false;
   $("promptLabel").textContent="Factor";
   $("prompt").innerHTML=fmtTri(S.cur.a,S.cur.b,S.cur.c);
-  $("answerArea").innerHTML=`<div class="answer">( <input class="box-in" id="A" inputmode="numeric" aria-label="first x coefficient" placeholder="?">x <input class="box-in" id="B" inputmode="numeric" aria-label="first number" placeholder="?"> )( <input class="box-in" id="C" inputmode="numeric" aria-label="second x coefficient" placeholder="?">x <input class="box-in" id="D" inputmode="numeric" aria-label="second number" placeholder="?"> )</div><div class="progress-txt">Fill all four: the x-coefficients and the numbers (with signs).</div>`;
+  $("answerArea").innerHTML=`<div class="answer">( <input class="box-in" id="A" inputmode="numeric" aria-label="first x coefficient" placeholder="?">x <input class="box-in" id="B" inputmode="text" aria-label="first constant, include its sign" placeholder="\u00B1"> )( <input class="box-in" id="C" inputmode="numeric" aria-label="second x coefficient" placeholder="?">x <input class="box-in" id="D" inputmode="text" aria-label="second constant, include its sign" placeholder="\u00B1"> )</div><div class="progress-txt">Leading numbers stay plain (like <span style="font-family:var(--font-math)">2</span>); each constant needs a sign (like <span style="font-family:var(--font-math)">+3</span> or <span style="font-family:var(--font-math)">-1</span>).</div>`;
   setControls([
     {label:"Check",cls:"btn-primary",fn:checkL4},
     {label:"Hint",cls:"btn-ghost",fn:hintL4},
@@ -462,6 +480,7 @@ function newL4(){
   ]);
   drawL4box(); $("boxHint").textContent=""; fb("");
   ["A","B","C","D"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")checkL4();}));
+  ["B","D"].forEach(id=>$(id).addEventListener("input",e=>{const t=e.target; t.classList.toggle("needsign", /^\d+$/.test(t.value.trim()));}));
   $("A").focus();
 }
 function drawL4box(){
@@ -487,8 +506,14 @@ function revealL4(){
   setControls([{label:"New problem",cls:"btn-primary",fn:newL4},{label:"Hint",cls:"btn-ghost",fn:hintL4},{label:"Check",cls:"btn-ghost",fn:checkL4}]);
 }
 function checkL4(){
-  const {a,b,c}=S.cur; const A=parseI("A"),B=parseI("B"),C=parseI("C"),D=parseI("D");
-  if([A,B,C,D].some(v=>v===null)){fb("All four blanks need a number.","hint");return;}
+  const {a,b,c}=S.cur; const A=parseI("A"),C=parseI("C"); const rb=parseSigned("B"), rd=parseSigned("D");
+  if(A===null||C===null){fb("The leading numbers (before each x) need to be whole numbers.","hint");return;}
+  if(rb.err||rd.err){
+    if(rb.err==="nosign"||rd.err==="nosign") fb("Include the sign on each constant \u2014 type +3, not just 3.","hint");
+    else fb("Put a signed number in each constant blank, like +3 or -1.","hint");
+    return;
+  }
+  const B=rb.val, D=rd.val;
   if(A*C===a&&A*D+B*C===b&&B*D===c){S.boxRevealed=true;drawL4box();correct();
     fb(`Yes! (${A}x ${sgn(B)})(${C}x ${sgn(D)}) expands right back to the area.`,"ok");
     setControls([{label:"Next problem",cls:"btn-primary",fn:newL4},{label:"New problem",cls:"btn-quiet",fn:newL4}]);return;}
