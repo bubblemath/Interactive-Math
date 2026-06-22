@@ -1,0 +1,515 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Room 3 — Haunted Manor // Unseal the Door</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Barlow:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --manor:#0c0a14;
+    --manor-2:#140f1f;
+    --panel:#1a1330;
+    --panel-2:#221836;
+    --line:rgba(142,227,198,.15);
+    --ghost:#7fe0c2;
+    --ghost-soft:#b4f0dd;
+    --violet:#b794f6;
+    --violet-deep:#8a5cd0;
+    --candle:#e6b35a;
+    --blood:#d9466b;
+    --parch:#e7e1ef;
+    --parch-dim:rgba(231,225,239,.58);
+    --serif:'Libre Baskerville',Georgia,serif;
+    --sans:'Barlow',system-ui,sans-serif;
+    --mono:'Source Code Pro',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);color:var(--parch);background:var(--manor);min-height:100vh;position:relative;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  /* candle-lit gothic gloom */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-2;
+    background:
+      radial-gradient(80% 50% at 50% -6%, rgba(230,179,90,.16), transparent 60%),
+      radial-gradient(60% 55% at 12% 10%, rgba(183,148,246,.12), transparent 55%),
+      radial-gradient(60% 55% at 88% 8%, rgba(127,224,194,.10), transparent 55%),
+      linear-gradient(180deg,var(--manor) 0%,var(--manor-2) 100%);
+  }
+  body::after{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 28%, transparent 52%, rgba(0,0,0,.62) 100%);
+  }
+  /* drifting spectral motes */
+  #motes{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+  .mote{position:absolute;bottom:-10px;width:5px;height:5px;border-radius:50%;opacity:0;animation:rise linear infinite;filter:blur(.3px)}
+  @keyframes rise{0%{transform:translateY(0) translateX(0);opacity:0}15%{opacity:.5}85%{opacity:.4}100%{transform:translateY(-104vh) translateX(var(--drift));opacity:0}}
+
+  .wrap{max-width:920px;margin:0 auto;padding:30px 22px 90px;position:relative}
+
+  /* HEADER */
+  .roombar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--ghost);border:1px solid var(--line);border-radius:10px;padding:11px 16px;background:rgba(26,19,48,.6)}
+  .roombar .live{display:flex;align-items:center;gap:8px;color:var(--parch-dim)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--blood);box-shadow:0 0 10px var(--blood);animation:flicker 2s infinite}
+  @keyframes flicker{0%,100%{opacity:1}40%{opacity:.35}55%{opacity:.8}}
+
+  header.hero{text-align:center;margin:34px 0 8px}
+  .eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.4em;text-transform:uppercase;color:var(--violet)}
+  h1{font-family:var(--serif);font-weight:700;font-size:clamp(2.1rem,6.5vw,3.5rem);line-height:1.05;margin:12px 0 6px;background:linear-gradient(100deg,var(--parch) 8%,var(--ghost-soft) 48%,var(--violet) 95%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  header.hero p{color:var(--parch-dim);max-width:55ch;margin:8px auto 0;line-height:1.6}
+
+  /* SIGIL CODE BAR */
+  .status{margin:30px auto 6px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,rgba(34,24,54,.78),rgba(12,10,20,.78));padding:18px 18px 16px}
+  .status .stitle{font-family:var(--mono);font-size:.7rem;letter-spacing:.26em;text-transform:uppercase;color:var(--parch-dim);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .status .count{color:var(--ghost)}
+  .slots{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+  .slot{width:54px;height:64px;border-radius:8px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(12,10,20,.9),rgba(26,19,48,.9));display:grid;place-items:center;font-family:var(--serif);font-weight:700;font-size:1.8rem;color:var(--parch-dim);position:relative;transition:all .4s ease}
+  .slot::after{content:"✦";opacity:.3;font-size:1.1rem}
+  .slot.filled{border-color:var(--ghost);color:var(--ghost-soft);background:linear-gradient(160deg,rgba(127,224,194,.14),rgba(138,92,208,.12));box-shadow:0 0 18px rgba(127,224,194,.4),inset 0 0 0 1px rgba(127,224,194,.3)}
+  .slot.filled::after{content:attr(data-d);opacity:1;font-size:1.8rem}
+
+  /* TOGGLES */
+  .manual-toggle{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:26px 0 6px}
+  .manual-toggle button{font-family:var(--mono);font-weight:600;font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);background:rgba(183,148,246,.08);border:1px solid rgba(183,148,246,.4);border-radius:10px;padding:11px 22px;cursor:pointer;transition:all .2s ease}
+  .manual-toggle button:hover{background:rgba(183,148,246,.16);box-shadow:0 0 16px rgba(183,148,246,.25)}
+  .manual-toggle button[aria-expanded="true"]{color:var(--manor);background:var(--violet)}
+  .manual-toggle button.calc-btn{color:var(--ghost);background:rgba(127,224,194,.08);border-color:rgba(127,224,194,.4)}
+  .manual-toggle button.calc-btn:hover{background:rgba(127,224,194,.16);box-shadow:0 0 16px rgba(127,224,194,.25)}
+  .manual-toggle button.calc-btn[aria-expanded="true"]{color:var(--manor);background:var(--ghost)}
+
+  .manual{max-height:0;overflow:hidden;opacity:0;transition:max-height .5s ease,opacity .4s ease,margin .4s ease;margin:0}
+  .manual.open{max-height:2600px;opacity:1;margin:16px 0 8px}
+  .manual-inner{border:1px dashed rgba(183,148,246,.4);border-radius:14px;background:rgba(20,15,36,.5);padding:22px}
+  .manual-inner h2{font-family:var(--mono);font-size:.76rem;letter-spacing:.24em;text-transform:uppercase;color:var(--violet);margin-bottom:6px}
+  .manual-inner .lede{color:var(--parch-dim);font-size:.92rem;margin-bottom:16px}
+  .mcols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .mcard{background:rgba(12,10,20,.55);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .mcard h3{font-family:var(--serif);font-size:1.08rem;color:var(--ghost-soft);margin-bottom:10px}
+  .mcard ul{list-style:none;font-size:.9rem;line-height:1.45}
+  .mcard li{padding:5px 0;border-bottom:1px dotted rgba(142,227,198,.14)}
+  .mcard li:last-child{border-bottom:none}
+  .mcard b{color:var(--parch)}
+  .mcard code{font-family:var(--mono);font-size:.86em;color:var(--candle);background:rgba(230,179,90,.1);padding:1px 6px;border-radius:4px}
+
+  /* Desmos panel */
+  .calc{max-height:0;overflow:hidden;opacity:0;transition:max-height .5s ease,opacity .4s ease,margin .4s ease;margin:0}
+  .calc.open{max-height:760px;opacity:1;margin:16px 0 8px}
+  .calc-inner{border:1px solid rgba(127,224,194,.4);border-radius:14px;background:rgba(12,10,20,.5);padding:14px}
+  .calc-inner .clabel{font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--ghost);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .calc-inner .clabel a{color:var(--parch-dim);text-decoration:none;border-bottom:1px dotted currentColor}
+  .calc-inner .clabel a:hover{color:var(--ghost)}
+  .calc-frame{width:100%;height:560px;border:0;border-radius:10px;background:#fff;display:block}
+
+  /* CLUES */
+  .stations{margin-top:30px;display:flex;flex-direction:column;gap:18px}
+  .station{border:1px solid var(--line);border-radius:16px;background:linear-gradient(165deg,rgba(26,19,48,.92),rgba(12,10,20,.94));padding:22px 22px 20px;position:relative;overflow:hidden}
+  .station::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--parch-dim);transition:background .4s ease,box-shadow .4s ease}
+  .station.solved::before{background:var(--ghost);box-shadow:0 0 16px var(--ghost)}
+  .st-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .st-tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ghost)}
+  .st-topic{font-family:var(--mono);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--parch-dim)}
+  .st-state{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--blood);border:1px solid currentColor;border-radius:20px;padding:3px 12px}
+  .station.solved .st-state{color:var(--ghost)}
+  .q{font-size:1.06rem;line-height:1.55;margin:14px 0 4px}
+  .q .given{color:var(--ghost-soft);font-weight:600}
+  .q .mono{font-family:var(--mono)}
+
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  .controls input{font-family:var(--mono);font-size:1rem;background:rgba(12,10,20,.85);color:var(--parch);border:1px solid var(--line);border-radius:9px;padding:11px 14px;width:170px;outline:none;transition:border-color .2s ease,box-shadow .2s ease}
+  .controls input:focus{border-color:var(--ghost);box-shadow:0 0 0 3px rgba(127,224,194,.18)}
+  .controls input:disabled{opacity:.55}
+  button.act{font-family:var(--mono);font-weight:600;font-size:.82rem;letter-spacing:.06em;border-radius:9px;padding:11px 18px;cursor:pointer;border:1px solid transparent;transition:all .18s ease}
+  .check{background:var(--ghost);color:var(--manor)}
+  .check:hover{filter:brightness(1.08);box-shadow:0 0 16px rgba(127,224,194,.4)}
+  .hintbtn{background:transparent;color:var(--candle);border-color:rgba(230,179,90,.45)}
+  .hintbtn:hover{background:rgba(230,179,90,.1)}
+  button.act:disabled{opacity:.5;cursor:not-allowed;filter:none;box-shadow:none}
+
+  /* multiple-choice options */
+  .options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .opt{text-align:left;font-family:var(--sans);font-size:.96rem;color:var(--parch);background:rgba(12,10,20,.75);border:1px solid var(--line);border-radius:10px;padding:13px 15px;cursor:pointer;transition:all .16s ease;line-height:1.35}
+  .opt:hover:not(:disabled){border-color:var(--violet);background:rgba(183,148,246,.1)}
+  .opt:disabled{cursor:default}
+  .opt.chosen{border-color:var(--ghost);background:rgba(127,224,194,.16);color:var(--ghost-soft);box-shadow:0 0 16px rgba(127,224,194,.3)}
+  .opt.rejected{border-color:var(--blood);background:rgba(217,70,107,.12)}
+  @media (max-width:560px){.options{grid-template-columns:1fr}}
+
+  .feedback{font-family:var(--mono);font-size:.82rem;margin-top:12px;min-height:1.1em;letter-spacing:.04em}
+  .feedback.ok{color:var(--ghost)}
+  .feedback.no{color:var(--blood)}
+
+  .hint{max-height:0;overflow:hidden;opacity:0;transition:all .35s ease;font-size:.92rem;line-height:1.5;color:var(--candle);border-left:2px solid rgba(230,179,90,.5);padding-left:0;margin-top:0}
+  .hint.show{max-height:220px;opacity:1;padding:10px 0 2px 14px;margin-top:12px}
+  .hint b{color:#f3cd86}
+
+  .release{margin-top:14px;font-family:var(--mono);font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ghost);display:none;align-items:center;gap:10px}
+  .release.show{display:flex}
+  .release .digit{font-size:1.3rem;color:var(--manor);background:var(--ghost);border-radius:7px;padding:2px 12px;font-weight:700;font-family:var(--serif);box-shadow:0 0 16px rgba(127,224,194,.5)}
+
+  .shake{animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+  /* MANOR DOOR (override) */
+  .override{margin-top:34px;text-align:center;border:1px solid var(--line);border-radius:18px;background:radial-gradient(120% 140% at 50% 0%, rgba(217,70,107,.12), transparent 60%),linear-gradient(180deg,rgba(34,24,54,.85),rgba(12,10,20,.9));padding:30px 24px;position:relative}
+  .override.armed{background:radial-gradient(120% 140% at 50% 0%, rgba(127,224,194,.16), transparent 60%),linear-gradient(180deg,rgba(34,24,54,.85),rgba(12,10,20,.9));border-color:rgba(127,224,194,.45)}
+  .override .olabel{font-family:var(--mono);font-size:.74rem;letter-spacing:.3em;text-transform:uppercase;color:var(--blood)}
+  .override.armed .olabel{color:var(--ghost)}
+  .override h2{font-family:var(--serif);font-size:clamp(1.5rem,4.5vw,2.1rem);margin:10px 0 6px;color:var(--parch)}
+  .override .osub{color:var(--parch-dim);font-size:.95rem;margin-bottom:18px;max-width:46ch;margin-left:auto;margin-right:auto}
+  .override .orow{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
+  .override input{font-family:var(--serif);font-weight:700;font-size:1.5rem;letter-spacing:.5em;text-align:center;background:rgba(12,10,20,.85);color:var(--ghost-soft);border:1px solid var(--line);border-radius:10px;padding:13px 16px;width:220px;outline:none}
+  .override input:focus{border-color:var(--ghost);box-shadow:0 0 0 3px rgba(127,224,194,.2)}
+  .override input:disabled{opacity:.4}
+  .override .obtn{background:var(--parch-dim);color:var(--manor);font-size:.9rem;padding:14px 26px}
+  .override.armed .obtn{background:linear-gradient(100deg,var(--ghost),var(--violet));cursor:pointer}
+  .override.armed .obtn:hover{box-shadow:0 0 22px rgba(127,224,194,.5)}
+  .ofeedback{font-family:var(--mono);font-size:.82rem;margin-top:14px;min-height:1.1em}
+  .ofeedback.no{color:var(--blood)}
+
+  .escape{display:none;margin-top:22px}
+  .escape.show{display:block;animation:fadeup .6s ease}
+  @keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .escape .breach{font-family:var(--mono);font-size:.8rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ghost);margin-bottom:14px}
+  .escape a{display:inline-block;text-decoration:none;font-family:var(--mono);font-weight:700;font-size:1.05rem;letter-spacing:.08em;text-transform:uppercase;color:var(--manor);background:linear-gradient(100deg,var(--ghost),var(--violet),var(--ghost-soft));padding:16px 38px;border-radius:12px;box-shadow:0 0 30px rgba(127,224,194,.5);transition:transform .18s ease}
+  .escape a:hover{transform:translateY(-3px) scale(1.02)}
+  .escape .timer{margin-top:12px;font-family:var(--mono);font-size:.76rem;color:var(--parch-dim);letter-spacing:.12em}
+
+  footer{text-align:center;margin-top:46px;font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--parch-dim)}
+
+  @media (max-width:640px){.mcols{grid-template-columns:1fr}.controls input{width:100%}.slot{width:46px;height:56px;font-size:1.5rem}}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important;transition-duration:.001s !important}.mote{display:none}}
+</style>
+</head>
+<body>
+<div id="motes" aria-hidden="true"></div>
+<main class="wrap">
+
+  <div class="roombar">
+    <span>Room 3 // Haunted Manor</span>
+    <span class="live"><span class="dot"></span> Front Door: <b style="color:var(--blood)">SEALED</b></span>
+  </div>
+
+  <header class="hero">
+    <div class="eyebrow">Shape Detective · The Haunted Manor</div>
+    <h1>Unseal the Door</h1>
+    <p>The manor's great door is bound by five spectral locks. Each one demands real evidence — a measured distance, a midpoint, a properly named reason. Solve a clue and a spirit light ignites, revealing one numeral of the sigil. Gather all five to unseal the door and move on.</p>
+  </header>
+
+  <!-- SIGIL CODE -->
+  <section class="status" aria-label="Sigil code progress">
+    <div class="stitle">
+      <span>Door Sigil · Spirit Lights</span>
+      <span class="count"><span id="solvedCount">0</span> / 5 clues solved</span>
+    </div>
+    <div class="slots">
+      <div class="slot" data-slot="0"></div>
+      <div class="slot" data-slot="1"></div>
+      <div class="slot" data-slot="2"></div>
+      <div class="slot" data-slot="3"></div>
+      <div class="slot" data-slot="4"></div>
+    </div>
+  </section>
+
+  <!-- TOGGLES -->
+  <div class="manual-toggle">
+    <button id="manualBtn" aria-expanded="false" aria-controls="manual">📓 Detective's Casebook — Review</button>
+    <button id="calcBtn" class="calc-btn" aria-expanded="false" aria-controls="calc">🖩 Desmos Scientific</button>
+  </div>
+
+  <div class="manual" id="manual">
+    <div class="manual-inner">
+      <h2>Detective's Casebook · Day 6 + Day 7 Quick Review</h2>
+      <p class="lede">Toggle this open whenever you need a refresher. Closing it does not reset your progress.</p>
+      <div class="mcols">
+        <div class="mcard">
+          <h3>Day 7 — Distance &amp; Midpoint</h3>
+          <ul>
+            <li><b>Distance:</b> <code>d = √[(x₂−x₁)² + (y₂−y₁)²]</code> — the Pythagorean Theorem in disguise</li>
+            <li>Watch negatives: <code>4 − (−2) = 6</code>, not 2</li>
+            <li><b>Simplify radicals:</b> <code>√(a·b) = √a · √b</code> — pull out the largest perfect square</li>
+            <li><b>Triples</b> (whole-number distances): 3-4-5 · 5-12-13 · 8-15-17 and multiples (6-8-10…)</li>
+            <li><b>Midpoint:</b> <code>M = ((x₁+x₂)/2, (y₁+y₂)/2)</code> — just average the coordinates</li>
+            <li><b>Missing endpoint:</b> apply the <i>same change</i> from endpoint → midpoint again, or solve <code>(known + B)/2 = M</code></li>
+          </ul>
+        </div>
+        <div class="mcard">
+          <h3>Day 6 — Deductive Reasoning &amp; Proofs</h3>
+          <ul>
+            <li><b>The Because Test:</b> every step is true <i>because</i> of a <b>theorem, definition, or postulate</b> — never "because it looks like it"</li>
+            <li><b>Algebraic reasons</b> name the operation: Addition / Subtraction / Multiplication / Division Property of Equality, Distributive, Substitution</li>
+            <li><b>Geometric reasons:</b> Vertical Angles Theorem, Def. of Midpoint, Def. of Angle Bisector, Segment/Angle Addition Postulate…</li>
+            <li><b>≅ vs =:</b> objects are congruent (≅); their measures are equal (=)</li>
+            <li><b>Converse:</b> flip IF and THEN — <b>not automatically true</b>; prove it separately</li>
+            <li><b>Error types:</b> Appearance · Wrong theorem · Missing step</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="calc" id="calc">
+    <div class="calc-inner">
+      <div class="clabel">
+        <span>🖩 Desmos Scientific Calculator</span>
+        <a href="https://www.desmos.com/scientific" target="_blank" rel="noopener">Open in new tab ↗</a>
+      </div>
+      <iframe class="calc-frame" id="calcFrame" title="Desmos Scientific Calculator" data-src="https://www.desmos.com/scientific" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <!-- CLUES -->
+  <section class="stations" id="stations">
+
+    <!-- 1: distance (integer triple) -->
+    <article class="station" data-type="num" data-answer="10" data-digit="9" data-slot="0">
+      <div class="st-head">
+        <div><span class="st-tag">Clue I</span> &nbsp; <span class="st-topic">The Long Hall · Distance</span></div>
+        <span class="st-state">Sealed</span>
+      </div>
+      <p class="q">A corridor runs from <span class="given mono">A(0, 0)</span> to <span class="given mono">B(6, 8)</span>. Find its exact length — the distance <span class="given">AB</span>.</p>
+      <div class="controls">
+        <input type="text" inputmode="decimal" placeholder="d = ?" aria-label="Answer for clue 1">
+        <button class="act check">Investigate</button>
+        <button class="act hintbtn">Reveal Hint</button>
+      </div>
+      <div class="hint"><b>Strategy:</b> Use <code>d = √[(x₂−x₁)² + (y₂−y₁)²]</code>. The two differences are the legs of a right triangle — square them, add, take the root. Check whether the legs fit a Pythagorean triple so the answer comes out whole.</div>
+      <div class="feedback"></div>
+      <div class="release">Spirit light ignites → <span class="digit">9</span></div>
+    </article>
+
+    <!-- 2: midpoint -->
+    <article class="station" data-type="coord" data-answer="2,2" data-digit="1" data-slot="1">
+      <div class="st-head">
+        <div><span class="st-tag">Clue II</span> &nbsp; <span class="st-topic">The Balcony · Midpoint</span></div>
+        <span class="st-state">Sealed</span>
+      </div>
+      <p class="q">Two candle sconces hang at <span class="given mono">A(−4, 7)</span> and <span class="given mono">B(8, −3)</span>. Find the midpoint <span class="given">M</span> exactly between them.</p>
+      <div class="controls">
+        <input type="text" placeholder="(x, y)" aria-label="Answer for clue 2">
+        <button class="act check">Investigate</button>
+        <button class="act hintbtn">Reveal Hint</button>
+      </div>
+      <div class="hint"><b>Strategy:</b> The midpoint is just the average of the coordinates: <code>M = ((x₁+x₂)/2, (y₁+y₂)/2)</code>. Average the x's, then the y's — and watch the signs when a coordinate is negative.</div>
+      <div class="feedback"></div>
+      <div class="release">Spirit light ignites → <span class="digit">1</span></div>
+    </article>
+
+    <!-- 3: MC — name the algebraic proof step -->
+    <article class="station" data-type="mc" data-digit="3" data-slot="2">
+      <div class="st-head">
+        <div><span class="st-tag">Clue III</span> &nbsp; <span class="st-topic">The Study · Name the Reason</span></div>
+        <span class="st-state">Sealed</span>
+      </div>
+      <p class="q">In a two-column proof, the line <span class="given mono">3x + 7 = 22</span> becomes <span class="given mono">3x = 15</span>. Which reason justifies that step?</p>
+      <div class="options">
+        <button class="opt">Division Property of Equality</button>
+        <button class="opt" data-correct="1">Subtraction Property of Equality</button>
+        <button class="opt">Distributive Property</button>
+        <button class="opt">Substitution Property</button>
+      </div>
+      <div class="controls">
+        <button class="act hintbtn">Reveal Hint</button>
+      </div>
+      <div class="hint"><b>Strategy:</b> Name the step by the <i>operation performed on both sides</i>, not by the result. Ask: what was done to both sides of the equation to get from the first line to the second?</div>
+      <div class="feedback"></div>
+      <div class="release">Spirit light ignites → <span class="digit">3</span></div>
+    </article>
+
+    <!-- 4: missing endpoint -->
+    <article class="station" data-type="coord" data-answer="9,10" data-digit="7" data-slot="3">
+      <div class="st-head">
+        <div><span class="st-tag">Clue IV</span> &nbsp; <span class="st-topic">The Cellar · Missing Endpoint</span></div>
+        <span class="st-state">Sealed</span>
+      </div>
+      <p class="q">A passage starts at <span class="given mono">A(1, 4)</span>, and its midpoint is <span class="given mono">M(5, 7)</span>. Find the far endpoint <span class="given">B</span>.</p>
+      <div class="controls">
+        <input type="text" placeholder="(x, y)" aria-label="Answer for clue 4">
+        <button class="act check">Investigate</button>
+        <button class="act hintbtn">Reveal Hint</button>
+      </div>
+      <div class="hint"><b>Strategy:</b> The midpoint sits exactly halfway. Find the change in x and y from the known endpoint to the midpoint, then apply that <i>same change again</i> to reach the far endpoint. (Or solve <code>(1 + x)/2 = 5</code> and <code>(4 + y)/2 = 7</code>.)</div>
+      <div class="feedback"></div>
+      <div class="release">Spirit light ignites → <span class="digit">7</span></div>
+    </article>
+
+    <!-- 5: MC — the Because Test (capstone) -->
+    <article class="station" data-type="mc" data-digit="2" data-slot="4">
+      <div class="st-head">
+        <div><span class="st-tag">Clue V</span> &nbsp; <span class="st-topic">The Séance · The Because Test</span></div>
+        <span class="st-state">Sealed</span>
+      </div>
+      <p class="q">A witness in the manor claims: <span class="given">"∠1 ≅ ∠2 because they look the same size."</span> Why does this fail the <span class="given">Because Test</span> as a proof reason?</p>
+      <div class="options">
+        <button class="opt" data-correct="1">It relies on appearance instead of a theorem, definition, or postulate</button>
+        <button class="opt">It uses the wrong theorem in place of the right one</button>
+        <button class="opt">It skips a required step in the proof</button>
+        <button class="opt">Nothing is wrong — it is a valid reason</button>
+      </div>
+      <div class="controls">
+        <button class="act hintbtn">Reveal Hint</button>
+      </div>
+      <div class="hint"><b>Strategy:</b> Apply the Because Test: a valid reason names a theorem, definition, or postulate. Ask what is wrong with justifying a claim by how something <i>appears</i> rather than by a stated rule.</div>
+      <div class="feedback"></div>
+      <div class="release">Spirit light ignites → <span class="digit">2</span></div>
+    </article>
+
+  </section>
+
+  <!-- MANOR DOOR -->
+  <section class="override" id="override">
+    <div class="olabel" id="oLabel">⚠ Door Sealed — solve all 5 clues</div>
+    <h2>Unseal the Manor Door</h2>
+    <p class="osub">Light all five spirit lights to reveal the full sigil, then inscribe the assembled 5-numeral code below.</p>
+    <div class="orow">
+      <input id="overrideInput" type="text" inputmode="numeric" maxlength="5" placeholder="—————" disabled aria-label="Sigil code">
+      <button class="act obtn" id="overrideBtn" disabled>Unseal Door</button>
+    </div>
+    <div class="ofeedback" id="oFeedback"></div>
+
+    <div class="escape" id="escape">
+      <div class="breach">✓ The locks fall away — the great door creaks open</div>
+      <a href="https://bubblemath.github.io/Interactive-Math/Upward_Bound/Geometry/room4_hidden_chamber.html">Enter Room 4 →</a>
+      <div class="timer" id="autoTimer"></div>
+    </div>
+  </section>
+
+  <footer>Geometry Bridge · Shape Detective · Room 3 of 5</footer>
+</main>
+
+<script>
+  const NEXT_URL = "https://bubblemath.github.io/Interactive-Math/Upward_Bound/Geometry/room4_hidden_chamber.html";
+
+  function norm(s){return (s || "").toLowerCase().replace(/[\s()]/g,"").replace(/[−–—]/g,"-").replace(/,+/g,",").trim();}
+  function parseNum(s){
+    s = norm(s);
+    if (s.includes("/")){const p=s.split("/");if(p.length===2){const a=parseFloat(p[0]),b=parseFloat(p[1]);if(!isNaN(a)&&!isNaN(b)&&b!==0)return a/b;}return NaN;}
+    return parseFloat(s);
+  }
+
+  let solved = 0;
+  const totalNeeded = 5;
+
+  // spectral motes
+  (function(){
+    const layer = document.getElementById('motes');
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const COLORS = ['#7fe0c2','#b794f6','#e6b35a'];
+    for (let i=0;i<16;i++){
+      const m=document.createElement('div');m.className='mote';
+      m.style.left=Math.random()*100+'vw';
+      const dur=12+Math.random()*10;m.style.animationDuration=dur+'s';m.style.animationDelay=(-Math.random()*dur)+'s';
+      m.style.setProperty('--drift',(Math.random()*70-35)+'px');
+      const s=3+Math.random()*4;m.style.width=m.style.height=s+'px';
+      const c=COLORS[i%COLORS.length];m.style.background=c;m.style.boxShadow='0 0 9px 2px '+c+'88';
+      layer.appendChild(m);
+    }
+  })();
+
+  // toggles
+  const manualBtn=document.getElementById('manualBtn'), manual=document.getElementById('manual');
+  manualBtn.addEventListener('click',()=>{const o=manual.classList.toggle('open');manualBtn.setAttribute('aria-expanded',o?'true':'false');manualBtn.textContent=o?'📓 Detective\u2019s Casebook — Hide':'📓 Detective\u2019s Casebook — Review';});
+
+  const calcBtn=document.getElementById('calcBtn'), calc=document.getElementById('calc'), calcFrame=document.getElementById('calcFrame');
+  calcBtn.addEventListener('click',()=>{const o=calc.classList.toggle('open');calcBtn.setAttribute('aria-expanded',o?'true':'false');calcBtn.textContent=o?'🖩 Desmos Scientific — Hide':'🖩 Desmos Scientific';if(o&&!calcFrame.src)calcFrame.src=calcFrame.dataset.src;});
+
+  // clues
+  document.querySelectorAll('.station').forEach(station => {
+    const type   = station.dataset.type;
+    const digit  = station.dataset.digit;
+    const slotIx = station.dataset.slot;
+    const hintBtn  = station.querySelector('.hintbtn');
+    const hint     = station.querySelector('.hint');
+    const fb       = station.querySelector('.feedback');
+    const release  = station.querySelector('.release');
+    const stateTag = station.querySelector('.st-state');
+
+    hintBtn.addEventListener('click', () => {
+      const show = hint.classList.toggle('show');
+      hintBtn.textContent = show ? 'Hide Hint' : 'Reveal Hint';
+    });
+
+    function solve(){
+      if (station.classList.contains('solved')) return;
+      station.classList.add('solved');
+      stateTag.textContent = 'Solved';
+      fb.className = 'feedback ok';
+      fb.textContent = '✓ Sound evidence. A spirit light ignites.';
+      release.classList.add('show');
+      if (type === 'mc'){ station.querySelectorAll('.opt').forEach(o=>o.disabled=true); }
+      else { station.querySelector('input').disabled=true; station.querySelector('.check').disabled=true; }
+      const slot=document.querySelector('.slot[data-slot="'+slotIx+'"]');
+      slot.dataset.d=digit; slot.classList.add('filled');
+      solved++; document.getElementById('solvedCount').textContent=solved;
+      if (solved>=totalNeeded) armOverride();
+    }
+
+    if (type === 'mc'){
+      station.querySelectorAll('.opt').forEach(opt => {
+        opt.addEventListener('click', () => {
+          if (station.classList.contains('solved')) return;
+          if (opt.dataset.correct === '1'){
+            opt.classList.add('chosen'); solve();
+          } else {
+            fb.className='feedback no';
+            fb.textContent='✗ That evidence won\u2019t hold. Apply the Because Test and try another.';
+            opt.classList.add('rejected'); opt.classList.remove('shake'); void opt.offsetWidth; opt.classList.add('shake');
+            setTimeout(()=>opt.classList.remove('rejected'), 700);
+          }
+        });
+      });
+    } else {
+      const input = station.querySelector('input');
+      const checkBtn = station.querySelector('.check');
+      const answer = station.dataset.answer;
+      function matches(){
+        const raw = input.value;
+        if (!norm(raw)) return false;
+        if (type === 'num'){ const a=parseNum(answer), b=parseNum(raw); return !isNaN(b) && Math.abs(a-b)<1e-6; }
+        return norm(raw) === norm(answer); // coordinate, order-sensitive
+      }
+      function wrong(){
+        fb.className='feedback no';
+        fb.textContent='✗ The lock holds. Recheck your work and try again.';
+        station.classList.remove('shake'); void station.offsetWidth; station.classList.add('shake');
+      }
+      checkBtn.addEventListener('click', ()=> matches() ? solve() : wrong());
+      input.addEventListener('keydown', e=>{ if(e.key==='Enter') checkBtn.click(); });
+    }
+  });
+
+  // manor door
+  const MASTER = "91372"; // 9,1,3,7,2 in clue order
+  const override=document.getElementById('override'), oInput=document.getElementById('overrideInput'),
+        oBtn=document.getElementById('overrideBtn'), oFeedback=document.getElementById('oFeedback'),
+        oLabel=document.getElementById('oLabel'), escape=document.getElementById('escape');
+
+  function armOverride(){
+    override.classList.add('armed');
+    oLabel.textContent='✓ All clues solved — inscribe the sigil code';
+    oInput.disabled=false; oBtn.disabled=false; oInput.focus();
+  }
+  function tryOverride(){
+    const val=oInput.value.replace(/\D/g,'');
+    if (val===MASTER){
+      oFeedback.className='ofeedback'; oFeedback.textContent='';
+      oBtn.disabled=true; oInput.disabled=true; escape.classList.add('show'); startAutoRedirect();
+    } else {
+      oFeedback.className='ofeedback no';
+      oFeedback.textContent='✗ The door holds. Re-check the numerals (left to right).';
+      oInput.classList.remove('shake'); void oInput.offsetWidth; oInput.classList.add('shake');
+    }
+  }
+  oBtn.addEventListener('click', tryOverride);
+  oInput.addEventListener('keydown', e=>{ if(e.key==='Enter' && !oBtn.disabled) tryOverride(); });
+
+  function startAutoRedirect(){
+    let t=6; const el=document.getElementById('autoTimer');
+    el.textContent='The door opens in '+t+'…';
+    const iv=setInterval(()=>{t--;if(t<=0){clearInterval(iv);window.location.href=NEXT_URL;return;}el.textContent='The door opens in '+t+'…';},1000);
+  }
+</script>
+</body>
+</html>
