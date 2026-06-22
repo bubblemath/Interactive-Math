@@ -1,0 +1,509 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Room 2 — Abandoned Town // Open the Gate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Barlow:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --town:#15110b;
+    --town-2:#1d1810;
+    --panel:#241d12;
+    --panel-2:#2d2417;
+    --line:rgba(194,96,58,.16);
+    --rust:#cf6b3e;
+    --rust-soft:#e89a6f;
+    --teal:#6fb3a8;
+    --teal-soft:#9fd3c9;
+    --lamp:#e8c170;
+    --warn:#d6553f;
+    --paper:#ece3d2;
+    --paper-dim:rgba(236,227,210,.58);
+    --serif:'Libre Baskerville',Georgia,serif;
+    --sans:'Barlow',system-ui,sans-serif;
+    --mono:'Source Code Pro',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);color:var(--paper);background:var(--town);min-height:100vh;position:relative;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  /* dusty ghost-town dusk, lone streetlamp glow */
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-2;
+    background:
+      radial-gradient(70% 45% at 50% -4%, rgba(232,193,112,.16), transparent 60%),
+      radial-gradient(55% 50% at 10% 12%, rgba(207,107,62,.12), transparent 55%),
+      radial-gradient(55% 50% at 90% 10%, rgba(111,179,168,.10), transparent 55%),
+      linear-gradient(180deg,var(--town) 0%,var(--town-2) 100%);
+  }
+  body::after{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:radial-gradient(120% 90% at 50% 26%, transparent 54%, rgba(0,0,0,.55) 100%);
+  }
+  /* drifting dust */
+  #motes{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+  .mote{position:absolute;bottom:-10px;width:5px;height:5px;border-radius:50%;opacity:0;animation:rise linear infinite;filter:blur(.4px)}
+  @keyframes rise{0%{transform:translateY(0) translateX(0);opacity:0}15%{opacity:.4}85%{opacity:.3}100%{transform:translateY(-104vh) translateX(var(--drift));opacity:0}}
+
+  .wrap{max-width:920px;margin:0 auto;padding:30px 22px 90px;position:relative}
+
+  /* HEADER */
+  .roombar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--rust);border:1px solid var(--line);border-radius:10px;padding:11px 16px;background:rgba(36,29,18,.6)}
+  .roombar .live{display:flex;align-items:center;gap:8px;color:var(--paper-dim)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--warn);box-shadow:0 0 10px var(--warn);animation:flicker 2.2s infinite}
+  @keyframes flicker{0%,100%{opacity:1}38%{opacity:.4}52%{opacity:.85}}
+
+  header.hero{text-align:center;margin:34px 0 8px}
+  .eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.4em;text-transform:uppercase;color:var(--teal)}
+  h1{font-family:var(--serif);font-weight:700;font-size:clamp(2.1rem,6.5vw,3.5rem);line-height:1.05;margin:12px 0 6px;background:linear-gradient(100deg,var(--paper) 8%,var(--rust-soft) 50%,var(--teal) 96%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  header.hero p{color:var(--paper-dim);max-width:55ch;margin:8px auto 0;line-height:1.6}
+
+  /* COMBINATION BAR */
+  .status{margin:30px auto 6px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,rgba(45,36,23,.78),rgba(21,17,11,.78));padding:18px 18px 16px}
+  .status .stitle{font-family:var(--mono);font-size:.7rem;letter-spacing:.26em;text-transform:uppercase;color:var(--paper-dim);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .status .count{color:var(--rust)}
+  .slots{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+  .slot{width:54px;height:64px;border-radius:8px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(21,17,11,.9),rgba(36,29,18,.9));display:grid;place-items:center;font-family:var(--serif);font-weight:700;font-size:1.8rem;color:var(--paper-dim);position:relative;transition:all .4s ease}
+  .slot::after{content:"○";opacity:.3;font-size:1.2rem}
+  .slot.filled{border-color:var(--rust);color:var(--rust-soft);background:linear-gradient(160deg,rgba(207,107,62,.14),rgba(111,179,168,.1));box-shadow:0 0 18px rgba(207,107,62,.4),inset 0 0 0 1px rgba(207,107,62,.3)}
+  .slot.filled::after{content:attr(data-d);opacity:1;font-size:1.8rem}
+
+  /* TOGGLES */
+  .manual-toggle{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:26px 0 6px}
+  .manual-toggle button{font-family:var(--mono);font-weight:600;font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;color:var(--rust);background:rgba(207,107,62,.08);border:1px solid rgba(207,107,62,.4);border-radius:10px;padding:11px 22px;cursor:pointer;transition:all .2s ease}
+  .manual-toggle button:hover{background:rgba(207,107,62,.16);box-shadow:0 0 16px rgba(207,107,62,.25)}
+  .manual-toggle button[aria-expanded="true"]{color:var(--town);background:var(--rust)}
+  .manual-toggle button.calc-btn{color:var(--teal);background:rgba(111,179,168,.08);border-color:rgba(111,179,168,.4)}
+  .manual-toggle button.calc-btn:hover{background:rgba(111,179,168,.16);box-shadow:0 0 16px rgba(111,179,168,.25)}
+  .manual-toggle button.calc-btn[aria-expanded="true"]{color:var(--town);background:var(--teal)}
+
+  .manual{max-height:0;overflow:hidden;opacity:0;transition:max-height .5s ease,opacity .4s ease,margin .4s ease;margin:0}
+  .manual.open{max-height:2600px;opacity:1;margin:16px 0 8px}
+  .manual-inner{border:1px dashed rgba(207,107,62,.4);border-radius:14px;background:rgba(28,22,13,.5);padding:22px}
+  .manual-inner h2{font-family:var(--mono);font-size:.76rem;letter-spacing:.24em;text-transform:uppercase;color:var(--rust);margin-bottom:6px}
+  .manual-inner .lede{color:var(--paper-dim);font-size:.92rem;margin-bottom:16px}
+  .mcols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .mcard{background:rgba(21,17,11,.55);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .mcard h3{font-family:var(--serif);font-size:1.08rem;color:var(--rust-soft);margin-bottom:10px}
+  .mcard ul{list-style:none;font-size:.9rem;line-height:1.45}
+  .mcard li{padding:5px 0;border-bottom:1px dotted rgba(194,96,58,.16)}
+  .mcard li:last-child{border-bottom:none}
+  .mcard b{color:var(--paper)}
+  .mcard code{font-family:var(--mono);font-size:.86em;color:var(--lamp);background:rgba(232,193,112,.1);padding:1px 6px;border-radius:4px}
+
+  /* Desmos */
+  .calc{max-height:0;overflow:hidden;opacity:0;transition:max-height .5s ease,opacity .4s ease,margin .4s ease;margin:0}
+  .calc.open{max-height:760px;opacity:1;margin:16px 0 8px}
+  .calc-inner{border:1px solid rgba(111,179,168,.4);border-radius:14px;background:rgba(21,17,11,.5);padding:14px}
+  .calc-inner .clabel{font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .calc-inner .clabel a{color:var(--paper-dim);text-decoration:none;border-bottom:1px dotted currentColor}
+  .calc-inner .clabel a:hover{color:var(--teal)}
+  .calc-frame{width:100%;height:560px;border:0;border-radius:10px;background:#fff;display:block}
+
+  /* MARKERS */
+  .stations{margin-top:30px;display:flex;flex-direction:column;gap:18px}
+  .station{border:1px solid var(--line);border-radius:16px;background:linear-gradient(165deg,rgba(36,29,18,.92),rgba(21,17,11,.94));padding:22px 22px 20px;position:relative;overflow:hidden}
+  .station::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--paper-dim);transition:background .4s ease,box-shadow .4s ease}
+  .station.solved::before{background:var(--rust);box-shadow:0 0 16px var(--rust)}
+  .st-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .st-tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--rust)}
+  .st-topic{font-family:var(--mono);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--paper-dim)}
+  .st-state{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--warn);border:1px solid currentColor;border-radius:20px;padding:3px 12px}
+  .station.solved .st-state{color:var(--teal)}
+  .q{font-size:1.06rem;line-height:1.55;margin:14px 0 4px}
+  .q .given{color:var(--rust-soft);font-weight:600}
+  .q .mono{font-family:var(--mono)}
+
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  .controls input{font-family:var(--mono);font-size:1rem;background:rgba(21,17,11,.85);color:var(--paper);border:1px solid var(--line);border-radius:9px;padding:11px 14px;width:170px;outline:none;transition:border-color .2s ease,box-shadow .2s ease}
+  .controls input:focus{border-color:var(--rust);box-shadow:0 0 0 3px rgba(207,107,62,.18)}
+  .controls input:disabled{opacity:.55}
+  button.act{font-family:var(--mono);font-weight:600;font-size:.82rem;letter-spacing:.06em;border-radius:9px;padding:11px 18px;cursor:pointer;border:1px solid transparent;transition:all .18s ease}
+  .check{background:var(--rust);color:var(--town)}
+  .check:hover{filter:brightness(1.08);box-shadow:0 0 16px rgba(207,107,62,.4)}
+  .hintbtn{background:transparent;color:var(--lamp);border-color:rgba(232,193,112,.45)}
+  .hintbtn:hover{background:rgba(232,193,112,.1)}
+  button.act:disabled{opacity:.5;cursor:not-allowed;filter:none;box-shadow:none}
+
+  /* multiple choice */
+  .options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .opt{text-align:left;font-family:var(--sans);font-size:.96rem;color:var(--paper);background:rgba(21,17,11,.75);border:1px solid var(--line);border-radius:10px;padding:13px 15px;cursor:pointer;transition:all .16s ease;line-height:1.35}
+  .opt:hover:not(:disabled){border-color:var(--teal);background:rgba(111,179,168,.1)}
+  .opt:disabled{cursor:default}
+  .opt.chosen{border-color:var(--rust);background:rgba(207,107,62,.16);color:var(--rust-soft);box-shadow:0 0 16px rgba(207,107,62,.3)}
+  .opt.rejected{border-color:var(--warn);background:rgba(214,85,63,.12)}
+  @media (max-width:560px){.options{grid-template-columns:1fr}}
+
+  .feedback{font-family:var(--mono);font-size:.82rem;margin-top:12px;min-height:1.1em;letter-spacing:.04em}
+  .feedback.ok{color:var(--teal)}
+  .feedback.no{color:var(--warn)}
+
+  .hint{max-height:0;overflow:hidden;opacity:0;transition:all .35s ease;font-size:.92rem;line-height:1.5;color:var(--lamp);border-left:2px solid rgba(232,193,112,.5);padding-left:0;margin-top:0}
+  .hint.show{max-height:220px;opacity:1;padding:10px 0 2px 14px;margin-top:12px}
+  .hint b{color:#f3d79a}
+
+  .release{margin-top:14px;font-family:var(--mono);font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);display:none;align-items:center;gap:10px}
+  .release.show{display:flex}
+  .release .digit{font-size:1.3rem;color:var(--town);background:var(--rust);border-radius:7px;padding:2px 12px;font-weight:700;font-family:var(--serif);box-shadow:0 0 16px rgba(207,107,62,.5)}
+
+  .shake{animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+  /* GATE PADLOCK */
+  .override{margin-top:34px;text-align:center;border:1px solid var(--line);border-radius:18px;background:radial-gradient(120% 140% at 50% 0%, rgba(214,85,63,.12), transparent 60%),linear-gradient(180deg,rgba(45,36,23,.85),rgba(21,17,11,.9));padding:30px 24px;position:relative}
+  .override.armed{background:radial-gradient(120% 140% at 50% 0%, rgba(111,179,168,.16), transparent 60%),linear-gradient(180deg,rgba(45,36,23,.85),rgba(21,17,11,.9));border-color:rgba(111,179,168,.45)}
+  .override .olabel{font-family:var(--mono);font-size:.74rem;letter-spacing:.3em;text-transform:uppercase;color:var(--warn)}
+  .override.armed .olabel{color:var(--teal)}
+  .override h2{font-family:var(--serif);font-size:clamp(1.5rem,4.5vw,2.1rem);margin:10px 0 6px;color:var(--paper)}
+  .override .osub{color:var(--paper-dim);font-size:.95rem;margin-bottom:18px;max-width:46ch;margin-left:auto;margin-right:auto}
+  .override .orow{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap}
+  .override input{font-family:var(--serif);font-weight:700;font-size:1.5rem;letter-spacing:.5em;text-align:center;background:rgba(21,17,11,.85);color:var(--rust-soft);border:1px solid var(--line);border-radius:10px;padding:13px 16px;width:220px;outline:none}
+  .override input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(111,179,168,.2)}
+  .override input:disabled{opacity:.4}
+  .override .obtn{background:var(--paper-dim);color:var(--town);font-size:.9rem;padding:14px 26px}
+  .override.armed .obtn{background:linear-gradient(100deg,var(--teal),var(--rust));cursor:pointer}
+  .override.armed .obtn:hover{box-shadow:0 0 22px rgba(111,179,168,.5)}
+  .ofeedback{font-family:var(--mono);font-size:.82rem;margin-top:14px;min-height:1.1em}
+  .ofeedback.no{color:var(--warn)}
+
+  .escape{display:none;margin-top:22px}
+  .escape.show{display:block;animation:fadeup .6s ease}
+  @keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .escape .breach{font-family:var(--mono);font-size:.8rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal);margin-bottom:14px}
+  .escape a{display:inline-block;text-decoration:none;font-family:var(--mono);font-weight:700;font-size:1.05rem;letter-spacing:.08em;text-transform:uppercase;color:var(--town);background:linear-gradient(100deg,var(--rust),var(--lamp),var(--rust-soft));padding:16px 38px;border-radius:12px;box-shadow:0 0 30px rgba(207,107,62,.5);transition:transform .18s ease}
+  .escape a:hover{transform:translateY(-3px) scale(1.02)}
+  .escape .timer{margin-top:12px;font-family:var(--mono);font-size:.76rem;color:var(--paper-dim);letter-spacing:.12em}
+
+  footer{text-align:center;margin-top:46px;font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--paper-dim)}
+
+  @media (max-width:640px){.mcols{grid-template-columns:1fr}.controls input{width:100%}.slot{width:46px;height:56px;font-size:1.5rem}}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important;transition-duration:.001s !important}.mote{display:none}}
+</style>
+</head>
+<body>
+<div id="motes" aria-hidden="true"></div>
+<main class="wrap">
+
+  <div class="roombar">
+    <span>Room 2 // Abandoned Town</span>
+    <span class="live"><span class="dot"></span> Town Gate: <b style="color:var(--warn)">CHAINED</b></span>
+  </div>
+
+  <header class="hero">
+    <div class="eyebrow">Shape Detective · The Abandoned Town</div>
+    <h1>Open the Gate</h1>
+    <p>A rusted padlock chains the only road out of town. Five markers scattered through the streets each hide one digit of the combination — but each gives up its digit only when you solve the geometry it guards. Recover all five and work the lock.</p>
+  </header>
+
+  <!-- COMBINATION -->
+  <section class="status" aria-label="Gate combination progress">
+    <div class="stitle">
+      <span>Gate Combination · Recovered Digits</span>
+      <span class="count"><span id="solvedCount">0</span> / 5 markers solved</span>
+    </div>
+    <div class="slots">
+      <div class="slot" data-slot="0"></div>
+      <div class="slot" data-slot="1"></div>
+      <div class="slot" data-slot="2"></div>
+      <div class="slot" data-slot="3"></div>
+      <div class="slot" data-slot="4"></div>
+    </div>
+  </section>
+
+  <!-- TOGGLES -->
+  <div class="manual-toggle">
+    <button id="manualBtn" aria-expanded="false" aria-controls="manual">🗺️ Field Notes — Review</button>
+    <button id="calcBtn" class="calc-btn" aria-expanded="false" aria-controls="calc">🖩 Desmos Scientific</button>
+  </div>
+
+  <div class="manual" id="manual">
+    <div class="manual-inner">
+      <h2>Field Notes · Day 4 + Day 5 Quick Review</h2>
+      <p class="lede">Toggle this open whenever you need a refresher. Closing it does not reset your progress.</p>
+      <div class="mcols">
+        <div class="mcard">
+          <h3>Day 4 — Triangle Angle Relationships</h3>
+          <ul>
+            <li><b>Triangle Sum:</b> <code>∠A + ∠B + ∠C = 180°</code> — missing angle = 180° − (other two)</li>
+            <li><b>Exterior Angle:</b> <code>∠ext = ∠R₁ + ∠R₂</code> — equals the sum of the two <i>remote</i> interior angles</li>
+            <li><b>Isosceles:</b> equal sides → equal <b>base</b> angles. The vertex angle is <i>not</i> a base angle</li>
+            <li>Each base angle = <code>(180° − vertex) ÷ 2</code></li>
+            <li><b>Equilateral:</b> all sides equal → every angle = 60°</li>
+          </ul>
+        </div>
+        <div class="mcard">
+          <h3>Day 5 — Vocabulary &amp; Notation</h3>
+          <ul>
+            <li><b>"Can you measure it?"</b> — a number (length / measure) uses <code>=</code>; a geometric object uses <code>≅</code></li>
+            <li>So: <code>m∠A = 40°</code> ✓ but <code>m∠A ≅ 40°</code> ✗ · <code>AB̄ ≅ CD̄</code> ✓ but <code>AB̄ = CD̄</code> ✗</li>
+            <li><b>Segment Addition:</b> if B is between A and C → <code>AB + BC = AC</code></li>
+            <li><b>Angle Addition:</b> ray inside an angle → <code>m∠ABD + m∠DBC = m∠ABC</code></li>
+            <li><b>Midpoint / Bisector</b> = a command to set the two halves <i>equal</i> and solve</li>
+            <li>Angle name <code>∠ABC</code>: the <b>middle letter</b> is the vertex</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="calc" id="calc">
+    <div class="calc-inner">
+      <div class="clabel">
+        <span>🖩 Desmos Scientific Calculator</span>
+        <a href="https://www.desmos.com/scientific" target="_blank" rel="noopener">Open in new tab ↗</a>
+      </div>
+      <iframe class="calc-frame" id="calcFrame" title="Desmos Scientific Calculator" data-src="https://www.desmos.com/scientific" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <!-- MARKERS -->
+  <section class="stations" id="stations">
+
+    <!-- 1: triangle sum -->
+    <article class="station" data-type="num" data-answer="55" data-digit="6" data-slot="0">
+      <div class="st-head">
+        <div><span class="st-tag">Marker I</span> &nbsp; <span class="st-topic">The Watchtower · Triangle Sum</span></div>
+        <span class="st-state">Locked</span>
+      </div>
+      <p class="q">A triangular weathervane atop the watchtower has angles <span class="given mono">∠A = 72°</span> and <span class="given mono">∠B = 53°</span>. Find the third angle <span class="given">∠C</span> (in degrees, number only).</p>
+      <div class="controls">
+        <input type="text" inputmode="numeric" placeholder="∠C = ?" aria-label="Answer for marker 1">
+        <button class="act check">Inspect</button>
+        <button class="act hintbtn">Reveal Hint</button>
+      </div>
+      <div class="hint"><b>Strategy:</b> The three interior angles of any triangle add to 180°. To find the missing one, subtract the two known angles from 180°.</div>
+      <div class="feedback"></div>
+      <div class="release">Dial clicks → <span class="digit">6</span></div>
+    </article>
+
+    <!-- 2: MC — congruence vs equality notation -->
+    <article class="station" data-type="mc" data-digit="2" data-slot="1">
+      <div class="st-head">
+        <div><span class="st-tag">Marker II</span> &nbsp; <span class="st-topic">The Faded Signpost · Notation</span></div>
+        <span class="st-state">Locked</span>
+      </div>
+      <p class="q">A weather-beaten signpost lists four geometry statements. Which one uses <span class="given">≅ vs. =</span> correctly?</p>
+      <div class="options">
+        <button class="opt">m∠A ≅ 40°</button>
+        <button class="opt">AB̄ = CD̄ &nbsp;(the segments)</button>
+        <button class="opt">AB ≅ CD &nbsp;(the lengths)</button>
+        <button class="opt" data-correct="1">m∠A = 40°</button>
+      </div>
+      <div class="controls">
+        <button class="act hintbtn">Reveal Hint</button>
+      </div>
+      <div class="hint"><b>Strategy:</b> Apply the "Can you measure it?" rule. A <i>measure</i> or <i>length</i> is a number → use <code>=</code>. A geometric <i>object</i> (segment, angle, triangle) → use <code>≅</code>. Find the statement that pairs the right kind of thing with the right symbol.</div>
+      <div class="feedback"></div>
+      <div class="release">Dial clicks → <span class="digit">2</span></div>
+    </article>
+
+    <!-- 3: exterior angle -->
+    <article class="station" data-type="num" data-answer="24" data-digit="8" data-slot="2">
+      <div class="st-head">
+        <div><span class="st-tag">Marker III</span> &nbsp; <span class="st-topic">The Broken Roof · Exterior Angle</span></div>
+        <span class="st-state">Locked</span>
+      </div>
+      <p class="q">A collapsed roofline forms a triangle whose <span class="given">exterior angle is 130°</span>. Its two remote interior angles are <span class="given mono">∠A = (2x + 10)°</span> and <span class="given mono">∠B = (3x)°</span>. Find <span class="given mono">x</span>.</p>
+      <div class="controls">
+        <input type="text" inputmode="numeric" placeholder="x = ?" aria-label="Answer for marker 3">
+        <button class="act check">Inspect</button>
+        <button class="act hintbtn">Reveal Hint</button>
+      </div>
+      <div class="hint"><b>Strategy:</b> An exterior angle equals the sum of the two <i>remote</i> interior angles (the ones it doesn't touch). Set that sum equal to the exterior angle and solve for x.</div>
+      <div class="feedback"></div>
+      <div class="release">Dial clicks → <span class="digit">8</span></div>
+    </article>
+
+    <!-- 4: angle addition postulate -->
+    <article class="station" data-type="num" data-answer="12" data-digit="5" data-slot="3">
+      <div class="st-head">
+        <div><span class="st-tag">Marker IV</span> &nbsp; <span class="st-topic">The Clocktower · Angle Addition</span></div>
+        <span class="st-state">Locked</span>
+      </div>
+      <p class="q">The clocktower's cracked face splits an angle. Ray <span class="given mono">BD</span> is inside <span class="given mono">∠ABC</span>, with <span class="given mono">m∠ABD = (3x + 10)°</span>, <span class="given mono">m∠DBC = (2x + 5)°</span>, and <span class="given mono">m∠ABC = 75°</span>. Find <span class="given mono">x</span>.</p>
+      <div class="controls">
+        <input type="text" inputmode="numeric" placeholder="x = ?" aria-label="Answer for marker 4">
+        <button class="act check">Inspect</button>
+        <button class="act hintbtn">Reveal Hint</button>
+      </div>
+      <div class="hint"><b>Strategy:</b> When a ray splits an angle, the two parts add to the whole: <code>m∠ABD + m∠DBC = m∠ABC</code>. Add the two expressions, set the total equal to the whole angle, and solve.</div>
+      <div class="feedback"></div>
+      <div class="release">Dial clicks → <span class="digit">5</span></div>
+    </article>
+
+    <!-- 5: isosceles base angle (capstone) -->
+    <article class="station" data-type="num" data-answer="65" data-digit="3" data-slot="4">
+      <div class="st-head">
+        <div><span class="st-tag">Marker V</span> &nbsp; <span class="st-topic">The Old Chapel · Isosceles</span></div>
+        <span class="st-state">Locked</span>
+      </div>
+      <p class="q">The chapel's gable is an isosceles triangle <span class="given mono">△PQR</span> with <span class="given mono">PQ = PR</span> and vertex angle <span class="given mono">∠P = 50°</span>. Find the base angle <span class="given">∠Q</span> (number only).</p>
+      <div class="controls">
+        <input type="text" inputmode="numeric" placeholder="∠Q = ?" aria-label="Answer for marker 5">
+        <button class="act check">Inspect</button>
+        <button class="act hintbtn">Reveal Hint</button>
+      </div>
+      <div class="hint"><b>Strategy:</b> Equal sides give equal <i>base</i> angles — and ∠P is the <b>vertex</b> angle, not a base angle, so don't set it equal to ∠Q. Each base angle = <code>(180° − vertex) ÷ 2</code>.</div>
+      <div class="feedback"></div>
+      <div class="release">Dial clicks → <span class="digit">3</span></div>
+    </article>
+
+  </section>
+
+  <!-- GATE PADLOCK -->
+  <section class="override" id="override">
+    <div class="olabel" id="oLabel">⚠ Gate Locked — solve all 5 markers</div>
+    <h2>Work the Gate Lock</h2>
+    <p class="osub">Recover all five digits to read the full combination, then dial it into the padlock below.</p>
+    <div class="orow">
+      <input id="overrideInput" type="text" inputmode="numeric" maxlength="5" placeholder="—————" disabled aria-label="Combination">
+      <button class="act obtn" id="overrideBtn" disabled>Open Lock</button>
+    </div>
+    <div class="ofeedback" id="oFeedback"></div>
+
+    <div class="escape" id="escape">
+      <div class="breach">✓ The chain drops — the rusted gate swings open</div>
+      <a href="https://bubblemath.github.io/Interactive-Math/Upward_Bound/Geometry/room3_haunted_manor.html">Enter Room 3 →</a>
+      <div class="timer" id="autoTimer"></div>
+    </div>
+  </section>
+
+  <footer>Geometry Bridge · Shape Detective · Room 2 of 5</footer>
+</main>
+
+<script>
+  const NEXT_URL = "https://bubblemath.github.io/Interactive-Math/Upward_Bound/Geometry/room3_haunted_manor.html";
+
+  function norm(s){return (s || "").toLowerCase().replace(/[\s()°]/g,"").replace(/[−–—]/g,"-").replace(/,+/g,",").trim();}
+  function parseNum(s){
+    s = norm(s);
+    if (s.includes("/")){const p=s.split("/");if(p.length===2){const a=parseFloat(p[0]),b=parseFloat(p[1]);if(!isNaN(a)&&!isNaN(b)&&b!==0)return a/b;}return NaN;}
+    return parseFloat(s);
+  }
+
+  let solved = 0;
+  const totalNeeded = 5;
+
+  // dust motes
+  (function(){
+    const layer = document.getElementById('motes');
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const COLORS = ['#cf6b3e','#6fb3a8','#e8c170'];
+    for (let i=0;i<16;i++){
+      const m=document.createElement('div');m.className='mote';
+      m.style.left=Math.random()*100+'vw';
+      const dur=13+Math.random()*10;m.style.animationDuration=dur+'s';m.style.animationDelay=(-Math.random()*dur)+'s';
+      m.style.setProperty('--drift',(Math.random()*60-30)+'px');
+      const s=3+Math.random()*4;m.style.width=m.style.height=s+'px';
+      const c=COLORS[i%COLORS.length];m.style.background=c;m.style.boxShadow='0 0 8px 2px '+c+'77';
+      layer.appendChild(m);
+    }
+  })();
+
+  // toggles
+  const manualBtn=document.getElementById('manualBtn'), manual=document.getElementById('manual');
+  manualBtn.addEventListener('click',()=>{const o=manual.classList.toggle('open');manualBtn.setAttribute('aria-expanded',o?'true':'false');manualBtn.textContent=o?'🗺️ Field Notes — Hide':'🗺️ Field Notes — Review';});
+
+  const calcBtn=document.getElementById('calcBtn'), calc=document.getElementById('calc'), calcFrame=document.getElementById('calcFrame');
+  calcBtn.addEventListener('click',()=>{const o=calc.classList.toggle('open');calcBtn.setAttribute('aria-expanded',o?'true':'false');calcBtn.textContent=o?'🖩 Desmos Scientific — Hide':'🖩 Desmos Scientific';if(o&&!calcFrame.src)calcFrame.src=calcFrame.dataset.src;});
+
+  // markers
+  document.querySelectorAll('.station').forEach(station => {
+    const type   = station.dataset.type;
+    const digit  = station.dataset.digit;
+    const slotIx = station.dataset.slot;
+    const hintBtn  = station.querySelector('.hintbtn');
+    const hint     = station.querySelector('.hint');
+    const fb       = station.querySelector('.feedback');
+    const release  = station.querySelector('.release');
+    const stateTag = station.querySelector('.st-state');
+
+    hintBtn.addEventListener('click', () => {
+      const show = hint.classList.toggle('show');
+      hintBtn.textContent = show ? 'Hide Hint' : 'Reveal Hint';
+    });
+
+    function solve(){
+      if (station.classList.contains('solved')) return;
+      station.classList.add('solved');
+      stateTag.textContent = 'Solved';
+      fb.className = 'feedback ok';
+      fb.textContent = '✓ Correct. A dial clicks into place on the gate lock.';
+      release.classList.add('show');
+      if (type === 'mc'){ station.querySelectorAll('.opt').forEach(o=>o.disabled=true); }
+      else { station.querySelector('input').disabled=true; station.querySelector('.check').disabled=true; }
+      const slot=document.querySelector('.slot[data-slot="'+slotIx+'"]');
+      slot.dataset.d=digit; slot.classList.add('filled');
+      solved++; document.getElementById('solvedCount').textContent=solved;
+      if (solved>=totalNeeded) armOverride();
+    }
+
+    if (type === 'mc'){
+      station.querySelectorAll('.opt').forEach(opt => {
+        opt.addEventListener('click', () => {
+          if (station.classList.contains('solved')) return;
+          if (opt.dataset.correct === '1'){ opt.classList.add('chosen'); solve(); }
+          else {
+            fb.className='feedback no';
+            fb.textContent='✗ That notation won\u2019t hold up. Use the "Can you measure it?" rule and try another.';
+            opt.classList.add('rejected'); opt.classList.remove('shake'); void opt.offsetWidth; opt.classList.add('shake');
+            setTimeout(()=>opt.classList.remove('rejected'), 700);
+          }
+        });
+      });
+    } else {
+      const input = station.querySelector('input');
+      const checkBtn = station.querySelector('.check');
+      const answer = station.dataset.answer;
+      function matches(){
+        const raw = input.value;
+        if (!norm(raw)) return false;
+        if (type === 'num'){ const a=parseNum(answer), b=parseNum(raw); return !isNaN(b) && Math.abs(a-b)<1e-6; }
+        return norm(raw) === norm(answer);
+      }
+      function wrong(){
+        fb.className='feedback no';
+        fb.textContent='✗ The dial won\u2019t budge. Recheck your work and try again.';
+        station.classList.remove('shake'); void station.offsetWidth; station.classList.add('shake');
+      }
+      checkBtn.addEventListener('click', ()=> matches() ? solve() : wrong());
+      input.addEventListener('keydown', e=>{ if(e.key==='Enter') checkBtn.click(); });
+    }
+  });
+
+  // gate lock
+  const MASTER = "62853"; // 6,2,8,5,3 in marker order
+  const override=document.getElementById('override'), oInput=document.getElementById('overrideInput'),
+        oBtn=document.getElementById('overrideBtn'), oFeedback=document.getElementById('oFeedback'),
+        oLabel=document.getElementById('oLabel'), escape=document.getElementById('escape');
+
+  function armOverride(){
+    override.classList.add('armed');
+    oLabel.textContent='✓ All markers solved — dial the combination';
+    oInput.disabled=false; oBtn.disabled=false; oInput.focus();
+  }
+  function tryOverride(){
+    const val=oInput.value.replace(/\D/g,'');
+    if (val===MASTER){
+      oFeedback.className='ofeedback'; oFeedback.textContent='';
+      oBtn.disabled=true; oInput.disabled=true; escape.classList.add('show'); startAutoRedirect();
+    } else {
+      oFeedback.className='ofeedback no';
+      oFeedback.textContent='✗ The lock holds. Re-check the digits (left to right).';
+      oInput.classList.remove('shake'); void oInput.offsetWidth; oInput.classList.add('shake');
+    }
+  }
+  oBtn.addEventListener('click', tryOverride);
+  oInput.addEventListener('keydown', e=>{ if(e.key==='Enter' && !oBtn.disabled) tryOverride(); });
+
+  function startAutoRedirect(){
+    let t=6; const el=document.getElementById('autoTimer');
+    el.textContent='The gate opens in '+t+'…';
+    const iv=setInterval(()=>{t--;if(t<=0){clearInterval(iv);window.location.href=NEXT_URL;return;}el.textContent='The gate opens in '+t+'…';},1000);
+  }
+</script>
+</body>
+</html>
