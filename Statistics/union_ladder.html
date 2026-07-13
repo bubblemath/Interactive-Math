@@ -1,0 +1,795 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Union Ladder — overlap, unions, and odds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Barlow:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f7f6f1; --card:#ffffff; --ink:#1f242f; --ink-soft:#5a6270;
+    --rule:#e4e1d7; --rule-2:#efebe2;
+    --accent:#4f46b8; --accent-deep:#393196; --accent-tint:#ecebfa;
+    --amber:#d99a26; --amber-tint:#fbf1d8;
+    --green:#2e9e6b; --green-tint:#e6f5ee;
+    --red:#d0584a; --red-tint:#fbe9e6;
+    --serif:'Libre Baskerville',Georgia,serif;
+    --sans:'Barlow',system-ui,sans-serif;
+    --mono:'Source Code Pro',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.5;-webkit-font-smoothing:antialiased}
+
+  header.top{position:sticky;top:0;z-index:20;background:rgba(247,246,241,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+  .topin{max-width:880px;margin:0 auto;padding:13px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .brand{font-family:var(--mono);font-weight:700;font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-deep)}
+  nav a{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);text-decoration:none;margin-left:18px}
+  nav a:hover{color:var(--accent)}
+
+  .wrap{max-width:880px;margin:0 auto;padding:0 22px}
+
+  .hero{padding:54px 0 8px;text-align:center}
+  .kicker{font-family:var(--mono);font-size:.74rem;letter-spacing:.26em;text-transform:uppercase;color:var(--accent)}
+  h1{font-family:var(--serif);font-weight:700;font-size:clamp(2rem,5.5vw,3.1rem);line-height:1.12;margin:14px auto 0;max-width:20ch}
+  .hero .thesis{font-size:1.1rem;color:var(--ink-soft);max-width:62ch;margin:18px auto 0}
+  .hero .thesis b{color:var(--ink)}
+
+  .sec{padding:46px 0 0}
+  .sec-eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--accent)}
+  .sec h2{font-family:var(--serif);font-weight:700;font-size:1.7rem;margin-top:8px}
+
+  .how{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}
+  .howcard{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:20px}
+  .howcard .n{font-family:var(--mono);font-weight:700;color:var(--accent);font-size:.8rem;letter-spacing:.1em}
+  .howcard h3{font-family:var(--serif);font-size:1.12rem;margin:10px 0 8px}
+  .howcard p{font-size:.94rem;color:var(--ink-soft)}
+  .howcard b{color:var(--ink)}
+
+  .callout{margin-top:22px;display:flex;gap:16px;align-items:flex-start;background:var(--amber-tint);border:1px solid #ecd9a8;border-radius:14px;padding:20px 22px}
+  .callout .hand{font-size:1.6rem;line-height:1}
+  .callout p{font-size:.98rem;color:#6b551f}
+  .callout b{color:#4d3d12}
+  .callout i{color:#4d3d12}
+  .callout code{font-family:var(--mono);font-size:.88em;background:#fff;padding:1px 5px;border-radius:4px;color:#6b551f}
+
+  .onerule{margin-top:22px;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:22px}
+  .onerule .tlab{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+  .bigform{font-family:var(--mono);font-size:1.25rem;font-weight:700;color:var(--accent-deep);text-align:center;background:var(--accent-tint);border-radius:10px;padding:16px;letter-spacing:.02em}
+  .onerule .tnote{margin-top:13px;font-size:.92rem;color:var(--ink-soft)}
+  .onerule .tnote b{color:var(--ink)}
+
+  .ladprogress{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:22px;font-family:var(--mono);font-size:.78rem;letter-spacing:.06em;color:var(--ink-soft)}
+  .ladprogress .badges{color:var(--amber)}
+  .resetbtn{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);background:none;border:1px solid var(--rule);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .resetbtn:hover{border-color:var(--accent);color:var(--accent)}
+
+  .ladder{margin-top:16px;display:flex;flex-direction:column;gap:12px}
+  .rung{background:var(--card);border:1px solid var(--rule);border-radius:14px;overflow:hidden;transition:border-color .2s ease,box-shadow .2s ease}
+  .rung.active{border-color:var(--accent);box-shadow:0 6px 22px -10px rgba(79,70,184,.4)}
+  .rung-head{width:100%;display:flex;align-items:center;gap:14px;padding:16px 18px;background:none;border:none;cursor:pointer;text-align:left;font-family:inherit}
+  .rnum{flex:none;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-family:var(--mono);font-weight:700;background:var(--accent-tint);color:var(--accent-deep);font-size:1.02rem}
+  .rung.done .rnum{background:var(--green-tint);color:var(--green)}
+  .rung.cap .rnum{background:var(--amber-tint);color:#a8740f}
+  .rung.cap.done .rnum{background:var(--green-tint);color:var(--green)}
+  .rhead-main{flex:1;min-width:0}
+  .rtitle{font-family:var(--serif);font-weight:700;font-size:1.08rem}
+  .rsub{font-size:.84rem;color:var(--ink-soft)}
+  .rstatus{flex:none;font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);display:flex;align-items:center;gap:8px}
+  .badge{color:var(--green);font-weight:700}
+
+  .rung-body{display:none;padding:0 18px 20px;border-top:1px solid var(--rule-2)}
+  .rung.active .rung-body{display:block}
+  .strategy{background:var(--accent-tint);border-radius:12px;padding:15px 17px;margin:16px 0}
+  .strategy .slabel{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+  .strategy p{font-size:.95rem;color:#2f2a6b}
+  .strategy .why{margin-top:9px;font-size:.88rem;color:#403a82;border-top:1px dashed #c3bff0;padding-top:9px}
+  .strategy .why b{color:var(--accent-deep)}
+
+  .streak{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+  .dots{display:flex;gap:6px}
+  .dot{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--rule);background:#fff;transition:all .2s ease}
+  .dot.on{background:var(--green);border-color:var(--green);box-shadow:0 0 0 3px var(--green-tint)}
+
+  .qcard{border:1px solid var(--rule);border-radius:12px;padding:18px;background:#fcfbf7}
+  .qprompt{font-size:1.06rem;line-height:1.6}
+  .qsub{font-size:.86rem;color:var(--ink-soft);margin-top:10px}
+  .sit{background:#fff;border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:8px;padding:11px 14px;margin-top:10px;font-size:.99rem;line-height:1.55;color:var(--ink)}
+  .expbox{background:#fff;border:1px solid var(--rule);border-left:3px solid var(--amber);border-radius:8px;padding:11px 14px;margin-top:10px;font-size:1rem;color:var(--ink)}
+  .expbox .lab{display:block;font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:5px}
+  .expbox b{color:var(--accent-deep)}
+  .evrow{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .evbox{flex:1;min-width:210px;background:#fff;border:1px solid var(--rule);border-radius:8px;padding:10px 13px;font-size:.98rem}
+  .evbox .tag{display:block;font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+  .evbox.a{border-left:3px solid var(--accent)} .evbox.a .tag{color:var(--accent)}
+  .evbox.b{border-left:3px solid var(--amber)} .evbox.b .tag{color:var(--amber)}
+  .bignum{background:#fff;border:1px solid var(--rule);border-left:3px solid var(--amber);border-radius:8px;padding:14px 16px;margin-top:10px;font-family:var(--mono);font-size:1.4rem;font-weight:700;color:var(--ink);text-align:center}
+  .venn{background:#fff;border:1px solid var(--rule);border-radius:10px;padding:8px;margin-top:12px}
+
+  .frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;font-family:var(--mono);line-height:1.15;margin:0 2px}
+  .frac .num{border-bottom:1.5px solid currentColor;padding:0 5px}
+  .frac .den{padding:0 5px}
+
+  .stagebar{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+  .schip{font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--rule);border-radius:20px;padding:3px 9px;color:var(--ink-soft)}
+  .schip.now{background:var(--accent-tint);border-color:var(--accent);color:var(--accent);font-weight:600}
+  .schip.on{background:var(--green-tint);border-color:var(--green);color:var(--green);font-weight:600}
+
+  .opts{display:grid;grid-template-columns:1fr;gap:10px;margin-top:16px}
+  .opts.two{grid-template-columns:1fr 1fr}
+  .opt{font-family:var(--sans);font-size:.98rem;font-weight:500;color:var(--ink);background:#fff;border:1.5px solid var(--rule);border-radius:10px;padding:13px 15px;cursor:pointer;transition:all .15s ease;text-align:left;display:flex;align-items:center;gap:10px}
+  .opt:hover:not(:disabled){border-color:var(--accent);background:var(--accent-tint)}
+  .opt:disabled{cursor:default}
+  .opt .key{flex:none;font-family:var(--mono);font-size:.7rem;font-weight:700;width:20px;height:20px;border-radius:5px;display:grid;place-items:center;background:var(--rule-2);color:var(--ink-soft)}
+  .opt:hover:not(:disabled) .key{background:#fff;color:var(--accent)}
+  .opt.right{border-color:var(--green);background:var(--green-tint);color:var(--green)}
+  .opt.right .key{background:#fff;color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-tint);color:var(--red)}
+  .opt.wrong .key{background:#fff;color:var(--red)}
+  .opt.num{justify-content:center;font-family:var(--mono);font-weight:700;font-size:1.08rem}
+  .kbhint{font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-top:11px;text-align:right}
+
+  .feedback{margin-top:14px;font-size:.95rem;min-height:1.2em;font-weight:500}
+  .feedback.ok{color:var(--green)}
+  .feedback.no{color:var(--red)}
+  .feedback .fix{color:var(--ink-soft);font-weight:400}
+  .feedback .fix b{color:var(--ink)}
+
+  .mastered-note{margin-top:14px;background:var(--green-tint);border:1px solid #bfe6d2;border-radius:12px;padding:16px;display:none}
+  .mastered-note.show{display:block}
+  .mastered-note b{color:var(--green)}
+  .mastered-note .next{font-family:var(--mono);font-size:.85rem;color:var(--ink-soft);margin-top:6px}
+
+  .why-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}
+  .whycard{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:20px}
+  .whycard h3{font-family:var(--serif);font-size:1.08rem;color:var(--accent-deep);margin-bottom:8px}
+  .whycard p{font-size:.92rem;color:var(--ink-soft)}
+  .whycard code{font-family:var(--mono);font-size:.86em;background:var(--accent-tint);color:var(--accent-deep);padding:1px 5px;border-radius:4px}
+  .closing{margin-top:20px;font-size:1rem;color:var(--ink-soft);max-width:66ch}
+
+  footer{margin-top:54px;padding:26px 0 60px;border-top:1px solid var(--rule);text-align:center;font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+
+  @media (max-width:680px){ .how,.why-cards{grid-template-columns:1fr} .opts.two{grid-template-columns:1fr} nav{display:none} .bigform{font-size:.98rem} }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="topin">
+    <div class="brand">∪ The Union Ladder</div>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="kicker">Union fluency · count the overlap, subtract it</div>
+    <h1>There is only one union rule.</h1>
+    <p class="thesis">Textbooks give you two — a general one and a special one for mutually exclusive events — and then you have to remember which is which. But <b>mutually exclusive is not a different formula</b>. It is the case where the overlap happens to be <b>zero</b>. Learn one rule, always subtract the overlap, and the only skill left is <b>counting the overlap correctly</b>.</p>
+  </section>
+
+  <section class="sec" id="how">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Can both happen at once?</h2>
+    <div class="how">
+      <div class="howcard">
+        <div class="n">01</div>
+        <h3>Start anywhere</h3>
+        <p>Eleven rungs run from a complement warm-up up to a four-stage full solve. Nothing is locked — climb in order, or jump to the skill you need.</p>
+      </div>
+      <div class="howcard">
+        <div class="n">02</div>
+        <h3>Earn each badge</h3>
+        <p>Get <b>four in a row</b> on a rung to earn its badge. Answer with the mouse or hit <b>1–4</b> on the keyboard. Probabilities are <b>reduced fractions</b>; odds are <b>reduced ratios</b>.</p>
+      </div>
+      <div class="howcard">
+        <div class="n">03</div>
+        <h3>The one question</h3>
+        <p>Before every union: <b>can both events happen on a single trial?</b> If yes, count the overlap and subtract it. If no, the overlap is 0 — and subtracting it changes nothing.</p>
+      </div>
+    </div>
+
+    <div class="onerule">
+      <div class="tlab">The only formula you need</div>
+      <div class="bigform">P(A ∪ B) = P(A) + P(B) − P(A ∩ B)</div>
+      <p class="tnote">When A and B are <b>mutually exclusive</b>, P(A ∩ B) = <b>0</b>, and the rule quietly becomes P(A) + P(B). You do not switch formulas — you just find that there was nothing to subtract. <b>Spade or King</b>: 13 + 4 − 1 = 16, because the king of spades was counted twice. <b>Ace or King</b>: 4 + 4 − 0 = 8, because no card is both.</p>
+    </div>
+
+    <div class="callout">
+      <div class="hand">✋</div>
+      <p><b>Odds are not probability.</b> If P(E) = 1/6, the odds in favor are <code>1 : 5</code> — not 1 : 6. Probability compares favorable to <i>total</i>; odds compare favorable to <b>unfavorable</b>. That single off-by-one is the most common error in this lesson, and it is worth burning into memory now.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="ladder">
+    <div class="sec-eyebrow">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="ladprogress">
+      <span><span id="progText">Open practice — start on any rung</span> · <span class="badges" id="badgeText">0 of 11 badges earned</span></span>
+      <button class="resetbtn" id="resetBtn">Reset progress</button>
+    </div>
+    <div class="ladder" id="ladder"></div>
+  </section>
+
+  <section class="sec" id="why">
+    <div class="sec-eyebrow">Why this matters</div>
+    <h2>Overlap is everywhere</h2>
+    <div class="why-cards">
+      <div class="whycard">
+        <h3>Double counting is the enemy</h3>
+        <p>Add two groups that share members and you have counted the shared ones twice. <code>P(A ∩ B)</code> is not a technicality — it is the correction that makes the arithmetic honest.</p>
+      </div>
+      <div class="whycard">
+        <h3>The complement saves work</h3>
+        <p>"At least one" is nearly always easier as <code>1 − P(none)</code>. When counting the winners is painful, count the losers and subtract.</p>
+      </div>
+      <div class="whycard">
+        <h3>Odds are a different language</h3>
+        <p>Bookmakers, doctors, and risk reports all speak in odds. Translating fluently in both directions is what lets you check whether a claim is as good as it sounds.</p>
+      </div>
+    </div>
+    <p class="closing">Most probability errors are not errors of reasoning — they are errors of bookkeeping. Somebody added two overlapping groups and forgot that a few members belonged to both. Somebody heard "three to one" and thought it meant a three-in-one chance. The rules in this lesson exist to keep the books straight: subtract what you counted twice, flip to the complement when it is easier, and know exactly what you are comparing to what. Get the bookkeeping right and the reasoning takes care of itself.</p>
+  </section>
+
+</div>
+
+<footer>The Union Ladder · one rule, always subtract the overlap · odds compare favorable to unfavorable</footer>
+
+<script>
+//// ---------- helpers ----------
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function gcd(a,b){return b?gcd(b,Math.abs(a%b)):Math.abs(a);}
+function red(n,d){const g=gcd(n,d)||1;return [n/g,d/g];}
+function fkey(n,d){const [a,b]=red(n,d);return a+'/'+b;}
+function fracHTML(n,d){return `<span class="frac"><span class="num">${n}</span><span class="den">${d}</span></span>`;}
+function fracKeyHTML(k){const [a,b]=k.split('/');return fracHTML(a,b);}
+function rkey(m,n){const g=gcd(m,n)||1;return (m/g)+':'+(n/g);}
+function fdec(n,d){return (Math.round(n/d*1000)/1000).toString();}
+const TOP=11;
+
+//// ---------- sample spaces ----------
+const SP=(()=>{
+  const die=[1,2,3,4,5,6];
+  const dice2=[]; for(let a=1;a<=6;a++) for(let b=1;b<=6;b++) dice2.push({a,b,s:a+b});
+  const suits=['\u2665','\u2666','\u2663','\u2660'];
+  const deck=[]; suits.forEach(s=>{ for(let r=1;r<=13;r++) deck.push({r,s,red:(s==='\u2665'||s==='\u2666'),face:(r>=11)}); });
+  return {die,dice2,deck};
+})();
+const SPACE={die:SP.die,dice2:SP.dice2,deck:SP.deck};
+const SPNAME={
+  die:'A standard six-sided die is rolled.',
+  dice2:'Two dice are rolled (36 equally likely ordered pairs).',
+  deck:'One card is drawn from a standard 52-card deck.'
+};
+const cnt=(s,f)=>s.filter(f).length;
+
+//// ---------- event pairs (A, B) ----------
+const PAIRS=[
+  // deck — with overlap
+  {e:'deck',A:{l:'a spade',f:c=>c.s==='\u2660'},B:{l:'a king',f:c=>c.r===13}},
+  {e:'deck',A:{l:'a red card',f:c=>c.red},B:{l:'a queen',f:c=>c.r===12}},
+  {e:'deck',A:{l:'a heart',f:c=>c.s==='\u2665'},B:{l:'a face card',f:c=>c.face}},
+  {e:'deck',A:{l:'a red card',f:c=>c.red},B:{l:'a face card',f:c=>c.face}},
+  {e:'deck',A:{l:'a diamond',f:c=>c.s==='\u2666'},B:{l:'a face card',f:c=>c.face}},
+  // deck — mutually exclusive
+  {e:'deck',A:{l:'an ace',f:c=>c.r===1},B:{l:'a king',f:c=>c.r===13}},
+  {e:'deck',A:{l:'a red card',f:c=>c.red},B:{l:'a black card',f:c=>!c.red}},
+  {e:'deck',A:{l:'a club',f:c=>c.s==='\u2663'},B:{l:'a heart',f:c=>c.s==='\u2665'}},
+  {e:'deck',A:{l:'a face card',f:c=>c.face},B:{l:'an ace',f:c=>c.r===1}},
+  // die — with overlap
+  {e:'die',A:{l:'an even number',f:o=>o%2===0},B:{l:'a number less than 4',f:o=>o<4}},
+  {e:'die',A:{l:'an odd number',f:o=>o%2===1},B:{l:'a number less than 4',f:o=>o<4}},
+  {e:'die',A:{l:'a prime number',f:o=>[2,3,5].includes(o)},B:{l:'an even number',f:o=>o%2===0}},
+  {e:'die',A:{l:'a number divisible by 3',f:o=>o%3===0},B:{l:'a number greater than 4',f:o=>o>4}},
+  // die — mutually exclusive
+  {e:'die',A:{l:'a 1',f:o=>o===1},B:{l:'a 6',f:o=>o===6}},
+  {e:'die',A:{l:'an even number',f:o=>o%2===0},B:{l:'an odd number',f:o=>o%2===1}},
+  {e:'die',A:{l:'a number greater than 4',f:o=>o>4},B:{l:'a number less than 3',f:o=>o<3}},
+  // two dice — with overlap
+  {e:'dice2',A:{l:'at least one 6',f:o=>o.a===6||o.b===6},B:{l:'a sum of 7',f:o=>o.s===7}},
+  {e:'dice2',A:{l:'doubles',f:o=>o.a===o.b},B:{l:'an even sum',f:o=>o.s%2===0}},
+  {e:'dice2',A:{l:'at least one 6',f:o=>o.a===6||o.b===6},B:{l:'doubles',f:o=>o.a===o.b}},
+  // two dice — mutually exclusive
+  {e:'dice2',A:{l:'a sum of 7',f:o=>o.s===7},B:{l:'doubles',f:o=>o.a===o.b}},
+  {e:'dice2',A:{l:'a sum less than 5',f:o=>o.s<5},B:{l:'a sum greater than 9',f:o=>o.s>9}},
+  {e:'dice2',A:{l:'a sum of 7',f:o=>o.s===7},B:{l:'a sum of 11',f:o=>o.s===11}}
+];
+function stats(p){
+  const S=SPACE[p.e], nS=S.length;
+  const nA=cnt(S,p.A.f), nB=cnt(S,p.B.f);
+  const nAB=cnt(S,o=>p.A.f(o)&&p.B.f(o));
+  return {S,nS,nA,nB,nAB,nU:nA+nB-nAB,me:nAB===0};
+}
+const OVERLAP=PAIRS.filter(p=>stats(p).nAB>0);
+const DISJOINT=PAIRS.filter(p=>stats(p).nAB===0);
+
+//// ---------- single events (rung 1) ----------
+const SOLO=[
+  {e:'die',l:'a 6',f:o=>o===6},
+  {e:'die',l:'an even number',f:o=>o%2===0},
+  {e:'die',l:'a number less than 4',f:o=>o<4},
+  {e:'deck',l:'an ace',f:c=>c.r===1},
+  {e:'deck',l:'a spade',f:c=>c.s==='\u2660'},
+  {e:'deck',l:'a face card',f:c=>c.face},
+  {e:'deck',l:'a red card',f:c=>c.red},
+  {e:'dice2',l:'a sum of 7',f:o=>o.s===7},
+  {e:'dice2',l:'doubles',f:o=>o.a===o.b}
+];
+
+//// ---------- method identification (rung 10) ----------
+const METHOD=[
+  {t:'A card is drawn. What is the probability that it is a heart <b>or</b> a king?',a:'ov',
+   w:'A card can be <b>both</b> a heart and a king (the king of hearts), so the events overlap. Use the union rule and <b>subtract</b> P(A \u2229 B).'},
+  {t:'A card is drawn. What is the probability that it is an <b>ace or a king</b>?',a:'me',
+   w:'No card is both an ace and a king \u2014 the overlap is <b>0</b>. Mutually exclusive: just add.'},
+  {t:'A die is rolled. What is the probability the result is <b>not</b> a 6?',a:'comp',
+   w:'"Not" is the giveaway. Use the <b>complement</b>: P(not 6) = 1 \u2212 P(6).'},
+  {t:'A coin is flipped 4 times. What is the probability of <b>at least one head</b>?',a:'comp',
+   w:'"At least one" is nearly always fastest as the <b>complement</b>: 1 \u2212 P(no heads at all).'},
+  {t:'The probability of rain tomorrow is 0.3. What are the <b>odds in favor</b> of rain?',a:'odds',
+   w:'This is a translation between two ways of expressing the same chance \u2014 an <b>odds conversion</b>.'},
+  {t:'The odds in favor of an event are 3 : 4. What is the <b>probability</b> of the event?',a:'odds',
+   w:'Going the other way \u2014 odds back to probability. An <b>odds conversion</b>: P = m \u00f7 (m + n).'},
+  {t:'A card is drawn. What is the probability that it is <b>red or a face card</b>?',a:'ov',
+   w:'Six cards are <b>both</b> red and face cards, so they overlap. Union rule with a subtraction.'},
+  {t:'A die is rolled. What is the probability of rolling a <b>1 or a 6</b>?',a:'me',
+   w:'A single roll cannot be both a 1 and a 6 \u2014 overlap <b>0</b>. Mutually exclusive: just add.'},
+  {t:'A card is drawn. What is the probability it is <b>not a spade</b>?',a:'comp',
+   w:'Again "not" \u2014 the <b>complement</b> rule. 1 \u2212 P(spade).'},
+  {t:'Two dice are rolled. What is the probability of a <b>sum of 7 or doubles</b>?',a:'me',
+   w:'A sum of 7 can never be doubles (7 is odd). The overlap is <b>0</b> \u2014 mutually exclusive, even though it does not look it at first.'},
+  {t:'Two dice are rolled. What is the probability of <b>at least one 6 or a sum of 7</b>?',a:'ov',
+   w:'(1,6) and (6,1) are <b>both</b> \u2014 the events overlap on 2 outcomes. Union rule with a subtraction.'},
+  {t:'A jar holds white, red, and blue marbles. What is the probability of drawing a <b>white or a blue</b> marble?',a:'me',
+   w:'A marble has one colour \u2014 it cannot be both. Overlap <b>0</b>: mutually exclusive, just add.'},
+  {t:'The probability an event occurs is 5/8. What are the <b>odds against</b> it?',a:'odds',
+   w:'An <b>odds conversion</b> \u2014 and note the direction: <i>against</i> means unfavorable : favorable.'}
+];
+const M_OPT={
+  comp:'Complement rule \u2014 P(E\u2032) = 1 \u2212 P(E)',
+  me:'Union rule, mutually exclusive \u2014 just add (overlap is 0)',
+  ov:'Union rule with overlap \u2014 add, then subtract P(A \u2229 B)',
+  odds:'Odds conversion \u2014 translate between odds and probability'
+};
+
+//// ---------- rungs ----------
+const RUNGS=[
+  {id:1,kind:'r1',title:'Complement Warm-Up',sub:'P(E\u2032) = 1 \u2212 P(E)',
+   strat:'Either the event happens or it does not \u2014 so the two probabilities must add to <b>1</b>. To find P(not E), subtract from 1. Equivalently, count the outcomes <b>not</b> in E. Watch for the word <b>"not"</b>, and remember that <b>"at least one"</b> is nearly always easier as 1 \u2212 P(none).',
+   why:'You met this in the last lesson; here it is a tool you will reach for constantly. When counting winners is painful, count the losers instead.'},
+  {id:2,kind:'r2',title:'Count the Overlap',sub:'n(A \u2229 B) \u00b7 outcomes in BOTH',
+   strat:'The intersection holds the outcomes that satisfy <b>both</b> events at once. Do not add anything, do not subtract anything \u2014 just walk the sample space and count the outcomes that are in A <b>and</b> in B. If none are, the answer is <b>0</b>, and that is a real answer.',
+   why:'This one number is the entire difference between the two union formulas. Count it correctly and you never have to remember which formula to use \u2014 because there is only one.'},
+  {id:3,kind:'r3',title:'Mutually Exclusive?',sub:'The crux \u00b7 can both happen at once?',
+   strat:'Ask one question: on a <b>single</b> trial, could both events happen together? A card cannot be an ace <i>and</i> a king \u2014 mutually exclusive. A card can be a spade <i>and</i> a king \u2014 not mutually exclusive. The formal test is simply <b>n(A \u2229 B) = 0</b>.',
+   why:'This decides whether there is anything to subtract. And it is more subtle than it looks: a sum of 7 and doubles feel unrelated, but they are genuinely mutually exclusive \u2014 7 is odd, and doubles are always even.'},
+  {id:4,kind:'r4',title:'Union, No Overlap',sub:'Mutually exclusive \u2014 just add',
+   strat:'These events cannot happen together, so <b>nothing was counted twice</b>. P(A \u222a B) = P(A) + P(B). You are still using the general rule \u2014 you are just subtracting a zero.',
+   why:'Seeing it as "the general rule with an overlap of 0" means you carry one formula in your head instead of two, and you never have to decide which one to reach for.'},
+  {id:5,kind:'r5',title:'Union, With Overlap',sub:'Add \u2014 then subtract what you counted twice',
+   strat:'These events <b>can</b> happen together. Adding n(A) + n(B) counts every shared outcome <b>twice</b>, so subtract the overlap once to fix it: <b>n(A \u222a B) = n(A) + n(B) \u2212 n(A \u2229 B)</b>. The subtraction is not a rule to memorize \u2014 it is a repair.',
+   why:'Forgetting the subtraction always inflates the answer, and often pushes it above 1 \u2014 which is your free warning that something went wrong.'},
+  {id:6,kind:'r6',title:'n(A \u222a B), Unlabeled',sub:'Nobody tells you whether they overlap',
+   strat:'Run the chain. First ask whether the events can happen together. If <b>no</b>, add. If <b>yes</b>, count the overlap and subtract it. Never assume \u2014 check.',
+   why:'This is the call the exam actually asks for. The problem will not tell you which case you are in; deciding that <i>is</i> the question.'},
+  {id:7,kind:'r7',title:'Probability \u2192 Odds',sub:'Favorable : UNfavorable',
+   strat:'Odds compare the winners to the <b>losers</b>, not to the total. If P(E) = a/b, then there are <b>a</b> favorable outcomes and <b>b \u2212 a</b> unfavorable ones, so the odds in favor are <b>a : (b \u2212 a)</b>, reduced. P = 1/6 gives odds of <b>1 : 5</b> \u2014 never 1 : 6.',
+   why:'This off-by-one is the most common error in the lesson. Probability is <i>part to whole</i>; odds are <i>part to part</i>. They are different languages for the same fact.'},
+  {id:8,kind:'r8',title:'Odds \u2192 Probability',sub:'P = m \u00f7 (m + n)',
+   strat:'Odds of <b>m : n</b> mean m favorable outcomes and n unfavorable ones \u2014 so there are <b>m + n</b> outcomes in total, and the probability is <b>m \u00f7 (m + n)</b>. The denominator is the <b>sum</b>, never one of the two numbers.',
+   why:'The reverse trip. Getting fluent in both directions is what lets you hear "3 to 1 against" and instantly know it means a 25% chance.'},
+  {id:9,kind:'r9',title:'In Favor, or Against?',sub:'The direction rung',
+   strat:'Odds <b>in favor</b> are favorable : unfavorable. Odds <b>against</b> are the same two numbers <b>flipped</b>: unfavorable : favorable. That is the whole difference \u2014 and both versions look perfectly reasonable, which is exactly why you must read the question.',
+   why:'Reversing the ratio produces an answer that is plausible, well-formed, and wrong. Nothing in the arithmetic will catch it for you \u2014 only reading carefully will.'},
+  {id:10,kind:'r10',title:'Which Method?',sub:'Name the rule \u00b7 no computation',
+   strat:'Read the question and name the tool. The word <b>"not"</b> \u2192 complement. The word <b>"or"</b> \u2192 a union, and then ask whether the two can happen together: if they can, <b>subtract the overlap</b>; if they cannot, just add. Words like <b>odds</b> or a ratio like <b>3 : 4</b> \u2192 an odds conversion.',
+   why:'Almost every lost mark in this lesson comes from grabbing the wrong tool, not from bad arithmetic. Naming the method before computing anything is the habit that fixes it.'},
+  {id:11,kind:'r11',title:'The Full Solve',sub:'The capstone \u00b7 four gated stages',
+   strat:'One problem, start to finish: are the events <b>mutually exclusive</b>? What is <b>n(A \u2229 B)</b>? What is <b>P(A \u222a B)</b>? And finally, what are the <b>odds in favor</b> of the union? Each stage must be right before the next opens \u2014 so a bad overlap cannot quietly poison your final answer.',
+   why:'This is the whole lesson in a single problem. On paper, a wrong overlap in step two produces a confidently wrong answer in step four and you never find out where it broke. Here, you cannot walk past the mistake.'}
+];
+
+//// ---------- state ----------
+const MASTER_N=4;
+let state={unlocked:1,mastered:[],streak:{}};
+RUNGS.forEach(r=>state.streak[r.id]=0);
+try{const s=JSON.parse(localStorage.getItem('unionLadder')||'null'); if(s){state.unlocked=s.unlocked||1;state.mastered=s.mastered||[];}}catch(e){}
+function save(){try{localStorage.setItem('unionLadder',JSON.stringify({unlocked:state.unlocked,mastered:state.mastered}));}catch(e){}}
+function isMastered(id){return state.mastered.includes(id);}
+
+const ladderEl=document.getElementById('ladder');
+function buildLadder(){
+  ladderEl.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=isMastered(r.id);
+    const div=document.createElement('div');
+    div.className='rung'+(done?' done':'')+(r.id===TOP?' cap':''); div.dataset.id=r.id;
+    div.innerHTML=`
+      <button class="rung-head">
+        <span class="rnum">${done?'\u2713':r.id}</span>
+        <span class="rhead-main"><span class="rtitle">${r.title}</span><br><span class="rsub">${r.sub}</span></span>
+        <span class="rstatus">${done?'<span class="badge">\u2713 Badge earned</span>':'<span>Ready</span>'}</span>
+      </button>
+      <div class="rung-body">
+        <div class="strategy"><div class="slabel">Strategy</div><p>${r.strat}</p><div class="why"><b>Why it matters:</b> ${r.why}</div></div>
+        <div class="practice" id="practice-${r.id}"></div>
+      </div>`;
+    div.querySelector('.rung-head').addEventListener('click',()=>openRung(r.id));
+    ladderEl.appendChild(div);
+  });
+  updateProgress();
+}
+function updateProgress(){
+  document.getElementById('progText').textContent='Open practice — start on any rung';
+  document.getElementById('badgeText').textContent=state.mastered.length+' of '+TOP+' badges earned';
+}
+let activeId=null;
+function openRung(id){
+  document.querySelectorAll('.rung').forEach(r=>r.classList.remove('active'));
+  const el=[...document.querySelectorAll('.rung')].find(r=>+r.dataset.id===id);
+  el.classList.add('active'); activeId=id; newProblem(id);
+}
+function streakDots(id){let d='';for(let i=0;i<MASTER_N;i++)d+=`<span class="dot ${i<state.streak[id]?'on':''}"></span>`;return `<div class="streak"><span>Streak to badge</span><div class="dots">${d}</div><span>${state.streak[id]}/${MASTER_N}</span></div>`;}
+function masteredNote(){return `<div class="mastered-note" id="mnote"><b>\u2605 Badge earned \u2014 four in a row!</b><div class="next" id="mnext"></div></div>`;}
+function refreshStreak(id){const c=document.getElementById('practice-'+id);const s=c.querySelector('.streak');if(s)s.outerHTML=streakDots(id);}
+function onWrong(id){state.streak[id]=0;refreshStreak(id);}
+function buildLadderPreserve(){const keep=activeId;buildLadder();if(keep){const el=[...document.querySelectorAll('.rung')].find(r=>+r.dataset.id===keep);if(el)el.classList.add('active');}}
+function onCorrect(id){
+  state.streak[id]++;
+  if(state.streak[id]>=MASTER_N){
+    if(!isMastered(id)) state.mastered.push(id);
+    if(state.unlocked<Math.min(id+1,TOP)) state.unlocked=Math.min(id+1,TOP);
+    save(); refreshStreak(id);
+    document.getElementById('mnote').classList.add('show');
+    const rungEl=[...document.querySelectorAll('.rung')].find(r=>+r.dataset.id===id);
+    rungEl.classList.add('done'); rungEl.querySelector('.rnum').textContent='\u2713';
+    rungEl.querySelector('.rstatus').innerHTML='<span class="badge">\u2713 Badge earned</span>';
+    const nxt=document.getElementById('mnext');
+    if(id<TOP){
+      nxt.innerHTML=`Next up: Rung ${id+1}. <a href="#" id="goNext" style="color:var(--accent);font-weight:600">Climb to it \u2192</a>`;
+      buildLadderPreserve();
+      setTimeout(()=>{const g=document.getElementById('goNext'); if(g)g.addEventListener('click',e=>{e.preventDefault();openRung(id+1);document.getElementById('practice-'+(id+1)).scrollIntoView({behavior:'smooth',block:'center'});});},0);
+    } else { nxt.textContent='You\'ve topped the ladder \u2014 one union rule, one overlap, and odds in both directions. That is the whole lesson.'; buildLadderPreserve(); }
+    updateProgress(); return true;
+  }
+  refreshStreak(id); return false;
+}
+
+let keyHandler=null;
+function bindKeys(btns){
+  if(keyHandler) document.removeEventListener('keydown',keyHandler);
+  keyHandler=function(e){
+    const n=parseInt(e.key,10);
+    if(!isNaN(n)&&n>=1&&n<=btns.length){const b=btns[n-1]; if(b&&!b.disabled){e.preventDefault();b.click();}}
+  };
+  document.addEventListener('keydown',keyHandler);
+}
+function unbindKeys(){if(keyHandler){document.removeEventListener('keydown',keyHandler);keyHandler=null;}}
+
+function renderOpts(target,options,twoCol,numStyle){
+  target.innerHTML=`<div class="opts${twoCol?' two':''}">${options.map((o,i)=>`<button class="opt${numStyle?' num':''}" data-v="${o.v}"><span class="key">${i+1}</span><span>${o.label}</span></button>`).join('')}</div><div class="kbhint">Tip \u00b7 press 1\u2013${options.length}</div>`;
+  return [...target.querySelectorAll('.opt')];
+}
+function tapProblem(id,promptHTML,subHTML,options,correctVal,fixMsg,twoCol,numStyle){
+  const q=document.getElementById('q-'+id), fb=document.getElementById('fb-'+id);
+  q.innerHTML=`<div class="qprompt">${promptHTML}</div>${subHTML?`<div class="qsub">${subHTML}</div>`:''}<div id="oz-${id}"></div>`;
+  const btns=renderOpts(document.getElementById('oz-'+id),options,twoCol,numStyle);
+  btns.forEach(b=>b.addEventListener('click',()=>{
+    btns.forEach(x=>x.disabled=true); unbindKeys();
+    if(b.dataset.v===correctVal){
+      b.classList.add('right'); fb.className='feedback ok'; fb.textContent='\u2713 Correct.';
+      if(!onCorrect(id)) setTimeout(()=>newProblem(id),750);
+    } else {
+      b.classList.add('wrong');
+      const r=btns.find(x=>x.dataset.v===correctVal); if(r) r.classList.add('right');
+      fb.className='feedback no'; fb.innerHTML='\u2717 Not quite. <span class="fix">'+fixMsg+'</span>';
+      onWrong(id); setTimeout(()=>newProblem(id),3200);
+    }
+  }));
+  bindKeys(btns);
+}
+function numOpts(ans,cands,fallback){
+  const seen=new Set([String(ans)]); const outs=[];
+  for(const c of cands){ if(!isFinite(c)||c<0) continue; const s=String(c); if(seen.has(s)) continue; seen.add(s); outs.push(c); if(outs.length===3) break; }
+  let i=1;
+  while(outs.length<3&&i<90){ const c=fallback(i); if(isFinite(c)&&c>=0&&!seen.has(String(c))){seen.add(String(c));outs.push(c);} i++; }
+  return shuffle([ans,...outs]).map(v=>({v:String(v),label:String(v)}));
+}
+// fraction options — every distractor differs in VALUE, not just in spelling
+function fracOpts(nE,nS,extra){
+  const ansKey=fkey(nE,nS), ansVal=nE/nS;
+  const cands=(extra||[]).concat([[nS-nE,nS],[nE,nS-nE],[1,nS],[nE+1,nS],[nE-1,nS],[nE,nS*2],[nE*2,nS]]);
+  const seen=new Set([ansKey]); const outs=[];
+  for(const [a,b] of cands){
+    if(!(a>0&&b>0)) continue;
+    if(Math.abs(a/b-ansVal)<1e-12) continue;
+    const k=fkey(a,b);
+    if(seen.has(k)) continue;
+    seen.add(k); outs.push(k);
+    if(outs.length===3) break;
+  }
+  let i=1;
+  while(outs.length<3&&i<80){
+    [[nE,nS+i],[nE+i,nS],[i,nS]].forEach(([a,b])=>{
+      if(outs.length>=3) return;
+      if(!(a>0&&b>0)) return;
+      if(Math.abs(a/b-ansVal)<1e-12) return;
+      const k=fkey(a,b);
+      if(seen.has(k)) return;
+      seen.add(k); outs.push(k);
+    });
+    i++;
+  }
+  return shuffle([ansKey,...outs]).map(k=>({v:k,label:fracKeyHTML(k)}));
+}
+// odds options — every distractor is a genuinely different ratio
+function oddsOpts(m,n,extra){
+  const ansKey=rkey(m,n);
+  const cands=(extra||[]).concat([[n,m],[m,m+n],[m+n,m],[m+n,n],[n,m+n],[m+1,n],[m,n+1],[m+2,n]]);
+  const seen=new Set([ansKey]); const outs=[];
+  for(const [a,b] of cands){
+    if(!(a>0&&b>0)) continue;
+    const k=rkey(a,b);
+    if(seen.has(k)) continue;
+    seen.add(k); outs.push(k);
+    if(outs.length===3) break;
+  }
+  let i=1;
+  while(outs.length<3&&i<60){ const k=rkey(m+i,n+2*i); if(!seen.has(k)){seen.add(k);outs.push(k);} i++; }
+  return shuffle([ansKey,...outs]).map(k=>({v:k,label:k.replace(':',' : ')}));
+}
+
+//// ---------- Venn renderer ----------
+function vennSVG(st,la,lb){
+  const W=440,H=210;
+  const onlyA=st.nA-st.nAB, onlyB=st.nB-st.nAB, none=st.nS-st.nU;
+  let s=`<svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+  s+=`<rect x="8" y="8" width="${W-16}" height="${H-16}" rx="10" fill="#fcfbf7" stroke="#c9c5b8" stroke-width="1.2"/>`;
+  s+=`<text x="20" y="28" font-family="Source Code Pro,monospace" font-size="11" fill="#5a6270">S = ${st.nS}</text>`;
+  const disj=st.nAB===0;
+  const c1 = disj?{x:145,y:115,r:56}:{x:170,y:115,r:64};
+  const c2 = disj?{x:300,y:115,r:56}:{x:265,y:115,r:64};
+  s+=`<circle cx="${c1.x}" cy="${c1.y}" r="${c1.r}" fill="#4f46b8" fill-opacity="0.30" stroke="#4f46b8" stroke-width="1.5"/>`;
+  s+=`<circle cx="${c2.x}" cy="${c2.y}" r="${c2.r}" fill="#d99a26" fill-opacity="0.30" stroke="#d99a26" stroke-width="1.5"/>`;
+  const T=(x,y,t,sz,col,w)=>`<text x="${x}" y="${y}" text-anchor="middle" font-family="${w?'Libre Baskerville,serif':'Source Code Pro,monospace'}" font-weight="${w?700:400}" font-size="${sz}" fill="${col}">${t}</text>`;
+  if(disj){
+    s+=T(c1.x,58,'A',12,'#4f46b8')+T(c2.x,58,'B',12,'#d99a26');
+    s+=T(c1.x,122,onlyA,20,'#393196',1)+T(c2.x,122,onlyB,20,'#8a6512',1);
+  } else {
+    s+=T(120,52,'A',12,'#4f46b8')+T(315,52,'B',12,'#d99a26');
+    s+=T(135,122,onlyA,19,'#393196',1);
+    s+=T(217,122,st.nAB,19,'#7a3fa0',1);
+    s+=T(300,122,onlyB,19,'#8a6512',1);
+  }
+  s+=T(392,190,none,15,'#5a6270',1);
+  s+=`<text x="392" y="172" text-anchor="middle" font-family="Source Code Pro,monospace" font-size="9" fill="#5a6270">neither</text>`;
+  s+=`<text x="${W/2}" y="200" text-anchor="middle" font-family="Source Code Pro,monospace" font-size="11" fill="#5a6270">n(A) = ${st.nA} \u00b7 n(B) = ${st.nB} \u00b7 n(A\u2229B) = ${st.nAB} \u00b7 n(A\u222aB) = ${st.nU}</text>`;
+  return s+'</svg>';
+}
+function evRow(p){
+  return `<div class="evrow"><div class="evbox a"><span class="tag">Event A</span>${p.A.l}</div><div class="evbox b"><span class="tag">Event B</span>${p.B.l}</div></div>`;
+}
+
+//// ---------- capstone ----------
+function capstone(id){
+  const p=pick(PAIRS), st=stats(p);
+  const q=document.getElementById('q-'+id), fb=document.getElementById('fb-'+id);
+  const STAGES=['Mutually exclusive?','n(A \u2229 B)','P(A \u222a B)','Odds in favor'];
+  q.innerHTML=`<div class="qprompt">Solve it end to end.
+      <div class="expbox"><span class="lab">Experiment</span>${SPNAME[p.e]}</div>${evRow(p)}</div>
+    <div class="stagebar" id="sb-${id}"></div>
+    <div id="vz-${id}"></div>
+    <div id="cq-${id}"></div>
+    <div id="oz-${id}"></div>`;
+  const sb=document.getElementById('sb-'+id), zone=document.getElementById('oz-'+id);
+  const cq=document.getElementById('cq-'+id), vz=document.getElementById('vz-'+id);
+  function bar(s){ sb.innerHTML=STAGES.map((x,i)=>`<span class="schip ${i<s?'on':(i===s?'now':'')}">${i<s?'\u2713 ':''}${i+1} \u00b7 ${x}</span>`).join(''); }
+  function fail(msg){ fb.className='feedback no'; fb.innerHTML='\u2717 Not quite. <span class="fix">'+msg+'</span>'; onWrong(id); setTimeout(()=>newProblem(id),4000); }
+  function stage(i,promptHTML,options,correct,fixMsg,numStyle,next){
+    bar(i); fb.textContent=''; fb.className='feedback';
+    cq.innerHTML=`<div class="qprompt" style="margin-top:14px">${promptHTML}</div>`;
+    const btns=renderOpts(zone,options,true,numStyle);
+    btns.forEach(b=>b.addEventListener('click',()=>{
+      btns.forEach(x=>x.disabled=true); unbindKeys();
+      if(b.dataset.v===correct){
+        b.classList.add('right');
+        if(next){ fb.className='feedback ok'; fb.textContent='\u2713 Correct. Next step.'; setTimeout(next,800); }
+        else { bar(4); fb.className='feedback ok'; fb.textContent='\u2713 Solved end to end \u2014 overlap, union, and odds.';
+               if(!onCorrect(id)) setTimeout(()=>newProblem(id),1400); }
+      } else {
+        b.classList.add('wrong');
+        const r=btns.find(x=>x.dataset.v===correct); if(r) r.classList.add('right');
+        fail(fixMsg);
+      }
+    }));
+    bindKeys(btns);
+  }
+
+  const s1=()=>stage(0,`<b>Step 1.</b> Are A and B <b>mutually exclusive</b>?`,
+    [{v:'yes',label:'Yes \u2014 they cannot both happen'},{v:'no',label:'No \u2014 they can happen together'}],
+    st.me?'yes':'no',
+    st.me?`No outcome satisfies both, so n(A \u2229 B) = <b>0</b>. They <b>are</b> mutually exclusive.`
+         :`<b>${st.nAB}</b> outcome${st.nAB>1?'s':''} satisfy both events at once, so they are <b>not</b> mutually exclusive.`,
+    false,s2);
+  function s2(){
+    stage(1,`<b>Step 2.</b> How many outcomes are in <b>A \u2229 B</b> (both at once)?`,
+      numOpts(st.nAB,[st.nA,st.nB,st.nAB+1,st.nU],i=>st.nAB+i),
+      String(st.nAB),
+      `Exactly <b>${st.nAB}</b> of the ${st.nS} outcomes satisfy both "${p.A.l}" and "${p.B.l}".`,
+      true,s3);
+  }
+  function s3(){
+    vz.innerHTML=`<div class="venn">${vennSVG(st,p.A.l,p.B.l)}</div>`;
+    stage(2,`<b>Step 3.</b> What is <b>P(A \u222a B)</b>?`,
+      fracOpts(st.nU,st.nS,[[st.nA+st.nB,st.nS]]),
+      fkey(st.nU,st.nS),
+      `n(A \u222a B) = ${st.nA} + ${st.nB} \u2212 ${st.nAB} = <b>${st.nU}</b>, so P = ${st.nU}/${st.nS} = <b>${fkey(st.nU,st.nS)}</b>. ${st.nAB>0?`Forgetting the subtraction would give ${st.nA+st.nB}/${st.nS} \u2014 too big, because ${st.nAB} outcome${st.nAB>1?'s were':' was'} counted twice.`:'The overlap was 0, so there was nothing to subtract.'}`,
+      false,s4);
+  }
+  function s4(){
+    const m=st.nU, n=st.nS-st.nU;
+    stage(3,`<b>Step 4.</b> What are the <b>odds in favor</b> of A \u222a B?`,
+      oddsOpts(m,n,[[m,st.nS]]),
+      rkey(m,n),
+      `${m} favorable, ${n} unfavorable \u2192 odds in favor = ${m} : ${n} = <b>${rkey(m,n)}</b>. Writing ${m} : ${st.nS} would compare favorable to the <i>total</i> \u2014 that is a probability, not odds.`,
+      false,null);
+  }
+  s1();
+}
+
+//// ---------- router ----------
+function newProblem(id){
+  const rung=RUNGS.find(r=>r.id===id);
+  const cont=document.getElementById('practice-'+id);
+  unbindKeys();
+  cont.innerHTML=streakDots(id)+`<div class="qcard" id="q-${id}"></div><div class="feedback" id="fb-${id}"></div>`+masteredNote();
+  const k=rung.kind;
+
+  if(k==='r1'){
+    const s=pick(SOLO), S=SPACE[s.e], nS=S.length, nE=cnt(S,s.f), nC=nS-nE;
+    tapProblem(id,`What is <b>P(E\u2032)</b> \u2014 the probability that E does <b>not</b> happen?
+        <div class="expbox"><span class="lab">Experiment</span>${SPNAME[s.e]}</div>
+        <div class="expbox"><span class="lab">Event E</span><b>${s.l}</b></div>`,
+      'P(E\u2032) = 1 \u2212 P(E).',
+      fracOpts(nC,nS), fkey(nC,nS),
+      `P(E) = ${fkey(nE,nS)}, so P(E\u2032) = 1 \u2212 ${fkey(nE,nS)} = <b>${fkey(nC,nS)}</b>. Equivalently, ${nC} of the ${nS} outcomes are not in E.`,
+      true);
+  }
+  else if(k==='r2'){
+    const p=pick(PAIRS), st=stats(p);
+    tapProblem(id,`How many outcomes are in <b>A \u2229 B</b> \u2014 satisfying <b>both</b> events at once?
+        <div class="expbox"><span class="lab">Experiment</span>${SPNAME[p.e]}</div>${evRow(p)}`,
+      'Not A plus B. Only the outcomes in BOTH.',
+      numOpts(st.nAB,[st.nA,st.nB,st.nA+st.nB,st.nAB+1],i=>st.nAB+i),
+      String(st.nAB),
+      st.nAB===0
+        ? `<b>Zero.</b> No single outcome can be both "${p.A.l}" and "${p.B.l}" \u2014 and 0 is a perfectly good answer. These events are mutually exclusive.`
+        : `<b>${st.nAB}</b> of the ${st.nS} outcomes are both "${p.A.l}" and "${p.B.l}". (n(A) = ${st.nA} and n(B) = ${st.nB}, but those are not what was asked.)`,
+      true,true);
+  }
+  else if(k==='r3'){
+    const p=pick(PAIRS), st=stats(p);
+    tapProblem(id,`Are these events <b>mutually exclusive</b>?
+        <div class="expbox"><span class="lab">Experiment</span>${SPNAME[p.e]}</div>${evRow(p)}`,
+      'On a single trial, could both happen at the same time?',
+      [{v:'yes',label:'Yes \u2014 they cannot both happen (overlap is 0)'},{v:'no',label:'No \u2014 they can happen together'}],
+      st.me?'yes':'no',
+      st.me
+        ? `Nothing satisfies both, so n(A \u2229 B) = <b>0</b>. They <b>are</b> mutually exclusive \u2014 there is nothing to subtract.`
+        : `<b>${st.nAB}</b> outcome${st.nAB>1?'s satisfy':' satisfies'} both at once, so they are <b>not</b> mutually exclusive. You will have to subtract that overlap.`);
+  }
+  else if(k==='r4'){
+    const p=pick(DISJOINT), st=stats(p);
+    tapProblem(id,`These events are <b>mutually exclusive</b>. What is <b>P(A \u222a B)</b>?
+        <div class="expbox"><span class="lab">Experiment</span>${SPNAME[p.e]}</div>${evRow(p)}`,
+      'Nothing was counted twice \u2014 so nothing needs subtracting.',
+      fracOpts(st.nU,st.nS,[[st.nA,st.nS],[st.nB,st.nS]]),
+      fkey(st.nU,st.nS),
+      `n(A) = ${st.nA}, n(B) = ${st.nB}, and the overlap is <b>0</b>. So n(A \u222a B) = ${st.nA} + ${st.nB} = <b>${st.nU}</b>, giving P = ${st.nU}/${st.nS} = <b>${fkey(st.nU,st.nS)}</b>.`,
+      true);
+  }
+  else if(k==='r5'){
+    const p=pick(OVERLAP), st=stats(p);
+    tapProblem(id,`These events <b>overlap</b>. What is <b>P(A \u222a B)</b>?
+        <div class="expbox"><span class="lab">Experiment</span>${SPNAME[p.e]}</div>${evRow(p)}
+        <div class="expbox"><span class="lab">You are given</span>n(A) = <b>${st.nA}</b> \u00b7 n(B) = <b>${st.nB}</b> \u00b7 n(A \u2229 B) = <b>${st.nAB}</b></div>`,
+      'Add \u2014 then subtract what you counted twice.',
+      fracOpts(st.nU,st.nS,[[st.nA+st.nB,st.nS]]),
+      fkey(st.nU,st.nS),
+      `n(A \u222a B) = ${st.nA} + ${st.nB} \u2212 ${st.nAB} = <b>${st.nU}</b>, so P = ${st.nU}/${st.nS} = <b>${fkey(st.nU,st.nS)}</b>. Skipping the subtraction gives ${st.nA+st.nB}/${st.nS} \u2014 too big, because ${st.nAB} outcome${st.nAB>1?'s were':' was'} counted twice.`,
+      true);
+  }
+  else if(k==='r6'){
+    const p=pick(PAIRS), st=stats(p);
+    tapProblem(id,`What is <b>n(A \u222a B)</b>?
+        <div class="expbox"><span class="lab">Experiment</span>${SPNAME[p.e]}</div>${evRow(p)}`,
+      'Decide first: can both happen at once?',
+      numOpts(st.nU,[st.nA+st.nB,st.nA,st.nB,st.nAB],i=>st.nU+i),
+      String(st.nU),
+      st.nAB===0
+        ? `They cannot happen together, so nothing is double-counted: n(A \u222a B) = ${st.nA} + ${st.nB} = <b>${st.nU}</b>.`
+        : `They <b>can</b> happen together \u2014 ${st.nAB} outcome${st.nAB>1?'s':''} overlap. So n(A \u222a B) = ${st.nA} + ${st.nB} \u2212 ${st.nAB} = <b>${st.nU}</b>, not ${st.nA+st.nB}.`,
+      true,true);
+  }
+  else if(k==='r7'){
+    if(Math.random()<0.5){
+      const s=pick(SOLO), S=SPACE[s.e], nS=S.length, nE=cnt(S,s.f), nC=nS-nE;
+      tapProblem(id,`What are the <b>odds in favor</b> of E?
+          <div class="expbox"><span class="lab">Experiment</span>${SPNAME[s.e]}</div>
+          <div class="expbox"><span class="lab">Event E</span><b>${s.l}</b></div>`,
+        'Odds compare favorable to UNfavorable \u2014 not to the total.',
+        oddsOpts(nE,nC,[[nE,nS]]), rkey(nE,nC),
+        `${nE} favorable and ${nC} unfavorable, so the odds in favor are ${nE} : ${nC} = <b>${rkey(nE,nC)}</b>. Writing ${nE} : ${nS} compares favorable to the <i>total</i> \u2014 that is the probability, not the odds.`,
+        true);
+    } else {
+      const b=pick([5,6,7,8,9,11,13]);
+      const a=rnd(1,b-1);
+      const [ra,rb]=red(a,b);
+      tapProblem(id,`Convert this probability to <b>odds in favor</b>.<div class="bignum">P(E) = ${ra}/${rb}</div>`,
+        'If P = a/b, then a are favorable and b \u2212 a are unfavorable.',
+        oddsOpts(ra,rb-ra,[[ra,rb]]), rkey(ra,rb-ra),
+        `Out of ${rb} outcomes, ${ra} are favorable and ${rb-ra} are not. Odds in favor = ${ra} : ${rb-ra} = <b>${rkey(ra,rb-ra)}</b>. The classic error is writing ${ra} : ${rb} \u2014 that is the probability wearing a colon.`,
+        true);
+    }
+  }
+  else if(k==='r8'){
+    let m=rnd(1,9), n=rnd(1,9);
+    const g=gcd(m,n); m=m/g; n=n/g;
+    tapProblem(id,`The odds in favor of E are <b>${m} : ${n}</b>. What is <b>P(E)</b>?<div class="bignum">${m} : ${n}</div>`,
+      'P = m \u00f7 (m + n). The denominator is the SUM.',
+      fracOpts(m,m+n,[[m,n],[n,m+n]]), fkey(m,m+n),
+      `Odds of ${m} : ${n} mean ${m} favorable and ${n} unfavorable \u2014 <b>${m+n}</b> outcomes in total. So P(E) = ${m}/${m+n} = <b>${fkey(m,m+n)}</b> \u2248 ${fdec(m,m+n)}. Writing ${m}/${n} treats the odds as if they were already a fraction.`,
+      true);
+  }
+  else if(k==='r9'){
+    if(Math.random()<0.5){
+      const b=pick([5,6,7,8,9,11]);
+      const a=rnd(1,b-1);
+      const [ra,rb]=red(a,b);
+      tapProblem(id,`What are the odds <b>AGAINST</b> E?<div class="bignum">P(E) = ${ra}/${rb}</div>`,
+        'Against = unfavorable : favorable. The reverse of odds in favor.',
+        oddsOpts(rb-ra,ra,[[ra,rb-ra],[ra,rb]]), rkey(rb-ra,ra),
+        `${ra} favorable, ${rb-ra} unfavorable. Odds <b>against</b> put the unfavorable <i>first</i>: ${rb-ra} : ${ra} = <b>${rkey(rb-ra,ra)}</b>. (The odds <i>in favor</i> would be ${rkey(ra,rb-ra)} \u2014 the same two numbers, flipped.)`,
+        true);
+    } else {
+      let m=rnd(1,9), n=rnd(1,9);
+      const g=gcd(m,n); m=m/g; n=n/g;
+      if(m===n){ m=2; n=5; }
+      tapProblem(id,`The odds <b>in favor</b> of E are ${m} : ${n}. What are the odds <b>AGAINST</b> E?<div class="bignum">in favor: ${m} : ${n}</div>`,
+        'Just flip the ratio.',
+        oddsOpts(n,m,[[m,m+n],[n,m+n]]), rkey(n,m),
+        `Odds against are the same two numbers, <b>reversed</b>: <b>${rkey(n,m)}</b>. Nothing in the arithmetic will catch you if you leave them in the original order \u2014 only reading the question will.`,
+        true);
+    }
+  }
+  else if(k==='r10'){
+    const it=pick(METHOD);
+    tapProblem(id,`Which method does this problem call for? <span style="font-size:.88rem;color:var(--ink-soft)">(Do not compute anything.)</span><div class="sit">${it.t}</div>`,
+      '"Not" \u2192 complement. "Or" \u2192 union \u2014 then ask whether they overlap.',
+      shuffle(Object.keys(M_OPT).map(kk=>({v:kk,label:M_OPT[kk]}))),
+      it.a, it.w);
+  }
+  else if(k==='r11'){ capstone(id); }
+}
+
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  state.unlocked=1; state.mastered=[]; RUNGS.forEach(r=>state.streak[r.id]=0); save();
+  activeId=null; buildLadder(); openRung(1);
+  document.getElementById('ladder').scrollIntoView({behavior:'smooth',block:'start'});
+});
+
+buildLadder();
+openRung(Math.min(state.unlocked,TOP));
+</script>
+</body>
+</html>
