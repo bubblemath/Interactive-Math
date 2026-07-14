@@ -1,0 +1,742 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Binomial Ladder — count the ways, price one way, multiply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Barlow:wght@400;500;600;700&family=Source+Code+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f7f6f1; --card:#ffffff; --ink:#1f242f; --ink-soft:#5a6270;
+    --rule:#e4e1d7; --rule-2:#efebe2;
+    --accent:#4f46b8; --accent-deep:#393196; --accent-tint:#ecebfa;
+    --amber:#d99a26; --amber-tint:#fbf1d8;
+    --green:#2e9e6b; --green-tint:#e6f5ee;
+    --red:#d0584a; --red-tint:#fbe9e6;
+    --serif:'Libre Baskerville',Georgia,serif;
+    --sans:'Barlow',system-ui,sans-serif;
+    --mono:'Source Code Pro',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);color:var(--ink);background:var(--paper);line-height:1.5;-webkit-font-smoothing:antialiased}
+
+  header.top{position:sticky;top:0;z-index:20;background:rgba(247,246,241,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+  .topin{max-width:880px;margin:0 auto;padding:13px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .brand{font-family:var(--mono);font-weight:700;font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-deep)}
+  nav a{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);text-decoration:none;margin-left:18px}
+  nav a:hover{color:var(--accent)}
+
+  .wrap{max-width:880px;margin:0 auto;padding:0 22px}
+
+  .hero{padding:54px 0 8px;text-align:center}
+  .kicker{font-family:var(--mono);font-size:.74rem;letter-spacing:.26em;text-transform:uppercase;color:var(--accent)}
+  h1{font-family:var(--serif);font-weight:700;font-size:clamp(2rem,5.5vw,3.1rem);line-height:1.12;margin:14px auto 0;max-width:20ch}
+  .hero .thesis{font-size:1.1rem;color:var(--ink-soft);max-width:62ch;margin:18px auto 0}
+  .hero .thesis b{color:var(--ink)}
+
+  .sec{padding:46px 0 0}
+  .sec-eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--accent)}
+  .sec h2{font-family:var(--serif);font-weight:700;font-size:1.7rem;margin-top:8px}
+
+  .how{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}
+  .howcard{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:20px}
+  .howcard .n{font-family:var(--mono);font-weight:700;color:var(--accent);font-size:.8rem;letter-spacing:.1em}
+  .howcard h3{font-family:var(--serif);font-size:1.12rem;margin:10px 0 8px}
+  .howcard p{font-size:.94rem;color:var(--ink-soft)}
+  .howcard b{color:var(--ink)}
+
+  .callout{margin-top:22px;display:flex;gap:16px;align-items:flex-start;background:var(--amber-tint);border:1px solid #ecd9a8;border-radius:14px;padding:20px 22px}
+  .callout .hand{font-size:1.6rem;line-height:1}
+  .callout p{font-size:.98rem;color:#6b551f}
+  .callout b{color:#4d3d12}
+  .callout i{color:#4d3d12}
+  .callout code{font-family:var(--mono);font-size:.88em;background:#fff;padding:1px 5px;border-radius:4px;color:#6b551f}
+
+  .onerule{margin-top:22px;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:22px}
+  .onerule .tlab{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+  .bigform{font-family:var(--mono);font-size:1.18rem;font-weight:700;color:var(--accent-deep);text-align:center;background:var(--accent-tint);border-radius:10px;padding:16px;letter-spacing:.02em}
+  .bigform .sm{display:block;font-size:.72rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-top:8px}
+  .onerule .tnote{margin-top:13px;font-size:.92rem;color:var(--ink-soft)}
+  .onerule .tnote b{color:var(--ink)}
+
+  .ladprogress{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:22px;font-family:var(--mono);font-size:.78rem;letter-spacing:.06em;color:var(--ink-soft)}
+  .ladprogress .badges{color:var(--amber)}
+  .resetbtn{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);background:none;border:1px solid var(--rule);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .resetbtn:hover{border-color:var(--accent);color:var(--accent)}
+
+  .ladder{margin-top:16px;display:flex;flex-direction:column;gap:12px}
+  .rung{background:var(--card);border:1px solid var(--rule);border-radius:14px;overflow:hidden;transition:border-color .2s ease,box-shadow .2s ease}
+  .rung.active{border-color:var(--accent);box-shadow:0 6px 22px -10px rgba(79,70,184,.4)}
+  .rung-head{width:100%;display:flex;align-items:center;gap:14px;padding:16px 18px;background:none;border:none;cursor:pointer;text-align:left;font-family:inherit}
+  .rnum{flex:none;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-family:var(--mono);font-weight:700;background:var(--accent-tint);color:var(--accent-deep);font-size:1.02rem}
+  .rung.done .rnum{background:var(--green-tint);color:var(--green)}
+  .rung.cap .rnum{background:var(--amber-tint);color:#a8740f}
+  .rung.cap.done .rnum{background:var(--green-tint);color:var(--green)}
+  .rhead-main{flex:1;min-width:0}
+  .rtitle{font-family:var(--serif);font-weight:700;font-size:1.08rem}
+  .rsub{font-size:.84rem;color:var(--ink-soft)}
+  .rstatus{flex:none;font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);display:flex;align-items:center;gap:8px}
+  .badge{color:var(--green);font-weight:700}
+
+  .rung-body{display:none;padding:0 18px 20px;border-top:1px solid var(--rule-2)}
+  .rung.active .rung-body{display:block}
+  .strategy{background:var(--accent-tint);border-radius:12px;padding:15px 17px;margin:16px 0}
+  .strategy .slabel{font-family:var(--mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+  .strategy p{font-size:.95rem;color:#2f2a6b}
+  .strategy .why{margin-top:9px;font-size:.88rem;color:#403a82;border-top:1px dashed #c3bff0;padding-top:9px}
+  .strategy .why b{color:var(--accent-deep)}
+
+  .streak{display:flex;align-items:center;gap:8px;margin-bottom:14px;font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+  .dots{display:flex;gap:6px}
+  .dot{width:13px;height:13px;border-radius:50%;border:1.5px solid var(--rule);background:#fff;transition:all .2s ease}
+  .dot.on{background:var(--green);border-color:var(--green);box-shadow:0 0 0 3px var(--green-tint)}
+
+  .qcard{border:1px solid var(--rule);border-radius:12px;padding:18px;background:#fcfbf7}
+  .qprompt{font-size:1.06rem;line-height:1.6}
+  .qsub{font-size:.86rem;color:var(--ink-soft);margin-top:10px}
+  .sit{background:#fff;border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:8px;padding:11px 14px;margin-top:10px;font-size:.99rem;line-height:1.55;color:var(--ink)}
+  .given{background:var(--accent-tint);border-radius:8px;padding:11px 15px;margin-top:10px;font-family:var(--mono);font-size:1rem;color:var(--accent-deep);font-weight:600;text-align:center;letter-spacing:.04em}
+  .bignum{background:#fff;border:1px solid var(--rule);border-left:3px solid var(--amber);border-radius:8px;padding:14px 16px;margin-top:10px;font-family:var(--mono);font-size:1.3rem;font-weight:700;color:var(--ink);text-align:center}
+  .seq{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  .sc{width:40px;height:40px;border-radius:8px;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:1.05rem;border:1.5px solid}
+  .sc.s{background:var(--accent-tint);border-color:var(--accent);color:var(--accent-deep)}
+  .sc.f{background:var(--amber-tint);border-color:var(--amber);color:#8a6512}
+  .seqlab{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-top:10px}
+
+  .stagebar{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+  .schip{font-family:var(--mono);font-size:.6rem;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--rule);border-radius:20px;padding:3px 9px;color:var(--ink-soft)}
+  .schip.now{background:var(--accent-tint);border-color:var(--accent);color:var(--accent);font-weight:600}
+  .schip.on{background:var(--green-tint);border-color:var(--green);color:var(--green);font-weight:600}
+
+  .opts{display:grid;grid-template-columns:1fr;gap:10px;margin-top:16px}
+  .opts.two{grid-template-columns:1fr 1fr}
+  .opt{font-family:var(--sans);font-size:.98rem;font-weight:500;color:var(--ink);background:#fff;border:1.5px solid var(--rule);border-radius:10px;padding:13px 15px;cursor:pointer;transition:all .15s ease;text-align:left;display:flex;align-items:center;gap:10px}
+  .opt:hover:not(:disabled){border-color:var(--accent);background:var(--accent-tint)}
+  .opt:disabled{cursor:default}
+  .opt .key{flex:none;font-family:var(--mono);font-size:.7rem;font-weight:700;width:20px;height:20px;border-radius:5px;display:grid;place-items:center;background:var(--rule-2);color:var(--ink-soft)}
+  .opt:hover:not(:disabled) .key{background:#fff;color:var(--accent)}
+  .opt.right{border-color:var(--green);background:var(--green-tint);color:var(--green)}
+  .opt.right .key{background:#fff;color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:var(--red-tint);color:var(--red)}
+  .opt.wrong .key{background:#fff;color:var(--red)}
+  .opt.num{justify-content:center;font-family:var(--mono);font-weight:700;font-size:1.08rem}
+  .kbhint{font-family:var(--mono);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);margin-top:11px;text-align:right}
+
+  .feedback{margin-top:14px;font-size:.95rem;min-height:1.2em;font-weight:500}
+  .feedback.ok{color:var(--green)}
+  .feedback.no{color:var(--red)}
+  .feedback .fix{color:var(--ink-soft);font-weight:400}
+  .feedback .fix b{color:var(--ink)}
+
+  .mastered-note{margin-top:14px;background:var(--green-tint);border:1px solid #bfe6d2;border-radius:12px;padding:16px;display:none}
+  .mastered-note.show{display:block}
+  .mastered-note b{color:var(--green)}
+  .mastered-note .next{font-family:var(--mono);font-size:.85rem;color:var(--ink-soft);margin-top:6px}
+
+  .why-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}
+  .whycard{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:20px}
+  .whycard h3{font-family:var(--serif);font-size:1.08rem;color:var(--accent-deep);margin-bottom:8px}
+  .whycard p{font-size:.92rem;color:var(--ink-soft)}
+  .whycard code{font-family:var(--mono);font-size:.86em;background:var(--accent-tint);color:var(--accent-deep);padding:1px 5px;border-radius:4px}
+  .closing{margin-top:20px;font-size:1rem;color:var(--ink-soft);max-width:66ch}
+
+  footer{margin-top:54px;padding:26px 0 60px;border-top:1px solid var(--rule);text-align:center;font-family:var(--mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft)}
+
+  @media (max-width:680px){ .how,.why-cards{grid-template-columns:1fr} .opts.two{grid-template-columns:1fr} nav{display:none} .bigform{font-size:.95rem} .sc{width:34px;height:34px;font-size:.9rem} }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="topin">
+    <div class="brand">▮ The Binomial Ladder</div>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="kicker">Binomial fluency · count the ways, price one way</div>
+    <h1>Every winning sequence costs exactly the same.</h1>
+    <p class="thesis">That is the whole formula. <b>S-S-F</b> and <b>F-S-S</b> are different sequences, but both are worth <b>p·p·q</b> — the same product, reshuffled. So you never price them one at a time: you <b>count</b> how many there are, <b>price</b> a single one, and multiply. <code>C(n,x)</code> does the counting. <code>pˣq^(n−x)</code> does the pricing. Nothing else is happening.</p>
+  </section>
+
+  <section class="sec" id="how">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Count the ways. Price one way. Multiply.</h2>
+    <div class="how">
+      <div class="howcard">
+        <div class="n">01</div>
+        <h3>Start anywhere</h3>
+        <p>Eleven rungs run from "is this even binomial?" up to a full five-stage analysis. Nothing is locked — climb in order, or jump to the skill you need.</p>
+      </div>
+      <div class="howcard">
+        <div class="n">02</div>
+        <h3>Earn each badge</h3>
+        <p>Get <b>four in a row</b> on a rung to earn its badge. Answer with the mouse or hit <b>1–4</b> on the keyboard. Probabilities are given to <b>4 decimal places</b>, matching the Explorer.</p>
+      </div>
+      <div class="howcard">
+        <div class="n">03</div>
+        <h3>The one question</h3>
+        <p>Before any formula: <b>does p stay the same on every trial?</b> Sample <i>with</i> replacement and it does. Sample <i>without</i>, and it doesn't — and nothing on this page applies.</p>
+      </div>
+    </div>
+
+    <div class="onerule">
+      <div class="tlab">The formula, in two halves</div>
+      <div class="bigform">P(X = x) = C(n, x) · pˣ · q^(n−x)<span class="sm">count the ways &nbsp;×&nbsp; price one way</span></div>
+      <p class="tnote">The left half is <b>Lesson 10</b> — a combination, counting how many arrangements of x successes fit into n trials. The right half is <b>Lesson 9</b> — independent events multiplied together, giving the probability of <i>one particular</i> arrangement. The only new idea in this lesson is that you are allowed to <b>multiply them</b> — and you are allowed because every one of those arrangements has the <b>same</b> probability.</p>
+    </div>
+
+    <div class="callout">
+      <div class="hand">✋</div>
+      <p><b>"Success" is just the thing you're counting.</b> It does not have to be good. If 29% of stores charge you incorrectly and you want the probability that <i>some</i> store overcharges you, then <b>success = being overcharged</b> and <code>p = 0.29</code>. Students lose more marks to naming p backwards than to any arithmetic in this lesson.</p>
+    </div>
+  </section>
+
+  <section class="sec" id="ladder">
+    <div class="sec-eyebrow">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="ladprogress">
+      <span><span id="progText">Open practice — start on any rung</span> · <span class="badges" id="badgeText">0 of 11 badges earned</span></span>
+      <button class="resetbtn" id="resetBtn">Reset progress</button>
+    </div>
+    <div class="ladder" id="ladder"></div>
+  </section>
+
+  <section class="sec" id="why">
+    <div class="sec-eyebrow">Why the binomial matters</div>
+    <h2>The distribution that runs the world</h2>
+    <div class="why-cards">
+      <div class="whycard">
+        <h3>It is everywhere</h3>
+        <p>Defect rates, poll responses, drug trials, click-through rates, quality control. Anything repeated a fixed number of times with a yes/no answer is binomial — which is most of applied statistics.</p>
+      </div>
+      <div class="whycard">
+        <h3>The complement does the heavy lifting</h3>
+        <p><code>P(at least one)</code> means adding up every case from 1 to n. Or you compute <code>1 − P(none)</code> — a single term. Same answer, a tenth of the work.</p>
+      </div>
+      <div class="whycard">
+        <h3>μ and σ turn it into judgment</h3>
+        <p>Expecting 5 and seeing 9 — is that strange? Only <code>μ ± 2σ</code> can tell you. The rule you learned back in Variation is what makes this distribution <i>useful</i>.</p>
+      </div>
+    </div>
+    <p class="closing">The binomial distribution is where the whole course finally converges. It needs the combinations from counting, the independent multiplication from conditional probability, the complement rule from unions, and the two-standard-deviation rule from variation — all in a single formula, all at once. That is not a coincidence and it is not a coincidence that it comes last. Everything you have been learning was building toward the ability to answer one very practical question: <b>I expected this many. I saw that many. Should I be surprised?</b></p>
+  </section>
+
+</div>
+
+<footer>The Binomial Ladder · count the ways × price one way · at least one = 1 − P(none)</footer>
+
+<script>
+//// ---------- helpers ----------
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function fact(n){let r=1;for(let i=2;i<=n;i++) r*=i; return r;}
+function comb(n,r){if(r<0||r>n) return 0; let x=1; for(let i=0;i<r;i++) x=x*(n-i)/(i+1); return Math.round(x);}
+function binom(n,x,p){return comb(n,x)*Math.pow(p,x)*Math.pow(1-p,n-x);}
+function cumLE(n,p,k){let s=0;for(let i=0;i<=k;i++) s+=binom(n,i,p); return s;}
+function cumGE(n,p,k){return 1-cumLE(n,p,k-1);}
+function r4(x){return (Math.round(x*10000)/10000).toFixed(4);}
+function r2(x){return (Math.round(x*100)/100).toFixed(2);}
+function pct(p){return (Math.round(p*100))+'%';}
+const TOP=11;
+
+//// ---------- option builder ----------
+function optsF(ans,cands,fmt,fallback,valid){
+  valid=valid||(v=>isFinite(v));
+  const seen=new Set([fmt(ans)]); const outs=[];
+  for(const c of cands){
+    if(c===null||c===undefined||!isFinite(c)||!valid(c)) continue;
+    const s=fmt(c);
+    if(seen.has(s)) continue;
+    seen.add(s); outs.push(c);
+    if(outs.length===3) break;
+  }
+  let i=1;
+  while(outs.length<3&&i<300){
+    const c=fallback(i);
+    if(c!==null&&c!==undefined&&isFinite(c)&&valid(c)){
+      const s=fmt(c);
+      if(!seen.has(s)){ seen.add(s); outs.push(c); }
+    }
+    i++;
+  }
+  return shuffle([ans,...outs]).map(v=>({v:fmt(v),label:fmt(v)}));
+}
+const inP=v=>v>0&&v<1;                      // a legal, displayable probability
+const pFall=ans=>i=>{ const d=0.0173*Math.ceil(i/2); const v=(i%2)?ans+d:ans-d; return (v>0.00005&&v<0.99995)?v:null; };
+const posFall=ans=>i=>{ const d=0.17*Math.ceil(i/2); const v=(i%2)?ans+d:ans-d; return v>0?v:null; };
+function intOpts(ans,cands,fallback){
+  const seen=new Set([String(ans)]); const outs=[];
+  for(const c of cands){ if(!Number.isInteger(c)||c<0) continue; const s=String(c); if(seen.has(s)) continue; seen.add(s); outs.push(c); if(outs.length===3) break; }
+  let i=1;
+  while(outs.length<3&&i<120){ const c=fallback(i); if(Number.isInteger(c)&&c>=0&&!seen.has(String(c))){seen.add(String(c));outs.push(c);} i++; }
+  return shuffle([ans,...outs]).map(v=>({v:String(v),label:String(v)}));
+}
+
+//// ---------- scenario bank ----------
+const BSCEN=[
+  {p:0.5, setup:n=>`A fair coin is flipped <b>${n}</b> times.`, sN:'heads', s1:'lands heads'},
+  {p:0.15,setup:n=>`About <b>15%</b> of people have blue eyes. A researcher selects <b>${n}</b> people at random.`, sN:'have blue eyes', s1:'has blue eyes'},
+  {p:0.29,setup:n=>`The FTC reports that <b>29%</b> of stores with checkout scanners charge customers incorrectly. You shop at <b>${n}</b> stores.`, sN:'charge incorrectly', s1:'charges incorrectly'},
+  {p:0.8, setup:n=>`A player makes <b>80%</b> of her free throws. She takes <b>${n}</b> shots.`, sN:'are made', s1:'is made'},
+  {p:0.1, setup:n=>`<b>10%</b> of a factory's bulbs are defective. <b>${n}</b> bulbs are drawn at random, with replacement.`, sN:'are defective', s1:'is defective'},
+  {p:0.25,setup:n=>`A student guesses at random on <b>${n}</b> multiple-choice questions, each with four options.`, sN:'are answered correctly', s1:'is answered correctly'},
+  {p:0.6, setup:n=>`<b>60%</b> of adults in a region are vaccinated. <b>${n}</b> adults are sampled at random.`, sN:'are vaccinated', s1:'is vaccinated'},
+  {p:0.75,setup:n=>`A company claims <b>75%</b> of its seeds germinate. <b>${n}</b> seeds are planted.`, sN:'germinate', s1:'germinates'},
+  {p:0.3, setup:n=>`The chance of rain on any April day is <b>30%</b>, independently of other days. <b>${n}</b> days are chosen.`, sN:'are rainy', s1:'is rainy'},
+  {p:0.4, setup:n=>`<b>40%</b> of customers use a loyalty card. <b>${n}</b> customers are observed at random.`, sN:'use a loyalty card', s1:'uses a loyalty card'}
+];
+// pick n and x so the answer is displayable at 4 dp and not degenerate
+function genB(lo,hi){
+  for(let t=0;t<500;t++){
+    const sc=pick(BSCEN), n=rnd(lo||3,hi||8), x=rnd(0,n);
+    const pr=binom(n,x,sc.p);
+    if(pr<0.0006||pr>0.9994) continue;
+    return {sc,n,x,p:sc.p,q:1-sc.p,pr};
+  }
+  const sc=BSCEN[0]; return {sc,n:5,x:2,p:0.5,q:0.5,pr:binom(5,2,0.5)};
+}
+// pick n and x so a SINGLE sequence is displayable
+function genSeq(){
+  for(let t=0;t<500;t++){
+    const sc=pick(BSCEN), n=rnd(3,6), x=rnd(1,n-1);
+    const one=Math.pow(sc.p,x)*Math.pow(1-sc.p,n-x);
+    if(one<0.0006||one>0.9994) continue;
+    const arr=shuffle(Array.from({length:n},(_,i)=>i<x?'S':'F'));
+    return {sc,n,x,p:sc.p,q:1-sc.p,one,arr};
+  }
+  return {sc:BSCEN[0],n:4,x:2,p:0.5,q:0.5,one:0.0625,arr:['S','F','S','F']};
+}
+
+//// ---------- is it binomial? (rung 1) ----------
+const BINQ=[
+  {t:'A fair coin is flipped 20 times; you count the number of heads.',v:'yes',
+   w:'Fixed n = 20, two outcomes (heads / tails), and p = 0.5 on every single flip. <b>Binomial.</b>'},
+  {t:'Five cards are dealt from a deck <b>without replacement</b>; you count the hearts.',v:'no',
+   w:'Without replacement, p <b>changes</b> after every card (13/52, then 12/51, \u2026). The trials are not independent. <b>Not binomial.</b>'},
+  {t:'A die is rolled 10 times; you record the number showing each time.',v:'no',
+   w:'There are <b>six</b> outcomes, not two. <b>Not binomial.</b> (Counting "how many 6s" <i>would</i> be \u2014 that collapses it to 6 / not-6.)'},
+  {t:'A die is rolled 10 times; you count how many times it shows a 6.',v:'yes',
+   w:'Fixed n = 10, two outcomes (6 / not a 6), and p = 1/6 on every roll. <b>Binomial.</b>'},
+  {t:'You flip a coin until the first head appears, and count how many flips it took.',v:'no',
+   w:'The number of trials is <b>not fixed in advance</b> \u2014 you stop when the head arrives. <b>Not binomial.</b>'},
+  {t:'8% of a large population is left-handed. 25 people are sampled at random; you count the left-handers.',v:'yes',
+   w:'Fixed n = 25, two outcomes, and p stays essentially 0.08 because the population is large. <b>Binomial.</b>'},
+  {t:'Three marbles are drawn from a jar of ten <b>without replacement</b>; you count the reds.',v:'no',
+   w:'The jar changes with every draw, so p is not constant. <b>Not binomial.</b>'},
+  {t:'Three marbles are drawn from a jar <b>with replacement</b>; you count the reds.',v:'yes',
+   w:'The marble goes back, so p is identical on every draw. <b>Binomial.</b>'},
+  {t:'A student answers 12 multiple-choice questions purely by guessing; you count the correct answers.',v:'yes',
+   w:'Fixed n = 12, correct / incorrect, and p = 0.25 every time. <b>Binomial.</b>'},
+  {t:'You survey people until you find five who own a car, and record how many you had to ask.',v:'no',
+   w:'n is <b>not fixed</b> \u2014 it depends on how the survey goes. <b>Not binomial.</b>'},
+  {t:'An inspector measures the exact weight of 20 boxes.',v:'no',
+   w:'Weight is a measurement, not a success / failure. There are <b>not two outcomes</b>. <b>Not binomial.</b>'},
+  {t:'A treatment works 70% of the time. It is given to 15 unrelated patients; you count the successes.',v:'yes',
+   w:'Fixed n = 15, works / does not, and p = 0.7 for each unrelated patient. <b>Binomial.</b>'}
+];
+
+//// ---------- rungs ----------
+const RUNGS=[
+  {id:1,kind:'r1',title:'Is It Binomial?',sub:'Fixed n \u00b7 two outcomes \u00b7 constant p',
+   strat:'Three conditions, all required. <b>1.</b> The number of trials <b>n is fixed in advance</b> \u2014 not "keep going until something happens." <b>2.</b> Each trial has exactly <b>two outcomes</b>, success or failure. <b>3.</b> <b>p stays constant</b>, which means the trials are independent. Sampling <i>with</i> replacement keeps p constant; sampling <i>without</i> does not.',
+   why:'Everything else on this ladder is worthless if the setup is not binomial. Applying the formula to a without-replacement problem gives a clean, confident, wrong answer.'},
+  {id:2,kind:'r2',title:'Name n, p and x',sub:'Before you compute anything',
+   strat:'<b>n</b> is how many trials. <b>p</b> is the probability of a <i>success</i> on one trial. <b>x</b> is how many successes you are asking about. And "success" simply means <b>the thing being counted</b> \u2014 it does not have to be a good thing. If 29% of stores overcharge and you are counting overcharges, then <b>p = 0.29</b>, not 0.71.',
+   why:'More marks are lost here than anywhere else in the lesson. Naming p backwards produces a flawless computation of the wrong quantity, and nothing downstream will warn you.'},
+  {id:3,kind:'r3',title:'Count the Ways',sub:'C(n, x) \u00b7 straight from Lesson 10',
+   strat:'How many different <b>orders</b> could x successes arrive in, among n trials? That is exactly <b>C(n, x)</b> \u2014 the combination. Two successes in three trials can happen as SSF, SFS or FSS: C(3,2) = <b>3</b> ways. Order of arrival does not change the outcome, so it is a combination, never a permutation.',
+   why:'This is the C(n, x) sitting at the front of the binomial formula. It is not decoration \u2014 it is the reason you do not have to list every sequence by hand.'},
+  {id:4,kind:'r4',title:'Price One Way',sub:'p\u02e3 \u00b7 q\u207f\u207b\u02e3 \u00b7 the cost of a single sequence',
+   strat:'Take <b>one specific sequence</b>, like S-S-F-S-F. The trials are independent, so multiply straight along: p \u00d7 p \u00d7 q \u00d7 p \u00d7 q = <b>p\u00b3q\u00b2</b>. That is it \u2014 <b>no combination here</b>. You are pricing exactly one arrangement, not counting them.',
+   why:'Here is the fact the whole formula rests on: <b>every</b> sequence with x successes has this same price, because multiplication does not care about order. That is why you can count them and multiply once.'},
+  {id:5,kind:'r5',title:'P(X = x)',sub:'Count \u00d7 price \u00b7 the whole formula',
+   strat:'Put the halves together: <b>P(X = x) = C(n, x) \u00b7 p\u02e3 \u00b7 q\u207f\u207b\u02e3</b>. Count the arrangements, price one of them, multiply. Round to <b>4 decimal places</b>.',
+   why:'Forgetting C(n, x) gives you the probability of <i>one particular</i> sequence rather than of <i>any</i> sequence with x successes \u2014 an answer that is always far too small.'},
+  {id:6,kind:'r6',title:'At Least One',sub:'1 \u2212 P(X = 0) \u00b7 the complement',
+   strat:'"At least one" means 1, or 2, or 3, \u2026 all the way to n. Adding all of those is miserable. So flip it: <b>P(X \u2265 1) = 1 \u2212 P(X = 0) = 1 \u2212 q\u207f</b>. One term instead of n. Always do this.',
+   why:'It is the same complement trick from the union lesson, and it is the single biggest labour-saver in binomial problems. The classic error is stopping at q\u207f \u2014 which is the probability of <i>none</i>, the exact opposite of what was asked.'},
+  {id:7,kind:'r7',title:'At Least k, At Most k',sub:'Which terms do you actually need?',
+   strat:'<b>At most k</b> means 0, 1, \u2026, up to k \u2014 add those terms. <b>At least k</b> means k, k+1, \u2026, up to n \u2014 and it is usually faster as <b>1 \u2212 P(X \u2264 k \u2212 1)</b>. Decide which list of terms you need <i>before</i> you touch a calculator, and count whether the direct sum or the complement is shorter.',
+   why:'Every mark lost here is an off-by-one: forgetting that "at most 2" includes 0, or that "at least 2" excludes 1. The words decide the terms, and the terms decide the answer.'},
+  {id:8,kind:'r8',title:'The Mean',sub:'\u03bc = np \u00b7 how many you expect',
+   strat:'<b>\u03bc = np</b>. That is all. Flip a coin 40 times and you expect 40 \u00d7 0.5 = <b>20</b> heads. It need not be a whole number \u2014 an expected value of 3.75 successes is perfectly ordinary, and simply means "in the long run, 3.75 on average."',
+   why:'The mean is what makes a binomial useful rather than merely computable. It is the number you compare reality against \u2014 and comparing is the entire point of statistics.'},
+  {id:9,kind:'r9',title:'The Standard Deviation',sub:'\u03c3 = \u221a(npq)',
+   strat:'<b>\u03c3 = \u221a(npq)</b> \u2014 multiply all three, <i>then</i> take the square root. Two errors to avoid: leaving out the <b>q</b>, and forgetting the <b>square root</b> (that would leave you with the variance, npq).',
+   why:'Same story as the Variation lesson: the variance lives in squared units and means nothing on its own. The square root brings it back to "number of successes", which is a thing you can actually reason about.'},
+  {id:10,kind:'r10',title:'Is That Unusual?',sub:'\u03bc \u00b1 2\u03c3 \u00b7 an old rule, a new home',
+   strat:'Build the two boundaries \u2014 <b>\u03bc \u2212 2\u03c3</b> and <b>\u03bc + 2\u03c3</b> \u2014 and check whether the observed count falls <b>outside</b> them. If it does, it is <b>unusual</b>. This is exactly the rule from the Variation lesson; only the source of \u03bc and \u03c3 has changed.',
+   why:'This is what the binomial is <i>for</i>. "I expected 5 and I saw 9 \u2014 is that strange?" is the question that catches loaded dice, broken machines and drugs that actually work. \u03bc \u00b1 2\u03c3 is how you answer it.'},
+  {id:11,kind:'r11',title:'The Full Analysis',sub:'The capstone \u00b7 five gated stages',
+   strat:'One scenario, start to finish. <b>Is it binomial?</b> \u2192 <b>what is p?</b> \u2192 <b>C(n, x)</b> \u2192 <b>P(X = x)</b> \u2192 <b>is the count unusual?</b> Each stage must be right before the next opens, so a mis-named p cannot quietly wreck everything after it.',
+   why:'This is the exam question and the real one. It needs a combination from Lesson 10, independent multiplication from Lesson 9, and the two-sigma rule from Lesson 5 \u2014 which is why this lesson comes last.'}
+];
+
+//// ---------- state ----------
+const MASTER_N=4;
+let state={unlocked:1,mastered:[],streak:{}};
+RUNGS.forEach(r=>state.streak[r.id]=0);
+try{const s=JSON.parse(localStorage.getItem('binomLadder')||'null'); if(s){state.unlocked=s.unlocked||1;state.mastered=s.mastered||[];}}catch(e){}
+function save(){try{localStorage.setItem('binomLadder',JSON.stringify({unlocked:state.unlocked,mastered:state.mastered}));}catch(e){}}
+function isMastered(id){return state.mastered.includes(id);}
+
+const ladderEl=document.getElementById('ladder');
+function buildLadder(){
+  ladderEl.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=isMastered(r.id);
+    const div=document.createElement('div');
+    div.className='rung'+(done?' done':'')+(r.id===TOP?' cap':''); div.dataset.id=r.id;
+    div.innerHTML=`
+      <button class="rung-head">
+        <span class="rnum">${done?'\u2713':r.id}</span>
+        <span class="rhead-main"><span class="rtitle">${r.title}</span><br><span class="rsub">${r.sub}</span></span>
+        <span class="rstatus">${done?'<span class="badge">\u2713 Badge earned</span>':'<span>Ready</span>'}</span>
+      </button>
+      <div class="rung-body">
+        <div class="strategy"><div class="slabel">Strategy</div><p>${r.strat}</p><div class="why"><b>Why it matters:</b> ${r.why}</div></div>
+        <div class="practice" id="practice-${r.id}"></div>
+      </div>`;
+    div.querySelector('.rung-head').addEventListener('click',()=>openRung(r.id));
+    ladderEl.appendChild(div);
+  });
+  updateProgress();
+}
+function updateProgress(){
+  document.getElementById('progText').textContent='Open practice — start on any rung';
+  document.getElementById('badgeText').textContent=state.mastered.length+' of '+TOP+' badges earned';
+}
+let activeId=null;
+function openRung(id){
+  document.querySelectorAll('.rung').forEach(r=>r.classList.remove('active'));
+  const el=[...document.querySelectorAll('.rung')].find(r=>+r.dataset.id===id);
+  el.classList.add('active'); activeId=id; newProblem(id);
+}
+function streakDots(id){let d='';for(let i=0;i<MASTER_N;i++)d+=`<span class="dot ${i<state.streak[id]?'on':''}"></span>`;return `<div class="streak"><span>Streak to badge</span><div class="dots">${d}</div><span>${state.streak[id]}/${MASTER_N}</span></div>`;}
+function masteredNote(){return `<div class="mastered-note" id="mnote"><b>\u2605 Badge earned \u2014 four in a row!</b><div class="next" id="mnext"></div></div>`;}
+function refreshStreak(id){const c=document.getElementById('practice-'+id);const s=c.querySelector('.streak');if(s)s.outerHTML=streakDots(id);}
+function onWrong(id){state.streak[id]=0;refreshStreak(id);}
+function buildLadderPreserve(){const keep=activeId;buildLadder();if(keep){const el=[...document.querySelectorAll('.rung')].find(r=>+r.dataset.id===keep);if(el)el.classList.add('active');}}
+function onCorrect(id){
+  state.streak[id]++;
+  if(state.streak[id]>=MASTER_N){
+    if(!isMastered(id)) state.mastered.push(id);
+    if(state.unlocked<Math.min(id+1,TOP)) state.unlocked=Math.min(id+1,TOP);
+    save(); refreshStreak(id);
+    document.getElementById('mnote').classList.add('show');
+    const rungEl=[...document.querySelectorAll('.rung')].find(r=>+r.dataset.id===id);
+    rungEl.classList.add('done'); rungEl.querySelector('.rnum').textContent='\u2713';
+    rungEl.querySelector('.rstatus').innerHTML='<span class="badge">\u2713 Badge earned</span>';
+    const nxt=document.getElementById('mnext');
+    if(id<TOP){
+      nxt.innerHTML=`Next up: Rung ${id+1}. <a href="#" id="goNext" style="color:var(--accent);font-weight:600">Climb to it \u2192</a>`;
+      buildLadderPreserve();
+      setTimeout(()=>{const g=document.getElementById('goNext'); if(g)g.addEventListener('click',e=>{e.preventDefault();openRung(id+1);document.getElementById('practice-'+(id+1)).scrollIntoView({behavior:'smooth',block:'center'});});},0);
+    } else { nxt.textContent='You\'ve topped the ladder \u2014 conditions, formula, complements, and the judgment to say whether a result is strange. That is the binomial, complete.'; buildLadderPreserve(); }
+    updateProgress(); return true;
+  }
+  refreshStreak(id); return false;
+}
+
+let keyHandler=null;
+function bindKeys(btns){
+  if(keyHandler) document.removeEventListener('keydown',keyHandler);
+  keyHandler=function(e){
+    const n=parseInt(e.key,10);
+    if(!isNaN(n)&&n>=1&&n<=btns.length){const b=btns[n-1]; if(b&&!b.disabled){e.preventDefault();b.click();}}
+  };
+  document.addEventListener('keydown',keyHandler);
+}
+function unbindKeys(){if(keyHandler){document.removeEventListener('keydown',keyHandler);keyHandler=null;}}
+
+function renderOpts(target,options,twoCol,numStyle){
+  target.innerHTML=`<div class="opts${twoCol?' two':''}">${options.map((o,i)=>`<button class="opt${numStyle?' num':''}" data-v="${o.v}"><span class="key">${i+1}</span><span>${o.label}</span></button>`).join('')}</div><div class="kbhint">Tip \u00b7 press 1\u2013${options.length}</div>`;
+  return [...target.querySelectorAll('.opt')];
+}
+function tapProblem(id,promptHTML,subHTML,options,correctVal,fixMsg,twoCol,numStyle){
+  const q=document.getElementById('q-'+id), fb=document.getElementById('fb-'+id);
+  q.innerHTML=`<div class="qprompt">${promptHTML}</div>${subHTML?`<div class="qsub">${subHTML}</div>`:''}<div id="oz-${id}"></div>`;
+  const btns=renderOpts(document.getElementById('oz-'+id),options,twoCol,numStyle);
+  btns.forEach(b=>b.addEventListener('click',()=>{
+    btns.forEach(x=>x.disabled=true); unbindKeys();
+    if(b.dataset.v===correctVal){
+      b.classList.add('right'); fb.className='feedback ok'; fb.textContent='\u2713 Correct.';
+      if(!onCorrect(id)) setTimeout(()=>newProblem(id),750);
+    } else {
+      b.classList.add('wrong');
+      const r=btns.find(x=>x.dataset.v===correctVal); if(r) r.classList.add('right');
+      fb.className='feedback no'; fb.innerHTML='\u2717 Not quite. <span class="fix">'+fixMsg+'</span>';
+      onWrong(id); setTimeout(()=>newProblem(id),3600);
+    }
+  }));
+  bindKeys(btns);
+}
+function seqHTML(arr){
+  return `<div class="seq">${arr.map(c=>`<div class="sc ${c==='S'?'s':'f'}">${c}</div>`).join('')}</div>`;
+}
+// generate a value that is / is not outside mu +/- 2 sigma, avoiding the boundary
+function genUnusual(){
+  for(let t=0;t<600;t++){
+    const sc=pick(BSCEN), n=rnd(5,12);
+    const mu=n*sc.p, sd=Math.sqrt(n*sc.p*(1-sc.p));
+    if(sd<0.6) continue;
+    const lo=mu-2*sd, hi=mu+2*sd;
+    const inside=[], outside=[];
+    for(let v=0;v<=n;v++){
+      const d=Math.min(Math.abs(v-lo),Math.abs(v-hi));
+      if(d<0.12) continue;                 // never sit on the fence
+      (v<lo||v>hi) ? outside.push(v) : inside.push(v);
+    }
+    if(!outside.length||!inside.length) continue;
+    const want=Math.random()<0.5;
+    const x=pick(want?outside:inside);
+    return {sc,n,p:sc.p,mu,sd,lo,hi,x,unusual:(x<lo||x>hi)};
+  }
+  return {sc:BSCEN[0],n:10,p:0.5,mu:5,sd:Math.sqrt(2.5),lo:5-2*Math.sqrt(2.5),hi:5+2*Math.sqrt(2.5),x:9,unusual:true};
+}
+
+//// ---------- capstone ----------
+function capstone(id){
+  const g=genUnusual();
+  const n=g.n, p=g.p, sc=g.sc;
+  let x=g.x; if(x===0) x=1;
+  const pr=binom(n,x,p), C=comb(n,x);
+  const mu=n*p, sd=Math.sqrt(n*p*(1-p));
+  const unusual = x<mu-2*sd || x>mu+2*sd;
+  const q=document.getElementById('q-'+id), fb=document.getElementById('fb-'+id);
+  const STAGES=['Binomial?','p','C(n,x)','P(X = x)','Unusual?'];
+  q.innerHTML=`<div class="qprompt">The full analysis \u2014 five steps, one scenario.
+      <div class="sit">${sc.setup(n)} You observe that <b>${x}</b> ${sc.sN}.</div></div>
+    <div class="stagebar" id="sb-${id}"></div>
+    <div id="cq-${id}"></div>
+    <div id="oz-${id}"></div>`;
+  const sb=document.getElementById('sb-'+id), zone=document.getElementById('oz-'+id), cq=document.getElementById('cq-'+id);
+  function bar(s){ sb.innerHTML=STAGES.map((t,i)=>`<span class="schip ${i<s?'on':(i===s?'now':'')}">${i<s?'\u2713 ':''}${i+1} \u00b7 ${t}</span>`).join(''); }
+  function fail(msg){ fb.className='feedback no'; fb.innerHTML='\u2717 Not quite. <span class="fix">'+msg+'</span>'; onWrong(id); setTimeout(()=>newProblem(id),4600); }
+  function stage(i,promptHTML,options,correct,fixMsg,numStyle,next){
+    bar(i); fb.textContent=''; fb.className='feedback';
+    cq.innerHTML=`<div class="qprompt" style="margin-top:14px">${promptHTML}</div>`;
+    const btns=renderOpts(zone,options,true,numStyle);
+    btns.forEach(b=>b.addEventListener('click',()=>{
+      btns.forEach(z=>z.disabled=true); unbindKeys();
+      if(b.dataset.v===correct){
+        b.classList.add('right');
+        if(next){ fb.className='feedback ok'; fb.textContent='\u2713 Correct. Next step.'; setTimeout(next,850); }
+        else { bar(5); fb.className='feedback ok'; fb.textContent='\u2713 Analysed end to end \u2014 conditions, formula, and judgment.';
+               if(!onCorrect(id)) setTimeout(()=>newProblem(id),1700); }
+      } else {
+        b.classList.add('wrong');
+        const rr=btns.find(z=>z.dataset.v===correct); if(rr) rr.classList.add('right');
+        fail(fixMsg);
+      }
+    }));
+    bindKeys(btns);
+  }
+  const s1=()=>stage(0,`<b>Step 1.</b> Is this a binomial experiment?`,
+    [{v:'y',label:'Yes \u2014 fixed n, two outcomes, constant p'},{v:'n',label:'No \u2014 one of the three conditions fails'}],
+    'y',
+    `Fixed n = ${n}, each trial is a success or a failure, and p stays at ${p} throughout. <b>Binomial.</b>`,
+    false,s2);
+  function s2(){
+    stage(1,`<b>Step 2.</b> What is <b>p</b>, the probability of a success on one trial?`,
+      shuffle([{v:String(p),label:String(p)},{v:String(Math.round((1-p)*100)/100),label:String(Math.round((1-p)*100)/100)},{v:String(n),label:String(n)},{v:String(x),label:String(x)}]),
+      String(p),
+      `A "success" is whatever you are counting \u2014 here that is <b>${sc.s1}</b>, so <b>p = ${p}</b>. Choosing ${Math.round((1-p)*100)/100} names the <i>failure</i> rate instead.`,
+      true,s3);
+  }
+  function s3(){
+    stage(2,`<b>Step 3.</b> In how many <b>orders</b> could ${x} successes arrive among ${n} trials? <span style="font-size:.86rem;color:var(--ink-soft)">C(${n}, ${x})</span>`,
+      intOpts(C,[n,x,comb(n,x+1),Math.pow(n,x)],i=>C+i),
+      String(C),
+      `C(${n}, ${x}) = <b>${C}</b>. Order of arrival does not matter, so it is a combination \u2014 never a permutation.`,
+      true,s4);
+  }
+  function s4(){
+    const one=Math.pow(p,x)*Math.pow(1-p,n-x);
+    stage(3,`<b>Step 4.</b> What is <b>P(X = ${x})</b>? <span style="font-size:.86rem;color:var(--ink-soft)">(4 decimal places)</span>`,
+      optsF(pr,[one,binom(n,n-x,p),comb(n,x)*Math.pow(p,x),binom(n,x+1,p),binom(n,Math.max(0,x-1),p)],r4,pFall(pr),inP),
+      r4(pr),
+      `P(X = ${x}) = C(${n},${x}) \u00b7 ${p}^${x} \u00b7 ${r2(1-p)}^${n-x} = ${C} \u00d7 ${r4(one)} = <b>${r4(pr)}</b>. Answering ${r4(one)} prices <i>one</i> sequence and forgets to count the ${C} of them.`,
+      true,s5);
+  }
+  function s5(){
+    stage(4,`<b>Step 5.</b> \u03bc = ${r2(mu)} and \u03c3 = ${r2(sd)}. Is observing <b>${x}</b> unusual?`,
+      [{v:'y',label:'Yes \u2014 more than 2 standard deviations from the mean'},{v:'n',label:'No \u2014 within 2 standard deviations of the mean'}],
+      unusual?'y':'n',
+      `The boundaries are \u03bc \u2212 2\u03c3 = <b>${r2(mu-2*sd)}</b> and \u03bc + 2\u03c3 = <b>${r2(mu+2*sd)}</b>. Since ${x} lies <b>${unusual?'outside':'inside'}</b> that interval, it is <b>${unusual?'unusual':'usual'}</b>.`,
+      false,null);
+  }
+  s1();
+}
+
+//// ---------- router ----------
+function newProblem(id){
+  const rung=RUNGS.find(x=>x.id===id);
+  const cont=document.getElementById('practice-'+id);
+  unbindKeys();
+  cont.innerHTML=streakDots(id)+`<div class="qcard" id="q-${id}"></div><div class="feedback" id="fb-${id}"></div>`+masteredNote();
+  const k=rung.kind;
+
+  if(k==='r1'){
+    const it=pick(BINQ);
+    tapProblem(id,`Is this a <b>binomial</b> experiment?<div class="sit">${it.t}</div>`,
+      'Fixed n? Two outcomes? Constant p?',
+      [{v:'yes',label:'Yes \u2014 all three conditions hold'},{v:'no',label:'No \u2014 at least one condition fails'}],
+      it.v, it.w);
+  }
+  else if(k==='r2'){
+    const g=genB(4,8);
+    const ask=pick(['n','p','x']);
+    const NAME={n:'<b>n</b> (the number of trials)',p:'<b>p</b> (the probability of success on one trial)',x:'<b>x</b> (the number of successes asked about)'};
+    const q1=Math.round((1-g.p)*100)/100;
+    let ansS, cands;
+    if(ask==='n'){ ansS=String(g.n); cands=[String(g.x),String(g.p),String(g.n-g.x),String(q1),String(Math.round(g.p*100))]; }
+    else if(ask==='p'){ ansS=String(g.p); cands=[String(q1),String(g.n),String(g.x),String(Math.round(g.x/g.n*100)/100)]; }
+    else { ansS=String(g.x); cands=[String(g.n),String(g.n-g.x),String(g.p),String(q1)]; }
+    const outs=[]; const seen=new Set([ansS]);
+    for(const c of cands){ if(seen.has(c)) continue; seen.add(c); outs.push(c); if(outs.length===3) break; }
+    let j=1; while(outs.length<3&&j<40){ const c=String(g.n+j); if(!seen.has(c)){seen.add(c);outs.push(c);} j++; }
+    tapProblem(id,`Identify ${NAME[ask]}.
+        <div class="sit">${g.sc.setup(g.n)} Find the probability that <b>exactly ${g.x}</b> ${g.sc.sN}.</div>`,
+      'A "success" is whatever is being counted \u2014 good or bad.',
+      shuffle([ansS,...outs]).map(v=>({v,label:v})),
+      ansS,
+      `n = <b>${g.n}</b> (the trials), p = <b>${g.p}</b> (a success is when one ${g.sc.s1}), and x = <b>${g.x}</b> (the number asked about). Careful: ${q1} is the <i>failure</i> rate, not p.`,
+      true,true);
+  }
+  else if(k==='r3'){
+    const n=rnd(4,9), x=rnd(1,n-1);
+    const C=comb(n,x);
+    tapProblem(id,`In how many <b>orders</b> could exactly <b>${x}</b> successes arrive among <b>${n}</b> trials?<div class="bignum">C(${n}, ${x})</div>`,
+      'It is a combination \u2014 the order of arrival does not change the count.',
+      intOpts(C,[n,x,n*x,comb(n,x+1),Math.pow(n,x)],i=>C+i),
+      String(C),
+      `C(${n}, ${x}) = ${n}! \u00f7 [${x}! \u00b7 ${n-x}!] = <b>${C}</b>. This is the number sitting at the front of the binomial formula \u2014 it counts the arrangements so you do not have to list them.`,
+      true,true);
+  }
+  else if(k==='r4'){
+    const g=genSeq();
+    const withC=binom(g.n,g.x,g.p);
+    const swapped=Math.pow(g.p,g.n-g.x)*Math.pow(g.q,g.x);
+    const chain=g.arr.map(c=>c==='S'?String(g.p):String(Math.round(g.q*100)/100)).join(' \u00d7 ');
+    tapProblem(id,
+      `What is the probability of <b>this exact sequence</b>?
+       <div class="sit">${g.sc.setup(g.n)} <span style="color:var(--ink-soft)">p = ${g.p} for a success (${g.sc.s1}).</span></div>
+       ${seqHTML(g.arr)}
+       <div class="seqlab">${g.x} successes \u00b7 ${g.n-g.x} failures \u00b7 in this order</div>`,
+      'One sequence only \u2014 multiply straight along. No combination.',
+      optsF(g.one,[withC,swapped,Math.pow(g.p,g.x),Math.pow(g.q,g.n-g.x)],r4,pFall(g.one),inP),
+      r4(g.one),
+      `Independent trials, so multiply along: ${chain} = p<sup>${g.x}</sup>q<sup>${g.n-g.x}</sup> = <b>${r4(g.one)}</b>. Answering ${r4(withC)} multiplies in C(${g.n},${g.x}) \u2014 but that counts <i>all</i> the orders, and you were asked for this one. <b>Every</b> sequence with ${g.x} successes is worth the same ${r4(g.one)} \u2014 which is exactly why the formula can count them and multiply once.`,
+      true,true);
+  }
+  else if(k==='r5'){
+    const g=genB(3,8);
+    const one=Math.pow(g.p,g.x)*Math.pow(g.q,g.n-g.x);
+    const C=comb(g.n,g.x);
+    tapProblem(id,`Find <b>P(X = ${g.x})</b>.
+        <div class="sit">${g.sc.setup(g.n)} Find the probability that <b>exactly ${g.x}</b> ${g.sc.sN}.</div>
+        <div class="given">n = ${g.n} &nbsp;\u00b7&nbsp; p = ${g.p} &nbsp;\u00b7&nbsp; x = ${g.x}</div>`,
+      'C(n, x) \u00b7 p\u02e3 \u00b7 q\u207f\u207b\u02e3 \u2014 to 4 decimal places.',
+      optsF(g.pr,[one,binom(g.n,g.n-g.x,g.p),C*Math.pow(g.p,g.x),binom(g.n,g.x+1,g.p),binom(g.n,Math.max(0,g.x-1),g.p)],r4,pFall(g.pr),inP),
+      r4(g.pr),
+      `C(${g.n}, ${g.x}) = ${C}, and one sequence is worth ${g.p}<sup>${g.x}</sup> \u00b7 ${Math.round(g.q*100)/100}<sup>${g.n-g.x}</sup> = ${r4(one)}. So P = ${C} \u00d7 ${r4(one)} = <b>${r4(g.pr)}</b>. Answering ${r4(one)} forgets to count the ${C} arrangements.`,
+      true,true);
+  }
+  else if(k==='r6'){
+    const sc=pick(BSCEN), n=rnd(3,7);
+    const q=1-sc.p;
+    const none=Math.pow(q,n);
+    const ans=1-none;
+    tapProblem(id,`Find <b>P(at least one)</b>.
+        <div class="sit">${sc.setup(n)} Find the probability that <b>at least one</b> ${sc.s1}.</div>
+        <div class="given">n = ${n} &nbsp;\u00b7&nbsp; p = ${sc.p} &nbsp;\u00b7&nbsp; q = ${Math.round(q*100)/100}</div>`,
+      'Do not add up every case. Use 1 \u2212 P(none).',
+      optsF(ans,[none,binom(n,1,sc.p),1-Math.pow(sc.p,n),Math.pow(sc.p,n)],r4,pFall(ans),inP),
+      r4(ans),
+      `P(none) = q\u207f = ${Math.round(q*100)/100}<sup>${n}</sup> = ${r4(none)}. So P(at least one) = 1 \u2212 ${r4(none)} = <b>${r4(ans)}</b>. Stopping at ${r4(none)} answers the <i>opposite</i> question \u2014 that is the probability that <b>none</b> of them ${sc.s1.replace(/^is /,'are ').replace(/^lands/,'land')}.`,
+      true,true);
+  }
+  else if(k==='r7'){
+    const sc=pick(BSCEN), n=rnd(4,8);
+    const kk=rnd(2,n-1);
+    const atLeast=Math.random()<0.5;
+    const ans=atLeast?cumGE(n,sc.p,kk):cumLE(n,sc.p,kk);
+    const exact=binom(n,kk,sc.p);
+    const offByOne=atLeast?cumGE(n,sc.p,kk+1):cumLE(n,sc.p,kk-1);
+    const compl=1-ans;
+    const terms=atLeast
+      ? Array.from({length:n-kk+1},(_,i)=>kk+i).join(', ')
+      : Array.from({length:kk+1},(_,i)=>i).join(', ');
+    tapProblem(id,`Find <b>P(X ${atLeast?'\u2265':'\u2264'} ${kk})</b>.
+        <div class="sit">${sc.setup(n)} Find the probability that <b>${atLeast?'at least':'at most'} ${kk}</b> ${sc.sN}.</div>
+        <div class="given">n = ${n} &nbsp;\u00b7&nbsp; p = ${sc.p}</div>`,
+      atLeast?'"At least k" includes k itself, and everything above it.':'"At most k" includes k itself, and everything below it \u2014 down to 0.',
+      optsF(ans,[exact,compl,offByOne],r4,pFall(ans),inP),
+      r4(ans),
+      `"${atLeast?'At least':'At most'} ${kk}" means x = <b>${terms}</b>. ${atLeast
+        ? `Fastest route: P(X \u2265 ${kk}) = 1 \u2212 P(X \u2264 ${kk-1}) = <b>${r4(ans)}</b>.`
+        : `Add those terms: P(X \u2264 ${kk}) = <b>${r4(ans)}</b>.`} Answering ${r4(exact)} gives only P(X = ${kk}) \u2014 the single term, not the whole range.`,
+      true,true);
+  }
+  else if(k==='r8'){
+    const sc=pick(BSCEN), n=rnd(5,40);
+    const mu=n*sc.p, q=1-sc.p;
+    tapProblem(id,`What is the <b>mean</b> \u2014 the expected number of successes?
+        <div class="sit">${sc.setup(n)}</div>
+        <div class="given">n = ${n} &nbsp;\u00b7&nbsp; p = ${sc.p}</div>`,
+      '\u03bc = np.',
+      optsF(mu,[n*sc.p*q,n*q,sc.p*q,n/sc.p],r2,posFall(mu),v=>v>0),
+      r2(mu),
+      `\u03bc = np = ${n} \u00d7 ${sc.p} = <b>${r2(mu)}</b>. It need not be a whole number \u2014 ${r2(mu)} successes is simply the long-run average. (${r2(n*q)} would be the expected number of <i>failures</i>.)`,
+      true,true);
+  }
+  else if(k==='r9'){
+    const sc=pick(BSCEN), n=rnd(5,40);
+    const q=1-sc.p, varr=n*sc.p*q, sd=Math.sqrt(varr);
+    tapProblem(id,`What is the <b>standard deviation</b>?
+        <div class="sit">${sc.setup(n)}</div>
+        <div class="given">n = ${n} &nbsp;\u00b7&nbsp; p = ${sc.p} &nbsp;\u00b7&nbsp; q = ${Math.round(q*100)/100}</div>`,
+      '\u03c3 = \u221a(npq). Multiply all three, then take the root.',
+      optsF(sd,[varr,Math.sqrt(n*sc.p),n*sc.p,Math.sqrt(n*q)],r2,posFall(sd),v=>v>0),
+      r2(sd),
+      `\u03c3 = \u221a(npq) = \u221a(${n} \u00d7 ${sc.p} \u00d7 ${Math.round(q*100)/100}) = \u221a${r2(varr)} = <b>${r2(sd)}</b>. Answering ${r2(varr)} skips the square root \u2014 that is the <i>variance</i>. Answering ${r2(Math.sqrt(n*sc.p))} leaves out the q.`,
+      true,true);
+  }
+  else if(k==='r10'){
+    const g=genUnusual();
+    tapProblem(id,`Is this result <b>unusual</b>?
+        <div class="sit">${g.sc.setup(g.n)} You observe <b>${g.x}</b> ${g.sc.sN}.</div>
+        <div class="given">\u03bc = np = ${r2(g.mu)} &nbsp;\u00b7&nbsp; \u03c3 = \u221a(npq) = ${r2(g.sd)}</div>`,
+      'Build \u03bc \u2212 2\u03c3 and \u03bc + 2\u03c3, then see where the value falls.',
+      [{v:'y',label:'Yes \u2014 more than 2 standard deviations from the mean'},{v:'n',label:'No \u2014 within 2 standard deviations of the mean'}],
+      g.unusual?'y':'n',
+      `The boundaries are ${r2(g.mu)} \u2212 2(${r2(g.sd)}) = <b>${r2(g.lo)}</b> and ${r2(g.mu)} + 2(${r2(g.sd)}) = <b>${r2(g.hi)}</b>. Since ${g.x} lies <b>${g.unusual?'outside':'inside'}</b> that interval, it is <b>${g.unusual?'unusual':'usual'}</b>. ${g.unusual?'A result this far from the mean is worth investigating.':'It may feel far from the mean, but the boundary is the test \u2014 not the feeling.'}`);
+  }
+  else if(k==='r11'){ capstone(id); }
+}
+
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  state.unlocked=1; state.mastered=[]; RUNGS.forEach(r=>state.streak[r.id]=0); save();
+  activeId=null; buildLadder(); openRung(1);
+  document.getElementById('ladder').scrollIntoView({behavior:'smooth',block:'start'});
+});
+
+buildLadder();
+openRung(Math.min(state.unlocked,TOP));
+</script>
+</body>
+</html>
