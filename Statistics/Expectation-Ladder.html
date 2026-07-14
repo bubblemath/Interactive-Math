@@ -1,0 +1,1253 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Expectation Ladder — Discrete Distributions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#faf7f0;
+    --paper-deep:#f2ece0;
+    --ink:#232021;
+    --ink-soft:#5d5751;
+    --rule:#ddd4c4;
+    --accent:#8a5a2b;
+    --accent-soft:#f0e4d2;
+    --good:#2f6b46;
+    --good-soft:#e2efe6;
+    --bad:#a33a2c;
+    --bad-soft:#f6e3df;
+    --gold:#b98a24;
+    --serif:'Libre Baskerville', Georgia, serif;
+    --sans:'Barlow', system-ui, sans-serif;
+    --mono:'Source Code Pro', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:17px;
+    line-height:1.55;
+    padding:0 0 5rem;
+  }
+  header{
+    border-bottom:1px solid var(--rule);
+    background:var(--paper-deep);
+    padding:2.2rem 1.25rem 1.6rem;
+    text-align:center;
+  }
+  header h1{
+    font-family:var(--serif);
+    font-size:1.9rem;
+    margin:0 0 .3rem;
+    letter-spacing:-.01em;
+  }
+  header .sub{
+    font-family:var(--mono);
+    font-size:.78rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  main{max-width:760px;margin:0 auto;padding:0 1.25rem;}
+
+  /* ---- strategy panel ---- */
+  .strategy{
+    border:1px solid var(--rule);
+    border-left:5px solid var(--accent);
+    background:#fff;
+    padding:1.3rem 1.4rem;
+    margin:2rem 0 2.6rem;
+  }
+  .strategy h2{
+    font-family:var(--serif);
+    font-size:1.1rem;
+    margin:0 0 .6rem;
+  }
+  .strategy .move{
+    font-family:var(--mono);
+    font-size:.72rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:.55rem;
+  }
+  .strategy p{margin:.55rem 0;}
+  .strategy .chain{
+    font-family:var(--mono);
+    font-size:.95rem;
+    background:var(--accent-soft);
+    padding:.7rem .85rem;
+    margin-top:.9rem;
+    line-height:1.9;
+  }
+
+  /* ---- rungs ---- */
+  .rung{
+    border:1px solid var(--rule);
+    background:#fff;
+    margin-bottom:1.6rem;
+  }
+  .rung.capstone{border:2px solid var(--accent);}
+  .rung-head{
+    display:flex;
+    align-items:center;
+    gap:.85rem;
+    padding:1rem 1.2rem;
+    cursor:pointer;
+    user-select:none;
+    background:var(--paper-deep);
+    border-bottom:1px solid transparent;
+  }
+  .rung.open .rung-head{border-bottom-color:var(--rule);}
+  .rung-num{
+    font-family:var(--mono);
+    font-size:.78rem;
+    background:var(--ink);
+    color:var(--paper);
+    width:1.9rem;height:1.9rem;
+    display:flex;align-items:center;justify-content:center;
+    flex:0 0 auto;
+  }
+  .rung.capstone .rung-num{background:var(--accent);}
+  .rung-title{
+    font-family:var(--serif);
+    font-size:1.02rem;
+    flex:1 1 auto;
+  }
+  .rung-title small{
+    display:block;
+    font-family:var(--sans);
+    font-size:.83rem;
+    color:var(--ink-soft);
+    font-weight:400;
+  }
+  .badge{
+    font-family:var(--mono);
+    font-size:.68rem;
+    letter-spacing:.1em;
+    padding:.22rem .5rem;
+    border:1px solid var(--rule);
+    color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  .badge.earned{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#fff;
+  }
+  .rung-body{display:none;padding:1.3rem 1.2rem 1.5rem;}
+  .rung.open .rung-body{display:block;}
+
+  .stem{margin-bottom:1rem;}
+  .stem .scenario{margin:0 0 .8rem;}
+  .stem .ask{font-weight:600;margin:.9rem 0 0;}
+
+  table.dist{
+    border-collapse:collapse;
+    font-family:var(--mono);
+    font-size:.95rem;
+    margin:.9rem 0;
+    width:100%;
+    max-width:520px;
+  }
+  table.dist th, table.dist td{
+    border:1px solid var(--rule);
+    padding:.4rem .6rem;
+    text-align:center;
+  }
+  table.dist th{background:var(--paper-deep);font-weight:600;}
+  table.dist td.blank{background:var(--accent-soft);color:var(--accent);font-weight:600;}
+  .twoup{display:flex;gap:1rem;flex-wrap:wrap;}
+  .twoup .col{flex:1 1 220px;}
+  .twoup .col h4{
+    font-family:var(--mono);
+    font-size:.75rem;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    margin:.2rem 0 0;
+    color:var(--ink-soft);
+  }
+
+  .options{display:grid;gap:.5rem;margin-top:.2rem;}
+  button.opt{
+    display:flex;
+    align-items:center;
+    gap:.75rem;
+    width:100%;
+    text-align:left;
+    font-family:var(--sans);
+    font-size:1rem;
+    background:var(--paper);
+    border:1px solid var(--rule);
+    padding:.65rem .8rem;
+    cursor:pointer;
+    color:var(--ink);
+    transition:background .12s, border-color .12s;
+  }
+  button.opt:hover:not(:disabled){background:var(--accent-soft);border-color:var(--accent);}
+  button.opt .key{
+    font-family:var(--mono);
+    font-size:.72rem;
+    border:1px solid var(--rule);
+    padding:.1rem .38rem;
+    color:var(--ink-soft);
+    flex:0 0 auto;
+  }
+  button.opt .num{font-family:var(--mono);}
+  button.opt:disabled{cursor:default;}
+  button.opt.right{background:var(--good-soft);border-color:var(--good);}
+  button.opt.right .key{border-color:var(--good);color:var(--good);}
+  button.opt.wrong{background:var(--bad-soft);border-color:var(--bad);}
+  button.opt.wrong .key{border-color:var(--bad);color:var(--bad);}
+  button.opt.dim{opacity:.5;}
+
+  .feedback{
+    margin-top:.9rem;
+    padding:.75rem .9rem;
+    border-left:4px solid var(--rule);
+    background:var(--paper);
+    font-size:.95rem;
+    display:none;
+  }
+  .feedback.show{display:block;}
+  .feedback.right{border-left-color:var(--good);}
+  .feedback.wrong{border-left-color:var(--bad);}
+  .feedback .verdict{font-weight:600;font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;}
+  .feedback .work{font-family:var(--mono);font-size:.9rem;display:block;margin-top:.35rem;line-height:1.7;}
+
+  .footrow{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:1rem;
+    margin-top:1.1rem;
+    padding-top:.9rem;
+    border-top:1px solid var(--rule);
+  }
+  .streak{display:flex;align-items:center;gap:.4rem;}
+  .streak .label{
+    font-family:var(--mono);
+    font-size:.7rem;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-right:.25rem;
+  }
+  .pip{
+    width:.85rem;height:.85rem;
+    border:1px solid var(--rule);
+    background:var(--paper);
+  }
+  .pip.on{background:var(--gold);border-color:var(--gold);}
+  button.next{
+    font-family:var(--sans);
+    font-weight:500;
+    font-size:.92rem;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    padding:.5rem 1rem;
+    cursor:pointer;
+  }
+  button.next:hover{background:var(--accent);}
+
+  /* ---- capstone stages ---- */
+  .stages{display:flex;gap:.35rem;margin-bottom:1rem;}
+  .stagepip{
+    flex:1 1 0;
+    height:.35rem;
+    background:var(--rule);
+  }
+  .stagepip.done{background:var(--good);}
+  .stagepip.active{background:var(--accent);}
+  .stagepip.miss{background:var(--bad);}
+  .stagelabel{
+    font-family:var(--mono);
+    font-size:.7rem;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:.45rem;
+  }
+  .autopsy-done{
+    padding:.8rem .9rem;
+    border-left:4px solid var(--good);
+    background:var(--good-soft);
+    font-size:.95rem;
+    display:none;
+  }
+  .autopsy-done.show{display:block;}
+
+  footer{
+    max-width:760px;
+    margin:2.5rem auto 0;
+    padding:1.2rem 1.25rem;
+    border-top:1px solid var(--rule);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:1rem;
+    flex-wrap:wrap;
+    color:var(--ink-soft);
+    font-size:.85rem;
+  }
+  footer button{
+    font-family:var(--mono);
+    font-size:.72rem;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    background:none;
+    border:1px solid var(--rule);
+    padding:.35rem .6rem;
+    cursor:pointer;
+    color:var(--ink-soft);
+  }
+  footer button:hover{border-color:var(--bad);color:var(--bad);}
+  .neg{color:var(--bad);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>The Expectation Ladder</h1>
+  <div class="sub">Lesson 12 · Discrete Distributions &amp; Expected Value</div>
+</header>
+
+<main>
+
+<section class="strategy">
+  <div class="move">The signature first move</div>
+  <h2>Prove the table is legal. Then build a column and add it.</h2>
+  <p>Before you compute a single thing, check the distribution: every <span class="mono">P(x)</span> is between 0 and 1, and <b>ΣP(x) = 1</b>. A table that fails this test cannot be fixed by arithmetic downstream.</p>
+  <p>Once it's legal, everything you'll ever be asked for is <i>one column, multiplied down and added up</i>:</p>
+  <div class="chain">
+    E(X) = Σ[ x · P(x) ] &nbsp;— multiply, then add<br>
+    σ² = Σ[ (x − μ)² · P(x) ] &nbsp;— same move, new column<br>
+    net gain: bake the cost into the x's, then E(X) again<br>
+    <b>fair game ⟺ E(X) = 0</b>
+  </div>
+  <p style="margin-top:.9rem;">Keyboard: press <b>1–4</b> to answer, <b>Enter</b> for the next problem. Four correct in a row earns the rung's badge.</p>
+</section>
+
+<div id="ladder"></div>
+
+</main>
+
+<footer>
+  <span>Badges are saved in this browser.</span>
+  <button id="reset">Reset all badges</button>
+</footer>
+
+<script>
+/* =============================== GENERATORS START =============================== */
+
+const DENOMS = [8, 10, 16, 20, 25, 40, 50, 100];
+
+function ri(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+function pick(arr) { return arr[ri(0, arr.length - 1)]; }
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = ri(0, i); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+function fmt(v) { return Number(Number(v).toFixed(4)).toString(); }
+function money(v) { return (v < 0 ? '−$' : '$') + Math.abs(v).toFixed(2); }
+function near(a, b) { return Math.abs(a - b) < 1e-9; }
+
+/* n positive integer counts summing to D (composition of D into n parts, each >= 1) */
+function randCounts(n, D) {
+  const pool = [];
+  for (let i = 1; i < D; i++) pool.push(i);
+  shuffle(pool);
+  const cuts = pool.slice(0, n - 1).sort((a, b) => a - b);
+  const counts = [];
+  let prev = 0;
+  for (const c of cuts) { counts.push(c - prev); prev = c; }
+  counts.push(D - prev);
+  return counts;
+}
+
+/* A distribution whose probabilities all terminate within 4 decimal places
+   and whose probabilities sum to exactly 1 (checked on integer counts). */
+function makeDist(n, opts) {
+  opts = opts || {};
+  const D = pick(DENOMS.filter(d => d >= n * 1));
+  const counts = randCounts(n, D);
+  let x0 = opts.startZero ? 0 : ri(0, 3);
+  const xs = [x0];
+  for (let i = 1; i < n; i++) xs.push(xs[i - 1] + (opts.consecutive ? 1 : ri(1, 3)));
+  const probs = counts.map(c => c / D);
+  const sumXC = xs.reduce((s, x, i) => s + x * counts[i], 0);
+  const mean = sumXC / D;                       // exact rational, terminates
+  const varr = xs.reduce((s, x, i) => s + (x - mean) * (x - mean) * counts[i], 0) / D;
+  return { n, D, counts, xs, probs, mean, varr, sd: Math.sqrt(varr) };
+}
+
+function distTable(xs, probs, blankIdx, xLabel) {
+  let r1 = '', r2 = '';
+  for (let i = 0; i < xs.length; i++) {
+    r1 += '<td>' + xs[i] + '</td>';
+    r2 += (blankIdx === i)
+      ? '<td class="blank">?</td>'
+      : '<td>' + (typeof probs[i] === 'string' ? probs[i] : fmt(probs[i])) + '</td>';
+  }
+  return '<table class="dist"><tr><th>' + (xLabel || 'x') + '</th>' + r1 + '</tr>' +
+         '<tr><th>P(x)</th>' + r2 + '</tr></table>';
+}
+
+/* Assemble 4 distinct numeric options; returns null if it can't. */
+function numOptions(correct, distractors, formatter) {
+  const f = formatter || fmt;
+  const vals = [correct];
+  for (const d of distractors) {
+    if (d === null || d === undefined || !isFinite(d)) continue;
+    if (vals.some(v => near(v, d))) continue;
+    vals.push(d);
+    if (vals.length === 4) break;
+  }
+  if (vals.length < 4) return null;
+  const labels = vals.map(f);
+  if (new Set(labels).size < 4) return null;
+  const order = shuffle([0, 1, 2, 3]);
+  return { options: order.map(i => labels[i]), correct: order.indexOf(0) };
+}
+
+function textOptions(correctText, others) {
+  const all = [correctText].concat(others);
+  if (new Set(all).size < all.length) return null;
+  const order = shuffle(all.map((_, i) => i));
+  return { options: order.map(i => all[i]), correct: order.indexOf(0) };
+}
+
+/* ---------- Rung 1 — the random variable and its values ---------- */
+const RV_BANK = [
+  { s: 'A fair coin is tossed <b>three</b> times. Let X = the number of heads.', c: '{0, 1, 2, 3}', d: ['{1, 2, 3}', '{0, 1, 2}', '{1, 2, 3, 4, 5, 6}'] },
+  { s: 'Two fair six-sided dice are rolled. Let X = the <b>sum</b> of the two dice.', c: '{2, 3, 4, …, 12}', d: ['{1, 2, 3, …, 12}', '{0, 1, 2, …, 12}', '{1, 2, 3, 4, 5, 6}'] },
+  { s: 'A hand of 2 cards is dealt from a standard deck. Let X = the number of <b>aces</b> in the hand.', c: '{0, 1, 2}', d: ['{1, 2}', '{0, 1, 2, 3, 4}', '{1, 2, 3, 4}'] },
+  { s: 'Five circuit boards are inspected. Let X = the number that are <b>defective</b>.', c: '{0, 1, 2, 3, 4, 5}', d: ['{1, 2, 3, 4, 5}', '{0, 1}', '{0, 1, 2, 3, 4}'] },
+  { s: 'You buy one raffle ticket for $2. The only prize is $50. Let X = your <b>net gain</b>.', c: '{−2, 48}', d: ['{0, 50}', '{2, 50}', '{−2, 50}'] },
+  { s: 'A quiz has 4 true/false questions. Let X = the number answered <b>correctly</b>.', c: '{0, 1, 2, 3, 4}', d: ['{1, 2, 3, 4}', '{0, 1, 2, 3, 4, 5}', '{0, 1}'] },
+  { s: 'A family has 3 children. Let X = the number of <b>girls</b>.', c: '{0, 1, 2, 3}', d: ['{1, 2, 3}', '{0, 1, 2, 3, 4}', '{0, 1}'] },
+  { s: 'A single die is rolled. Let X = the number showing on the <b>top face</b>.', c: '{1, 2, 3, 4, 5, 6}', d: ['{0, 1, 2, 3, 4, 5, 6}', '{0, 1, 2, 3, 4, 5}', '{1, 2, 3}'] },
+  { s: 'Cars arriving at a toll booth in one minute are counted. Let X = the number of <b>cars</b>.', c: '{0, 1, 2, 3, …}', d: ['{1, 2, 3, …}', 'any number in [0, ∞)', 'any number in [0, 60]'] },
+  { s: 'A game costs $5 to play. You win $20 or nothing. Let X = your <b>net gain</b>.', c: '{−5, 15}', d: ['{0, 20}', '{−5, 20}', '{5, 15}'] },
+  { s: 'Two coins are tossed. Let X = the number of <b>tails</b>.', c: '{0, 1, 2}', d: ['{1, 2}', '{0, 1, 2, 3}', '{H, T}'] },
+  { s: 'A shop tracks how many of its 4 delivery vans are in use at noon. Let X = the number <b>in use</b>.', c: '{0, 1, 2, 3, 4}', d: ['{1, 2, 3, 4}', '{0, 1, 2, 3}', '{0, 1}'] }
+];
+
+function genRV() {
+  const it = pick(RV_BANK);
+  const o = textOptions(it.c, it.d.slice());
+  if (!o) return null;
+  return {
+    stem: '<p class="scenario">' + it.s + '</p><p class="ask">Which set lists all the possible values of X?</p>',
+    options: o.options,
+    correct: o.correct,
+    explain: 'X is a rule that assigns a <b>number</b> to each outcome. List the outcomes first, then read off every number X could produce — including the ones that feel like "nothing happened" (a loss, or zero successes).'
+  };
+}
+
+/* ---------- Rung 2 — is it a valid distribution? ---------- */
+const VALID_OPTS = [
+  'Valid — it is a legitimate probability distribution.',
+  'Not valid — one of the probabilities is negative.',
+  'Not valid — one of the probabilities is greater than 1.',
+  'Not valid — every P(x) is between 0 and 1, but they do not sum to 1.'
+];
+
+function genValid() {
+  const kind = pick(['valid', 'negative', 'over1', 'sum']);
+  const n = ri(3, 5);
+  const d = makeDist(n, { consecutive: true, startZero: true });
+  let probs = d.probs.slice();
+  let why;
+
+  if (kind === 'valid') {
+    why = 'Every P(x) sits in [0, 1] and the column adds to exactly 1.000. Legal.';
+  } else if (kind === 'negative') {
+    // move mass so one entry goes negative but the total is still exactly 1
+    const i = ri(0, n - 1);
+    let j = ri(0, n - 1);
+    while (j === i) j = ri(0, n - 1);
+    const t = pick([0.1, 0.15, 0.2]);
+    probs[i] = Number((probs[i] - probs[i] - t).toFixed(4));   // = −t
+    probs[j] = Number((probs[j] + d.probs[i] + t).toFixed(4));
+    if (probs[j] > 1) return null;
+    why = 'The column happens to add to 1.000 — but a probability can never be negative, so the table is dead on arrival.';
+  } else if (kind === 'over1') {
+    const i = ri(0, n - 1);
+    probs[i] = pick([1.2, 1.4, 1.5, 1.05]);
+    why = 'No probability may exceed 1. (Notice this also breaks the sum — but the fatal flaw is the value itself.)';
+  } else {
+    const drift = pick([-0.2, -0.1, 0.1, 0.2]);
+    const i = ri(0, n - 1);
+    const cand = Number((probs[i] + drift).toFixed(4));
+    if (cand <= 0 || cand >= 1) return null;
+    probs[i] = cand;
+    why = 'Each entry is a legal probability on its own, but the column does not total 1.000, so this is not a distribution.';
+  }
+
+  const total = Number(probs.reduce((s, p) => s + p, 0).toFixed(4));
+  // guard against an accidental second flaw
+  if (kind === 'valid' && !near(total, 1)) return null;
+  if (kind === 'negative' && (!near(total, 1) || probs.filter(p => p < 0).length !== 1 || probs.some(p => p > 1))) return null;
+  if (kind === 'over1' && (probs.some(p => p < 0) || probs.filter(p => p > 1).length !== 1)) return null;
+  if (kind === 'sum' && (near(total, 1) || probs.some(p => p < 0 || p > 1))) return null;
+
+  const idx = { valid: 0, negative: 1, over1: 2, sum: 3 }[kind];
+  const order = shuffle([0, 1, 2, 3]);
+  return {
+    stem: '<p class="scenario">A student proposes this table for a random variable X.</p>' +
+          distTable(d.xs, probs) +
+          '<p class="ask">Is this a valid probability distribution?</p>',
+    options: order.map(i => VALID_OPTS[i]),
+    correct: order.indexOf(idx),
+    explain: why + '<span class="work">Σ P(x) = ' + fmt(total) + '</span>'
+  };
+}
+
+/* ---------- Rung 3 — the missing probability ---------- */
+function genMissing() {
+  const n = ri(4, 5);
+  const d = makeDist(n, { consecutive: Math.random() < .5, startZero: Math.random() < .5 });
+  const k = ri(0, n - 1);
+  const correct = d.probs[k];
+  if (correct < 0.05) return null;
+  const others = d.probs.filter((_, i) => i !== k);
+  const sumOthers = Number(others.reduce((s, p) => s + p, 0).toFixed(4));
+  const o = numOptions(correct, [
+    sumOthers,
+    Number((correct + 0.1).toFixed(4)),
+    Number(Math.abs(correct - 0.1).toFixed(4)),
+    Number((1 - Math.max.apply(null, others)).toFixed(4)),
+    Number((correct / 2).toFixed(4))
+  ]);
+  if (!o) return null;
+  return {
+    stem: '<p class="scenario">One probability has been erased.</p>' +
+          distTable(d.xs, d.probs.map((p, i) => i === k ? '?' : fmt(p)), k) +
+          '<p class="ask">What is the missing probability?</p>',
+    options: o.options,
+    correct: o.correct,
+    explain: 'The whole column must total 1. So the missing entry is whatever is left over.' +
+             '<span class="work">missing = 1 − ' + fmt(sumOthers) + ' = ' + fmt(correct) + '</span>'
+  };
+}
+
+/* ---------- Rung 4 — reading probabilities off the table ---------- */
+function genRead() {
+  const n = ri(4, 5);
+  const d = makeDist(n, { consecutive: true, startZero: Math.random() < .5 });
+  const xs = d.xs, ps = d.probs;
+  const cum = i => Number(ps.slice(0, i + 1).reduce((s, p) => s + p, 0).toFixed(4));
+  const tail = i => Number(ps.slice(i).reduce((s, p) => s + p, 0).toFixed(4));
+
+  const type = pick(['eq', 'le', 'ge', 'lt', 'gt', 'between']);
+  let ask, correct, pool = [];
+
+  if (type === 'between') {
+    let a = ri(0, n - 3), b = ri(a + 1, n - 1);
+    correct = Number(ps.slice(a, b + 1).reduce((s, p) => s + p, 0).toFixed(4));
+    ask = 'P(' + xs[a] + ' ≤ X ≤ ' + xs[b] + ')';
+    pool = [
+      Number(ps.slice(a + 1, b).reduce((s, p) => s + p, 0).toFixed(4)),
+      Number((1 - correct).toFixed(4)),
+      cum(b), tail(a), ps[a] + ps[b]
+    ];
+  } else {
+    const k = ri(1, n - 2);
+    if (type === 'eq')      { correct = ps[k]; ask = 'P(X = ' + xs[k] + ')'; }
+    else if (type === 'le') { correct = cum(k); ask = 'P(X ≤ ' + xs[k] + ')'; }
+    else if (type === 'ge') { correct = tail(k); ask = 'P(X ≥ ' + xs[k] + ')'; }
+    else if (type === 'lt') { correct = cum(k - 1); ask = 'P(X &lt; ' + xs[k] + ')'; }
+    else                    { correct = tail(k + 1); ask = 'P(X &gt; ' + xs[k] + ')'; }
+    pool = [cum(k), cum(k - 1), tail(k), tail(k + 1), ps[k], Number((1 - correct).toFixed(4))];
+  }
+  pool = pool.map(v => Number(Number(v).toFixed(4))).filter(v => v >= 0 && v <= 1);
+  const o = numOptions(Number(correct.toFixed(4)), pool);
+  if (!o) return null;
+
+  const hints = {
+    eq: 'A single cell — no adding at all.',
+    le: '"≤ k" <b>includes</b> x = k. Add every cell from the left edge up to and including it.',
+    ge: '"≥ k" <b>includes</b> x = k. Add from that cell rightward.',
+    lt: '"&lt; k" <b>excludes</b> x = k. Stop one cell short.',
+    gt: '"&gt; k" <b>excludes</b> x = k. Start one cell past it.',
+    between: 'Both endpoints are included — add the whole block, endpoints and all.'
+  };
+  return {
+    stem: distTable(xs, ps) + '<p class="ask">Find ' + ask + '.</p>',
+    options: o.options,
+    correct: o.correct,
+    explain: hints[type] + '<span class="work">' + ask + ' = ' + fmt(correct) + '</span>'
+  };
+}
+
+/* ---------- Rung 5 — build the x·P(x) column ---------- */
+function genMean() {
+  const n = ri(3, 5);
+  const d = makeDist(n, { consecutive: Math.random() < .5, startZero: Math.random() < .5 });
+  const xs = d.xs, ps = d.probs;
+  const correct = Number(d.mean.toFixed(4));
+  const plainAvg = Number((xs.reduce((s, x) => s + x, 0) / n).toFixed(4));
+  const modeX = xs[ps.indexOf(Math.max.apply(null, ps))];
+  const shifted = Number(xs.reduce((s, x, i) => s + x * ps[(i + 1) % n], 0).toFixed(4));
+  const sumX = xs.reduce((s, x) => s + x, 0);
+  const o = numOptions(correct, [plainAvg, modeX, shifted, Number((sumX / 2).toFixed(4))]);
+  if (!o) return null;
+  const work = xs.map((x, i) => '(' + x + ')(' + fmt(ps[i]) + ')').join(' + ');
+  return {
+    stem: distTable(xs, ps) + '<p class="ask">Find E(X), the expected value. Round to 4 decimal places if needed.</p>',
+    options: o.options,
+    correct: o.correct,
+    explain: 'Multiply across each column, then add the products. The probabilities are the <b>weights</b> — never just average the x-values.' +
+             '<span class="work">E(X) = ' + work + ' = ' + fmt(correct) + '</span>'
+  };
+}
+
+/* ---------- Rung 6 — interpreting E(X) ---------- */
+function genInterpret() {
+  const kind = pick(['coins', 'claims', 'kids', 'sales']);
+  let scen, mu, unit, ctx;
+  if (kind === 'coins') {
+    const nc = pick([2, 3, 4]);
+    mu = nc / 2; unit = 'heads';
+    scen = 'A fair coin is tossed ' + nc + ' times and X = the number of heads. It can be shown that E(X) = ' + fmt(mu) + '.';
+    ctx = 'tosses of ' + nc + ' coins';
+  } else if (kind === 'claims') {
+    mu = Number((ri(3, 18) / 10).toFixed(4)); unit = 'claims';
+    scen = 'X = the number of insurance claims a driver files in a year, and E(X) = ' + fmt(mu) + '.';
+    ctx = 'drivers';
+  } else if (kind === 'kids') {
+    mu = Number((ri(15, 29) / 10).toFixed(4)); unit = 'children';
+    scen = 'X = the number of children in a randomly chosen household, and E(X) = ' + fmt(mu) + '.';
+    ctx = 'households';
+  } else {
+    mu = Number((ri(20, 60) / 10).toFixed(4)); unit = 'sales';
+    scen = 'X = the number of cars a salesperson sells in a week, and E(X) = ' + fmt(mu) + '.';
+    ctx = 'weeks';
+  }
+  const o = textOptions(
+    'Over very many ' + ctx + ', the average value of X will be close to ' + fmt(mu) + ' ' + unit + '.',
+    [
+      'The next observed value of X will be ' + fmt(mu) + ' ' + unit + '.',
+      fmt(mu) + ' is the single most likely value of X.',
+      'Half of all observed values of X fall below ' + fmt(mu) + ' ' + unit + '.'
+    ]
+  );
+  if (!o) return null;
+  return {
+    stem: '<p class="scenario">' + scen + '</p><p class="ask">Which statement correctly interprets E(X)?</p>',
+    options: o.options,
+    correct: o.correct,
+    explain: 'E(X) is a <b>long-run average</b>, not a prediction, not the mode, and not the median. It need not even be a value X can actually take — a household cannot contain ' + fmt(mu) + ' children, and that is fine.'
+  };
+}
+
+/* ---------- Rung 7 — spread ---------- */
+const SD_CONCEPT = [
+  {
+    q: 'In the formula σ² = Σ[(x − μ)² · P(x)], what is the role of P(x)?',
+    c: 'It weights each squared distance from the mean by how likely that value is.',
+    d: ['It converts the distances into percentages.',
+        'It cancels the squaring, returning the answer to the original units.',
+        'It guarantees the variance is less than 1.']
+  },
+  {
+    q: 'Two distributions have the same mean. What does a <b>larger</b> standard deviation tell you?',
+    c: 'Its values are typically farther from the mean — the distribution is more spread out.',
+    d: ['Its values are typically larger.',
+        'It has more possible outcomes.',
+        'Its probabilities sum to more than 1.']
+  },
+  {
+    q: 'Why is the standard deviation reported instead of stopping at the variance?',
+    c: 'σ is back in the original units of X, so it can be compared to the mean directly.',
+    d: ['σ is always smaller, so it is easier to work with.',
+        'The variance can be negative, but σ cannot.',
+        'σ is the exact distance from the mean to every value of X.']
+  },
+  {
+    q: 'A distribution has σ = 0. What must be true?',
+    c: 'X takes only one value, with probability 1.',
+    d: ['The mean is 0.',
+        'All outcomes are equally likely.',
+        'The distribution is symmetric.']
+  }
+];
+
+function genSpread() {
+  if (Math.random() < 0.4) {
+    const it = pick(SD_CONCEPT);
+    const o = textOptions(it.c, it.d.slice());
+    if (!o) return null;
+    return { stem: '<p class="ask">' + it.q + '</p>', options: o.options, correct: o.correct,
+             explain: 'σ is a <b>weighted</b> average distance from the mean. It says nothing about where the center is — only how far the values wander from it.' };
+  }
+
+  // symmetric xs so both distributions share the same mean by construction
+  const step = ri(1, 3);
+  const c = ri(2, 6);
+  const xs = [c - 2 * step, c - step, c, c + step, c + 2 * step];
+  const D = 100;
+  const equal = Math.random() < 0.15;
+
+  const tight = [ri(2, 8), ri(15, 25), 0, 0, 0];
+  tight[2] = D - 2 * (tight[0] + tight[1]);
+  tight[3] = tight[1]; tight[4] = tight[0];
+  const wide = [ri(25, 35), ri(8, 15), 0, 0, 0];
+  wide[2] = D - 2 * (wide[0] + wide[1]);
+  wide[3] = wide[1]; wide[4] = wide[0];
+  if (tight[2] <= 0 || wide[2] <= 0) return null;
+
+  const cA = tight, cB = equal ? tight.slice() : wide;
+  const pA = cA.map(v => v / D), pB = cB.map(v => v / D);
+  const vOf = cs => {
+    const m = xs.reduce((s, x, i) => s + x * cs[i], 0) / D;
+    return xs.reduce((s, x, i) => s + (x - m) * (x - m) * cs[i], 0) / D;
+  };
+  const vA = vOf(cA), vB = vOf(cB);
+  const mA = xs.reduce((s, x, i) => s + x * cA[i], 0) / D;
+  const mB = xs.reduce((s, x, i) => s + x * cB[i], 0) / D;
+  if (!near(mA, mB)) return null;
+  if (!equal && Math.abs(vA - vB) < 0.5) return null;
+  if (equal && !near(vA, vB)) return null;
+
+  const flip = Math.random() < 0.5;
+  const first = flip ? { p: pB, v: vB } : { p: pA, v: vA };
+  const second = flip ? { p: pA, v: vA } : { p: pB, v: vB };
+
+  let correctText;
+  if (near(first.v, second.v)) correctText = 'They have the same standard deviation.';
+  else correctText = (first.v > second.v ? 'Distribution A' : 'Distribution B') + ' has the larger standard deviation.';
+
+  const all = [
+    'Distribution A has the larger standard deviation.',
+    'Distribution B has the larger standard deviation.',
+    'They have the same standard deviation.',
+    'There is not enough information — the standard deviation cannot be compared.'
+  ];
+  const idx = all.indexOf(correctText);
+  if (idx < 0) return null;
+  const order = shuffle([0, 1, 2, 3]);
+
+  return {
+    stem: '<p class="scenario">Both distributions have mean μ = ' + fmt(mA) + '. <b>Do not compute σ.</b></p>' +
+          '<div class="twoup"><div class="col"><h4>Distribution A</h4>' + distTable(xs, first.p) + '</div>' +
+          '<div class="col"><h4>Distribution B</h4>' + distTable(xs, second.p) + '</div></div>' +
+          '<p class="ask">Which has the larger standard deviation?</p>',
+    options: order.map(i => all[i]),
+    correct: order.indexOf(idx),
+    explain: 'Same center, same x-values — so the only question is where the probability <b>sits</b>. Mass piled on the middle means small distances from μ; mass pushed out to the tails means large ones.' +
+             '<span class="work">σ_A = ' + fmt(Math.sqrt(first.v)) + '&nbsp;&nbsp;σ_B = ' + fmt(Math.sqrt(second.v)) + '</span>'
+  };
+}
+
+/* ---------- Rung 8 — expected net gain & fair games ---------- */
+function fairTriple() {
+  // find c, W, p = w/D with W·w/D = c exactly  →  E(net) = 0
+  for (let t = 0; t < 200; t++) {
+    const c = pick([1, 2, 3, 4, 5]);
+    const D = pick([10, 20, 25, 40, 50, 100]);
+    const w = ri(1, Math.min(10, D - 1));
+    const W = c * D / w;
+    if (Number.isInteger(W) && W > c && W <= 200) return { c, D, w, W };
+  }
+  return null;
+}
+
+function genFair() {
+  const style = pick(['net', 'net', 'fair', 'raffle']);
+
+  if (style === 'raffle') {
+    const N = pick([200, 500, 1000, 2000]);
+    const cost = pick([1, 2, 5]);
+    const prizes = [
+      { v: pick([200, 300, 400, 500]), k: 1 },
+      { v: pick([50, 80, 100]), k: 1 },
+      { v: pick([10, 20, 25]), k: pick([2, 3, 4]) }
+    ];
+    const total = prizes.reduce((s, p) => s + p.v * p.k, 0);
+    // the expected payback must land on an exact cent, or the money display would round it
+    if ((total * 100) % N !== 0) return null;
+    const gross = total / N;
+    const net = Number((gross - cost).toFixed(4));
+    if (near(net, 0)) return null;
+    if (net > 0) return null;   // a raffle that pays out more than it charges is a fantasy
+    const o = numOptions(net, [
+      Number(gross.toFixed(4)),
+      Number((-cost).toFixed(4)),
+      Number((prizes.reduce((s, p) => s + p.v, 0) / N - cost).toFixed(4)),
+      Number((cost - gross).toFixed(4))
+    ], money);
+    if (!o) return null;
+    const list = prizes.map(p => '• ' + p.k + ' prize' + (p.k > 1 ? 's' : '') + ' worth ' + money(p.v) + ' each').join('<br>');
+    return {
+      stem: '<p class="scenario">A raffle sells <b>' + N + '</b> tickets at ' + money(cost) + ' each. The prizes are:<br>' + list + '</p>' +
+            '<p class="ask">What is the expected <b>net gain</b> from buying one ticket?</p>',
+      options: o.options,
+      correct: o.correct,
+      explain: 'Every ticket has the same chance, 1/' + N + ', of winning any given prize. Add up the expected winnings — then <b>subtract what the ticket cost you</b>. The cost is paid no matter what happens.' +
+               '<span class="work">expected winnings = ' + money(Number(gross.toFixed(4))) + '<br>expected net = ' + money(Number(gross.toFixed(4))) + ' − ' + money(cost) + ' = ' + money(net) + '</span>'
+    };
+  }
+
+  if (style === 'fair') {
+    const wantFair = Math.random() < 0.4;
+    let c, D, w, W;
+    if (wantFair) {
+      const t = fairTriple(); if (!t) return null;
+      ({ c, D, w, W } = t);
+    } else {
+      c = pick([1, 2, 3, 5]); D = pick([10, 20, 25, 50, 100]);
+      w = ri(1, 8); W = pick([10, 15, 20, 25, 40, 50, 60, 100]);
+      if (W <= c) return null;
+    }
+    const p = w / D;
+    const net = Number((W * p - c).toFixed(4));
+    const all = [
+      'The game is fair — E(X) = 0.',
+      'The game favors the player — E(X) > 0.',
+      'The game favors the house — E(X) < 0.',
+      'It cannot be decided without knowing how many times the game is played.'
+    ];
+    const idx = near(net, 0) ? 0 : (net > 0 ? 1 : 2);
+    const order = shuffle([0, 1, 2, 3]);
+    return {
+      stem: '<p class="scenario">A carnival game costs <b>' + money(c) + '</b> to play. You win <b>' + money(W) + '</b> with probability <b>' + fmt(p) + '</b>; otherwise you win nothing.</p>' +
+            '<p class="ask">Let X be your net gain. Is this game fair?</p>',
+      options: order.map(i => all[i]),
+      correct: order.indexOf(idx),
+      explain: 'Fair means the expected <b>net</b> gain is exactly zero — the game gives back, on average, precisely what it charges. Build the net-gain distribution first: you gain ' + money(W - c) + ' with probability ' + fmt(p) + ', and lose ' + money(c) + ' with probability ' + fmt(Number((1 - p).toFixed(4))) + '.' +
+               '<span class="work">E(X) = (' + fmt(W - c) + ')(' + fmt(p) + ') + (−' + fmt(c) + ')(' + fmt(Number((1 - p).toFixed(4))) + ') = ' + money(net) + '</span>'
+    };
+  }
+
+  // style === 'net'
+  const c = pick([1, 2, 3, 5]);
+  const D = pick([10, 20, 25, 50, 100]);
+  const w = ri(1, 9);
+  const W = pick([10, 15, 20, 25, 40, 50, 100]);
+  if (W <= c || w >= D) return null;
+  const p = w / D;
+  const net = Number((W * p - c).toFixed(4));
+  if (near(net, 0)) return null;
+  const o = numOptions(net, [
+    Number((W * p).toFixed(4)),                       // forgot the cost
+    Number(((W - c) * p).toFixed(4)),                 // ignored the losing branch
+    Number((c - W * p).toFixed(4)),                   // sign flip
+    Number(((W - c) * p - c).toFixed(4))              // double-charged
+  ], money);
+  if (!o) return null;
+  return {
+    stem: '<p class="scenario">A game costs <b>' + money(c) + '</b> to play. With probability <b>' + fmt(p) + '</b> you win <b>' + money(W) + '</b>; otherwise you win nothing.</p>' +
+          '<p class="ask">What is your expected net gain per play?</p>',
+    options: o.options,
+    correct: o.correct,
+    explain: 'Bake the cost into the x-values before you take an expectation. Winning is a net gain of ' + money(W) + ' − ' + money(c) + ' = ' + money(W - c) + '; losing is a net gain of −' + money(c) + ' — and losing is an outcome you must include.' +
+             '<span class="work">E(X) = (' + fmt(W - c) + ')(' + fmt(p) + ') + (−' + fmt(c) + ')(' + fmt(Number((1 - p).toFixed(4))) + ') = ' + money(net) + '</span>'
+  };
+}
+
+/* ---------- Rung 9 — decide with E(X) ---------- */
+function twoOutcome(lo, hi) {
+  const D = pick([10, 20, 25, 50, 100]);
+  const w = ri(1, D - 1);
+  const p = w / D;
+  const a = ri(lo, hi) * 1000;
+  const b = 0;
+  return { xs: [b, a], probs: [Number((1 - p).toFixed(4)), Number(p.toFixed(4))], E: Number((a * p).toFixed(4)) };
+}
+
+function genDecide() {
+  const gain = Math.random() < 0.5;
+  const wantTie = Math.random() < 0.15;
+  const A = twoOutcome(10, 40);
+  let B;
+  if (wantTie) {
+    // same expectation, visibly different table: halve the prize, double the chance
+    const a2 = A.xs[1] / 2, p2 = Number((A.probs[1] * 2).toFixed(4));
+    if (a2 % 1000 !== 0 || p2 >= 1) return null;
+    B = { xs: [0, a2], probs: [Number((1 - p2).toFixed(4)), p2], E: Number((a2 * p2).toFixed(4)) };
+    if (!near(A.E, B.E)) return null;
+  } else {
+    B = twoOutcome(10, 40);
+    if (near(A.E, B.E)) return null;
+  }
+
+  const tie = near(A.E, B.E);
+  const better = tie ? null : (gain ? (A.E > B.E ? 'A' : 'B') : (A.E < B.E ? 'A' : 'B'));
+  const ctx = gain
+    ? { lead: 'Two insurance policies pay out as follows. You want the <b>larger</b> expected payout.', word: 'payout' }
+    : { lead: 'Two repair contracts will cost you as follows. You want the <b>smaller</b> expected cost.', word: 'cost' };
+
+  const all = [
+    'Choose Option A.',
+    'Choose Option B.',
+    'The two options are equivalent.',
+    'Choose whichever option has the larger single ' + ctx.word + ', regardless of probability.'
+  ];
+  const idx = tie ? 2 : (better === 'A' ? 0 : 1);
+  const order = shuffle([0, 1, 2, 3]);
+
+  const label = v => money(v);
+  const tbl = (d) => '<table class="dist"><tr><th>' + (gain ? 'payout' : 'cost') + '</th>' +
+      d.xs.map(x => '<td>' + label(x) + '</td>').join('') + '</tr><tr><th>P(x)</th>' +
+      d.probs.map(p => '<td>' + fmt(p) + '</td>').join('') + '</tr></table>';
+
+  return {
+    stem: '<p class="scenario">' + ctx.lead + '</p>' +
+          '<div class="twoup"><div class="col"><h4>Option A</h4>' + tbl(A) + '</div>' +
+          '<div class="col"><h4>Option B</h4>' + tbl(B) + '</div></div>' +
+          '<p class="ask">Which should you choose?</p>',
+    options: order.map(i => all[i]),
+    correct: order.indexOf(idx),
+    explain: 'Compute E(X) for each and compare. A big headline number means nothing if its probability is small — the expectation already accounts for that.' +
+             '<span class="work">E(A) = ' + money(A.E) + '&nbsp;&nbsp;E(B) = ' + money(B.E) + '<br>' +
+             (tie ? 'equal expectations → the two options are equivalent on average'
+                  : (gain ? 'larger' : 'smaller') + ' expected ' + ctx.word + ' → Option ' + better) + '</span>'
+  };
+}
+
+/* ---------- Capstone — the Distribution Autopsy ---------- */
+function genAutopsy() {
+  // target the verdict, then search for parameters that produce it —
+  // otherwise the random search overwhelmingly builds games that favor the player,
+  // which is not what a real booth looks like.
+  const target = pick(['house', 'house', 'house', 'house', 'house', 'house', 'house', 'house', 'player', 'player', 'fair', 'fair']);
+  const c = pick([1, 2, 5]);
+  const D = pick([50, 100]);
+  const w1 = ri(1, 3);
+  const W1 = pick([25, 50, 100, 200]);
+  const W2 = pick([5, 10, 20, 25]);
+  if (W2 <= c || W1 <= 2 * W2) return null;
+
+  let w2;
+  if (target === 'fair') {
+    // solve W1·w1 + W2·w2 = c·D exactly, rather than waiting for luck
+    const need = c * D - W1 * w1;
+    if (need <= 0 || need % W2 !== 0) return null;
+    w2 = need / W2;
+    if (w2 < 2 || w2 > 8) return null;
+  } else {
+    w2 = ri(2, 8);
+  }
+  if (w1 + w2 >= D) return null;
+
+  const p1 = w1 / D, p2 = w2 / D, p0 = Number((1 - p1 - p2).toFixed(4));
+  if (p0 < 0.6) return null;                     // you should usually walk away with nothing
+
+  const S = W1 * w1 + W2 * w2;                   // D · (expected winnings)
+  const E = Number((S / D - c).toFixed(4));      // D ∈ {50,100} ⇒ E is an exact number of cents
+  if (target === 'house' && !(E < 0)) return null;
+  if (target === 'player' && !(E > 0)) return null;
+  if (target === 'fair' && !near(E, 0)) return null;
+  if (Math.abs(E) > 6) return null;              // keep the edge plausible
+
+  const g1 = W1 - c, g2 = W2 - c, g0 = -c;
+
+  const flavor = pick([
+    { n: 'A booth at the county fair', v: 'spin the wheel' },
+    { n: 'An arcade claw machine', v: 'play a round' },
+    { n: 'A charity scratch-off card', v: 'buy a card' }
+  ]);
+  const scen = '<p class="scenario"><b>' + flavor.n + '</b> charges <b>' + money(c) + '</b> to ' + flavor.v + '. ' +
+    'With probability <b>' + fmt(p1) + '</b> you win the grand prize of <b>' + money(W1) + '</b>; ' +
+    'with probability <b>' + fmt(p2) + '</b> you win a consolation prize of <b>' + money(W2) + '</b>; ' +
+    'otherwise you win nothing. Let X be your <b>net gain</b>.</p>';
+
+  const stages = [];
+
+  // Stage 1 — the value set
+  const s1 = textOptions(
+    '{ ' + fmt(g0) + ', ' + fmt(g2) + ', ' + fmt(g1) + ' }',
+    ['{ 0, ' + fmt(W2) + ', ' + fmt(W1) + ' }',
+     '{ ' + fmt(g0) + ', ' + fmt(W2) + ', ' + fmt(W1) + ' }',
+     '{ ' + fmt(c) + ', ' + fmt(g2) + ', ' + fmt(g1) + ' }']
+  );
+  if (!s1) return null;
+  stages.push({
+    label: 'Stage 1 of 4 — name the random variable',
+    stem: scen + '<p class="ask">What values can X take?</p>',
+    options: s1.options, correct: s1.correct,
+    explain: 'X is <b>net</b> gain, so the ' + money(c) + ' comes off every branch — including the branch where you win. And "win nothing" is still an outcome: it is a net gain of −' + money(c) + '.'
+  });
+
+  // Stage 2 — the missing probability
+  const s2 = numOptions(p0, [
+    Number((p1 + p2).toFixed(4)),
+    Number((1 - p1).toFixed(4)),
+    Number((1 - p2).toFixed(4)),
+    Number((p0 / 2).toFixed(4))
+  ]);
+  if (!s2) return null;
+  stages.push({
+    label: 'Stage 2 of 4 — complete the table',
+    stem: scen + distTable([g0, g2, g1], ['?', fmt(p2), fmt(p1)], 0, 'x (net gain)') +
+          '<p class="ask">What is P(X = ' + fmt(g0) + ') — the probability of winning nothing?</p>',
+    options: s2.options, correct: s2.correct,
+    explain: 'The column has to total 1. The scenario never states the losing probability out loud — you have to recover it.' +
+             '<span class="work">P(lose) = 1 − ' + fmt(p1) + ' − ' + fmt(p2) + ' = ' + fmt(p0) + '</span>'
+  });
+
+  // Stage 3 — E(X)
+  const s3 = numOptions(E, [
+    Number((W1 * p1 + W2 * p2).toFixed(4)),
+    Number((g1 * p1 + g2 * p2).toFixed(4)),
+    Number((-E).toFixed(4)),
+    Number((W1 * p1 + W2 * p2 - c * p0).toFixed(4))
+  ], money);
+  if (!s3) return null;
+  stages.push({
+    label: 'Stage 3 of 4 — build the column',
+    stem: scen + distTable([g0, g2, g1], [fmt(p0), fmt(p2), fmt(p1)], null, 'x (net gain)') +
+          '<p class="ask">What is E(X)?</p>',
+    options: s3.options, correct: s3.correct,
+    explain: 'Multiply across, add down. All three branches, cost included.' +
+             '<span class="work">E(X) = (' + fmt(g1) + ')(' + fmt(p1) + ') + (' + fmt(g2) + ')(' + fmt(p2) + ') + (' + fmt(g0) + ')(' + fmt(p0) + ') = ' + money(E) + '</span>'
+  });
+
+  // Stage 4 — the verdict
+  const all4 = [
+    'The game is fair — E(X) = 0.',
+    'The game favors the player — E(X) > 0.',
+    'The game favors the house — E(X) < 0.',
+    'The game is fair, because someone does win the grand prize eventually.'
+  ];
+  const idx4 = near(E, 0) ? 0 : (E > 0 ? 1 : 2);
+  const order4 = shuffle([0, 1, 2, 3]);
+  stages.push({
+    label: 'Stage 4 of 4 — the verdict',
+    stem: scen + '<p class="ask">You found E(X) = ' + money(E) + '. Is the game fair?</p>',
+    options: order4.map(i => all4[i]), correct: order4.indexOf(idx4),
+    explain: 'Fair means E(X) = 0 exactly — no edge to either side. Here the house keeps ' + money(Math.abs(E)) + ' per play on average, forever. Someone winning the grand prize does not change that; it is already priced into the expectation.'
+  });
+
+  return { stages };
+}
+
+/* =============================== GENERATORS END =============================== */
+
+/* ------------------------------- LADDER ENGINE ------------------------------- */
+
+const STORE = 'discreteLadder';
+const RUNGS = [
+  { id: 'rv',        title: 'The Random Variable',        sub: 'What is X, and what values can it take?',            gen: genRV },
+  { id: 'valid',     title: 'Is the Table Legal?',        sub: 'Every P(x) in [0,1], and ΣP(x) = 1',                 gen: genValid },
+  { id: 'missing',   title: 'The Missing Probability',    sub: 'Whatever is left over after the rest',               gen: genMissing },
+  { id: 'read',      title: 'Reading the Table',          sub: '≤ and ≥ include the endpoint. < and > do not.',      gen: genRead },
+  { id: 'mean',      title: 'The x·P(x) Column',          sub: 'Multiply across, add down — that is E(X)',           gen: genMean },
+  { id: 'interpret', title: 'What E(X) Actually Means',   sub: 'A long-run average, not a prediction',               gen: genInterpret },
+  { id: 'spread',    title: 'Spread, Without Computing',  sub: 'σ² = Σ[(x − μ)²·P(x)] — read it, do not grind it',   gen: genSpread },
+  { id: 'fair',      title: 'Net Gain &amp; Fair Games',      sub: 'Bake the cost in. Fair means E(X) = 0.',             gen: genFair },
+  { id: 'decide',    title: 'Deciding with E(X)',         sub: 'Compute both, then choose',                          gen: genDecide }
+];
+const GOAL = 4;
+
+function loadBadges() {
+  try { return JSON.parse(localStorage.getItem(STORE) || '{}'); } catch (e) { return {}; }
+}
+function saveBadge(id) {
+  const b = loadBadges(); b[id] = true;
+  try { localStorage.setItem(STORE, JSON.stringify(b)); } catch (e) {}
+}
+
+function tryGen(fn) {
+  for (let i = 0; i < 400; i++) { const p = fn(); if (p) return p; }
+  return null;
+}
+
+function optionRow(text, i) {
+  const isNum = /^[−$\-0-9.]/.test(text);
+  return '<button class="opt" data-i="' + i + '"><span class="key">' + (i + 1) + '</span>' +
+         '<span class="' + (isNum ? 'num' : '') + '">' + text + '</span></button>';
+}
+
+/* --- standard rung --- */
+function tapProblem(rung, el) {
+  const state = { streak: 0, locked: false, prob: null, earned: loadBadges()[rung.id] === true };
+
+  const body = el.querySelector('.rung-body');
+  const badge = el.querySelector('.badge');
+
+  function paintBadge() {
+    if (state.earned) { badge.classList.add('earned'); badge.textContent = '★ MASTERED'; }
+    else { badge.classList.remove('earned'); badge.textContent = state.streak + '/' + GOAL; }
+  }
+
+  function paintPips() {
+    const pips = body.querySelectorAll('.pip');
+    pips.forEach((p, i) => p.classList.toggle('on', i < state.streak));
+  }
+
+  function deal() {
+    state.prob = tryGen(rung.gen);
+    state.locked = false;
+    if (!state.prob) { body.innerHTML = '<p>Could not build a problem. Reload the page.</p>'; return; }
+    body.innerHTML =
+      '<div class="stem">' + state.prob.stem + '</div>' +
+      '<div class="options">' + state.prob.options.map(optionRow).join('') + '</div>' +
+      '<div class="feedback"></div>' +
+      '<div class="footrow"><div class="streak"><span class="label">streak</span>' +
+      '<span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>' +
+      '<button class="next">Next problem →</button></div>';
+    paintPips();
+    paintBadge();
+    body.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => answer(+b.dataset.i)));
+    body.querySelector('.next').addEventListener('click', deal);
+  }
+
+  function answer(i) {
+    if (state.locked) return;
+    state.locked = true;
+    const right = i === state.prob.correct;
+    const btns = body.querySelectorAll('.opt');
+    btns.forEach((b, j) => {
+      b.disabled = true;
+      if (j === state.prob.correct) b.classList.add('right');
+      else if (j === i) b.classList.add('wrong');
+      else b.classList.add('dim');
+    });
+    const fb = body.querySelector('.feedback');
+    fb.className = 'feedback show ' + (right ? 'right' : 'wrong');
+    fb.innerHTML = '<span class="verdict">' + (right ? 'Correct' : 'Not quite') + '</span> ' + state.prob.explain;
+
+    state.streak = right ? state.streak + 1 : 0;
+    if (state.streak >= GOAL && !state.earned) { state.earned = true; saveBadge(rung.id); }
+    paintPips();
+    paintBadge();
+  }
+
+  el._deal = deal;
+  el._answer = i => { if (state.prob && !state.locked) answer(i); };
+  el._next = () => { if (state.locked) deal(); };
+  paintBadge();
+}
+
+/* --- capstone: sequential stages, all four must land --- */
+function tapAutopsy(rung, el) {
+  const state = { streak: 0, locked: false, stage: 0, run: null, miss: false, earned: loadBadges()[rung.id] === true };
+  const body = el.querySelector('.rung-body');
+  const badge = el.querySelector('.badge');
+
+  function paintBadge() {
+    if (state.earned) { badge.classList.add('earned'); badge.textContent = '★ MASTERED'; }
+    else { badge.classList.remove('earned'); badge.textContent = state.streak + '/' + GOAL; }
+  }
+
+  function deal() {
+    state.run = tryGen(genAutopsy);
+    state.stage = 0;
+    state.miss = false;
+    render();
+  }
+
+  function render() {
+    const st = state.run.stages[state.stage];
+    state.locked = false;
+    const pips = state.run.stages.map((_, i) =>
+      '<div class="stagepip ' + (i < state.stage ? 'done' : (i === state.stage ? 'active' : '')) + '"></div>').join('');
+    body.innerHTML =
+      '<div class="stages">' + pips + '</div>' +
+      '<div class="stagelabel">' + st.label + '</div>' +
+      '<div class="stem">' + st.stem + '</div>' +
+      '<div class="options">' + st.options.map(optionRow).join('') + '</div>' +
+      '<div class="feedback"></div>' +
+      '<div class="autopsy-done"></div>' +
+      '<div class="footrow"><div class="streak"><span class="label">streak</span>' +
+      '<span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>' +
+      '<button class="next">Next stage →</button></div>';
+    body.querySelectorAll('.pip').forEach((p, i) => p.classList.toggle('on', i < state.streak));
+    paintBadge();
+    body.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => answer(+b.dataset.i)));
+    body.querySelector('.next').addEventListener('click', advance);
+  }
+
+  function answer(i) {
+    if (state.locked) return;
+    state.locked = true;
+    const st = state.run.stages[state.stage];
+    const right = i === st.correct;
+    if (!right) state.miss = true;
+    body.querySelectorAll('.opt').forEach((b, j) => {
+      b.disabled = true;
+      if (j === st.correct) b.classList.add('right');
+      else if (j === i) b.classList.add('wrong');
+      else b.classList.add('dim');
+    });
+    const fb = body.querySelector('.feedback');
+    fb.className = 'feedback show ' + (right ? 'right' : 'wrong');
+    fb.innerHTML = '<span class="verdict">' + (right ? 'Correct' : 'Not quite') + '</span> ' + st.explain;
+    if (!right) body.querySelectorAll('.stagepip')[state.stage].classList.add('miss');
+    const btn = body.querySelector('.next');
+    btn.textContent = (state.stage === state.run.stages.length - 1) ? 'New autopsy →' : 'Next stage →';
+  }
+
+  function advance() {
+    if (!state.locked) return;
+    if (state.stage < state.run.stages.length - 1) {
+      state.stage++;
+      render();
+      return;
+    }
+    // autopsy complete
+    state.streak = state.miss ? 0 : state.streak + 1;
+    if (state.streak >= GOAL && !state.earned) { state.earned = true; saveBadge(rung.id); }
+    deal();
+  }
+
+  el._deal = deal;
+  el._answer = i => { if (state.run && !state.locked) answer(i); };
+  el._next = () => { if (state.locked) advance(); };
+  paintBadge();
+}
+
+/* ------------------------------- BUILD PAGE ------------------------------- */
+
+const ladder = document.getElementById('ladder');
+const all = RUNGS.concat([{ id: 'autopsy', title: 'Capstone — The Distribution Autopsy', sub: 'Four stages. Miss one and the streak resets.', capstone: true }]);
+const nodes = [];
+
+all.forEach((r, i) => {
+  const el = document.createElement('section');
+  el.className = 'rung' + (r.capstone ? ' capstone' : '');
+  el.innerHTML =
+    '<div class="rung-head">' +
+      '<div class="rung-num">' + (r.capstone ? '★' : (i + 1)) + '</div>' +
+      '<div class="rung-title">' + r.title + '<small>' + r.sub + '</small></div>' +
+      '<div class="badge">0/' + GOAL + '</div>' +
+    '</div>' +
+    '<div class="rung-body"></div>';
+  ladder.appendChild(el);
+  if (r.capstone) tapAutopsy(r, el); else tapProblem(r, el);
+  el.querySelector('.rung-head').addEventListener('click', () => {
+    const wasOpen = el.classList.contains('open');
+    nodes.forEach(n => n.classList.remove('open'));
+    if (!wasOpen) { el.classList.add('open'); el._deal(); }
+  });
+  nodes.push(el);
+});
+
+document.addEventListener('keydown', e => {
+  const open = nodes.find(n => n.classList.contains('open'));
+  if (!open) return;
+  if (e.key >= '1' && e.key <= '4') { open._answer(+e.key - 1); e.preventDefault(); }
+  else if (e.key === 'Enter') { open._next(); e.preventDefault(); }
+});
+
+document.getElementById('reset').addEventListener('click', () => {
+  try { localStorage.removeItem(STORE); } catch (e) {}
+  location.reload();
+});
+
+nodes[0].classList.add('open');
+nodes[0]._deal();
+</script>
+</body>
+</html>
