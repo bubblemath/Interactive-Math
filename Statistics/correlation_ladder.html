@@ -1,0 +1,897 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Correlation Ladder — read the cloud, then trust the number only so far</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#201A2E;
+  --paper:#F6F4FA;
+  --surface:#FFFFFF;
+  --line:#E4E0EE;
+  --accent:#6544E4;        /* r / brand */
+  --accent-soft:#E4DCFB;
+  --dot:#2E2745;           /* neutral dots — read the SHAPE, not the color */
+  --good:#2FA84F;
+  --good-soft:#E0F3E5;
+  --bad:#D64545;
+  --bad-soft:#FBE4E4;
+  --muted:#6B6480;
+  --shadow:0 1px 2px rgba(32,26,46,.06),0 8px 24px rgba(32,26,46,.06);
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--disp);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin:0}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(246,244,250,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand .glyph{color:var(--accent)}
+.navlinks{margin-left:auto;display:flex;gap:22px;font-size:14px;font-weight:500}
+.navlinks a{color:var(--muted)}
+.navlinks a:hover{color:var(--ink)}
+@media(max-width:560px){.navlinks{display:none}}
+
+header{padding:66px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+header h1{font-size:clamp(29px,5vw,48px);font-weight:600}
+header h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:640px;margin:20px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+.heroviz{margin:38px 0 6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:26px 26px 22px;display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:center}
+@media(max-width:640px){.heroviz{grid-template-columns:1fr}}
+.heroviz .cap{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:14px}
+.rval{font-family:var(--disp);font-size:40px;font-weight:600;color:var(--accent)}
+.rval small{font-size:15px;color:var(--muted);font-weight:500;font-family:var(--mono)}
+/* r scale -1..1 */
+.rscale{margin-top:20px}
+.rscale .bar{position:relative;height:12px;border-radius:99px;overflow:hidden;display:flex}
+.rscale .seg{height:100%}
+.rscale .lab{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px}
+.rscale .marker{position:absolute;top:-4px;width:3px;height:20px;background:var(--ink);border-radius:2px;transform:translateX(-50%)}
+
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+section h2{font-size:clamp(23px,3.4vw,31px);margin-bottom:8px}
+.sec-sub{color:var(--muted);max-width:640px;margin:0 0 30px}
+
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:680px){.trio{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card .n{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+.card h3{font-size:17px;margin:10px 0 6px}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card kbd{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--ink)}
+
+.limits{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+@media(max-width:680px){.limits{grid-template-columns:1fr}}
+.lbox{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.lbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:5px}
+.lbox .d{font-size:13.5px;color:var(--muted)}
+
+.callout{display:flex;gap:16px;background:var(--accent-soft);border:1px solid #C9B9F6;border-radius:14px;padding:20px 22px;margin-top:26px}
+.callout .hand{font-size:22px;line-height:1.2}
+.callout p{margin:0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout .mono{color:#5333c9}
+
+.ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.progress-wrap{width:100%;margin:16px 0 26px}
+.progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.progress-track{height:9px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.reset{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--bad);color:var(--bad)}
+
+.rungs{display:flex;flex-direction:column;gap:14px}
+.rung{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+.rung.cap{border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--shadow)}
+.rung-top{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;user-select:none}
+.rung-num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.rung.done .rung-num{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rung.cap .rung-num{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.rung-title{flex:1 1 auto}
+.rung-title .rt{font-family:var(--disp);font-weight:600;font-size:16px}
+.rung-title .rd{font-size:13px;color:var(--muted);margin-top:1px}
+.rung-badge{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.dots{display:flex;gap:4px}
+.dot-b{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dot-b.on{background:var(--accent)}
+.rung.done .dot-b.on{background:var(--good)}
+.chev{transition:transform .25s;color:var(--muted);font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.medal{display:none}
+.rung.done .medal{display:inline}
+.rung.done .rung-badge .txt{color:var(--good)}
+.rung-body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+.rung.open .rung-body{display:block}
+
+.strategy{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:18px 0;overflow:hidden}
+.strategy summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--accent);list-style:none;display:flex;align-items:center;gap:8px}
+.strategy summary::-webkit-details-marker{display:none}
+.strategy summary::before{content:"▸";transition:transform .2s;display:inline-block}
+.strategy[open] summary::before{transform:rotate(90deg)}
+.strategy .inner{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+.strategy .inner p{margin:.5em 0}
+.strategy code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--accent)}
+
+.qwrap{}
+.scenario{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:15px;margin-bottom:16px}
+.scenario .tag{font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:8px}
+.scenario b{color:var(--ink)}
+.ask{font-weight:600;font-family:var(--disp);font-size:16px;margin:4px 0 14px}
+.ask .hl{color:var(--accent)}
+
+/* scatter */
+.plotbox{display:flex;justify-content:center;margin:6px 0 18px}
+.plotbox.pair{gap:16px;flex-wrap:wrap}
+.plotcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 10px 6px;box-shadow:var(--shadow)}
+.plotcard .plabel{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;padding:4px 0 8px}
+.plotcard .plabel b{color:var(--accent)}
+svg.scatter{display:block;width:100%;max-width:340px;height:auto}
+.pair svg.scatter{max-width:230px}
+.plotframe{fill:var(--surface);stroke:var(--line);stroke-width:1}
+.grid{stroke:var(--line);opacity:.55}
+.dot-pt{fill:var(--dot);opacity:.72}
+.dot-pt.hi{fill:var(--bad);opacity:1}
+
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:14.5px;font-family:var(--body);color:var(--ink);transition:.12s}
+.choice:hover{border-color:var(--accent)}
+.choice .key{flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .key{background:var(--good);border-color:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.choice:disabled{cursor:default}
+
+.numrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.field input{font-family:var(--mono);font-size:16px;width:130px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);outline:none}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field input.ok{border-color:var(--good);background:var(--good-soft)}
+.field input.no{border-color:var(--bad);background:var(--bad-soft)}
+.btn{font-family:var(--disp);font-weight:600;font-size:14.5px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
+.btn:hover{background:#5333c9}
+.btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--accent)}
+
+.feedback{margin-top:15px;font-size:14.5px;display:none;border-radius:10px;padding:12px 15px}
+.feedback.show{display:block}
+.feedback.right{background:var(--good-soft);border:1px solid var(--good);color:#1e6b33}
+.feedback.wrong{background:var(--bad-soft);border:1px solid var(--bad);color:#9c2b2b}
+.feedback .mono{font-weight:700}
+.feedback .next{margin-top:9px}
+.streak-note{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:12px}
+
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:680px){.why-grid{grid-template-columns:1fr}}
+.why-grid h3{font-size:16px;margin-bottom:6px;color:var(--accent)}
+.why-grid p{font-size:14px;color:var(--muted);margin:0}
+.why-close{font-size:15px;color:var(--ink);max-width:680px}
+.why-close .mono{color:var(--accent)}
+
+footer{padding:30px 0 50px;border-top:1px solid var(--line)}
+.foot{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-family:var(--disp);font-weight:600;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:.35s;z-index:80;display:flex;gap:10px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="glyph">⁙⁙</span> The Correlation Ladder</div>
+    <div class="navlinks">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Scatterplots &amp; correlation · Lesson 18</div>
+    <h1>r measures <em>one straight line</em> — and nothing else.</h1>
+    <p class="lede">A correlation coefficient is a single number between −1 and 1 that answers exactly one question: how tightly do the points hug a <b>straight line</b>? Every classic mistake comes from asking it to do more — to prove a cause, to notice a curve, to shrug off an outlier, to care whether you measured in inches or centimeters. This ladder trains the reading, then the number, then the long list of things the number quietly refuses to tell you.</p>
+
+    <div class="heroviz">
+      <div>
+        <div class="cap">A moderate positive cloud</div>
+        <div class="plotcard" id="heroPlot"></div>
+      </div>
+      <div>
+        <div class="cap">Where its r sits</div>
+        <div class="rval" id="heroR">r = 0.00</div>
+        <div class="rscale">
+          <div class="bar" id="heroBar">
+            <div class="seg" style="width:10%;background:#C9B9F6"></div>
+            <div class="seg" style="width:40%;background:#A98FF0"></div>
+            <div class="seg" style="width:30%;background:#8163EA"></div>
+            <div class="seg" style="width:20%;background:#6544E4"></div>
+          </div>
+          <div class="lab"><span>|r|=0</span><span>.1</span><span>.5</span><span>.8</span><span>1</span></div>
+          <div class="lab" style="margin-top:2px"><span>none</span><span style="flex:1;text-align:center">weak · moderate · strong</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Read the cloud, put a number on it, know its limits</h2>
+    <p class="sec-sub">Eleven rungs run from "which variable goes on the x-axis?" up to a full read of a fresh plot. Every scatterplot is generated live, and its r is computed straight from the plotted points — so what you see is always what r actually is.</p>
+    <div class="trio">
+      <div class="card"><div class="n">01</div><h3>One skill per rung</h3><p>Direction, form, strength, then the properties of r — each rung isolates a single judgment so you can find the one you keep missing.</p></div>
+      <div class="card"><div class="n">02</div><h3>Earn each badge</h3><p>Get <b>four in a row</b> to earn a rung's badge. Answer with the mouse or press <kbd>1</kbd>–<kbd>4</kbd>; for the estimate rung, type a value and hit <kbd>Enter</kbd>. Miss one and the streak resets.</p></div>
+      <div class="card"><div class="n">03</div><h3>The strength scale</h3><p>By magnitude: <b>none</b> |r|&lt;0.1, <b>weak</b> 0.1–0.5, <b>moderate</b> 0.5–0.8, <b>strong</b> ≥0.8. Sign gives direction. Estimates count if you're within <b>0.1</b>.</p></div>
+    </div>
+
+    <div style="margin-top:34px">
+      <div class="sec-eyebrow">What r refuses to tell you</div>
+      <div class="limits">
+        <div class="lbox"><div class="t">It doesn't prove cause</div><div class="d">A tight correlation can be a lurking variable or pure coincidence. Association is not causation.</div></div>
+        <div class="lbox"><div class="t">It only sees straight lines</div><div class="d">A perfect U-shape can give r ≈ 0. A small r means "not <em>linear</em>," not "no relationship."</div></div>
+        <div class="lbox"><div class="t">It bends to outliers</div><div class="d">r is not resistant. A single stray point can inflate or collapse it.</div></div>
+        <div class="lbox"><div class="t">It ignores units &amp; labels</div><div class="d">Switch inches to cm, or swap which variable is x — r does not move at all.</div></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="hand">✋</div>
+      <p><b>A small r is not the same as "no relationship."</b> r only measures the <em>linear</em> part. Points can march along a clean parabola — an obviously strong pattern — and still return <span class="mono">r ≈ 0</span>, because none of that relationship is a straight line. Always look at the plot before you trust the number.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="ladder-head">
+      <div><div class="sec-eyebrow">The ladder</div><h2>Pick a rung and practice</h2></div>
+      <button class="reset" id="resetBtn">Reset progress</button>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span id="progLabel">0 of 11 badges earned</span><span>4 in a row = badge</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow">Why it matters</div>
+    <h2>The most over-trusted number in statistics</h2>
+    <div class="why-grid">
+      <div><h3>It compresses — and hides</h3><p>Boiling a whole scatterplot down to one number is powerful and dangerous. Two completely different clouds can share the same r. The plot holds the story; r is only its headline.</p></div>
+      <div><h3>Causation is the costly error</h3><p>"They're correlated, so one causes the other" is where correlation does real damage — in headlines, policy, and spending. The fix is cheap: ask what third thing might be driving both.</p></div>
+      <div><h3>Reading beats computing</h3><p>You'll rarely compute r by hand — a calculator or the correlation app does that. The skill worth owning is judgment: what the cloud shows, and what the number leaves out.</p></div>
+    </div>
+    <p class="why-close">Every rung here is the same discipline in miniature: <span class="mono">look at the cloud first · read direction, form, and strength · then reach for r — and remember its four blind spots.</span> A correlation coefficient is a sharp, honest tool for exactly one job. Knowing that job, and its edges, is most of what this lesson is for.</p>
+  </div>
+</section>
+
+<footer><div class="wrap"><div class="foot">The Correlation Ladder · −1 ≤ r ≤ 1 · straight lines only · correlation is not causation</div></div></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   ===== CORE LOGIC START  (pure; extracted for stress-testing) =====
+   ================================================================= */
+
+/* ---- Pearson r straight from coordinates (this is the source of truth) ---- */
+function corr(xs, ys){
+  var n = xs.length, mx=0, my=0, i;
+  for(i=0;i<n;i++){ mx+=xs[i]; my+=ys[i]; }
+  mx/=n; my/=n;
+  var sxy=0, sxx=0, syy=0, dx, dy;
+  for(i=0;i<n;i++){ dx=xs[i]-mx; dy=ys[i]-my; sxy+=dx*dy; sxx+=dx*dx; syy+=dy*dy; }
+  if(sxx===0 || syy===0) return 0;
+  return sxy/Math.sqrt(sxx*syy);
+}
+/* strength/direction bands (per course convention) */
+function band(r){
+  var a=Math.abs(r);
+  var strength = a<0.1 ? 'no correlation' : a<0.5 ? 'weak' : a<0.8 ? 'moderate' : 'strong';
+  var dir = a<0.1 ? 'none' : (r>0 ? 'positive' : 'negative');
+  return {a:a, strength:strength, dir:dir};
+}
+function labelOf(r){
+  var b=band(r);
+  return b.strength==='no correlation' ? 'no correlation' : (b.strength+' '+b.dir);
+}
+/* distance of |r| to the nearest band boundary — used to reject ambiguous plots */
+function bandMargin(r){
+  var a=Math.abs(r), bs=[0.1,0.5,0.8], m=1;
+  for(var i=0;i<bs.length;i++) m=Math.min(m, Math.abs(a-bs[i]));
+  return m;
+}
+
+/* ---- randomness ---- */
+function randn(){
+  var u=0,v=0;
+  while(u===0) u=Math.random();
+  while(v===0) v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+
+/* ---- plot generators (return plotted coords + r computed from them) ---- */
+function genLinearRaw(target, n){
+  var xs=[], ys=[], i, k=Math.sqrt(1-target*target);
+  for(i=0;i<n;i++){ var x=randn(); xs.push(x); ys.push(target*x + k*randn()); }
+  return {xs:xs, ys:ys, r:corr(xs,ys)};
+}
+/* generate a linear cloud whose r lands safely inside a target strength band + sign */
+function genBand(sign, strength, n){
+  n = n||32;
+  var lo,hi;
+  if(strength==='weak'){ lo=0.22; hi=0.46; }
+  else if(strength==='moderate'){ lo=0.58; hi=0.75; }
+  else { lo=0.83; hi=0.95; }              // strong
+  for(var t=0;t<600;t++){
+    var target = (lo + Math.random()*(hi-lo)) * (sign<0?-1:1);
+    var p = genLinearRaw(target, n);
+    var b = band(p.r);
+    if(b.strength===strength && b.dir===(sign<0?'negative':'positive') && bandMargin(p.r)>0.05){
+      return p;
+    }
+  }
+  return null;
+}
+/* a directional cloud of any non-none strength (for the direction rung) */
+function genDirectional(sign, n){
+  n=n||32;
+  for(var t=0;t<600;t++){
+    var target = (0.28 + Math.random()*0.62)*(sign<0?-1:1);
+    var p = genLinearRaw(target, n);
+    if(band(p.r).dir===(sign<0?'negative':'positive') && Math.abs(p.r)>0.18) return p;
+  }
+  return null;
+}
+/* a near-zero cloud (no correlation) */
+function genCloud(n){
+  n=n||34;
+  for(var t=0;t<600;t++){
+    var p = genLinearRaw(0, n);
+    if(Math.abs(p.r)<0.075) return p;
+  }
+  return null;
+}
+/* a clearly curved (quadratic) cloud with small linear r */
+function genCurved(n, maxR){
+  n=n||30; maxR = maxR||0.15;
+  for(var t=0;t<600;t++){
+    var xs=[], ys=[], i, open=(Math.random()<0.5?1:-1), noise=0.10+Math.random()*0.08;
+    for(i=0;i<n;i++){
+      var x=-1 + 2*i/(n-1) + (Math.random()-0.5)*0.06;
+      xs.push(x);
+      ys.push(open*(x*x) + noise*randn());
+    }
+    var r=corr(xs,ys);
+    if(Math.abs(r)<maxR) return {xs:xs, ys:ys, r:r, open:open};
+  }
+  return null;
+}
+/* a strong linear cloud, then one outlier that swings r substantially */
+function genOutlier(n){
+  n=n||26;
+  for(var t=0;t<600;t++){
+    var sign = Math.random()<0.5?1:-1;
+    var base = genBand(sign, Math.random()<0.5?'strong':'moderate', n);
+    if(!base) continue;
+    var xs=base.xs.slice(), ys=base.ys.slice();
+    var maxx=Math.max.apply(null,xs), minx=Math.min.apply(null,xs);
+    var maxy=Math.max.apply(null,ys), miny=Math.min.apply(null,ys);
+    // place an outlier off the trend: extreme x, opposite-trend y
+    var ox = (Math.random()<0.5 ? maxx : minx) + (Math.random()<0.5?1:-1)*(0.8+Math.random());
+    var oy = (sign>0 ? miny - (1.5+Math.random()*1.5) : maxy + (1.5+Math.random()*1.5));
+    xs.push(ox); ys.push(oy);
+    var r1 = corr(xs,ys);
+    if(Math.abs(r1 - base.r) > 0.28){
+      return {xs:xs, ys:ys, r1:r1, baseXs:base.xs, baseYs:base.ys, r0:base.r, outIdx:xs.length-1, sign:sign};
+    }
+  }
+  return null;
+}
+
+/* ---- SVG scatter renderer (pure string) ---- */
+function svgScatter(xs, ys, opts){
+  opts = opts||{};
+  var W=opts.w||320, H=opts.h||240, m=14, i;
+  var minx=Math.min.apply(null,xs), maxx=Math.max.apply(null,xs);
+  var miny=Math.min.apply(null,ys), maxy=Math.max.apply(null,ys);
+  var px=(maxx-minx)*0.09||1, py=(maxy-miny)*0.09||1;
+  minx-=px; maxx+=px; miny-=py; maxy+=py;
+  function X(x){ return (m + (x-minx)/(maxx-minx)*(W-2*m)).toFixed(1); }
+  function Y(y){ return (H-m - (y-miny)/(maxy-miny)*(H-2*m)).toFixed(1); }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="scatter" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="scatterplot">';
+  s+='<rect x="'+m+'" y="'+m+'" width="'+(W-2*m)+'" height="'+(H-2*m)+'" class="plotframe"/>';
+  for(var g=1;g<4;g++){
+    var gx=(m+g/4*(W-2*m)).toFixed(1), gy=(m+g/4*(H-2*m)).toFixed(1);
+    s+='<line x1="'+gx+'" y1="'+m+'" x2="'+gx+'" y2="'+(H-m)+'" class="grid"/>';
+    s+='<line x1="'+m+'" y1="'+gy+'" x2="'+(W-m)+'" y2="'+gy+'" class="grid"/>';
+  }
+  var dot=opts.dot||3.6;
+  for(i=0;i<xs.length;i++){
+    var cls='dot-pt'+(opts.hi===i?' hi':'');
+    s+='<circle cx="'+X(xs[i])+'" cy="'+Y(ys[i])+'" r="'+dot+'" class="'+cls+'"/>';
+  }
+  s+='</svg>';
+  return s;
+}
+
+/* ---- classify distractors (direction+strength) ---- */
+var ALL_LABELS = ['strong positive','moderate positive','weak positive','no correlation','weak negative','moderate negative','strong negative'];
+function classifyOptions(r){
+  var correct = labelOf(r);
+  var pool = ALL_LABELS.filter(function(l){ return l!==correct; });
+  shuffle(pool);
+  var opts = [correct, pool[0], pool[1], pool[2]];
+  shuffle(opts);
+  return {options:opts, answer:opts.indexOf(correct), correct:correct};
+}
+
+/* ---- context banks ---- */
+var ROLE_BANK = [
+  {a:'hours spent studying', b:'exam score', exp:'hours spent studying'},
+  {a:'amount of fertilizer used', b:'plant height', exp:'amount of fertilizer used'},
+  {a:'age of a used car', b:'its resale value', exp:'age of a used car'},
+  {a:'daily calories consumed', b:'body weight', exp:'daily calories consumed'},
+  {a:'hours of safety training', b:'number of workplace accidents', exp:'hours of safety training'},
+  {a:'outdoor temperature', b:'monthly heating cost', exp:'outdoor temperature'},
+  {a:'advertising budget', b:'monthly sales', exp:'advertising budget'},
+  {a:'rainfall during the season', b:'crop yield', exp:'rainfall during the season'}
+];
+var ASSOC_BANK = [
+  {a:"a mother's height", b:"her adult daughter's height", ans:'positive'},
+  {a:"a car's age", b:"its current market value", ans:'negative'},
+  {a:"a person's weight", b:"their daily calorie intake", ans:'positive'},
+  {a:"a person's height", b:"their birth month", ans:'none'},
+  {a:"hours of safety training", b:"the number of accidents", ans:'negative'},
+  {a:"hours studied for a test", b:"the score earned", ans:'positive'},
+  {a:"outdoor temperature", b:"the monthly heating bill", ans:'negative'},
+  {a:"a student's shoe size", b:"their exam grade", ans:'none'},
+  {a:"a car's weight", b:"its fuel economy (mpg)", ans:'negative'},
+  {a:"minutes of daily exercise", b:"resting heart rate", ans:'negative'},
+  {a:"a house's square footage", b:"its selling price", ans:'positive'},
+  {a:"the age of a used phone", b:"its resale price", ans:'negative'},
+  {a:"the number of pages in a novel", b:"the reader's shoe size", ans:'none'},
+  {a:"daily rainfall", b:"umbrella sales", ans:'positive'}
+];
+var CAUSE_BANK = [
+  {a:"monthly ice cream sales", b:"the number of drownings", r:0.93, lurk:"hot summer weather drives both"},
+  {a:"the number of firefighters sent to a blaze", b:"the property damage", r:0.88, lurk:"bigger fires cause both"},
+  {a:"children's shoe sizes", b:"their reading test scores", r:0.91, lurk:"older children have bigger feet and read better"},
+  {a:"a country's number of ministers", b:"its rum consumption", r:0.95, lurk:"a growing population raises both"},
+  {a:"televisions per household", b:"national life expectancy", r:0.89, lurk:"national wealth raises both"},
+  {a:"sunglasses sold", b:"ice cream sold", r:0.90, lurk:"sunny weather drives both"}
+];
+var CAUSE_OPTS = [
+  'The two are associated, but this alone does not show that one causes the other.',
+  'The first variable directly causes the second.',
+  'The second variable directly causes the first.',
+  'A strong r proves there is no real relationship.'
+];
+
+/* invariance rung: original r is unchanged by units / swap / linear shift */
+function genInvariance(){
+  var r0 = pick([0.84,-0.62,0.77,-0.88,0.71,-0.53,0.91,-0.79]);
+  var kind = pick(['units','swap','shift']);
+  var prompt, opts, ans;
+  if(kind==='units'){
+    prompt = 'Two variables have a correlation of <b>r = '+r0.toFixed(2)+'</b>. The x-values are re-expressed in different units (for example, inches converted to centimeters). What is the new correlation?';
+  } else if(kind==='swap'){
+    prompt = 'The correlation between x and y is <b>r = '+r0.toFixed(2)+'</b>. Suppose we swap the roles, treating the old y as x and the old x as y. What is the new correlation?';
+  } else {
+    prompt = 'Two variables have a correlation of <b>r = '+r0.toFixed(2)+'</b>. We add 10 to every y-value. What is the new correlation?';
+  }
+  // options: unchanged (correct), a scaled version, zero, sign-flipped
+  var scaled = r0>0 ? Math.min(0.99, r0+0.15) : Math.max(-0.99, r0-0.15);
+  opts = [ r0.toFixed(2), scaled.toFixed(2), '0.00', (-r0).toFixed(2) ];
+  // de-dup guard (sign flip of 0 etc. won't occur here)
+  ans = 0;
+  var packaged = opts.map(function(v,i){ return {v:v, correct:i===0}; });
+  shuffle(packaged);
+  var finalOpts = packaged.map(function(o){ return 'r = '+o.v; });
+  var answer = packaged.findIndex ? packaged.findIndex(function(o){return o.correct;}) : (function(){for(var i=0;i<packaged.length;i++){if(packaged[i].correct)return i;}return 0;})();
+  return {prompt:prompt, options:finalOpts, answer:answer, r0:r0, kind:kind};
+}
+
+if (typeof module !== 'undefined' && module.exports){
+  module.exports = {
+    corr:corr, band:band, labelOf:labelOf, bandMargin:bandMargin,
+    genLinearRaw:genLinearRaw, genBand:genBand, genDirectional:genDirectional,
+    genCloud:genCloud, genCurved:genCurved, genOutlier:genOutlier,
+    svgScatter:svgScatter, classifyOptions:classifyOptions, genInvariance:genInvariance,
+    ROLE_BANK:ROLE_BANK, ASSOC_BANK:ASSOC_BANK, CAUSE_BANK:CAUSE_BANK, ALL_LABELS:ALL_LABELS
+  };
+}
+/* =================================================================
+   ===== CORE LOGIC END =====
+   ================================================================= */
+
+
+/* ---------------- UI LAYER ---------------- */
+var KEY='corrLadder', NEED=4;
+var state = load();
+function load(){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.rungs) return s; }catch(e){} return {rungs:{}}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+/* hero plot */
+(function(){
+  var p = genBand(1,'moderate',30) || genLinearRaw(0.65,30);
+  document.getElementById('heroPlot').innerHTML = svgScatter(p.xs,p.ys,{w:300,h:210});
+  var r=p.r;
+  document.getElementById('heroR').innerHTML = 'r = '+r.toFixed(2)+' <small>'+labelOf(r)+'</small>';
+  var pct = (Math.abs(r))*100;
+  var bar=document.getElementById('heroBar');
+  var mk=document.createElement('div'); mk.className='marker'; mk.style.left=pct+'%'; bar.appendChild(mk);
+})();
+
+/* rung definitions */
+var RUNGS = [
+  {
+    id:'role', title:'Explanatory or response?', desc:'Which variable goes on the x-axis.',
+    strategy:'<p>The <b>explanatory</b> variable (x) is the one you think helps explain the other; the <b>response</b> variable (y) is the outcome you measure. The parameter is <code>ρ</code> (rho); the statistic computed from a sample is <code>r</code>.</p>',
+    build:function(){
+      var it = pick(ROLE_BANK);
+      var askExp = Math.random()<0.5;
+      var opts = shuffle([it.a, it.b]);
+      var target = askExp ? it.exp : (it.exp===it.a?it.b:it.a);
+      return {mode:'mc',
+        scenario:'<span class="tag">Bivariate data</span>A study looks at the relationship between <b>'+it.a+'</b> and <b>'+it.b+'</b>.',
+        ask:'Which is the <span class="hl">'+(askExp?'explanatory (x)':'response (y)')+'</span> variable?',
+        options:opts, answer:opts.indexOf(target)};
+    }
+  },
+  {
+    id:'direction', title:'Read the direction', desc:'Positive, negative, or none — from the cloud.',
+    strategy:'<p>Scan low-to-high across x. If y tends to <b>rise</b>, the association is <b>positive</b>; if it tends to <b>fall</b>, <b>negative</b>. If there is no consistent tilt, there is <b>no association</b>.</p>',
+    build:function(){
+      var kind = pick(['pos','neg','none']);
+      var p = kind==='none' ? genCloud() : genDirectional(kind==='neg'?-1:1);
+      var ans = kind==='none'?'No association':(kind==='neg'?'Negative association':'Positive association');
+      var opts = ['Positive association','Negative association','No association'];
+      return {mode:'mc', plot:p, ask:'What is the direction of this association?',
+        options:opts, answer:opts.indexOf(ans)};
+    }
+  },
+  {
+    id:'form', title:'Read the form', desc:'Straight-line, curved, or no clear pattern.',
+    strategy:'<p><b>Form</b> is the overall shape. A cloud that follows a straight tilt is <b>linear</b>; one that bends (a curve or U-shape) is <b>nonlinear</b>; a shapeless blob has <b>no clear pattern</b>. Form is separate from strength — decide the shape first.</p>',
+    build:function(){
+      var kind = pick(['linear','curved','none']);
+      var p = kind==='linear' ? genBand(Math.random()<0.5?-1:1, pick(['moderate','strong']))
+            : kind==='curved' ? genCurved(30,0.2)
+            : genCloud();
+      var ans = kind==='linear'?'Linear':(kind==='curved'?'Nonlinear (curved)':'No clear pattern');
+      var opts = ['Linear','Nonlinear (curved)','No clear pattern'];
+      return {mode:'mc', plot:p, ask:'What is the form of this scatterplot?',
+        options:opts, answer:opts.indexOf(ans)};
+    }
+  },
+  {
+    id:'strength', title:'Read the strength', desc:'Weak, moderate, or strong.',
+    strategy:'<p>Strength is how tightly the points hug the line, by <code>|r|</code>: <b>weak</b> 0.1–0.5, <b>moderate</b> 0.5–0.8, <b>strong</b> ≥ 0.8. Tighter band = stronger; a wide scattered tilt is weak.</p>',
+    build:function(){
+      var strength = pick(['weak','moderate','strong']);
+      var p = genBand(Math.random()<0.5?-1:1, strength);
+      var opts = ['Weak','Moderate','Strong'];
+      var ans = strength.charAt(0).toUpperCase()+strength.slice(1);
+      return {mode:'mc', plot:p, ask:'How strong is this linear association?',
+        options:opts, answer:opts.indexOf(ans)};
+    }
+  },
+  {
+    id:'estimate', title:'Estimate r', desc:'Put a number on the cloud (within 0.1).',
+    strategy:'<p>Estimate <code>r</code> from the tilt and tightness. Sign first: up-slope is positive, down-slope negative. Then magnitude — a near-perfect line is close to ±1, a loose tilt closer to ±0.3. You count if you land within <b>0.1</b> of the true value.</p>',
+    build:function(){
+      var sign = Math.random()<0.5?-1:1;
+      var p = genDirectional(sign);
+      return {mode:'num', plot:p, ask:'Estimate the correlation coefficient r for this plot.',
+        fields:[{label:'r =', trueR:p.r, tol:0.1}]};
+    }
+  },
+  {
+    id:'context', title:'Predict from context', desc:'Positive, negative, or none — before any data.',
+    strategy:'<p>Ask what happens to the second quantity as the first <b>increases</b>. Up together → positive. One up, one down → negative. No sensible link → none. This is a prediction about direction, not a computed value.</p>',
+    build:function(){
+      var it = pick(ASSOC_BANK);
+      var opts = ['Positive association','Negative association','No association'];
+      var ans = it.ans==='positive'?0 : it.ans==='negative'?1 : 2;
+      return {mode:'mc',
+        scenario:'<span class="tag">Predict the association</span>Consider <b>'+it.a+'</b> and <b>'+it.b+'</b>.',
+        ask:'What association would you expect?', options:opts, answer:ans};
+    }
+  },
+  {
+    id:'invariance', title:'Units &amp; labels don\'t move r', desc:'Rescale or swap — r stays put.',
+    strategy:'<p>r is built from <em>standardized</em> values, so it is <b>unit-free</b>: converting inches to cm, or adding a constant, or swapping which variable is x and which is y, all leave r <b>exactly the same</b>. Only the actual pattern of points can change it.</p>',
+    build:function(){
+      var q = genInvariance();
+      return {mode:'mc', scenario:'<span class="tag">Property of r</span>'+q.prompt,
+        ask:'What is the new correlation?', options:q.options, answer:q.answer};
+    }
+  },
+  {
+    id:'outlier', title:'Outliers move r', desc:'r is not resistant.',
+    strategy:'<p>Because r uses every point\'s distance from the mean, a single far-off point can pull it hard. Compare the two plots: the only difference is one added point, and r jumps. r is <b>not resistant</b> to outliers.</p>',
+    build:function(){
+      var o = genOutlier();
+      var opts = [
+        'r changes substantially — it is not resistant to outliers.',
+        'r is unaffected; a single point cannot change it.',
+        'r always moves closer to +1 when any point is added.',
+        'r stays the same because the units did not change.'
+      ];
+      return {mode:'mc', pairPlot:o, ask:'The right plot adds one outlier to the left plot. What does this show?',
+        options:opts, answer:0};
+    }
+  },
+  {
+    id:'linear', title:'r only sees straight lines', desc:'Strong pattern, r near zero.',
+    strategy:'<p>These points follow a clear curve — an obvious, strong relationship — yet <code>r ≈ 0</code>. That is the point: r measures only the <b>linear</b> part. A small r means "not straight-line," never "no relationship." Always look at the plot.</p>',
+    build:function(){
+      var p = genCurved(30,0.12);
+      var opts = [
+        'The relationship is strong but curved — r measures only linear association.',
+        'There is no relationship between x and y.',
+        'The data is random noise.',
+        'r must have been calculated incorrectly.'
+      ];
+      return {mode:'mc', plot:p, ask:'This plot has r ≈ '+p.r.toFixed(2)+' despite a clear pattern. Why?',
+        options:opts, answer:0};
+    }
+  },
+  {
+    id:'cause', title:'Correlation ≠ causation', desc:'A strong r is not a cause.',
+    strategy:'<p>A strong correlation can come from a <b>lurking variable</b> that drives both, or from coincidence. Correlation shows association only; establishing cause needs a controlled experiment. The safe conclusion names the association without claiming a cause.</p>',
+    build:function(){
+      var it = pick(CAUSE_BANK);
+      var opts = CAUSE_OPTS.slice();
+      var ans = 0;
+      // shuffle while tracking correct
+      var packed = opts.map(function(o,i){ return {o:o, c:i===0}; });
+      shuffle(packed);
+      var finalOpts = packed.map(function(x){return x.o;});
+      for(var i=0;i<packed.length;i++){ if(packed[i].c){ ans=i; break; } }
+      return {mode:'mc',
+        scenario:'<span class="tag">'+it.a.charAt(0).toUpperCase()+it.a.slice(1)+'</span>Across many samples, <b>'+it.a+'</b> and <b>'+it.b+'</b> show a strong positive correlation (r ≈ '+it.r.toFixed(2)+').',
+        ask:'What can we correctly conclude?', options:finalOpts, answer:ans, lurk:it.lurk};
+    }
+  },
+  {
+    id:'capstone', title:'Capstone — full read', desc:'Classify the cloud, then draw the right conclusion.', cap:true,
+    strategy:'<p>The whole judgment at once: read the plot\'s direction and strength, then decide what may and may not be concluded. Both parts must be right — a single miss resets the streak.</p>',
+    build:function(){
+      var strength = pick(['weak','moderate','strong']);
+      var sign = Math.random()<0.5?-1:1;
+      var p = genBand(sign, strength);
+      var cls = classifyOptions(p.r);
+      return {mode:'mc2', plot:p, sub:[
+        {ask:'1. Classify this correlation.', options:cls.options, answer:cls.answer},
+        {ask:'2. A researcher says this proves one variable causes the other. Is that valid?',
+         options:['No — correlation shows association, not causation.','Yes — a clear correlation establishes cause.','Yes, but only if r is above 0.8.','Only if the plot is a straight line.'], answer:0}
+      ]};
+    }
+  }
+];
+
+/* ---------- render skeleton ---------- */
+var rungsEl=document.getElementById('rungs');
+RUNGS.forEach(function(def, idx){
+  if(!state.rungs[def.id]) state.rungs[def.id]={streak:0,done:false};
+  var el=document.createElement('div');
+  el.className='rung'+(def.cap?' cap':'')+(state.rungs[def.id].done?' done':'');
+  el.dataset.id=def.id;
+  el.innerHTML='<div class="rung-top"><div class="rung-num">'+(idx+1)+'</div>'+
+    '<div class="rung-title"><div class="rt">'+def.title+'</div><div class="rd">'+def.desc+'</div></div>'+
+    '<div class="rung-badge"><span class="medal">🏅</span><span class="dots"></span><span class="txt"></span></div>'+
+    '<div class="chev">▶</div></div><div class="rung-body"></div>';
+  rungsEl.appendChild(el);
+  el.querySelector('.rung-top').addEventListener('click', function(){ toggleRung(def.id); });
+  renderBadge(def.id);
+});
+function rungEl(id){ return rungsEl.querySelector('.rung[data-id="'+id+'"]'); }
+function rungDef(id){ return RUNGS.filter(function(r){return r.id===id;})[0]; }
+function renderBadge(id){
+  var el=rungEl(id), st=state.rungs[id], dots=el.querySelector('.dots'); dots.innerHTML='';
+  for(var i=0;i<NEED;i++){ var d=document.createElement('span'); d.className='dot-b'+(i<st.streak?' on':''); dots.appendChild(d); }
+  el.querySelector('.txt').textContent = st.done?'earned':(st.streak+'/'+NEED);
+  el.classList.toggle('done', st.done);
+}
+
+var openId=null;
+function toggleRung(id){
+  var el=rungEl(id);
+  if(el.classList.contains('open')){ el.classList.remove('open'); openId=null; return; }
+  if(openId){ rungEl(openId).classList.remove('open'); }
+  el.classList.add('open'); openId=id; newQuestion(id);
+}
+
+/* ---------- question flow ---------- */
+var current={};
+function plotCard(p, extra){ return '<div class="plotcard">'+svgScatter(p.xs,p.ys,extra||{})+'</div>'; }
+function newQuestion(id){
+  var def=rungDef(id), q=def.build();
+  current[id]={def:def,q:q};
+  var body=rungEl(id).querySelector('.rung-body');
+  var html='<details class="strategy"><summary>Strategy</summary><div class="inner">'+def.strategy+'</div></details><div class="qwrap">';
+  if(q.scenario) html+='<div class="scenario">'+q.scenario+'</div>';
+  if(q.plot) html+='<div class="plotbox">'+plotCard(q.plot)+'</div>';
+  if(q.pairPlot){
+    var o=q.pairPlot;
+    html+='<div class="plotbox pair">'+
+      '<div class="plotcard">'+svgScatter(o.baseXs,o.baseYs,{w:240,h:200})+'<div class="plabel">without · r = <b>'+o.r0.toFixed(2)+'</b></div></div>'+
+      '<div class="plotcard">'+svgScatter(o.xs,o.ys,{w:240,h:200,hi:o.outIdx})+'<div class="plabel">with outlier · r = <b>'+o.r1.toFixed(2)+'</b></div></div>'+
+      '</div>';
+  }
+  if(q.mode==='mc2'){
+    html+='<div class="ask">'+q.sub[0].ask+'</div><div class="choices" data-sub="0">';
+    q.sub[0].options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div><div class="sub2" style="display:none;margin-top:18px"></div>';
+  } else if(q.mode==='mc'){
+    html+='<div class="ask">'+q.ask+'</div><div class="choices">';
+    q.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>';
+  } else {
+    html+='<div class="ask">'+q.ask+'</div><div class="numrow">';
+    q.fields.forEach(function(f,i){ html+='<div class="field"><label>'+f.label+'</label><input type="number" step="0.01" data-i="'+i+'" autocomplete="off"></div>'; });
+    html+='<button class="btn" data-check="1">Check</button></div>';
+  }
+  html+='<div class="feedback"></div><div class="streak-note"></div></div>';
+  body.innerHTML=html;
+  updateStreakNote(id);
+
+  if(q.mode==='mc'){
+    body.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerMC(id, parseInt(c.dataset.i,10)); }); });
+  } else if(q.mode==='mc2'){
+    body.querySelectorAll('.choices[data-sub="0"] .choice').forEach(function(c){ c.addEventListener('click', function(){ answerCapSub1(id, parseInt(c.dataset.i,10)); }); });
+  } else {
+    var inputs=body.querySelectorAll('input');
+    body.querySelector('[data-check]').addEventListener('click', function(){ answerNum(id); });
+    inputs.forEach(function(inp,i){ inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ if(i<inputs.length-1) inputs[i+1].focus(); else answerNum(id); } }); });
+    if(inputs[0]) inputs[0].focus();
+  }
+}
+function updateStreakNote(id){
+  var st=state.rungs[id], note=rungEl(id).querySelector('.streak-note'); if(!note) return;
+  note.textContent = st.done ? '✓ Badge earned — keep going for more practice.' : (st.streak>0 ? ('Streak: '+st.streak+' of '+NEED) : '');
+}
+function nextBtn(){ return '<div class="next"><button class="btn ghost" data-next="1">Next question →</button></div>'; }
+function wireNext(id){ var b=rungEl(id).querySelector('[data-next]'); if(b) b.addEventListener('click', function(){ newQuestion(id); }); }
+
+function answerMC(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), choices=body.querySelectorAll('.choice');
+  if(choices[0].disabled) return;
+  choices.forEach(function(c){ c.disabled=true; });
+  var correct=(choice===q.answer);
+  choices[q.answer].classList.add('correct');
+  if(!correct) choices[choice].classList.add('wrong');
+  var fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(correct?'right':'wrong');
+  var extra='';
+  if(cur.def.id==='cause' && q.lurk) extra=' <span style="opacity:.85">(Here, '+q.lurk+'.)</span>';
+  if(cur.def.id==='direction'||cur.def.id==='strength') extra=' <span style="opacity:.85">Actual r = <span class="mono">'+q.plot.r.toFixed(2)+'</span>.</span>';
+  fb.innerHTML=(correct?'Correct.':'Not quite — the right choice is highlighted.')+extra+nextBtn();
+  wireNext(id); recordResult(id, correct);
+}
+
+function answerNum(id){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), inputs=body.querySelectorAll('input');
+  if(inputs[0].disabled) return;
+  var f=q.fields[0], val=parseFloat(inputs[0].value.trim());
+  var ok=!isNaN(val) && Math.abs(val - f.trueR) <= f.tol + 1e-9;
+  inputs[0].classList.toggle('ok',ok); inputs[0].classList.toggle('no',!ok);
+  inputs.forEach(function(inp){ inp.disabled=true; }); body.querySelector('[data-check]').disabled=true;
+  var fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(ok?'right':'wrong');
+  fb.innerHTML=(ok?'Within range.':'Not within 0.1.')+' Actual r = <span class="mono">'+f.trueR.toFixed(2)+'</span> ('+labelOf(f.trueR)+').'+nextBtn();
+  wireNext(id); recordResult(id, ok);
+}
+
+/* capstone: two sequential questions, both must be right */
+function answerCapSub1(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c0=body.querySelectorAll('.choices[data-sub="0"] .choice');
+  if(c0[0].disabled) return;
+  c0.forEach(function(c){ c.disabled=true; });
+  var ok1=(choice===q.sub[0].answer);
+  c0[q.sub[0].answer].classList.add('correct');
+  if(!ok1) c0[choice].classList.add('wrong');
+  cur.ok1=ok1;
+  // reveal sub2
+  var s2=body.querySelector('.sub2'); s2.style.display='block';
+  var html='<div class="ask">'+q.sub[1].ask+'</div><div class="choices" data-sub="1">';
+  q.sub[1].options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+  html+='</div>';
+  s2.innerHTML=html;
+  s2.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerCapSub2(id, parseInt(c.dataset.i,10)); }); });
+}
+function answerCapSub2(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c1=body.querySelectorAll('.choices[data-sub="1"] .choice');
+  if(c1[0].disabled) return;
+  c1.forEach(function(c){ c.disabled=true; });
+  var ok2=(choice===q.sub[1].answer);
+  c1[q.sub[1].answer].classList.add('correct');
+  if(!ok2) c1[choice].classList.add('wrong');
+  var both=cur.ok1 && ok2;
+  var fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(both?'right':'wrong');
+  fb.innerHTML=(both?'Both correct — clean read.':'Not both correct — the streak resets.')+' Actual r = <span class="mono">'+q.plot.r.toFixed(2)+'</span> ('+labelOf(q.plot.r)+').'+nextBtn();
+  wireNext(id); recordResult(id, both);
+}
+
+function recordResult(id, correct){
+  var st=state.rungs[id], wasDone=st.done;
+  if(correct){ st.streak++; if(st.streak>=NEED) st.done=true; } else st.streak=0;
+  save(); renderBadge(id); updateStreakNote(id); updateProgress();
+  if(st.done && !wasDone) celebrate(id);
+}
+function updateProgress(){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  document.getElementById('progLabel').textContent=done+' of '+RUNGS.length+' badges earned';
+  document.getElementById('progFill').style.width=(100*done/RUNGS.length)+'%';
+}
+function celebrate(id){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  showToast('🏅 '+(done===RUNGS.length?'All 11 badges — you read the cloud and the number.':'Badge earned · '+rungDef(id).title));
+}
+var toastT;
+function showToast(txt){ var t=document.getElementById('toast'); t.innerHTML=txt; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){ t.classList.remove('show'); },2600); }
+
+/* keyboard 1-4 for MC / capstone active sub */
+document.addEventListener('keydown', function(e){
+  if(!openId) return;
+  var cur=current[openId]; if(!cur) return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  var n=parseInt(e.key,10); if(isNaN(n)||n<1||n>4) return;
+  var body=rungEl(openId).querySelector('.rung-body');
+  if(cur.q.mode==='mc'){
+    var cs=body.querySelectorAll('.choice');
+    if(cs[n-1] && !cs[0].disabled) answerMC(openId, n-1);
+  } else if(cur.q.mode==='mc2'){
+    var s1=body.querySelectorAll('.choices[data-sub="0"] .choice');
+    var s2=body.querySelectorAll('.choices[data-sub="1"] .choice');
+    if(s2.length && !s2[0].disabled){ if(s2[n-1]) answerCapSub2(openId, n-1); }
+    else if(s1.length && !s1[0].disabled){ if(s1[n-1]) answerCapSub1(openId, n-1); }
+  }
+});
+
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!confirm('Reset all progress on the Correlation Ladder?')) return;
+  state={rungs:{}}; RUNGS.forEach(function(r){ state.rungs[r.id]={streak:0,done:false}; });
+  save(); RUNGS.forEach(function(r){ renderBadge(r.id); updateStreakNote(r.id); });
+  if(openId) newQuestion(openId); updateProgress(); showToast('Progress reset');
+});
+
+updateProgress();
+</script>
+</body>
+</html>
