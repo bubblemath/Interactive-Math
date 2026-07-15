@@ -1,0 +1,960 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Interval Ladder — estimate ± critical × standard error</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16202B;
+  --paper:#F6F8FB;
+  --surface:#FFFFFF;
+  --line:#E2E8F0;
+  --band:#0E7C7B;          /* the interval */
+  --band-soft:#D3ECEB;
+  --mark:#E8833A;          /* the point estimate */
+  --mark-soft:#FBE7D4;
+  --good:#2FA84F;
+  --good-soft:#E0F3E5;
+  --bad:#D64545;
+  --bad-soft:#FBE4E4;
+  --muted:#5B6B7A;
+  --shadow:0 1px 2px rgba(22,32,43,.06),0 8px 24px rgba(22,32,43,.06);
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:var(--disp);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin:0}
+a{color:var(--band);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+/* ---------- nav ---------- */
+nav{
+  position:sticky;top:0;z-index:50;background:rgba(246,248,251,.86);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand .glyph{color:var(--band)}
+.navlinks{margin-left:auto;display:flex;gap:22px;font-size:14px;font-weight:500}
+.navlinks a{color:var(--muted)}
+.navlinks a:hover{color:var(--ink)}
+@media(max-width:560px){.navlinks{display:none}}
+
+/* ---------- hero ---------- */
+header{padding:66px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--band);margin-bottom:18px}
+header h1{font-size:clamp(30px,5.2vw,50px);font-weight:600}
+header h1 em{font-style:normal;color:var(--band)}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:640px;margin:20px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+/* hero interval viz */
+.heroviz{margin:38px 0 6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:30px 28px 24px}
+.heroviz .cap{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:22px}
+.numline{position:relative;height:74px}
+.axis{position:absolute;left:0;right:0;top:46px;height:2px;background:var(--line)}
+.band{position:absolute;top:38px;height:18px;background:var(--band-soft);border:1px solid var(--band);border-radius:5px;
+  transform:scaleX(0);transform-origin:center;animation:grow 1s .25s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes grow{to{transform:scaleX(1)}}
+.tick{position:absolute;top:34px;width:2px;height:26px;background:var(--band)}
+.tick.l{left:0}.tick.u{right:0}
+.pt{position:absolute;top:30px;width:14px;height:14px;border-radius:50%;background:var(--mark);
+  border:3px solid var(--surface);box-shadow:0 0 0 1px var(--mark);left:50%;transform:translateX(-50%) scale(0);
+  animation:pop .5s .9s cubic-bezier(.2,1.4,.4,1) forwards}
+@keyframes pop{to{transform:translateX(-50%) scale(1)}}
+.lab{position:absolute;font-family:var(--mono);font-size:12.5px;top:2px}
+.lab.pt-l{left:50%;transform:translateX(-50%);color:var(--mark)}
+.lab.l-l{left:0;color:var(--band)}
+.lab.u-l{right:0;color:var(--band);text-align:right}
+.skeleton{margin-top:26px;text-align:center;font-family:var(--mono);font-size:clamp(13px,2.4vw,16px);color:var(--ink)}
+.skeleton .est{color:var(--mark);font-weight:700}
+.skeleton .crit,.skeleton .se{color:var(--band);font-weight:700}
+
+/* ---------- generic section ---------- */
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+section h2{font-size:clamp(23px,3.4vw,31px);margin-bottom:8px}
+.sec-sub{color:var(--muted);max-width:620px;margin:0 0 30px}
+
+/* how it works trio */
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:680px){.trio{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card .n{font-family:var(--mono);font-size:13px;color:var(--band);font-weight:700}
+.card h3{font-size:17px;margin:10px 0 6px}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card kbd{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--ink)}
+
+/* skeleton / formula box */
+.formulas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:6px}
+@media(max-width:680px){.formulas{grid-template-columns:1fr}}
+.fbox{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--band);border-radius:12px;padding:18px 18px 16px;box-shadow:var(--shadow)}
+.fbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:8px}
+.fbox .f{font-family:var(--mono);font-size:15px;color:var(--band)}
+.fbox .d{font-size:13px;color:var(--muted);margin-top:8px}
+
+/* callout */
+.callout{display:flex;gap:16px;background:var(--mark-soft);border:1px solid #F0C9A6;border-radius:14px;padding:20px 22px;margin-top:26px}
+.callout .hand{font-size:22px;line-height:1.2}
+.callout p{margin:0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout .mono{color:#B4560E}
+
+/* ---------- ladder ---------- */
+.ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.progress-wrap{width:100%;margin:16px 0 26px}
+.progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.progress-track{height:9px;background:var(--band-soft);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--band);border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.reset{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--bad);color:var(--bad)}
+
+.rungs{display:flex;flex-direction:column;gap:14px}
+.rung{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+.rung.cap{border:1px solid var(--band);box-shadow:0 0 0 1px var(--band-soft),var(--shadow)}
+.rung-top{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;user-select:none}
+.rung-num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--paper);border:1px solid var(--line);
+  font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.rung.done .rung-num{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rung.cap .rung-num{background:var(--band-soft);border-color:var(--band);color:var(--band)}
+.rung-title{flex:1 1 auto}
+.rung-title .rt{font-family:var(--disp);font-weight:600;font-size:16px}
+.rung-title .rd{font-size:13px;color:var(--muted);margin-top:1px}
+.rung-badge{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.dots{display:flex;gap:4px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dot.on{background:var(--band)}
+.rung.done .dot.on{background:var(--good)}
+.chev{transition:transform .25s;color:var(--muted);font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.medal{display:none}
+.rung.done .medal{display:inline}
+.rung.done .rung-badge .txt{color:var(--good)}
+
+.rung-body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+.rung.open .rung-body{display:block}
+
+/* strategy panel */
+.strategy{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:18px 0;overflow:hidden}
+.strategy summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--band);list-style:none;display:flex;align-items:center;gap:8px}
+.strategy summary::-webkit-details-marker{display:none}
+.strategy summary::before{content:"▸";transition:transform .2s;display:inline-block}
+.strategy[open] summary::before{transform:rotate(90deg)}
+.strategy .inner{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+.strategy .inner p{margin:.5em 0}
+.strategy code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--band)}
+.ttable{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;margin-top:8px}
+.ttable th,.ttable td{border:1px solid var(--line);padding:5px 8px;text-align:center}
+.ttable th{background:var(--surface);color:var(--muted);font-weight:700}
+.ttable td.df{background:var(--surface);color:var(--ink);font-weight:700}
+
+/* question */
+.qwrap{}
+.scenario{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:15px;margin-bottom:16px}
+.scenario .tag{font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--band);display:block;margin-bottom:8px}
+.scenario b{color:var(--ink)}
+.ask{font-weight:600;font-family:var(--disp);font-size:16px;margin:4px 0 14px}
+.ask .hl{color:var(--band)}
+
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);
+  border-radius:10px;padding:12px 14px;cursor:pointer;font-size:14.5px;font-family:var(--body);color:var(--ink);transition:.12s}
+.choice:hover{border-color:var(--band)}
+.choice .key{flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--paper);border:1px solid var(--line);
+  font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .key{background:var(--good);border-color:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.choice:disabled{cursor:default}
+
+.numrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.field input{font-family:var(--mono);font-size:16px;width:150px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:9px;background:var(--surface);color:var(--ink);outline:none}
+.field input:focus{border-color:var(--band);box-shadow:0 0 0 3px var(--band-soft)}
+.field input.ok{border-color:var(--good);background:var(--good-soft)}
+.field input.no{border-color:var(--bad);background:var(--bad-soft)}
+.btn{font-family:var(--disp);font-weight:600;font-size:14.5px;background:var(--band);color:#fff;border:none;
+  border-radius:9px;padding:11px 20px;cursor:pointer}
+.btn:hover{background:#0c6b6a}
+.btn.ghost{background:var(--surface);color:var(--band);border:1px solid var(--band)}
+.hint-unit{font-family:var(--mono);font-size:12.5px;color:var(--muted);align-self:center}
+
+.feedback{margin-top:15px;font-size:14.5px;display:none;border-radius:10px;padding:12px 15px}
+.feedback.show{display:block}
+.feedback.right{background:var(--good-soft);border:1px solid var(--good);color:#1e6b33}
+.feedback.wrong{background:var(--bad-soft);border:1px solid var(--bad);color:#9c2b2b}
+.feedback .mono{font-weight:700}
+.feedback .next{margin-top:9px}
+
+.mini-numline{position:relative;height:40px;margin:10px 0 2px}
+.mini-numline .axis{top:26px}
+.mini-numline .band{top:20px;height:12px;animation:none;transform:none}
+.mini-numline .tick{top:18px;height:16px}
+.mini-numline .pt{top:16px;width:11px;height:11px;animation:none;transform:translateX(-50%)}
+.mini-lab{position:absolute;font-family:var(--mono);font-size:11px;top:0;color:var(--muted)}
+
+.streak-note{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:12px}
+
+/* why it matters */
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:680px){.why-grid{grid-template-columns:1fr}}
+.why-grid h3{font-size:16px;margin-bottom:6px;color:var(--band)}
+.why-grid p{font-size:14px;color:var(--muted);margin:0}
+.why-close{font-size:15px;color:var(--ink);max-width:680px}
+.why-close .mono{color:var(--band)}
+
+footer{padding:30px 0 50px;border-top:1px solid var(--line)}
+.foot{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;
+  background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-family:var(--disp);font-weight:600;
+  font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:.35s;z-index:80;display:flex;gap:10px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  .band{transform:none!important}
+  .pt{transform:translateX(-50%)!important}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="glyph">⊢●⊣</span> The Interval Ladder</div>
+    <div class="navlinks">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Confidence intervals · one skeleton, three types</div>
+    <h1>Every interval is <em>estimate ± margin</em>. The margin is where it breaks.</h1>
+    <p class="lede">A confidence interval is never a guess about a formula — it is always the same shape: a point estimate with a band around it. What changes from a Z to a T to a proportion is only <b>which critical value</b> you pull and <b>how you build the standard error</b>. Get those two right and the interval assembles itself.</p>
+
+    <div class="heroviz">
+      <div class="cap">A 95% confidence interval for a mean</div>
+      <div class="numline">
+        <div class="axis"></div>
+        <div class="band" style="left:22%;right:22%"></div>
+        <div class="tick l" style="left:22%"></div>
+        <div class="tick u" style="right:22%"></div>
+        <div class="pt"></div>
+        <div class="lab l-l" style="left:22%">69.38</div>
+        <div class="lab u-l" style="right:22%">71.02</div>
+        <div class="lab pt-l">70.20</div>
+      </div>
+      <div class="skeleton"><span class="est">x̄ = 70.20</span> &nbsp;±&nbsp; <span class="crit">z* = 1.960</span> × <span class="se">SE = 0.4167</span> &nbsp;=&nbsp; (69.38,&nbsp;71.02)</div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Climb the assembly, one piece at a time</h2>
+    <p class="sec-sub">Eleven rungs run from "which interval is this?" up to building a complete interval end-to-end. Nothing is locked — start anywhere, or jump to the piece you keep dropping.</p>
+    <div class="trio">
+      <div class="card">
+        <div class="n">01</div>
+        <h3>Isolate one piece</h3>
+        <p>Each rung drills a single step: the critical value, the standard error, the margin, the bounds. When the whole interval feels like too much, this is where you find the leak.</p>
+      </div>
+      <div class="card">
+        <div class="n">02</div>
+        <h3>Earn each badge</h3>
+        <p>Get <b>four in a row</b> on a rung to earn its badge. Pick answers with the mouse or press <kbd>1</kbd>–<kbd>4</kbd>; type numbers and hit <kbd>Enter</kbd>. Miss one and the streak resets.</p>
+      </div>
+      <div class="card">
+        <div class="n">03</div>
+        <h3>Report to 4 places</h3>
+        <p>Round the standard error, margin, and bounds to <b>4 decimal places</b>. Use critical values to <b>3 places</b> (<span class="mono">1.960</span>, <span class="mono">2.576</span>, and the t-table). Round the same way the ladder does and the numbers line up.</p>
+      </div>
+    </div>
+
+    <div style="margin-top:34px">
+      <div class="sec-eyebrow">The three standard errors</div>
+      <div class="formulas">
+        <div class="fbox">
+          <div class="t">Z-interval · mean</div>
+          <div class="f">SE = σ / √n</div>
+          <div class="d">Population σ is <b>known</b>. Critical value is <b>z*</b>.</div>
+        </div>
+        <div class="fbox">
+          <div class="t">T-interval · mean</div>
+          <div class="f">SE = s / √n</div>
+          <div class="d">Population σ is <b>unknown</b>; use sample s. Critical value is <b>t*</b> at df = n − 1.</div>
+        </div>
+        <div class="fbox">
+          <div class="t">Proportion</div>
+          <div class="f">SE = √( p̂(1−p̂) / n )</div>
+          <div class="d">Estimating a proportion. Critical value is <b>z*</b>.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="hand">✋</div>
+      <p><b>The point estimate is the exact midpoint — always.</b> Once you have an interval, you get two free checks: the estimate sits dead center (<span class="mono">estimate = (L+U)/2</span>) and the margin is exactly half the width (<span class="mono">ME = (U−L)/2</span>). For a proportion, the bounds also cannot leave <span class="mono">[0, 1]</span>. If any of those fail, it's arithmetic — not statistics — and you caught it before it was graded.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="ladder-head">
+      <div>
+        <div class="sec-eyebrow">The ladder</div>
+        <h2>Pick a rung and practice</h2>
+      </div>
+      <button class="reset" id="resetBtn">Reset progress</button>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span id="progLabel">0 of 11 badges earned</span><span>4 in a row = badge</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow">Why it matters</div>
+    <h2>An honest answer has a width</h2>
+    <div class="why-grid">
+      <div>
+        <h3>A point lies by omission</h3>
+        <p>"The mean is 70.2 inches" pretends to a precision the data never had. Thirty-six students cannot pin a population to a single number. The interval is the honest version: here is the estimate, and here is how far off it can reasonably be.</p>
+      </div>
+      <div>
+        <h3>Confidence is about the method</h3>
+        <p>"95% confident" is a statement about the procedure, not this one interval. Build intervals this way over and over and about 95% of them will catch the true value. This particular one either did or didn't — you just don't get to know which.</p>
+      </div>
+      <div>
+        <h3>Width is a design choice</h3>
+        <p>Want a narrower interval? Collect more data — the standard error shrinks with √n. Want more confidence? The interval widens. The sample-size rungs are exactly this trade, run backwards from the precision you need.</p>
+      </div>
+    </div>
+    <p class="why-close">Every interval on this ladder is the same three moves: <span class="mono">pick the critical value · build the standard error · assemble estimate ± critical × SE</span>. The Z, the T, and the proportion differ only in the middle move. Once the skeleton is automatic, a confidence interval stops being a formula to memorize and becomes what it actually is — a measured statement about how much you don't know.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">The Interval Ladder · estimate ± critical × SE · the midpoint never lies · 4 decimals, always</div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   ===== CORE LOGIC START  (pure; extracted for stress-testing) =====
+   ================================================================= */
+
+var Z_STAR = {90:1.645, 95:1.960, 99:2.576};
+
+/* Two-sided t* critical values, rounded to 3 dp, for the df values that
+   arise from perfect-square sample sizes n in {16,25,36,49,64,100}.
+   df = n - 1  ->  {15,24,35,48,63,99}. Values verified in stress test. */
+var T_TABLE = {
+  15:{90:1.753, 95:2.131, 99:2.947},
+  24:{90:1.711, 95:2.064, 99:2.797},
+  35:{90:1.690, 95:2.030, 99:2.724},
+  48:{90:1.677, 95:2.011, 99:2.682},
+  63:{90:1.669, 95:1.998, 99:2.656},
+  99:{90:1.660, 95:1.984, 99:2.626}
+};
+
+var MEAN_N   = [16,25,36,49,64,100];   // perfect squares -> clean sqrt
+var PROP_N   = [16,25,100];            // perfect squares where x/n is exact to 4 dp
+var C_LEVELS = [90,95,99];
+
+/* ---- rounding + guards ---- */
+function round4(x){
+  var s = x < 0 ? -1 : 1, v = Math.abs(x)*1e4;
+  return s * Math.round(v + 1e-7) / 1e4;
+}
+function round3(x){
+  var s = x < 0 ? -1 : 1, v = Math.abs(x)*1e3;
+  return s * Math.round(v + 1e-7) / 1e3;
+}
+// true if x rounds ambiguously at 4 dp (within a safe window of a .5 boundary)
+function onBoundary4(x){
+  var s = Math.abs(x)*1e4, frac = s - Math.floor(s);
+  return Math.abs(frac - 0.5) < 0.02;
+}
+// true if an exact sample size sits too close to an integer for ceil to be safe
+function ceilAmbiguous(x){
+  var frac = x - Math.floor(x);
+  return frac < 0.02 || frac > 0.98;
+}
+function rint(lo,hi){ return lo + Math.floor(Math.random()*(hi-lo+1)); }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function fmt4(x){ return round4(x).toFixed(4); }
+function fmt3(x){ return round3(x).toFixed(3); }
+
+/* ---- scenario banks ---- */
+var Z_THEMES = [
+  {tag:"Manufacturing", unit:"mm", noun:"bolt diameter", subj:"bolts", verb:"measures", xlo:80,xhi:260,xden:10, slo:8,shi:22,sden:100},
+  {tag:"Heights",       unit:"in", noun:"student height", subj:"students", verb:"records", xlo:640,xhi:720,xden:10, slo:20,shi:32,sden:10},
+  {tag:"Bottling",      unit:"ml", noun:"fill volume",   subj:"bottles", verb:"checks",  xlo:4980,xhi:5030,xden:10, slo:15,shi:40,sden:10},
+  {tag:"Batteries",     unit:"hr", noun:"battery life",  subj:"cells",   verb:"tests",   xlo:180,xhi:240,xden:10, slo:12,shi:30,sden:10}
+];
+var T_THEMES = [
+  {tag:"Education",  unit:"pts", noun:"exam score",     subj:"students", verb:"grades",  xlo:700,xhi:880,xden:10, slo:55,shi:95,sden:10},
+  {tag:"Quality",   unit:"eggs",noun:"broken eggs per carton", subj:"cartons", verb:"opens", xlo:5,xhi:18,xden:10, slo:3,shi:9,sden:10},
+  {tag:"Commuting", unit:"min", noun:"commute time",    subj:"drivers",  verb:"times",   xlo:210,xhi:420,xden:10, slo:40,shi:85,sden:10},
+  {tag:"Agriculture",unit:"cm", noun:"seedling growth", subj:"seedlings",verb:"measures",xlo:120,xhi:260,xden:10, slo:18,shi:40,sden:10}
+];
+var P_THEMES = [
+  {tag:"Public Opinion", noun:"adults who approve", subj:"adults surveyed"},
+  {tag:"Banking",        noun:"loans paid late",    subj:"loans sampled"},
+  {tag:"Quality Control",noun:"defective units",    subj:"units inspected"},
+  {tag:"Elections",      noun:"voters in support",  subj:"voters polled"}
+];
+
+/* ---- problem generators (each returns fully-derived, guard-checked object) ---- */
+function makeMean(sigmaKnown){
+  for(var tries=0; tries<400; tries++){
+    var bank = sigmaKnown ? Z_THEMES : T_THEMES;
+    var th = pick(bank);
+    var n  = pick(MEAN_N);
+    var root = Math.sqrt(n);
+    var xbar = rint(th.xlo, th.xhi)/th.xden;
+    var sd   = rint(th.slo, th.shi)/th.sden;
+    var C    = pick(C_LEVELS);
+    var df   = n-1;
+    var crit = sigmaKnown ? Z_STAR[C] : T_TABLE[df][C];
+    var SE   = round4(sd/root);
+    if(onBoundary4(sd/root)) continue;
+    var ME   = round4(crit*SE);
+    if(onBoundary4(crit*SE)) continue;
+    var L = round4(xbar - ME), U = round4(xbar + ME);
+    if(onBoundary4(xbar-ME) || onBoundary4(xbar+ME)) continue;
+    return {type:sigmaKnown?'z':'t', theme:th, n:n, df:df, C:C, crit:crit,
+            est:round4(xbar), sd:round4(sd), root:root, SE:SE, ME:ME, L:L, U:U,
+            spread:sigmaKnown?'σ':'s', paramLabel:sigmaKnown?'Population Std Dev (σ)':'Sample Std Dev (s)'};
+  }
+  return null;
+}
+function makeProp(){
+  for(var tries=0; tries<400; tries++){
+    var th = pick(P_THEMES);
+    var n  = pick(PROP_N);
+    var x  = rint(Math.round(0.15*n), Math.round(0.85*n));
+    var phat = round4(x/n);
+    if(phat<=0 || phat>=1) continue;
+    var C  = pick(C_LEVELS);
+    var crit = Z_STAR[C];
+    var rawSE = Math.sqrt(phat*(1-phat)/n);
+    if(onBoundary4(rawSE)) continue;
+    var SE = round4(rawSE);
+    if(onBoundary4(crit*SE)) continue;
+    var ME = round4(crit*SE);
+    var L = round4(phat - ME), U = round4(phat + ME);
+    if(onBoundary4(phat-ME) || onBoundary4(phat+ME)) continue;
+    if(L < 0 || U > 1) continue;
+    return {type:'p', theme:th, n:n, x:x, C:C, crit:crit, est:phat, phat:phat,
+            SE:SE, ME:ME, L:L, U:U, spread:'p̂'};
+  }
+  return null;
+}
+function makeProblem(type){
+  if(type==='z') return makeMean(true);
+  if(type==='t') return makeMean(false);
+  return makeProp();
+}
+
+/* ---- sample-size generators ---- */
+function makeSizeMean(){
+  for(var tries=0; tries<400; tries++){
+    var th = pick(Z_THEMES);
+    var C  = pick(C_LEVELS);
+    var crit = Z_STAR[C];
+    var sd = rint(th.slo, th.shi)/th.sden;
+    var E  = rint(2, 12)/100 * (th.unit==='mm'?1:1);   // error bound
+    // keep E on a scale that yields a reasonable n
+    E = round4(rint(5,40)/100 * sd);                    // E as a fraction of sd
+    if(E<=0) continue;
+    var exact = Math.pow(crit*sd/E, 2);
+    if(exact < 6 || exact > 1500) continue;
+    if(ceilAmbiguous(exact)) continue;
+    var n = Math.ceil(exact);
+    return {mode:'mean', theme:th, C:C, crit:crit, sd:round4(sd), E:round4(E), exact:exact, n:n};
+  }
+  return null;
+}
+function makeSizeProp(){
+  for(var tries=0; tries<400; tries++){
+    var th = pick(P_THEMES);
+    var C  = pick(C_LEVELS);
+    var crit = Z_STAR[C];
+    var worst = Math.random() < 0.5;
+    var p = worst ? 0.5 : rint(10,45)/100;   // prior estimate if not worst-case
+    var E = rint(2,8)/100;
+    var exact = crit*crit * p*(1-p) / (E*E);
+    if(exact < 20 || exact > 3000) continue;
+    if(ceilAmbiguous(exact)) continue;
+    var n = Math.ceil(exact);
+    return {mode:'prop', theme:th, C:C, crit:crit, p:p, worst:worst, E:round4(E), exact:exact, n:n};
+  }
+  return null;
+}
+
+/* ---- interpretation text (standard wording) ---- */
+function interpText(p){
+  var C = p.C;
+  var param = (p.type==='p') ? 'population proportion' : 'population mean';
+  var correct = 'We are '+C+'% confident that the true '+param+' lies between '+fmt4(p.L)+' and '+fmt4(p.U)+'.';
+  var d1 = C+'% of the sample values fall between '+fmt4(p.L)+' and '+fmt4(p.U)+'.';
+  var d2 = 'There is a '+C+'% probability that the true '+param+' lies in this particular interval.';
+  var d3 = 'If we repeated the study, '+C+'% of sample '+(p.type==='p'?'proportions':'means')+' would fall between '+fmt4(p.L)+' and '+fmt4(p.U)+'.';
+  return {correct:correct, distractors:[d1,d2,d3]};
+}
+
+if (typeof module !== 'undefined' && module.exports){
+  module.exports = {
+    Z_STAR:Z_STAR, T_TABLE:T_TABLE, MEAN_N:MEAN_N, PROP_N:PROP_N, C_LEVELS:C_LEVELS,
+    round4:round4, round3:round3, onBoundary4:onBoundary4, ceilAmbiguous:ceilAmbiguous,
+    makeMean:makeMean, makeProp:makeProp, makeProblem:makeProblem,
+    makeSizeMean:makeSizeMean, makeSizeProp:makeSizeProp, interpText:interpText, fmt4:fmt4, fmt3:fmt3
+  };
+}
+/* =================================================================
+   ===== CORE LOGIC END =====
+   ================================================================= */
+
+
+/* ---------------- UI LAYER ---------------- */
+var KEY = 'ciLadder';
+var NEED = 4;            // in a row for a badge
+var state = load();
+
+function load(){
+  try{ var s = JSON.parse(localStorage.getItem(KEY)); if(s && s.rungs) return s; }catch(e){}
+  return {rungs:{}};
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+/* scenario -> HTML for the "read the situation" box */
+function scenarioHTML(p){
+  var th = p.theme, C = p.C;
+  if(p.type==='z'){
+    return '<span class="tag">'+th.tag+' · σ known</span>An engineer '+th.verb+' a random sample of <b>'+p.n+'</b> '+th.subj+
+      ' and finds a mean '+th.noun+' of <b>'+fmt4(p.est)+' '+th.unit+'</b>. The population standard deviation is known to be <b>σ = '+fmt4(p.sd)+' '+th.unit+
+      '</b>. Build a <b>'+C+'%</b> confidence interval for the true mean '+th.noun+'.';
+  }
+  if(p.type==='t'){
+    return '<span class="tag">'+th.tag+' · σ unknown</span>A researcher '+th.verb+' a random sample of <b>'+p.n+'</b> '+th.subj+
+      ' and finds a mean '+th.noun+' of <b>'+fmt4(p.est)+' '+th.unit+'</b> with a sample standard deviation of <b>s = '+fmt4(p.sd)+' '+th.unit+
+      '</b>. Build a <b>'+C+'%</b> confidence interval for the true mean '+th.noun+'.';
+  }
+  return '<span class="tag">'+th.tag+' · proportion</span>In a random sample of <b>'+p.n+'</b> '+th.subj+
+    ', <b>'+p.x+'</b> were '+th.noun+'. Build a <b>'+C+'%</b> confidence interval for the true proportion.';
+}
+
+/* mini number-line viz for feedback on interval rungs */
+function miniLine(p){
+  return '<div class="mini-numline"><div class="axis"></div>'+
+    '<div class="band" style="left:20%;right:20%"></div>'+
+    '<div class="tick l" style="left:20%"></div><div class="tick u" style="right:20%"></div>'+
+    '<div class="pt" style="left:50%"></div>'+
+    '<div class="mini-lab" style="left:20%;color:var(--band)">'+fmt4(p.L)+'</div>'+
+    '<div class="mini-lab" style="left:50%;transform:translateX(-50%);color:var(--mark)">'+fmt4(p.est)+'</div>'+
+    '<div class="mini-lab" style="right:20%;color:var(--band)">'+fmt4(p.U)+'</div></div>';
+}
+
+/* ---- rung definitions: each build() returns {scenario?, ask, mode, ...} ---- */
+var RUNGS = [
+  {
+    id:'type', title:'Which interval?', desc:'Classify the scenario before you compute anything.',
+    strategy:'<p>Two questions settle it. <b>Mean or proportion?</b> A proportion problem counts successes out of a total. <b>Is σ known?</b> If the problem hands you the <em>population</em> standard deviation (σ), it is a <code>Z-interval</code>. If it only gives a <em>sample</em> standard deviation (s), it is a <code>T-interval</code>.</p>',
+    build:function(){
+      var p = makeProblem(pick(['z','t','p']));
+      var opts = ['Z-interval (population σ known)','T-interval (population σ unknown)','1-Proportion Z-interval'];
+      var ans = p.type==='z'?0 : p.type==='t'?1 : 2;
+      return {p:p, mode:'mc', scenario:scenarioHTML(p),
+        ask:'What type of confidence interval does this call for?', options:opts, answer:ans};
+    }
+  },
+  {
+    id:'inputs', title:'Pull the point estimate', desc:'Read the center off the scenario — or compute it.',
+    strategy:'<p>The point estimate is the center of your interval. For a mean it is the sample mean <code>x̄</code>, read straight from the problem. For a proportion you must build it: <code>p̂ = x / n</code>, the count of successes over the sample size. Report to 4 decimal places.</p>',
+    build:function(){
+      var p = makeProblem(pick(['z','t','p']));
+      var ask, ans, hint;
+      if(p.type==='p'){ ask='Compute the point estimate p̂ = x / n.'; ans=p.phat; hint='p̂'; }
+      else { ask='Identify the point estimate (sample mean x̄).'; ans=p.est; hint='x̄'; }
+      return {p:p, mode:'num', scenario:scenarioHTML(p), ask:ask,
+        fields:[{label:'Point estimate ('+hint+')', answer:ans, dp:4}]};
+    }
+  },
+  {
+    id:'crit', title:'Find the critical value', desc:'z* for Z & proportion, t* by df for T.',
+    strategy:'<p>For a <code>Z</code> or proportion interval the critical value depends only on the confidence level:</p>'+
+      '<table class="ttable"><tr><th>Confidence</th><th>90%</th><th>95%</th><th>99%</th></tr>'+
+      '<tr><td class="df">z*</td><td>1.645</td><td>1.960</td><td>2.576</td></tr></table>'+
+      '<p style="margin-top:12px">For a <code>T</code> interval, look up <code>t*</code> at df = n − 1:</p>'+
+      '<table class="ttable"><tr><th>df</th><th>90%</th><th>95%</th><th>99%</th></tr>'+
+      '<tr><td class="df">15</td><td>1.753</td><td>2.131</td><td>2.947</td></tr>'+
+      '<tr><td class="df">24</td><td>1.711</td><td>2.064</td><td>2.797</td></tr>'+
+      '<tr><td class="df">35</td><td>1.690</td><td>2.030</td><td>2.724</td></tr>'+
+      '<tr><td class="df">48</td><td>1.677</td><td>2.011</td><td>2.682</td></tr>'+
+      '<tr><td class="df">63</td><td>1.669</td><td>1.998</td><td>2.656</td></tr>'+
+      '<tr><td class="df">99</td><td>1.660</td><td>1.984</td><td>2.626</td></tr></table>',
+    build:function(){
+      var p = makeProblem(pick(['z','t','p']));
+      var ask = (p.type==='t')
+        ? 'This is a T-interval with n = '+p.n+', so df = '+p.df+', at '+p.C+'% confidence. State t*.'
+        : 'This is a '+(p.type==='p'?'proportion':'Z')+' interval at '+p.C+'% confidence. State z*.';
+      return {p:p, mode:'num', scenario:scenarioHTML(p), ask:ask,
+        fields:[{label:'Critical value', answer:p.crit, dp:3}]};
+    }
+  },
+  {
+    id:'se', title:'Build the standard error', desc:'Same skeleton, three different SE formulas.',
+    strategy:'<p>Pick the SE that matches the type, then evaluate to 4 dp:</p>'+
+      '<p><code>Z: σ/√n</code> &nbsp; <code>T: s/√n</code> &nbsp; <code>Proportion: √(p̂(1−p̂)/n)</code></p>'+
+      '<p>The sample sizes here are perfect squares, so √n is clean: √16=4, √25=5, √36=6, √49=7, √64=8, √100=10.</p>',
+    build:function(){
+      var p = makeProblem(pick(['z','t','p']));
+      var ask;
+      if(p.type==='p') ask='Compute the standard error: SE = √( p̂(1−p̂) / n ).';
+      else ask='Compute the standard error: SE = '+p.spread+' / √n.';
+      return {p:p, mode:'num', scenario:scenarioHTML(p), ask:ask,
+        fields:[{label:'Standard error (SE)', answer:p.SE, dp:4}]};
+    }
+  },
+  {
+    id:'me', title:'Assemble the margin', desc:'ME = critical value × standard error.',
+    strategy:'<p>The margin of error is just the two pieces multiplied: <code>ME = critical × SE</code>. Use the critical value at 3 dp and the SE at 4 dp, then round the product to 4 dp — the same order the ladder uses.</p>',
+    build:function(){
+      var p = makeProblem(pick(['z','t','p']));
+      return {p:p, mode:'num', scenario:scenarioHTML(p),
+        ask:'Find the margin of error (ME = critical value × SE).',
+        fields:[{label:'Margin of error (ME)', answer:p.ME, dp:4}]};
+    }
+  },
+  {
+    id:'build', title:'Build the interval', desc:'estimate ± ME → the two bounds.',
+    strategy:'<p>Lay the margin on both sides of the estimate: <code>Lower = estimate − ME</code>, <code>Upper = estimate + ME</code>. Round each bound to 4 dp.</p>',
+    build:function(){
+      var p = makeProblem(pick(['z','t','p']));
+      var wantUpper = Math.random()<0.5;
+      var ans = wantUpper ? p.U : p.L;
+      return {p:p, mode:'num', scenario:scenarioHTML(p),
+        ask:'Report the <span class="hl">'+(wantUpper?'UPPER':'LOWER')+'</span> bound of the interval.',
+        fields:[{label:(wantUpper?'Upper':'Lower')+' bound', answer:ans, dp:4}], viz:true};
+    }
+  },
+  {
+    id:'reverse', title:'Read it backwards', desc:'From the bounds, recover the estimate or the margin.',
+    strategy:'<p>An interval is symmetric around its center, so you can undo it: <code>estimate = (L+U)/2</code> and <code>ME = (U−L)/2</code>. This is also the fastest check on a forward build.</p>',
+    build:function(){
+      var p = makeProblem(pick(['z','t','p']));
+      var wantME = Math.random()<0.5;
+      var ans = wantME ? round4((p.U-p.L)/2) : round4((p.L+p.U)/2);
+      var box = '<span class="tag">'+p.theme.tag+'</span>A <b>'+p.C+'%</b> confidence interval is reported as <b>('+fmt4(p.L)+', '+fmt4(p.U)+')</b>.';
+      return {p:p, mode:'num', scenario:box,
+        ask:'Recover the <span class="hl">'+(wantME?'margin of error':'point estimate')+'</span> from these bounds.',
+        fields:[{label:wantME?'Margin of error':'Point estimate', answer:ans, dp:4}]};
+    }
+  },
+  {
+    id:'interpret', title:'Interpret it', desc:'The one sentence that says what a CI actually means.',
+    strategy:'<p>A confidence interval is a statement about the <em>true parameter</em> and how the <em>method</em> behaves — not about the data, and not a probability about this one interval. The correct reading names the parameter and the level of confidence: <code>"We are C% confident the true [mean/proportion] lies between L and U."</code></p>',
+    build:function(){
+      var p = makeProblem(pick(['z','t','p']));
+      var it = interpText(p);
+      // shuffle correct in among distractors
+      var pool = it.distractors.slice();
+      var pos = Math.floor(Math.random()*4);
+      var opts=[], ai=0;
+      for(var i=0;i<4;i++){ if(i===pos){opts.push(it.correct);} else {opts.push(pool[ai++]);} }
+      var box = '<span class="tag">'+p.theme.tag+'</span>A <b>'+p.C+'%</b> confidence interval for the true '+
+        (p.type==='p'?'proportion':'mean')+' is <b>('+fmt4(p.L)+', '+fmt4(p.U)+')</b>.';
+      return {p:p, mode:'mc', scenario:box, ask:'Which statement interprets this interval correctly?',
+        options:opts, answer:pos};
+    }
+  },
+  {
+    id:'sizemean', title:'Sample size for a mean', desc:'How many observations to hit a target margin.',
+    strategy:'<p>Solve the margin formula for n: <code>n = ( z* · σ / E )²</code>, then <b>round up</b> to the next whole number (rounding down would miss your precision target). Use z* at 3 dp.</p>',
+    build:function(){
+      var s = makeSizeMean();
+      var box = '<span class="tag">'+s.theme.tag+' · sample size</span>The population standard deviation is <b>σ = '+fmt4(s.sd)+' '+s.theme.unit+
+        '</b>. How large a sample is needed to estimate the mean within <b>±'+fmt4(s.E)+' '+s.theme.unit+'</b> at <b>'+s.C+'%</b> confidence?';
+      return {p:s, mode:'num', scenario:box, ask:'Required sample size n (round up).',
+        fields:[{label:'Sample size (n)', answer:s.n, dp:0}]};
+    }
+  },
+  {
+    id:'sizeprop', title:'Sample size for a proportion', desc:'Worst-case, or with a prior estimate.',
+    strategy:'<p><code>n = (z*)² · p̂(1−p̂) / E²</code>, then <b>round up</b>. With no prior information, use the worst case <code>p̂ = 0.5</code>, which maximizes p̂(1−p̂) and gives the safest (largest) sample size.</p>',
+    build:function(){
+      var s = makeSizeProp();
+      var pStr = s.worst
+        ? 'With no prior estimate (use the worst case p̂ = 0.5),'
+        : 'Prior studies suggest p̂ ≈ '+s.p.toFixed(2)+'.';
+      var box = '<span class="tag">'+s.theme.tag+' · sample size</span>'+pStr+' What sample size is needed to estimate the proportion within <b>±'+fmt4(s.E)+
+        '</b> at <b>'+s.C+'%</b> confidence?';
+      return {p:s, mode:'num', scenario:box, ask:'Required sample size n (round up).',
+        fields:[{label:'Sample size (n)', answer:s.n, dp:0}]};
+    }
+  },
+  {
+    id:'capstone', title:'Capstone — build it end to end', desc:'Any type. Both bounds. One miss restarts.', cap:true,
+    strategy:'<p>The whole assembly, unscaffolded: read the type, pull the critical value and standard error, form the margin, and report <b>both bounds</b> to 4 dp. Both must be right to count — a single miss sends the streak back to zero.</p>',
+    build:function(){
+      var p = makeProblem(pick(['z','t','p']));
+      return {p:p, mode:'num', scenario:scenarioHTML(p),
+        ask:'Construct the full <span class="hl">'+p.C+'%</span> confidence interval.',
+        fields:[{label:'Lower bound', answer:p.L, dp:4},{label:'Upper bound', answer:p.U, dp:4}],
+        viz:true, both:true};
+    }
+  }
+];
+
+/* ---------- render ---------- */
+var rungsEl = document.getElementById('rungs');
+RUNGS.forEach(function(def, idx){
+  if(!state.rungs[def.id]) state.rungs[def.id] = {streak:0, done:false};
+  var el = document.createElement('div');
+  el.className = 'rung'+(def.cap?' cap':'')+(state.rungs[def.id].done?' done':'');
+  el.dataset.id = def.id;
+  el.innerHTML =
+    '<div class="rung-top">'+
+      '<div class="rung-num">'+(idx+1)+'</div>'+
+      '<div class="rung-title"><div class="rt">'+def.title+'</div><div class="rd">'+def.desc+'</div></div>'+
+      '<div class="rung-badge"><span class="medal">🏅</span><span class="dots"></span><span class="txt"></span></div>'+
+      '<div class="chev">▶</div>'+
+    '</div>'+
+    '<div class="rung-body"></div>';
+  rungsEl.appendChild(el);
+  el.querySelector('.rung-top').addEventListener('click', function(){ toggleRung(def.id); });
+  renderBadge(def.id);
+});
+
+function renderBadge(id){
+  var el = rungEl(id), st = state.rungs[id];
+  var dots = el.querySelector('.dots'); dots.innerHTML='';
+  for(var i=0;i<NEED;i++){ var d=document.createElement('span'); d.className='dot'+(i<st.streak?' on':''); dots.appendChild(d); }
+  el.querySelector('.txt').textContent = st.done ? 'earned' : (st.streak+'/'+NEED);
+  el.classList.toggle('done', st.done);
+}
+function rungEl(id){ return rungsEl.querySelector('.rung[data-id="'+id+'"]'); }
+function rungDef(id){ return RUNGS.filter(function(r){return r.id===id;})[0]; }
+
+var openId = null;
+function toggleRung(id){
+  var el = rungEl(id);
+  if(el.classList.contains('open')){ el.classList.remove('open'); openId=null; return; }
+  if(openId){ rungEl(openId).classList.remove('open'); }
+  el.classList.add('open'); openId=id;
+  newQuestion(id);
+}
+
+/* ---------- question flow ---------- */
+var current = {};   // id -> {def, q}
+function newQuestion(id){
+  var def = rungDef(id);
+  var q = def.build();
+  current[id] = {def:def, q:q};
+  var body = rungEl(id).querySelector('.rung-body');
+  var html = '<details class="strategy"><summary>Strategy</summary><div class="inner">'+def.strategy+'</div></details>';
+  html += '<div class="qwrap">';
+  if(q.scenario) html += '<div class="scenario">'+q.scenario+'</div>';
+  html += '<div class="ask">'+q.ask+'</div>';
+  if(q.mode==='mc'){
+    html += '<div class="choices">';
+    q.options.forEach(function(opt,i){
+      html += '<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div class="numrow">';
+    q.fields.forEach(function(f,i){
+      var step = f.dp===0?'1':'any';
+      html += '<div class="field"><label>'+f.label+'</label><input type="number" step="'+step+'" data-i="'+i+'" autocomplete="off"></div>';
+    });
+    html += '<button class="btn" data-check="1">Check</button></div>';
+  }
+  html += '<div class="feedback"></div><div class="streak-note"></div>';
+  html += '</div>';
+  body.innerHTML = html;
+  updateStreakNote(id);
+
+  if(q.mode==='mc'){
+    body.querySelectorAll('.choice').forEach(function(c){
+      c.addEventListener('click', function(){ answerMC(id, parseInt(c.dataset.i,10)); });
+    });
+  } else {
+    var inputs = body.querySelectorAll('input');
+    body.querySelector('[data-check]').addEventListener('click', function(){ answerNum(id); });
+    inputs.forEach(function(inp,i){
+      inp.addEventListener('keydown', function(e){
+        if(e.key==='Enter'){
+          if(i < inputs.length-1){ inputs[i+1].focus(); }
+          else answerNum(id);
+        }
+      });
+    });
+    if(inputs[0]) inputs[0].focus();
+  }
+}
+
+function updateStreakNote(id){
+  var st = state.rungs[id];
+  var note = rungEl(id).querySelector('.streak-note');
+  if(!note) return;
+  if(st.done) note.textContent = '✓ Badge earned — keep going for more practice.';
+  else note.textContent = st.streak>0 ? ('Streak: '+st.streak+' of '+NEED) : '';
+}
+
+function answerMC(id, choice){
+  var cur = current[id]; if(!cur) return;
+  var q = cur.q, body = rungEl(id).querySelector('.rung-body');
+  var choices = body.querySelectorAll('.choice');
+  if(choices[0].disabled) return;
+  choices.forEach(function(c){ c.disabled = true; });
+  var correct = (choice === q.answer);
+  choices[q.answer].classList.add('correct');
+  if(!correct) choices[choice].classList.add('wrong');
+  var fb = body.querySelector('.feedback');
+  if(correct){
+    fb.className = 'feedback show right';
+    fb.innerHTML = 'Correct.'+ nextBtn(id);
+  } else {
+    fb.className = 'feedback show wrong';
+    fb.innerHTML = 'Not quite — the right choice is highlighted.'+ nextBtn(id);
+  }
+  wireNext(id);
+  recordResult(id, correct);
+}
+
+function answerNum(id){
+  var cur = current[id]; if(!cur) return;
+  var q = cur.q, body = rungEl(id).querySelector('.rung-body');
+  var inputs = body.querySelectorAll('input');
+  if(inputs[0].disabled) return;
+  var allCorrect = true, anyBlank=false;
+  q.fields.forEach(function(f,i){
+    var raw = inputs[i].value.trim();
+    if(raw===''){ anyBlank=true; }
+    var val = parseFloat(raw);
+    var tol = f.dp===0 ? 0.5 : 0.00005;
+    var ok = !isNaN(val) && Math.abs(val - f.answer) <= tol;
+    inputs[i].classList.toggle('ok', ok);
+    inputs[i].classList.toggle('no', !ok);
+    if(!ok) allCorrect=false;
+  });
+  if(anyBlank && !allCorrect){ /* still evaluate as wrong */ }
+  inputs.forEach(function(inp){ inp.disabled=true; });
+  body.querySelector('[data-check]').disabled = true;
+  var fb = body.querySelector('.feedback');
+  if(allCorrect){
+    fb.className='feedback show right';
+    var msg = 'Correct.';
+    if(q.viz && q.p && q.p.L!=null) msg += miniLine(q.p);
+    fb.innerHTML = msg + nextBtn(id);
+  } else {
+    fb.className='feedback show wrong';
+    var ansStr = q.fields.map(function(f){ return f.dp===0 ? String(f.answer) : fmt4(f.answer); }).join(',  ');
+    fb.innerHTML = 'Not quite. Correct answer'+(q.fields.length>1?'s':'')+': <span class="mono">'+ansStr+'</span>.'+ nextBtn(id);
+  }
+  wireNext(id);
+  recordResult(id, allCorrect);
+}
+
+function nextBtn(id){
+  return '<div class="next"><button class="btn ghost" data-next="1">Next question →</button></div>';
+}
+function wireNext(id){
+  var b = rungEl(id).querySelector('[data-next]');
+  if(b) b.addEventListener('click', function(){ newQuestion(id); });
+}
+
+function recordResult(id, correct){
+  var st = state.rungs[id];
+  var wasDone = st.done;
+  if(correct){ st.streak++; if(st.streak>=NEED){ st.done = true; } }
+  else { st.streak = 0; }
+  save();
+  renderBadge(id);
+  updateStreakNote(id);
+  updateProgress();
+  if(st.done && !wasDone){ celebrate(id); }
+}
+
+/* ---------- progress + celebration ---------- */
+function updateProgress(){
+  var done = RUNGS.filter(function(r){ return state.rungs[r.id].done; }).length;
+  document.getElementById('progLabel').textContent = done+' of '+RUNGS.length+' badges earned';
+  document.getElementById('progFill').style.width = (100*done/RUNGS.length)+'%';
+}
+function celebrate(id){
+  var def = rungDef(id);
+  var done = RUNGS.filter(function(r){ return state.rungs[r.id].done; }).length;
+  var msg = (done===RUNGS.length)
+    ? 'All 11 badges — the interval is automatic now.'
+    : 'Badge earned · '+def.title;
+  showToast('🏅 '+msg);
+}
+var toastT;
+function showToast(txt){
+  var t = document.getElementById('toast');
+  t.innerHTML = txt; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove('show'); }, 2600);
+}
+
+/* ---------- keyboard (1-4 for MC on open rung) ---------- */
+document.addEventListener('keydown', function(e){
+  if(!openId) return;
+  var cur = current[openId]; if(!cur || cur.q.mode!=='mc') return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  var n = parseInt(e.key,10);
+  if(n>=1 && n<=cur.q.options.length){
+    var body = rungEl(openId).querySelector('.rung-body');
+    if(body.querySelector('.choice') && !body.querySelector('.choice').disabled){
+      answerMC(openId, n-1);
+    }
+  }
+});
+
+/* ---------- reset ---------- */
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!confirm('Reset all progress on the Interval Ladder?')) return;
+  state = {rungs:{}};
+  RUNGS.forEach(function(r){ state.rungs[r.id]={streak:0,done:false}; });
+  save();
+  RUNGS.forEach(function(r){ renderBadge(r.id); updateStreakNote(r.id); });
+  if(openId){ newQuestion(openId); }
+  updateProgress();
+  showToast('Progress reset');
+});
+
+updateProgress();
+</script>
+</body>
+</html>
