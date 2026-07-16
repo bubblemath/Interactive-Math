@@ -1,0 +1,845 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Regression Ladder — the line predicts, the residual is the miss</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1A2130;
+  --paper:#F4F7FB;
+  --surface:#FFFFFF;
+  --line:#DFE6F0;
+  --accent:#2F6DE0;        /* the regression line / brand */
+  --accent-soft:#D8E6FB;
+  --resid:#E8833A;         /* residuals = the misses */
+  --resid-soft:#FBE7D4;
+  --dot:#26304A;           /* neutral data dots */
+  --good:#2FA84F;
+  --good-soft:#E0F3E5;
+  --bad:#D64545;
+  --bad-soft:#FBE4E4;
+  --muted:#63708A;
+  --shadow:0 1px 2px rgba(26,33,48,.06),0 8px 24px rgba(26,33,48,.06);
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--disp);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin:0}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(244,247,251,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand .glyph{color:var(--accent)}
+.navlinks{margin-left:auto;display:flex;gap:22px;font-size:14px;font-weight:500}
+.navlinks a{color:var(--muted)}
+.navlinks a:hover{color:var(--ink)}
+@media(max-width:560px){.navlinks{display:none}}
+
+header{padding:66px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+header h1{font-size:clamp(29px,5vw,48px);font-weight:600}
+header h1 em{font-style:normal;color:var(--accent)}
+header h1 .r{color:var(--resid)}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:650px;margin:20px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+.heroviz{margin:38px 0 6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:26px 26px 22px;display:grid;grid-template-columns:1.1fr 1fr;gap:26px;align-items:center}
+@media(max-width:640px){.heroviz{grid-template-columns:1fr}}
+.heroviz .cap{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:14px}
+.eqbig{font-family:var(--mono);font-size:22px;color:var(--ink);margin-bottom:16px}
+.eqbig .a{color:var(--accent)}.eqbig .b{color:var(--accent)}
+.legend{display:flex;flex-direction:column;gap:9px;font-size:14px;color:var(--muted)}
+.legend .row{display:flex;align-items:center;gap:10px}
+.legend .sw{width:22px;height:0;border-top:3px solid var(--accent);border-radius:2px}
+.legend .sw.dot{width:11px;height:11px;border-top:none;border-radius:50%;background:var(--dot)}
+.legend .sw.res{border-top:3px dashed var(--resid)}
+.legend b{color:var(--ink)}
+
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+section h2{font-size:clamp(23px,3.4vw,31px);margin-bottom:8px}
+.sec-sub{color:var(--muted);max-width:650px;margin:0 0 30px}
+
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:680px){.trio{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card .n{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+.card h3{font-size:17px;margin:10px 0 6px}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card kbd{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--ink)}
+
+.limits{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+@media(max-width:680px){.limits{grid-template-columns:1fr}}
+.lbox{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.lbox.r{border-left-color:var(--resid)}
+.lbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:5px}
+.lbox .d{font-size:13.5px;color:var(--muted)}
+
+.callout{display:flex;gap:16px;background:var(--resid-soft);border:1px solid #F0C9A6;border-radius:14px;padding:20px 22px;margin-top:26px}
+.callout .hand{font-size:22px;line-height:1.2}
+.callout p{margin:0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout .mono{color:#B4560E}
+
+.ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.progress-wrap{width:100%;margin:16px 0 26px}
+.progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.progress-track{height:9px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.reset{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--bad);color:var(--bad)}
+
+.rungs{display:flex;flex-direction:column;gap:14px}
+.rung{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+.rung.cap{border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--shadow)}
+.rung-top{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;user-select:none}
+.rung-num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.rung.done .rung-num{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rung.cap .rung-num{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.rung-title{flex:1 1 auto}
+.rung-title .rt{font-family:var(--disp);font-weight:600;font-size:16px}
+.rung-title .rd{font-size:13px;color:var(--muted);margin-top:1px}
+.rung-badge{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.dots{display:flex;gap:4px}
+.dot-b{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dot-b.on{background:var(--accent)}
+.rung.done .dot-b.on{background:var(--good)}
+.chev{transition:transform .25s;color:var(--muted);font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.medal{display:none}.rung.done .medal{display:inline}
+.rung.done .rung-badge .txt{color:var(--good)}
+.rung-body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+.rung.open .rung-body{display:block}
+
+.strategy{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:18px 0;overflow:hidden}
+.strategy summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--accent);list-style:none;display:flex;align-items:center;gap:8px}
+.strategy summary::-webkit-details-marker{display:none}
+.strategy summary::before{content:"▸";transition:transform .2s;display:inline-block}
+.strategy[open] summary::before{transform:rotate(90deg)}
+.strategy .inner{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+.strategy .inner p{margin:.5em 0}
+.strategy code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--accent)}
+
+.scenario{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:15px;margin-bottom:16px}
+.scenario .tag{font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:8px}
+.scenario b{color:var(--ink)}
+.eqline{font-family:var(--mono);font-size:17px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;display:inline-block;margin:6px 0}
+.eqline .hl{color:var(--accent)}
+.ask{font-weight:600;font-family:var(--disp);font-size:16px;margin:4px 0 14px}
+.ask .hl{color:var(--accent)}
+
+.plotbox{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin:6px 0 18px}
+.plotcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 10px 6px;box-shadow:var(--shadow)}
+.plotcard .plabel{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;padding:4px 0 8px}
+svg.plot{display:block;width:100%;max-width:320px;height:auto}
+.pair svg.plot{max-width:250px}
+.plotframe{fill:var(--surface);stroke:var(--line);stroke-width:1}
+.grid{stroke:var(--line);opacity:.55}
+.zeroline{stroke:var(--muted);stroke-width:1.2;stroke-dasharray:4 3;opacity:.7}
+.fitline{stroke:var(--accent);stroke-width:2.4}
+.residseg{stroke:var(--resid);stroke-width:1.6;stroke-dasharray:3 2;opacity:.85}
+.dot-pt{fill:var(--dot);opacity:.78}
+.dot-pt.hi{fill:var(--resid);opacity:1}
+
+/* range viz for interpolation/extrapolation */
+.rangeviz{margin:2px 0 16px}
+.rangeviz .track{position:relative;height:14px;background:var(--paper);border:1px solid var(--line);border-radius:99px}
+.rangeviz .band{position:absolute;top:0;bottom:0;background:var(--accent-soft);border-left:2px solid var(--accent);border-right:2px solid var(--accent)}
+.rangeviz .mk{position:absolute;top:-6px;width:2px;height:26px;background:var(--resid)}
+.rangeviz .mklab{position:absolute;top:-26px;font-family:var(--mono);font-size:11px;color:var(--resid);transform:translateX(-50%)}
+.rangeviz .ends{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:8px}
+
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:14.5px;font-family:var(--body);color:var(--ink);transition:.12s}
+.choice:hover{border-color:var(--accent)}
+.choice .key{flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .key{background:var(--good);border-color:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.choice:disabled{cursor:default}
+
+.numrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.field input{font-family:var(--mono);font-size:16px;width:140px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);outline:none}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field input.ok{border-color:var(--good);background:var(--good-soft)}
+.field input.no{border-color:var(--bad);background:var(--bad-soft)}
+.btn{font-family:var(--disp);font-weight:600;font-size:14.5px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
+.btn:hover{background:#255ac0}
+.btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--accent)}
+
+.feedback{margin-top:15px;font-size:14.5px;display:none;border-radius:10px;padding:12px 15px}
+.feedback.show{display:block}
+.feedback.right{background:var(--good-soft);border:1px solid var(--good);color:#1e6b33}
+.feedback.wrong{background:var(--bad-soft);border:1px solid var(--bad);color:#9c2b2b}
+.feedback .mono{font-weight:700}
+.feedback .next{margin-top:9px}
+.streak-note{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:12px}
+
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:680px){.why-grid{grid-template-columns:1fr}}
+.why-grid h3{font-size:16px;margin-bottom:6px;color:var(--accent)}
+.why-grid p{font-size:14px;color:var(--muted);margin:0}
+.why-close{font-size:15px;color:var(--ink);max-width:690px}
+.why-close .mono{color:var(--accent)}
+
+footer{padding:30px 0 50px;border-top:1px solid var(--line)}
+.foot{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-family:var(--disp);font-weight:600;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:.35s;z-index:80;display:flex;gap:10px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="glyph">╱•</span> The Regression Ladder</div>
+    <div class="navlinks"><a href="#how">How it works</a><a href="#ladder">The ladder</a><a href="#why">Why it matters</a></div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">LSRL &amp; residuals · Lesson 19</div>
+    <h1><em>ŷ</em> is a guess. <span class="r">y − ŷ</span> is how wrong it was.</h1>
+    <p class="lede">A regression line is a prediction machine: feed it an x, it returns a predicted <b>ŷ</b>. A residual is a single miss — the gap between what actually happened and what the line guessed. The least-squares line is just the one line that makes those misses, squared, as small as possible. Master those two objects and the whole lesson — predictions, interpretations, residual plots, extrapolation — falls out of them.</p>
+
+    <div class="heroviz">
+      <div>
+        <div class="cap">The line and its misses</div>
+        <div class="plotcard" id="heroPlot"></div>
+      </div>
+      <div>
+        <div class="eqbig">ŷ = <span class="a">a</span> + <span class="b">b</span>x</div>
+        <div class="legend">
+          <div class="row"><span class="sw dot"></span><span><b>points</b> — what actually happened</span></div>
+          <div class="row"><span class="sw"></span><span><b>the LSRL</b> — what the line predicts (ŷ)</span></div>
+          <div class="row"><span class="sw res"></span><span><b>residuals</b> — each miss, y − ŷ</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Read the line, use it, measure its misses, interpret it</h2>
+    <p class="sec-sub">Eleven rungs run from the anatomy of ŷ = a + bx up to a full analysis of a fresh plot. The line, r, and the correlation are handed to you — the same way the Regression app would compute them from raw data — so every rung is about <em>using</em> and <em>judging</em> the fit, not grinding out the fit by hand.</p>
+    <div class="trio">
+      <div class="card"><div class="n">01</div><h3>The line is given</h3><p>You get ŷ = a + bx (and r). Finding the line from raw data is the app's job; here you predict, find residuals, and interpret.</p></div>
+      <div class="card"><div class="n">02</div><h3>Earn each badge</h3><p><b>Four in a row</b> earns a rung's badge. Click, or press <kbd>1</kbd>–<kbd>4</kbd>; type predictions and residuals and hit <kbd>Enter</kbd>. Miss one, the streak resets.</p></div>
+      <div class="card"><div class="n">03</div><h3>Round to 2 places</h3><p>Report predictions and residuals to <b>2 decimal places</b>. Residual is always <span class="mono">y − ŷ</span> — observed minus predicted, never the other way around.</p></div>
+    </div>
+
+    <div style="margin-top:34px">
+      <div class="sec-eyebrow">Four things the line and its residuals tell you</div>
+      <div class="limits">
+        <div class="lbox"><div class="t">Least squares, exactly</div><div class="d">The LSRL minimizes the sum of <em>squared</em> residuals. The plain sum of residuals is always 0 — positive and negative misses cancel.</div></div>
+        <div class="lbox r"><div class="t">Residual = miss</div><div class="d"><span class="mono">y − ŷ</span>. Positive means the point sits <em>above</em> the line (the line under-predicted); negative means below.</div></div>
+        <div class="lbox r"><div class="t">Residual plots diagnose shape</div><div class="d">Random scatter around 0 → a line fits. A curve or U-shape in the residuals → the relationship isn't linear.</div></div>
+        <div class="lbox"><div class="t">Don't predict past the edges</div><div class="d">Extrapolating beyond the data's x-range assumes the pattern continues — which you have no evidence for.</div></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="hand">✋</div>
+      <p><b>Residual is observed minus predicted — in that order.</b> <span class="mono">residual = y − ŷ</span>. A point <em>above</em> the line has a <em>positive</em> residual because the real value beat the prediction. Flip the subtraction and every sign is backwards, which quietly wrecks the residual plot and every interpretation built on it.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="ladder-head"><div><div class="sec-eyebrow">The ladder</div><h2>Pick a rung and practice</h2></div><button class="reset" id="resetBtn">Reset progress</button></div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span id="progLabel">0 of 11 badges earned</span><span>4 in a row = badge</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow">Why it matters</div>
+    <h2>A line is a promise about the future</h2>
+    <div class="why-grid">
+      <div><h3>Prediction is the payoff</h3><p>Correlation says two things move together; regression turns that into a number you can act on — a forecast, a dose, a price. The residuals are the honesty check on that forecast.</p></div>
+      <div><h3>The residual plot is the truth-teller</h3><p>A high r can still hide a curved relationship. The residual plot is where that shows up — a pattern there means the straight line was the wrong promise, no matter how good r looked.</p></div>
+      <div><h3>Extrapolation is where lines lie</h3><p>Every famous bad forecast is an extrapolation: a line that fit beautifully in range, pushed somewhere it was never tested. Knowing the edge of your data is knowing the edge of your trust.</p></div>
+    </div>
+    <p class="why-close">Every rung is the same two objects in a new costume: <span class="mono">the prediction ŷ, and the miss y − ŷ.</span> Slope and intercept describe the line; residuals audit it; the residual plot judges its shape; extrapolation marks where it stops being evidence. Learn to move fluently between the line and its misses and regression stops being formulas — it becomes a forecast you know exactly how far to trust.</p>
+  </div>
+</section>
+
+<footer><div class="wrap"><div class="foot">The Regression Ladder · ŷ = a + bx · residual = y − ŷ · Σ residuals = 0 · don't extrapolate</div></div></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   ===== CORE LOGIC START  (pure; extracted for stress-testing) =====
+   ================================================================= */
+
+function r2(x){ var s=x<0?-1:1, v=Math.abs(x)*100; return s*Math.round(v+1e-7)/100; }
+function onBoundary2(x){ var s=Math.abs(x)*100, f=s-Math.floor(s); return Math.abs(f-0.5)<0.02; }
+function fmt2(x){ return r2(x).toFixed(2); }
+
+/* r bands — same convention as the correlation ladder */
+function band(r){
+  var a=Math.abs(r);
+  var strength = a<0.1?'no correlation': a<0.5?'weak': a<0.8?'moderate':'strong';
+  var dir = a<0.1?'none':(r>0?'positive':'negative');
+  return {a:a, strength:strength, dir:dir};
+}
+function bandMargin(r){ var a=Math.abs(r),bs=[0.1,0.5,0.8],m=1; for(var i=0;i<3;i++)m=Math.min(m,Math.abs(a-bs[i])); return m; }
+function assocLabel(r){ var b=band(r); return b.strength==='no correlation'?'no linear':(b.strength+' '+b.dir); }
+
+function randn(){ var u=0,v=0; while(u===0)u=Math.random(); while(v===0)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function corr(xs,ys){ var n=xs.length,mx=0,my=0,i; for(i=0;i<n;i++){mx+=xs[i];my+=ys[i];}mx/=n;my/=n; var sxy=0,sxx=0,syy=0,dx,dy; for(i=0;i<n;i++){dx=xs[i]-mx;dy=ys[i]-my;sxy+=dx*dy;sxx+=dx*dx;syy+=dy*dy;} return (sxx===0||syy===0)?0:sxy/Math.sqrt(sxx*syy); }
+
+/* least-squares fit (used only to render honest scatter+line & residual plots) */
+function fitLSRL(xs,ys){
+  var n=xs.length,mx=0,my=0,i; for(i=0;i<n;i++){mx+=xs[i];my+=ys[i];}mx/=n;my/=n;
+  var sxy=0,sxx=0,dx; for(i=0;i<n;i++){dx=xs[i]-mx; sxy+=dx*(ys[i]-my); sxx+=dx*dx;}
+  var b=sxx===0?0:sxy/sxx, a=my-b*mx;
+  return {a:a,b:b};
+}
+function residualsOf(xs,ys,a,b){ return xs.map(function(x,i){ return ys[i]-(a+b*x); }); }
+
+/* clean number pools for GIVEN lines (prediction / residual rungs) */
+var CLEAN_B=[0.42,0.5,0.6,0.75,0.8,1.2,1.25,1.5,1.9,2.3,2.5,3.2,0.9,1.4,2.0];
+var CLEAN_A=[2.5,3.5,5,6.8,8.4,10,12.5,18.2,25.5,30,45];
+
+var SCN=[
+  {ctx:'Study time and test scores', x:'hours studied', xu:'hour', y:'test score', yu:'points', pos:true},
+  {ctx:'Temperature and ice cream sales', x:'temperature', xu:'°F', y:'sales', yu:'dollars', pos:true},
+  {ctx:'Age and height of children', x:'age', xu:'month', y:'height', yu:'inches', pos:true},
+  {ctx:'Advertising and revenue', x:'ad spend', xu:'thousand dollars', y:'revenue', yu:'thousand dollars', pos:true},
+  {ctx:'Rainfall and crop yield', x:'rainfall', xu:'inch', y:'yield', yu:'bushels', pos:true},
+  {ctx:'Practice and free throws', x:'practice time', xu:'hour', y:'free throws made', yu:'shots', pos:true},
+  {ctx:'Speed and travel time', x:'speed', xu:'mph', y:'travel time', yu:'minutes', pos:false},
+  {ctx:'Car age and resale value', x:'car age', xu:'year', y:'resale value', yu:'hundred dollars', pos:false}
+];
+
+/* a GIVEN clean line + an x (integer). ŷ exact to <=2dp. */
+function givenLine(scn){
+  scn = scn || pick(SCN);
+  var b = pick(CLEAN_B) * (scn.pos?1:-1);
+  var a = pick(CLEAN_A);
+  return {scn:scn, a:r2(a), b:r2(b)};
+}
+function makePredict(){
+  for(var t=0;t<200;t++){
+    var g=givenLine(), x=2+Math.floor(Math.random()*13);
+    var yhat=r2(g.a+g.b*x);
+    if(onBoundary2(g.a+g.b*x)) continue;
+    return {scn:g.scn, a:g.a, b:g.b, x:x, yhat:yhat};
+  }
+  return null;
+}
+function predictOptions(a,b,x){
+  var correct=r2(a+b*x);
+  var cand=[ r2(b+a*x), r2(a-b*x), r2(b*x), r2(a*b+x), r2(a+b+x) ];
+  var opts=[correct], i;
+  for(i=0;i<cand.length && opts.length<4;i++){ if(opts.indexOf(cand[i])===-1) opts.push(cand[i]); }
+  var off=[1,-1,2,-2,3];
+  for(i=0;opts.length<4;i++){ var v=r2(correct+off[i%off.length]* (Math.abs(b)>1?1:0.5)); if(opts.indexOf(v)===-1) opts.push(v); }
+  var packed=opts.map(function(v,idx){return {v:v,c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(o){return 'ŷ = '+o.v.toFixed(2);}), answer:ans, correct:correct};
+}
+function makeResidual(){
+  for(var t=0;t<200;t++){
+    var g=givenLine(), x=2+Math.floor(Math.random()*13);
+    var yhat=r2(g.a+g.b*x);
+    var res=pick([0.8,1.2,1.5,2.3,3.4,0.6,2.7,1.9,4.2,0.9,3.1])*(Math.random()<0.5?1:-1);
+    var y=r2(yhat+res);
+    var resid=r2(y-yhat);
+    if(resid===0) continue;
+    if(onBoundary2(g.a+g.b*x)||onBoundary2(y-yhat)) continue;
+    return {scn:g.scn, a:g.a, b:g.b, x:x, y:y, yhat:yhat, resid:resid, above:resid>0};
+  }
+  return null;
+}
+
+/* datasets for the residual-plot rung (fit is honest; residuals drive the plot) */
+function genLinearData(n){
+  n=n||14;
+  for(var t=0;t<300;t++){
+    var b=(Math.random()<0.5?1:-1)*(0.8+Math.random()*1.6), a=5+Math.random()*10;
+    var xs=[],ys=[],i;
+    for(i=0;i<n;i++){ var x=2+i*(12/(n-1)); xs.push(r2(x)); ys.push(a+b*x+ (0.9+Math.random()*0.6)*randn()); }
+    var f=fitLSRL(xs,ys), res=residualsOf(xs,ys,f.a,f.b);
+    if(archScore(xs,res) < 0.35) return {xs:xs, ys:ys, a:f.a, b:f.b, res:res, kind:'linear'};
+  }
+  return null;
+}
+function genCurvedData(n){
+  n=n||14;
+  for(var t=0;t<300;t++){
+    var open=(Math.random()<0.5?1:-1), c=0.5+Math.random()*0.6, xm=8, lin=(Math.random()-0.5)*1.5;
+    var xs=[],ys=[],i;
+    for(i=0;i<n;i++){ var x=2+i*(12/(n-1)); xs.push(r2(x)); ys.push(20+lin*x+open*c*(x-xm)*(x-xm)+0.5*randn()); }
+    var f=fitLSRL(xs,ys), res=residualsOf(xs,ys,f.a,f.b);
+    if(archScore(xs,res) > 0.75) return {xs:xs, ys:ys, a:f.a, b:f.b, res:res, kind:'curved', open:open};
+  }
+  return null;
+}
+/* archScore: how much the residuals bend (middle third vs outer thirds), 0..~1+ */
+function archScore(xs,res){
+  var idx=xs.map(function(x,i){return i;}).sort(function(p,q){return xs[p]-xs[q];});
+  var n=idx.length, k=Math.max(1,Math.floor(n/3));
+  var lo=0,mid=0,hi=0,i;
+  for(i=0;i<k;i++) lo+=res[idx[i]];
+  for(i=0;i<k;i++) hi+=res[idx[n-1-i]];
+  for(i=0;i<k;i++) mid+=res[idx[Math.floor(n/2)-Math.floor(k/2)+i]];
+  lo/=k; hi/=k; mid/=k;
+  var spread=0,mr=0; for(i=0;i<n;i++)mr+=res[i]; mr/=n;
+  for(i=0;i<n;i++)spread+=Math.abs(res[i]-mr); spread=spread/n || 1;
+  return Math.abs(((lo+hi)/2 - mid))/spread;   // big when middle differs from ends (a bend)
+}
+
+/* ---- SVG: scatter with LSRL + optional residual segments ---- */
+function svgScatterLine(xs,ys,a,b,opts){
+  opts=opts||{}; var W=opts.w||300,H=opts.h||230,m=16,i;
+  var minx=Math.min.apply(null,xs),maxx=Math.max.apply(null,xs);
+  var vals=ys.concat(xs.map(function(x){return a+b*x;}));
+  var miny=Math.min.apply(null,vals),maxy=Math.max.apply(null,vals);
+  var px=(maxx-minx)*0.09||1, py=(maxy-miny)*0.12||1; minx-=px;maxx+=px;miny-=py;maxy+=py;
+  function X(x){return (m+(x-minx)/(maxx-minx)*(W-2*m)).toFixed(1);}
+  function Y(y){return (H-m-(y-miny)/(maxy-miny)*(H-2*m)).toFixed(1);}
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="plot" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="scatterplot with regression line">';
+  s+='<rect x="'+m+'" y="'+m+'" width="'+(W-2*m)+'" height="'+(H-2*m)+'" class="plotframe"/>';
+  for(var g=1;g<4;g++){ var gx=(m+g/4*(W-2*m)).toFixed(1),gy=(m+g/4*(H-2*m)).toFixed(1);
+    s+='<line x1="'+gx+'" y1="'+m+'" x2="'+gx+'" y2="'+(H-m)+'" class="grid"/><line x1="'+m+'" y1="'+gy+'" x2="'+(W-m)+'" y2="'+gy+'" class="grid"/>'; }
+  if(opts.resid){ for(i=0;i<xs.length;i++){ s+='<line x1="'+X(xs[i])+'" y1="'+Y(ys[i])+'" x2="'+X(xs[i])+'" y2="'+Y(a+b*xs[i])+'" class="residseg"/>'; } }
+  s+='<line x1="'+X(minx)+'" y1="'+Y(a+b*minx)+'" x2="'+X(maxx)+'" y2="'+Y(a+b*maxx)+'" class="fitline"/>';
+  for(i=0;i<xs.length;i++){ s+='<circle cx="'+X(xs[i])+'" cy="'+Y(ys[i])+'" r="'+(opts.dot||3.4)+'" class="dot-pt'+(opts.hi===i?' hi':'')+'"/>'; }
+  s+='</svg>'; return s;
+}
+/* ---- SVG: residual plot (x vs residual) with zero line ---- */
+function svgResidual(xs,res,opts){
+  opts=opts||{}; var W=opts.w||300,H=opts.h||190,m=16,i;
+  var minx=Math.min.apply(null,xs),maxx=Math.max.apply(null,xs);
+  var mr=Math.max.apply(null,res.map(Math.abs))||1;
+  var px=(maxx-minx)*0.09||1; minx-=px;maxx+=px; var miny=-mr*1.25,maxy=mr*1.25;
+  function X(x){return (m+(x-minx)/(maxx-minx)*(W-2*m)).toFixed(1);}
+  function Y(y){return (H-m-(y-miny)/(maxy-miny)*(H-2*m)).toFixed(1);}
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="plot" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="residual plot">';
+  s+='<rect x="'+m+'" y="'+m+'" width="'+(W-2*m)+'" height="'+(H-2*m)+'" class="plotframe"/>';
+  s+='<line x1="'+m+'" y1="'+Y(0)+'" x2="'+(W-m)+'" y2="'+Y(0)+'" class="zeroline"/>';
+  for(i=0;i<xs.length;i++){ s+='<circle cx="'+X(xs[i])+'" cy="'+Y(res[i])+'" r="3.4" class="dot-pt"/>'; }
+  s+='</svg>'; return s;
+}
+/* one-point residual mini-viz (feedback on residual rung) */
+function svgOnePoint(a,b,x,y){
+  var xs=[x-3,x,x+3], line=xs.map(function(v){return a+b*v;});
+  var W=260,H=150,m=14;
+  var allx=xs, ally=line.concat([y]);
+  var minx=Math.min.apply(null,allx),maxx=Math.max.apply(null,allx);
+  var miny=Math.min.apply(null,ally),maxy=Math.max.apply(null,ally);
+  var pxr=(maxx-minx)*0.12||1,pyr=(maxy-miny)*0.2||1; minx-=pxr;maxx+=pxr;miny-=pyr;maxy+=pyr;
+  function X(v){return (m+(v-minx)/(maxx-minx)*(W-2*m)).toFixed(1);}
+  function Y(v){return (H-m-(v-miny)/(maxy-miny)*(H-2*m)).toFixed(1);}
+  var yh=a+b*x;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="plot" xmlns="http://www.w3.org/2000/svg">';
+  s+='<rect x="'+m+'" y="'+m+'" width="'+(W-2*m)+'" height="'+(H-2*m)+'" class="plotframe"/>';
+  s+='<line x1="'+X(xs[0])+'" y1="'+Y(line[0])+'" x2="'+X(xs[2])+'" y2="'+Y(line[2])+'" class="fitline"/>';
+  s+='<line x1="'+X(x)+'" y1="'+Y(y)+'" x2="'+X(x)+'" y2="'+Y(yh)+'" class="residseg"/>';
+  s+='<circle cx="'+X(x)+'" cy="'+Y(yh)+'" r="3" class="dot-pt" style="opacity:.4"/>';
+  s+='<circle cx="'+X(x)+'" cy="'+Y(y)+'" r="4" class="dot-pt hi"/>';
+  s+='</svg>'; return s;
+}
+
+if (typeof module!=='undefined' && module.exports){
+  module.exports={ r2:r2, onBoundary2:onBoundary2, band:band, bandMargin:bandMargin, assocLabel:assocLabel,
+    corr:corr, fitLSRL:fitLSRL, residualsOf:residualsOf, archScore:archScore,
+    givenLine:givenLine, makePredict:makePredict, predictOptions:predictOptions, makeResidual:makeResidual,
+    genLinearData:genLinearData, genCurvedData:genCurvedData, svgScatterLine:svgScatterLine,
+    svgResidual:svgResidual, svgOnePoint:svgOnePoint, SCN:SCN, CLEAN_A:CLEAN_A, CLEAN_B:CLEAN_B };
+}
+/* =================================================================
+   ===== CORE LOGIC END =====
+   ================================================================= */
+
+
+/* ---------------- UI LAYER ---------------- */
+var KEY='lsrlLadder', NEED=4;
+var state=load();
+function load(){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.rungs) return s; }catch(e){} return {rungs:{}}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+/* hero plot */
+(function(){
+  var d=genLinearData(12)||{xs:[2,4,6,8,10,12],ys:[6,9,11,15,18,20],a:3,b:1.5,res:[]};
+  document.getElementById('heroPlot').innerHTML=svgScatterLine(d.xs,d.ys,d.a,d.b,{w:300,h:210,resid:true});
+})();
+
+var RUNGS=[
+  {
+    id:'anatomy', title:'Anatomy of ŷ = a + bx', desc:'Slope, intercept, and what ŷ means.',
+    strategy:'<p>In <code>ŷ = a + bx</code>: <code>a</code> is the <b>y-intercept</b> (the predicted y when x = 0), <code>b</code> is the <b>slope</b> (change in ŷ per 1-unit rise in x), and <code>ŷ</code> is the <b>predicted</b> y — not an observed value. We use x to predict y.</p>',
+    build:function(){
+      var g=givenLine();
+      var eq='ŷ = '+g.a.toFixed(2)+' + '+g.b.toFixed(2)+'x';
+      var mode=pick(['slope','intercept','yhat','usewhich']);
+      var q;
+      if(mode==='slope') q={ask:'In '+eq+', what is the slope?', options:['b = '+g.b.toFixed(2),'a = '+g.a.toFixed(2),'x','ŷ'], answer:0};
+      else if(mode==='intercept') q={ask:'In '+eq+', what is the y-intercept?', options:['a = '+g.a.toFixed(2),'b = '+g.b.toFixed(2),'x = 0','ŷ'], answer:0};
+      else if(mode==='yhat') q={ask:'What does ŷ represent?', options:['the predicted y-value','the actual observed y-value','the residual','the slope of the line'], answer:0};
+      else q={ask:'Which variable is used to predict the other?', options:['x predicts y','y predicts x','they predict each other','neither predicts the other'], answer:0};
+      var opts=q.options.map(function(o){return o;}), ans=q.answer;
+      var packed=opts.map(function(o,i){return {o:o,c:i===ans};}); shuffle(packed);
+      var fo=packed.map(function(p){return p.o;}), fa=0; for(var i=0;i<packed.length;i++) if(packed[i].c){fa=i;break;}
+      return {mode:'mc', scenario:'<span class="tag">The regression equation</span><span class="eqline"><span class="hl">'+eq+'</span></span>', ask:q.ask, options:fo, answer:fa};
+    }
+  },
+  {
+    id:'leastsq', title:'What "least squares" means', desc:'The line that minimizes squared misses.',
+    strategy:'<p>Among all possible lines, the LSRL is the one that makes the <b>sum of the squared residuals</b> as small as possible. A consequence: for that line, the plain <b>sum of the residuals is always 0</b> — the positive and negative misses exactly cancel.</p>',
+    build:function(){
+      var mode=pick(['min','sum','best']);
+      var q;
+      if(mode==='min') q={ask:'The LSRL is the line that minimizes the sum of the ___ of the residuals.', options:['squares','residuals themselves','absolute x-values','slopes'], answer:0};
+      else if(mode==='sum') q={ask:'For the least-squares regression line, the sum of the residuals is always ___.', options:['0','1','equal to the slope','equal to r'], answer:0};
+      else q={ask:'Which line is the "line of best fit"?', options:['the one with the smallest sum of squared residuals','the one passing through the most points','the one with slope equal to r','the steepest line through the data'], answer:0};
+      var packed=q.options.map(function(o,i){return {o:o,c:i===q.answer};}); shuffle(packed);
+      var fo=packed.map(function(p){return p.o;}), fa=0; for(var i=0;i<packed.length;i++) if(packed[i].c){fa=i;break;}
+      return {mode:'mc', ask:q.ask, options:fo, answer:fa};
+    }
+  },
+  {
+    id:'predict', title:'Predict ŷ', desc:'Feed the line an x, read off the prediction.',
+    strategy:'<p>Substitute x into the equation: <code>ŷ = a + b·x</code>. Multiply first, then add the intercept. Round to 2 decimal places.</p>',
+    build:function(){
+      var p=makePredict();
+      var eq='ŷ = '+p.a.toFixed(2)+' + '+p.b.toFixed(2)+'x';
+      return {mode:'num',
+        scenario:'<span class="tag">'+p.scn.ctx+'</span>The regression line is <span class="eqline"><span class="hl">'+eq+'</span></span>, where x is '+p.scn.x+' ('+p.scn.xu+') and ŷ is predicted '+p.scn.y+'.',
+        ask:'Predict ŷ when x = '+p.x+'.', fields:[{label:'ŷ =', answer:p.yhat, tol:0.005}]};
+    }
+  },
+  {
+    id:'extrap', title:'Interpolation or extrapolation?', desc:'Is this x inside the data, or past its edge?',
+    strategy:'<p>Predictions <b>within</b> the observed x-range (interpolation) are generally reliable. Predictions <b>outside</b> [min, max] (extrapolation) assume the pattern continues past where you have data — treat them with caution.</p>',
+    build:function(){
+      var scn=pick(SCN);
+      var lo=2+Math.floor(Math.random()*4), hi=lo+6+Math.floor(Math.random()*6);
+      var inside=Math.random()<0.5;
+      var x = inside ? lo+1+Math.floor(Math.random()*(hi-lo-1)) : (Math.random()<0.5 ? lo-1-Math.floor(Math.random()*4) : hi+1+Math.floor(Math.random()*5));
+      var opts=['Interpolation — within the data range, generally reliable.','Extrapolation — outside the data range, treat with caution.'];
+      var ans=(x>=lo && x<=hi)?0:1;
+      return {mode:'mc', range:{lo:lo,hi:hi,x:x},
+        scenario:'<span class="tag">'+scn.ctx+'</span>The data covers '+scn.x+' from <b>x = '+lo+'</b> to <b>x = '+hi+'</b> ('+scn.xu+'). We use the LSRL to predict '+scn.y+' at <b>x = '+x+'</b>.',
+        ask:'Is predicting at x = '+x+' interpolation or extrapolation?', options:opts, answer:ans};
+    }
+  },
+  {
+    id:'residual', title:'Compute a residual', desc:'residual = y − ŷ (observed − predicted).',
+    strategy:'<p>First predict: <code>ŷ = a + b·x</code>. Then subtract from the actual value: <code>residual = y − ŷ</code>. Keep the sign — it tells you which side of the line the point is on. Round to 2 dp.</p>',
+    build:function(){
+      var p=makeResidual();
+      var eq='ŷ = '+p.a.toFixed(2)+' + '+p.b.toFixed(2)+'x';
+      return {mode:'num', resPoint:p,
+        scenario:'<span class="tag">'+p.scn.ctx+'</span>The LSRL is <span class="eqline"><span class="hl">'+eq+'</span></span>. One observed data point is <b>('+p.x+', '+p.y.toFixed(2)+')</b>.',
+        ask:'Find the residual for this point.', fields:[{label:'residual =', answer:p.resid, tol:0.005}]};
+    }
+  },
+  {
+    id:'abovebelow', title:'Above or below the line?', desc:'Read the sign of the residual.',
+    strategy:'<p>Compute <code>residual = y − ŷ</code>. A <b>positive</b> residual means the observed point sits <b>above</b> the line (the line under-predicted); a <b>negative</b> residual means it sits <b>below</b>.</p>',
+    build:function(){
+      var p=makeResidual();
+      var eq='ŷ = '+p.a.toFixed(2)+' + '+p.b.toFixed(2)+'x';
+      var opts=['Above the line (positive residual)','Below the line (negative residual)'];
+      return {mode:'mc', resPoint:p,
+        scenario:'<span class="tag">'+p.scn.ctx+'</span>The LSRL is <span class="eqline"><span class="hl">'+eq+'</span></span>. An observed point is <b>('+p.x+', '+p.y.toFixed(2)+')</b>.',
+        ask:'Does this point fall above or below the regression line?', options:opts, answer:p.above?0:1};
+    }
+  },
+  {
+    id:'resplot', title:'Read the residual plot', desc:'Random scatter fits; a pattern doesn\'t.',
+    strategy:'<p>A residual plot graphs the residuals against x. If the points scatter <b>randomly</b> around 0 with no shape, a straight line is a good fit. If they form a <b>curve or U-shape</b>, the true relationship is nonlinear and the LSRL is the wrong model.</p>',
+    build:function(){
+      var curved=Math.random()<0.5;
+      var d=curved?genCurvedData():genLinearData();
+      var opts=['A linear model is appropriate — the residuals scatter randomly around 0.','The relationship is nonlinear — the residuals show a clear curved pattern.'];
+      return {mode:'mc', residualPlot:d, ask:'What does this residual plot tell you about the fit?', options:opts, answer:curved?1:0};
+    }
+  },
+  {
+    id:'slope', title:'Interpret the slope', desc:'What b means in context.',
+    strategy:'<p>The slope is a <b>rate</b>: for each <b>1-unit</b> increase in x, ŷ changes by <code>b</code> — increasing if b &gt; 0, decreasing if b &lt; 0. State it with the real variables and units, and keep it "on average / approximate," not causal.</p>',
+    build:function(){
+      var scn=pick(SCN);
+      var b=r2(pick(CLEAN_B)*(scn.pos?1:-1));
+      var mag=Math.abs(b).toFixed(2), updown=b>0?'increase':'decrease';
+      var correct='For each 1-'+scn.xu+' increase in '+scn.x+', '+scn.y+' is predicted to '+updown+' by about '+mag+' '+scn.yu+'.';
+      var d1='For each 1-'+scn.xu+' increase in '+scn.x+', '+scn.y+' is predicted to '+(b>0?'decrease':'increase')+' by about '+mag+' '+scn.yu+'.';
+      var d2='For each 1-'+scn.yu+' increase in '+scn.y+', '+scn.x+' is predicted to '+updown+' by about '+mag+' '+scn.xu+'.';
+      var d3='Increasing '+scn.x+' by 1 '+scn.xu+' causes '+scn.y+' to '+updown+' by exactly '+mag+' '+scn.yu+'.';
+      var packed=[{o:correct,c:true},{o:d1,c:false},{o:d2,c:false},{o:d3,c:false}]; shuffle(packed);
+      var fo=packed.map(function(p){return p.o;}),fa=0; for(var i=0;i<packed.length;i++) if(packed[i].c){fa=i;break;}
+      return {mode:'mc', scenario:'<span class="tag">'+scn.ctx+'</span>The regression line is <span class="eqline"><span class="hl">ŷ = a + '+b.toFixed(2)+'x</span></span>, where x is '+scn.x+' ('+scn.xu+') and ŷ is '+scn.y+' ('+scn.yu+').',
+        ask:'Which correctly interprets the slope?', options:fo, answer:fa};
+    }
+  },
+  {
+    id:'intercept', title:'Interpret the intercept', desc:'a is ŷ at x = 0 — and when that makes sense.',
+    strategy:'<p>The intercept <code>a</code> is the predicted y when <b>x = 0</b>. It only has a real-world meaning when x = 0 is sensible and near the data; otherwise it is just where the line crosses the axis, an extrapolation with no interpretation.</p>',
+    build:function(){
+      var scn=pick(SCN); var a=r2(pick(CLEAN_A));
+      var mode=pick(['meaning','sense']);
+      var q;
+      if(mode==='meaning'){
+        q={ask:'What does the intercept a = '+a.toFixed(2)+' represent?',
+          options:['the predicted '+scn.y+' when '+scn.x+' = 0','the change in '+scn.y+' per unit '+scn.x,'the value of '+scn.x+' when '+scn.y+' = 0','the strength of the association'], answer:0};
+      } else {
+        var sensible=Math.random()<0.5;
+        var xdesc = sensible ? ('a '+scn.x+' of 0 '+scn.xu+' is within reason, so the intercept is meaningful here')
+                             : ('a '+scn.x+' of 0 '+scn.xu+' is far outside the data (extrapolation), so the intercept has no real interpretation');
+        q={ask:'The data has '+scn.x+' ranging from 5 to 20 '+scn.xu+'. Can we meaningfully interpret the intercept (x = 0)?',
+          options:['No — x = 0 is outside the data range, so it is extrapolation with no real meaning.','Yes — the intercept is always meaningful.','Yes — because the slope is positive.','No — because r is less than 1.'], answer:0};
+      }
+      var packed=q.options.map(function(o,i){return {o:o,c:i===q.answer};}); shuffle(packed);
+      var fo=packed.map(function(p){return p.o;}),fa=0; for(var i=0;i<packed.length;i++) if(packed[i].c){fa=i;break;}
+      return {mode:'mc', scenario:'<span class="tag">'+scn.ctx+'</span>The regression line is <span class="eqline"><span class="hl">ŷ = '+a.toFixed(2)+' + bx</span></span>, where x is '+scn.x+' ('+scn.xu+').',
+        ask:q.ask, options:fo, answer:fa};
+    }
+  },
+  {
+    id:'interpr', title:'Interpret r', desc:'Direction, strength, linear association.',
+    strategy:'<p>Describe r in three parts: <b>strength</b> (|r|: weak 0.1–0.5, moderate 0.5–0.8, strong ≥0.8), <b>direction</b> (sign), and always the word <b>linear</b>. E.g. "a strong positive linear association."</p>',
+    build:function(){
+      var scn=pick(SCN);
+      var r;
+      for(var t=0;t<200;t++){ r=r2((0.2+Math.random()*0.78)*(scn.pos?1:-1)); if(bandMargin(r)>0.04){break;} }
+      var correct=assocLabel(r)+' linear association';
+      var all=['strong positive','moderate positive','weak positive','weak negative','moderate negative','strong negative'];
+      var pool=all.filter(function(l){return l!==assocLabel(r);}); shuffle(pool);
+      var opts=[correct, pool[0]+' linear association', pool[1]+' linear association', pool[2]+' linear association'];
+      var packed=opts.map(function(o,i){return {o:o,c:i===0};}); shuffle(packed);
+      var fo=packed.map(function(p){return 'There is a '+p.o+' between '+scn.x+' and '+scn.y+'.';}),fa=0;
+      for(var i=0;i<packed.length;i++) if(packed[i].c){fa=i;break;}
+      return {mode:'mc', scenario:'<span class="tag">'+scn.ctx+'</span>For '+scn.x+' and '+scn.y+', the correlation coefficient is <b>r = '+r.toFixed(2)+'</b>.',
+        ask:'Which correctly interprets r?', options:fo, answer:fa};
+    }
+  },
+  {
+    id:'capstone', title:'Capstone — full analysis', desc:'Predict, then judge the fit. One miss restarts.', cap:true,
+    strategy:'<p>The whole workflow: read the line and the plots, make a prediction, then judge whether the model can be trusted here. Both parts must be right — a single miss resets the streak.</p>',
+    build:function(){
+      var curved=Math.random()<0.5;
+      var d=curved?genCurvedData():genLinearData();
+      var a=r2(d.a), b=r2(d.b);
+      var lo=Math.min.apply(null,d.xs), hi=Math.max.apply(null,d.xs);
+      var xin=Math.round((lo+hi)/2);
+      var po=predictOptions(a,b,xin);
+      var q2mode=pick(['extrap','resid']);
+      var sub2;
+      if(q2mode==='extrap'){
+        var xout=Math.round(hi+3+Math.random()*4);
+        sub2={ask:'2. Predicting at x = '+xout+' (the data ends at x = '+Math.round(hi)+') would be…',
+          options:shuffleKeep(['Extrapolation — unreliable, beyond the data range.','Interpolation — perfectly reliable.','Impossible to compute.','Reliable because the line is straight.'],0)};
+      } else {
+        sub2={ask:'2. Based on the residual plot, is a linear model appropriate here?',
+          options:shuffleKeep(curved?['No — the residual plot shows a curved pattern, so the relationship is nonlinear.','Yes — the residual plot looks random, so a line fits well.','Yes — any data can use a line.','No — because the slope is too small.']
+                                     :['Yes — the residual plot scatters randomly around 0, so a line fits well.','No — the residual plot shows a clear curve.','No — residual plots never justify a line.','Yes — because r must be 1.'],0)};
+      }
+      return {mode:'mc2', capPlots:d,
+        sub:[{ask:'1. Use the line to predict ŷ at x = '+xin+' (inside the data).', options:po.options, answer:po.answer}, sub2]};
+    }
+  }
+];
+function shuffleKeep(opts, correctIdx){
+  var packed=opts.map(function(o,i){return {o:o,c:i===correctIdx};}); shuffle(packed);
+  var fo=packed.map(function(p){return p.o;}), fa=0; for(var i=0;i<packed.length;i++) if(packed[i].c){fa=i;break;}
+  return {options:fo, answer:fa};
+}
+
+/* ---------- render skeleton ---------- */
+var rungsEl=document.getElementById('rungs');
+RUNGS.forEach(function(def,idx){
+  if(!state.rungs[def.id]) state.rungs[def.id]={streak:0,done:false};
+  var el=document.createElement('div');
+  el.className='rung'+(def.cap?' cap':'')+(state.rungs[def.id].done?' done':'');
+  el.dataset.id=def.id;
+  el.innerHTML='<div class="rung-top"><div class="rung-num">'+(idx+1)+'</div>'+
+    '<div class="rung-title"><div class="rt">'+def.title+'</div><div class="rd">'+def.desc+'</div></div>'+
+    '<div class="rung-badge"><span class="medal">🏅</span><span class="dots"></span><span class="txt"></span></div>'+
+    '<div class="chev">▶</div></div><div class="rung-body"></div>';
+  rungsEl.appendChild(el);
+  el.querySelector('.rung-top').addEventListener('click', function(){ toggleRung(def.id); });
+  renderBadge(def.id);
+});
+function rungEl(id){ return rungsEl.querySelector('.rung[data-id="'+id+'"]'); }
+function rungDef(id){ return RUNGS.filter(function(r){return r.id===id;})[0]; }
+function renderBadge(id){
+  var el=rungEl(id),st=state.rungs[id],dots=el.querySelector('.dots'); dots.innerHTML='';
+  for(var i=0;i<NEED;i++){ var d=document.createElement('span'); d.className='dot-b'+(i<st.streak?' on':''); dots.appendChild(d); }
+  el.querySelector('.txt').textContent=st.done?'earned':(st.streak+'/'+NEED); el.classList.toggle('done',st.done);
+}
+var openId=null;
+function toggleRung(id){
+  var el=rungEl(id);
+  if(el.classList.contains('open')){ el.classList.remove('open'); openId=null; return; }
+  if(openId) rungEl(openId).classList.remove('open');
+  el.classList.add('open'); openId=id; newQuestion(id);
+}
+
+var current={};
+function rangeVizHTML(rg){
+  var span=rg.hi-rg.lo, full=rg.lo-4, fend=rg.hi+6, tot=fend-full;
+  function pc(v){ return ((v-full)/tot*100); }
+  return '<div class="rangeviz"><div class="track">'+
+    '<div class="band" style="left:'+pc(rg.lo)+'%;width:'+((rg.hi-rg.lo)/tot*100)+'%"></div>'+
+    '<div class="mk" style="left:'+pc(rg.x)+'%"></div><div class="mklab" style="left:'+pc(rg.x)+'%">x='+rg.x+'</div>'+
+    '</div><div class="ends"><span>data min x='+rg.lo+'</span><span>data max x='+rg.hi+'</span></div></div>';
+}
+function newQuestion(id){
+  var def=rungDef(id), q=def.build(); current[id]={def:def,q:q};
+  var body=rungEl(id).querySelector('.rung-body');
+  var html='<details class="strategy"><summary>Strategy</summary><div class="inner">'+def.strategy+'</div></details><div class="qwrap">';
+  if(q.scenario) html+='<div class="scenario">'+q.scenario+'</div>';
+  if(q.range) html+=rangeVizHTML(q.range);
+  if(q.residualPlot){ var d=q.residualPlot;
+    html+='<div class="plotbox pair">'+
+      '<div class="plotcard">'+svgScatterLine(d.xs,d.ys,d.a,d.b,{w:250,h:200})+'<div class="plabel">scatterplot with LSRL</div></div>'+
+      '<div class="plotcard">'+svgResidual(d.xs,d.res,{w:250,h:170})+'<div class="plabel">residual plot</div></div></div>';
+  }
+  if(q.capPlots){ var c=q.capPlots;
+    html+='<div class="plotbox pair">'+
+      '<div class="plotcard">'+svgScatterLine(c.xs,c.ys,c.a,c.b,{w:250,h:200,resid:true})+'<div class="plabel">ŷ = '+r2(c.a).toFixed(2)+' + '+r2(c.b).toFixed(2)+'x</div></div>'+
+      '<div class="plotcard">'+svgResidual(c.xs,c.res,{w:250,h:170})+'<div class="plabel">residual plot</div></div></div>';
+  }
+  if(q.mode==='mc2'){
+    html+='<div class="ask">'+q.sub[0].ask+'</div><div class="choices" data-sub="0">';
+    q.sub[0].options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div><div class="sub2" style="display:none;margin-top:18px"></div>';
+  } else if(q.mode==='mc'){
+    html+='<div class="ask">'+q.ask+'</div><div class="choices">';
+    q.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>';
+  } else {
+    html+='<div class="ask">'+q.ask+'</div><div class="numrow">';
+    q.fields.forEach(function(f,i){ html+='<div class="field"><label>'+f.label+'</label><input type="number" step="0.01" data-i="'+i+'" autocomplete="off"></div>'; });
+    html+='<button class="btn" data-check="1">Check</button></div>';
+  }
+  html+='<div class="feedback"></div><div class="streak-note"></div></div>';
+  body.innerHTML=html; updateStreakNote(id);
+
+  if(q.mode==='mc'){ body.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerMC(id, parseInt(c.dataset.i,10)); }); }); }
+  else if(q.mode==='mc2'){ body.querySelectorAll('.choices[data-sub="0"] .choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap1(id, parseInt(c.dataset.i,10)); }); }); }
+  else { var inputs=body.querySelectorAll('input'); body.querySelector('[data-check]').addEventListener('click', function(){ answerNum(id); });
+    inputs.forEach(function(inp,i){ inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ if(i<inputs.length-1) inputs[i+1].focus(); else answerNum(id); } }); }); if(inputs[0]) inputs[0].focus(); }
+}
+function updateStreakNote(id){ var st=state.rungs[id],note=rungEl(id).querySelector('.streak-note'); if(!note) return;
+  note.textContent=st.done?'✓ Badge earned — keep going for more practice.':(st.streak>0?('Streak: '+st.streak+' of '+NEED):''); }
+function nextBtn(){ return '<div class="next"><button class="btn ghost" data-next="1">Next question →</button></div>'; }
+function wireNext(id){ var b=rungEl(id).querySelector('[data-next]'); if(b) b.addEventListener('click', function(){ newQuestion(id); }); }
+
+function answerMC(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), choices=body.querySelectorAll('.choice');
+  if(choices[0].disabled) return; choices.forEach(function(c){c.disabled=true;});
+  var correct=(choice===q.answer); choices[q.answer].classList.add('correct'); if(!correct) choices[choice].classList.add('wrong');
+  var fb=body.querySelector('.feedback'); fb.className='feedback show '+(correct?'right':'wrong');
+  var extra='';
+  if(cur.def.id==='abovebelow' && q.resPoint){ var p=q.resPoint; extra=' <span style="opacity:.85">ŷ = '+p.yhat.toFixed(2)+', residual = '+p.resid.toFixed(2)+'.</span>'+'<div style="margin-top:8px">'+svgOnePoint(p.a,p.b,p.x,p.y)+'</div>'; }
+  fb.innerHTML=(correct?'Correct.':'Not quite — the right choice is highlighted.')+extra+nextBtn();
+  wireNext(id); recordResult(id, correct);
+}
+function answerNum(id){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), inputs=body.querySelectorAll('input');
+  if(inputs[0].disabled) return;
+  var f=q.fields[0], val=parseFloat(inputs[0].value.trim());
+  var ok=!isNaN(val)&&Math.abs(val-f.answer)<=f.tol+1e-9;
+  inputs[0].classList.toggle('ok',ok); inputs[0].classList.toggle('no',!ok);
+  inputs.forEach(function(i){i.disabled=true;}); body.querySelector('[data-check]').disabled=true;
+  var fb=body.querySelector('.feedback'); fb.className='feedback show '+(ok?'right':'wrong');
+  var viz='';
+  if(cur.def.id==='residual' && q.resPoint){ var p=q.resPoint; viz='<div style="margin-top:8px">'+svgOnePoint(p.a,p.b,p.x,p.y)+'</div>'; }
+  fb.innerHTML=(ok?'Correct.':'Not quite. Answer: <span class="mono">'+f.answer.toFixed(2)+'</span>.')+viz+nextBtn();
+  wireNext(id); recordResult(id, ok);
+}
+function answerCap1(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c0=body.querySelectorAll('.choices[data-sub="0"] .choice'); if(c0[0].disabled) return;
+  c0.forEach(function(c){c.disabled=true;});
+  cur.ok1=(choice===q.sub[0].answer); c0[q.sub[0].answer].classList.add('correct'); if(!cur.ok1) c0[choice].classList.add('wrong');
+  var s2=body.querySelector('.sub2'); s2.style.display='block';
+  var html='<div class="ask">'+q.sub[1].ask+'</div><div class="choices" data-sub="1">';
+  q.sub[1].options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+  html+='</div>'; s2.innerHTML=html;
+  s2.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap2(id, parseInt(c.dataset.i,10)); }); });
+}
+function answerCap2(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c1=body.querySelectorAll('.choices[data-sub="1"] .choice'); if(c1[0].disabled) return;
+  c1.forEach(function(c){c.disabled=true;});
+  var ok2=(choice===q.sub[1].answer); c1[q.sub[1].answer].classList.add('correct'); if(!ok2) c1[choice].classList.add('wrong');
+  var both=cur.ok1&&ok2; var fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(both?'right':'wrong');
+  fb.innerHTML=(both?'Both correct — full analysis clean.':'Not both correct — the streak resets.')+nextBtn();
+  wireNext(id); recordResult(id, both);
+}
+function recordResult(id, correct){
+  var st=state.rungs[id],wasDone=st.done;
+  if(correct){ st.streak++; if(st.streak>=NEED) st.done=true; } else st.streak=0;
+  save(); renderBadge(id); updateStreakNote(id); updateProgress();
+  if(st.done&&!wasDone) celebrate(id);
+}
+function updateProgress(){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  document.getElementById('progLabel').textContent=done+' of '+RUNGS.length+' badges earned';
+  document.getElementById('progFill').style.width=(100*done/RUNGS.length)+'%';
+}
+function celebrate(id){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  showToast('🏅 '+(done===RUNGS.length?'All 11 badges — line and residuals mastered.':'Badge earned · '+rungDef(id).title));
+}
+var toastT; function showToast(t){ var el=document.getElementById('toast'); el.innerHTML=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2600); }
+
+document.addEventListener('keydown', function(e){
+  if(!openId) return; var cur=current[openId]; if(!cur) return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  var n=parseInt(e.key,10); if(isNaN(n)||n<1||n>4) return;
+  var body=rungEl(openId).querySelector('.rung-body');
+  if(cur.q.mode==='mc'){ var cs=body.querySelectorAll('.choice'); if(cs[n-1]&&!cs[0].disabled) answerMC(openId,n-1); }
+  else if(cur.q.mode==='mc2'){
+    var s1=body.querySelectorAll('.choices[data-sub="0"] .choice'), s2=body.querySelectorAll('.choices[data-sub="1"] .choice');
+    if(s2.length&&!s2[0].disabled){ if(s2[n-1]) answerCap2(openId,n-1); }
+    else if(s1.length&&!s1[0].disabled){ if(s1[n-1]) answerCap1(openId,n-1); }
+  }
+});
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!confirm('Reset all progress on the Regression Ladder?')) return;
+  state={rungs:{}}; RUNGS.forEach(function(r){state.rungs[r.id]={streak:0,done:false};});
+  save(); RUNGS.forEach(function(r){renderBadge(r.id);updateStreakNote(r.id);});
+  if(openId) newQuestion(openId); updateProgress(); showToast('Progress reset');
+});
+updateProgress();
+</script>
+</body>
+</html>
