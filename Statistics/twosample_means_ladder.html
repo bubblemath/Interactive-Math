@@ -1,0 +1,674 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Two-Sample Ladder — one question decides everything: are they paired?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#26293A;
+  --paper:#F6F7FB;
+  --surface:#FFFFFF;
+  --line:#E3E5EE;
+  --accent:#46598C;         /* brand / group 1 */
+  --accent-soft:#DEE3F0;
+  --g2:#C77D3A;             /* group 2 */
+  --g2-soft:#F6E7D4;
+  --diff:#2E8B8B;           /* the differences */
+  --diff-soft:#D6ECEC;
+  --good:#2E9E51;
+  --good-soft:#E1F3E6;
+  --bad:#C6403D;
+  --bad-soft:#FBE4E3;
+  --muted:#666980;
+  --shadow:0 1px 2px rgba(38,41,58,.06),0 8px 24px rgba(38,41,58,.06);
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--disp);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin:0}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(246,247,251,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand .glyph{color:var(--accent)}
+.navlinks{margin-left:auto;display:flex;gap:22px;font-size:14px;font-weight:500}
+.navlinks a{color:var(--muted)}.navlinks a:hover{color:var(--ink)}
+@media(max-width:560px){.navlinks{display:none}}
+
+header{padding:66px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+header h1{font-size:clamp(28px,5vw,48px);font-weight:600}
+header h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:650px;margin:20px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+.heroviz{margin:38px 0 6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:26px 26px 22px;display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media(max-width:640px){.heroviz{grid-template-columns:1fr}}
+.hcol{text-align:center}
+.hcol .cap{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.03em;text-transform:uppercase;margin-bottom:10px}
+.hcol .cap b{color:var(--accent)}
+
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+section h2{font-size:clamp(23px,3.4vw,31px);margin-bottom:8px}
+.sec-sub{color:var(--muted);max-width:650px;margin:0 0 30px}
+
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:680px){.trio{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card .n{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+.card h3{font-size:17px;margin:10px 0 6px}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card kbd{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--ink)}
+
+.limits{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+@media(max-width:680px){.limits{grid-template-columns:1fr}}
+.lbox{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.lbox.p{border-left-color:var(--diff)}
+.lbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:5px}
+.lbox .d{font-size:13.5px;color:var(--muted)}
+.lbox code{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12.5px;color:var(--accent)}
+
+.callout{display:flex;gap:16px;background:var(--diff-soft);border:1px solid #ABD4D4;border-radius:14px;padding:20px 22px;margin-top:26px}
+.callout .hand{font-size:22px;line-height:1.2}
+.callout p{margin:0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout .mono{color:#1f6b6b}
+
+.ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.progress-wrap{width:100%;margin:16px 0 26px}
+.progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.progress-track{height:9px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.reset{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--bad);color:var(--bad)}
+
+.rungs{display:flex;flex-direction:column;gap:14px}
+.rung{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+.rung.cap{border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--shadow)}
+.rung-top{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;user-select:none}
+.rung-num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.rung.done .rung-num{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rung.cap .rung-num{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.rung-title{flex:1 1 auto}
+.rung-title .rt{font-family:var(--disp);font-weight:600;font-size:16px}
+.rung-title .rd{font-size:13px;color:var(--muted);margin-top:1px}
+.rung-badge{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.dots{display:flex;gap:4px}
+.dot-b{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dot-b.on{background:var(--accent)}
+.rung.done .dot-b.on{background:var(--good)}
+.chev{transition:transform .25s;color:var(--muted);font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.medal{display:none}.rung.done .medal{display:inline}
+.rung.done .rung-badge .txt{color:var(--good)}
+.rung-body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+.rung.open .rung-body{display:block}
+
+.strategy{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:18px 0;overflow:hidden}
+.strategy summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--accent);list-style:none;display:flex;align-items:center;gap:8px}
+.strategy summary::-webkit-details-marker{display:none}
+.strategy summary::before{content:"▸";transition:transform .2s;display:inline-block}
+.strategy[open] summary::before{transform:rotate(90deg)}
+.strategy .inner{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+.strategy .inner p{margin:.5em 0}
+.strategy code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--accent)}
+
+.scenario{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:15px;margin-bottom:16px}
+.scenario .tag{font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:8px}
+.scenario b{color:var(--ink)}
+.ask{font-weight:600;font-family:var(--disp);font-size:16px;margin:4px 0 14px}
+.ask .hl{color:var(--accent)}
+
+.vizbox{display:flex;flex-direction:column;align-items:center;margin:10px 0 16px}
+svg.struct{display:block;width:100%;max-width:330px;height:auto}
+svg.ncurve{display:block;width:100%;max-width:300px;height:auto}
+.struct .dotA{fill:var(--accent)}
+.struct .dotB{fill:var(--g2)}
+.struct .dotD{fill:var(--diff)}
+.struct .link{stroke:var(--muted);stroke-width:1.3;opacity:.55}
+.struct .nolink{stroke:var(--line);stroke-width:1.4;stroke-dasharray:3 3}
+.struct .arrow{stroke:var(--diff);stroke-width:1.6;fill:none}
+.struct .clab{font-family:var(--mono);font-size:11px;fill:var(--muted);text-anchor:middle}
+.ncurve .axis{stroke:var(--muted);stroke-width:1.1;opacity:.6}
+.ncurve .curveline{fill:none;stroke:var(--accent);stroke-width:2.2}
+.ncurve .tailfill{fill:var(--accent);opacity:.28}
+.ncurve .statline{stroke:var(--diff);stroke-width:2;stroke-dasharray:3 2}
+.vizcap{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px;text-align:center}
+
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:14.5px;font-family:var(--body);color:var(--ink);transition:.12s}
+.choice:hover{border-color:var(--accent)}
+.choice .key{flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.choice .mono{font-family:var(--mono)}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .key{background:var(--good);border-color:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.choice:disabled{cursor:default}
+
+.btn{font-family:var(--disp);font-weight:600;font-size:14.5px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
+.btn:hover{background:#3a4a76}
+.btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--accent)}
+.feedback{margin-top:15px;font-size:14.5px;display:none;border-radius:10px;padding:12px 15px}
+.feedback.show{display:block}
+.feedback.right{background:var(--good-soft);border:1px solid var(--good);color:#1c6b37}
+.feedback.wrong{background:var(--bad-soft);border:1px solid var(--bad);color:#96302d}
+.feedback .mono{font-weight:700}
+.feedback .next{margin-top:9px}
+.streak-note{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:12px}
+
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:680px){.why-grid{grid-template-columns:1fr}}
+.why-grid h3{font-size:16px;margin-bottom:6px;color:var(--accent)}
+.why-grid p{font-size:14px;color:var(--muted);margin:0}
+.why-close{font-size:15px;color:var(--ink);max-width:690px}
+.why-close .mono{color:var(--accent)}
+
+footer{padding:30px 0 50px;border-top:1px solid var(--line)}
+.foot{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-family:var(--disp);font-weight:600;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:.35s;z-index:80;display:flex;gap:10px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="glyph">⇄</span> The Two-Sample Ladder</div>
+    <div class="navlinks"><a href="#how">How it works</a><a href="#ladder">The ladder</a><a href="#why">Why it matters</a></div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Two-sample inference with means · Lesson 23</div>
+    <h1>One question decides everything: <em>are they paired?</em></h1>
+    <p class="lede">Two groups, two means to compare — but first, one fork in the road. If each value in group 1 has a natural partner in group 2 (same person before and after, same item at two stores, same day morning and afternoon), the data is <b>matched pairs</b>: collapse it to one column of differences and test d̄. If the groups are separate and unrelated, it's <b>independent</b>: compare the two means directly. Answer that first question and the whole test picks itself.</p>
+
+    <div class="heroviz">
+      <div class="hcol"><div class="cap"><b>Independent</b> · two separate groups</div><div id="heroInd"></div></div>
+      <div class="hcol"><div class="cap"><b>Matched pairs</b> · linked → differences</div><div id="heroPair"></div></div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Spot the structure, then run the machinery</h2>
+    <p class="sec-sub">Ten rungs run from "paired or independent?" to a full setup, across both procedures. It's all concept and setup — the t-statistic and p-value come from the two-sample calculator. What it can't do is tell you which test the data calls for.</p>
+    <div class="trio">
+      <div class="card"><div class="n">01</div><h3>The fork comes first</h3><p>Can you match each value in group 1 to a specific partner in group 2? Yes → paired. No → independent. Everything downstream depends on this one answer.</p></div>
+      <div class="card"><div class="n">02</div><h3>Earn each badge</h3><p><b>Four in a row</b> earns a rung's badge. Click a choice or press <kbd>1</kbd>–<kbd>4</kbd>. Miss one and the streak resets.</p></div>
+      <div class="card"><div class="n">03</div><h3>All samples are large</h3><p>Every scenario here uses <b>n ≥ 30</b> per group, so the sampling distribution is approximately normal by the CLT and the calculator handles the arithmetic.</p></div>
+    </div>
+
+    <div style="margin-top:34px">
+      <div class="sec-eyebrow">The two procedures</div>
+      <div class="limits">
+        <div class="lbox"><div class="t">Independent — 2-sample t</div><div class="d">Two separate groups. Random variable: <code>x̄₁ − x̄₂</code>. Hypotheses: <code>H₀: μ₁ = μ₂</code>.</div></div>
+        <div class="lbox p"><div class="t">Matched pairs — paired t</div><div class="d">One difference per pair. Random variable: <code>d̄</code>. Hypotheses: <code>H₀: μ_d = 0</code>.</div></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="hand">🔗</div>
+      <p><b>Matched pairs isn't about the two groups — it's about the one difference.</b> Once the data is paired, you throw away the two separate columns and work with a single column of differences, running what is really a one-sample t on d̄. Which means the sign of the alternative depends entirely on <span class="mono">how you defined the difference</span> — get "Before − After" backwards and every conclusion flips.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="ladder-head"><div><div class="sec-eyebrow">The ladder</div><h2>Pick a rung and practice</h2></div><button class="reset" id="resetBtn">Reset progress</button></div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span id="progLabel">0 of 10 badges earned</span><span>4 in a row = badge</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow">Why it matters</div>
+    <h2>Pairing is a design choice with real power</h2>
+    <div class="why-grid">
+      <div><h3>Pairing removes noise</h3><p>Measuring the same subjects twice cancels out person-to-person variation, so a real effect is much easier to detect. A study designed as paired can find differences an independent design would miss.</p></div>
+      <div><h3>The wrong test wastes the data</h3><p>Treat paired data as independent and you throw away the very structure that made it powerful — and can reach the wrong conclusion. Naming the design correctly is the whole game.</p></div>
+      <div><h3>Direction is easy to flip</h3><p>"Before − After" versus "After − Before" reverses the sign of every difference. The alternative hypothesis has to match the definition, or the test answers the opposite question.</p></div>
+    </div>
+    <p class="why-close">Lesson 23 is one decision followed by familiar machinery: <span class="mono">paired or independent — then hypotheses, assumptions, calculate, conclude.</span> If the values are linked, reduce them to differences and test d̄ against 0; if they're separate, compare μ₁ and μ₂ directly. Spot the structure, define the difference carefully, let the calculator return t and a p-value, and read that number back into the claim.</p>
+  </div>
+</section>
+
+<footer><div class="wrap"><div class="foot">The Two-Sample Ladder · paired → d̄ (μ_d = 0) · independent → x̄₁ − x̄₂ (μ₁ = μ₂) · n ≥ 30 · watch the difference direction</div></div></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   ===== CORE LOGIC START  (pure; extracted for stress-testing) =====
+   ================================================================= */
+
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+var OPS=['>','<','\u2260'];
+function otherOp(dir){ return pick(OPS.filter(function(o){return o!==dir;})); }
+function pickOpts(correct, distractors){
+  var opts=[correct], i;
+  for(i=0;i<distractors.length && opts.length<4;i++){ if(opts.indexOf(distractors[i])===-1) opts.push(distractors[i]); }
+  var packed=opts.map(function(o,idx){return {o:o,c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+
+/* recognition bank: paired vs independent, with the reason */
+var RECOG=[
+  {text:'A biologist records whale sightings in the morning and in the afternoon on the same 40 randomly chosen days.', kind:'paired', reason:'the two measurements come from the same days'},
+  {text:'Each of 45 installations has its number of system failures measured before and after a software patch.', kind:'paired', reason:'the same installations are measured before and after'},
+  {text:'A researcher records the price of the same 32 grocery items at Store A and at Store B.', kind:'paired', reason:'the same items are priced at both stores'},
+  {text:'Each of 50 patients has blood pressure measured before and after taking a new drug.', kind:'paired', reason:'the same patients are measured before and after'},
+  {text:'Intel and Southwest stock prices are recorded on the same 60 randomly selected trading days.', kind:'paired', reason:'both stocks are recorded on the same days'},
+  {text:'For each of 35 athletes, grip strength is measured for the left hand and the right hand.', kind:'paired', reason:'both measurements come from the same athlete'},
+  {text:'Students are matched into 40 pairs by GPA; within each pair one is assigned to method A, the other to method B.', kind:'paired', reason:'subjects are matched into pairs before assignment'},
+  {text:'Brand A is given to 30 randomly selected people and Brand B to 34 different randomly selected people.', kind:'independent', reason:'two separate groups of different people'},
+  {text:'A random sample of 40 sociology textbooks and a separate sample of 45 math textbooks are priced.', kind:'independent', reason:'two separate, unrelated samples'},
+  {text:'A random sample of 36 teenage boys and a random sample of 32 teenage girls have their premiums recorded.', kind:'independent', reason:'two separate groups with no pairing'},
+  {text:'An SRS of 100 students is taken from High School X and a separate SRS of 100 students from High School Y.', kind:'independent', reason:'two separate random samples'},
+  {text:'One random sample of 50 people rates water brand X; a different random sample of 50 people rates brand Y.', kind:'independent', reason:'different people in each group'},
+  {text:"A random sample of 60 of last year's graduates and a separate sample of 55 graduates from five years ago are compared.", kind:'independent', reason:'two separate groups sampled independently'}
+];
+
+/* structured scenarios */
+var IND=[
+  {ctx:'Headache remedies', g1:'Brand A', g2:'Brand B', dir:'>', claimShort:'Brand A takes longer to absorb than Brand B'},
+  {ctx:'Textbook prices', g1:'sociology texts', g2:'math/science texts', dir:'<', claimShort:'sociology textbooks cost less than math/science textbooks'},
+  {ctx:'Auto insurance', g1:'teenage boys', g2:'teenage girls', dir:'>', claimShort:'boys have higher mean insurance costs than girls'},
+  {ctx:'Candy counts', g1:'M&Ms', g2:"Reese's Pieces", dir:'\u2260', claimShort:'the mean number of pieces differs between the brands'},
+  {ctx:'ACT math scores', g1:'males', g2:'females', dir:'>', claimShort:'college-bound males outperform females on ACT math'}
+];
+var PAIR=[
+  {ctx:'Software patch', diffDef:'Before \u2212 After', dir:'>', claimShort:'the patch reduces system failures'},
+  {ctx:'Whale watching', diffDef:'Morning \u2212 Afternoon', dir:'<', claimShort:'more whales are sighted in the afternoon than the morning'},
+  {ctx:'Grocery prices', diffDef:'Elite \u2212 FreshMart', dir:'>', claimShort:'Elite Foods has higher prices than FreshMart'},
+  {ctx:'Memory recall', diffDef:'(1 hr) \u2212 (24 hr)', dir:'>', claimShort:'more words are recalled after 1 hour than after 24 hours'},
+  {ctx:'Blood-pressure drug', diffDef:'Before \u2212 After', dir:'>', claimShort:'the drug lowers blood pressure'},
+  {ctx:'Reaction time', diffDef:'Dominant \u2212 Non-dominant', dir:'\u2260', claimShort:'reaction time differs between the two hands'},
+  {ctx:'Tutoring', diffDef:'Post \u2212 Pre', dir:'>', claimShort:'tutoring improves scores'}
+];
+function bigN(){ return 30+Math.floor(Math.random()*50); }
+function genInd(){ var t=IND[Math.floor(Math.random()*IND.length)]; return {kind:'independent', ctx:t.ctx, g1:t.g1, g2:t.g2, dir:t.dir, claimShort:t.claimShort, n1:bigN(), n2:bigN()}; }
+function genPair(){ var t=PAIR[Math.floor(Math.random()*PAIR.length)]; return {kind:'paired', ctx:t.ctx, diffDef:t.diffDef, dir:t.dir, claimShort:t.claimShort, n:bigN()}; }
+function genScen(kind){ return kind==='paired'?genPair():genInd(); }
+
+/* option builders */
+function classifyOpts(kind){
+  return pickOpts(kind==='paired'?'Matched pairs (paired t-test)':'Two-sample independent means (2-sample t-test)',
+    [kind==='paired'?'Two-sample independent means (2-sample t-test)':'Matched pairs (paired t-test)']);
+}
+function whyOpts(item){
+  if(item.kind==='paired') return pickOpts('It is paired because '+item.reason+'.',
+    ['It is paired because the samples were selected randomly.','It is paired because the two groups are the same size.','It is paired because the sample sizes are large.']);
+  return pickOpts('It is independent because '+item.reason+'.',
+    ['It is independent because the same subjects are measured twice.','It is independent because the data can be matched pair by pair.','It is independent because a difference column is computed.']);
+}
+function rvOpts(kind){
+  if(kind==='paired') return pickOpts('The mean of the differences, d\u0304 (parameter \u03bc_d).',
+    ['The difference of the two sample means, x\u0304\u2081 \u2212 x\u0304\u2082.','The sum of the two sample means.','A single sample proportion, p\u0302.']);
+  return pickOpts('The difference of the two sample means, x\u0304\u2081 \u2212 x\u0304\u2082 (parameters \u03bc\u2081, \u03bc\u2082).',
+    ['The mean of the differences, d\u0304.','The sum of the two sample means.','A single sample proportion, p\u0302.']);
+}
+function hypoOpts(s){
+  if(s.kind==='paired'){ var oo=otherOp(s.dir);
+    return pickOpts('H\u2080: \u03bc_d = 0;  H\u2090: \u03bc_d '+s.dir+' 0', [
+      'H\u2080: \u03bc_d = 0;  H\u2090: \u03bc_d '+oo+' 0',
+      'H\u2080: \u03bc\u2081 = \u03bc\u2082;  H\u2090: \u03bc\u2081 '+s.dir+' \u03bc\u2082',
+      'H\u2080: \u03bc_d '+s.dir+' 0;  H\u2090: \u03bc_d = 0']);
+  }
+  var o2=otherOp(s.dir);
+  return pickOpts('H\u2080: \u03bc\u2081 = \u03bc\u2082;  H\u2090: \u03bc\u2081 '+s.dir+' \u03bc\u2082', [
+    'H\u2080: \u03bc\u2081 = \u03bc\u2082;  H\u2090: \u03bc\u2081 '+o2+' \u03bc\u2082',
+    'H\u2080: \u03bc_d = 0;  H\u2090: \u03bc_d '+s.dir+' 0',
+    'H\u2080: \u03bc\u2081 '+s.dir+' \u03bc\u2082;  H\u2090: \u03bc\u2081 = \u03bc\u2082']);
+}
+function signOpts(s){
+  var all=['>','<','\u2260','='];
+  var packed=all.map(function(op){ return {o:'\u03bc_d '+op+' 0', c:(op===s.dir)}; });
+  shuffle(packed);
+  var ans=0; for(var i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+function assumeOpts(kind){
+  if(kind==='paired') return pickOpts('The data are properly paired (one SRS of pairs, or before/after), and with n \u2265 30 the differences are approximately normal.',
+    ['The two groups are independent of each other.','The two groups must have different sample sizes.','No normality condition is ever required.']);
+  return pickOpts('Two independent SRSs (or randomized treatments), and with both n \u2265 30 the sampling distribution is approximately normal.',
+    ['The same subjects appear in both groups.','The two samples must be exactly the same size.','A difference column d must be computed first.']);
+}
+function normalOpts(){
+  return pickOpts('Both sample sizes are at least 30, so by the Central Limit Theorem the sampling distribution is approximately normal.',
+    ['The samples were chosen randomly, which guarantees normality.','A large p-value guarantees normality.','Normality is never needed for a t-test.']);
+}
+function decisionPA(){
+  var alpha=pick([0.05,0.05,0.05,0.10,0.01]);
+  var reject=Math.random()<0.5, p;
+  if(reject){ p=0.0005+Math.random()*(alpha*0.55-0.0005); }
+  else { p=alpha*1.7+Math.random()*(0.72-alpha*1.7); }
+  p=Math.round(p*1e4)/1e4; if(p<=0) p=0.0005;
+  return {alpha:alpha, p:p, reject:reject};
+}
+function decisionOpts(reject){
+  return pickOpts(reject?'Reject H\u2080':'Fail to reject H\u2080', [reject?'Fail to reject H\u2080':'Reject H\u2080','Accept H\u2080','The test is inconclusive']);
+}
+function conclusionOpts(s, reject){
+  var enough='There is sufficient evidence to conclude '+s.claimShort+'.';
+  var notenough='There is not enough evidence to conclude '+s.claimShort+'.';
+  if(reject) return pickOpts(enough, [notenough, 'This proves '+s.claimShort+'.', 'There is sufficient evidence that H\u2080 is true.']);
+  return pickOpts(notenough, [enough, 'This proves '+s.claimShort+' is false.', 'We accept that H\u2080 is true.']);
+}
+function errorOpts(s, which){
+  var typeI='Conclude '+s.claimShort+', when in reality there is no difference.';
+  var typeII='Conclude there is no difference, when in reality '+s.claimShort+'.';
+  var okA='Correctly conclude '+s.claimShort+' when it is in fact true.';
+  var okN='Correctly conclude there is no difference when there truly is none.';
+  if(which==='I') return pickOpts(typeI, [typeII, okA, okN]);
+  return pickOpts(typeII, [typeI, okA, okN]);
+}
+function pTypeIOpts(){
+  return pickOpts('\u03b1, the significance level.', ['the p-value.','\u03b2.','1 \u2212 \u03b1.']);
+}
+
+/* ---- structure diagram ---- */
+function svgStructure(kind){
+  var W=320,H=180,m=14, n=5, i;
+  var xA=64, xB=150, xD=252, y0=44, dy=25;
+  function cy(i){ return y0+i*dy; }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="struct" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="'+(kind==='paired'?'paired data structure':'independent data structure')+'">';
+  s+='<text x="'+xA+'" y="26" class="clab">Group 1</text>';
+  s+='<text x="'+xB+'" y="26" class="clab">Group 2</text>';
+  if(kind==='paired'){
+    for(i=0;i<n;i++){ s+='<line x1="'+xA+'" y1="'+cy(i)+'" x2="'+xB+'" y2="'+cy(i)+'" class="link"/>'; }
+    s+='<text x="'+xD+'" y="26" class="clab">Differences</text>';
+    s+='<path d="M'+(xB+18)+' '+cy(2)+' L'+(xD-18)+' '+cy(2)+'" class="arrow"/>';
+    s+='<path d="M'+(xD-24)+' '+(cy(2)-4)+' L'+(xD-18)+' '+cy(2)+' L'+(xD-24)+' '+(cy(2)+4)+'" class="arrow"/>';
+  } else {
+    s+='<line x1="'+((xA+xB)/2)+'" y1="34" x2="'+((xA+xB)/2)+'" y2="'+(cy(n-1)+8)+'" class="nolink"/>';
+  }
+  for(i=0;i<n;i++){ s+='<circle cx="'+xA+'" cy="'+cy(i)+'" r="6" class="dotA"/>'; s+='<circle cx="'+xB+'" cy="'+cy(i)+'" r="6" class="dotB"/>'; }
+  if(kind==='paired'){ for(i=0;i<n;i++){ s+='<circle cx="'+xD+'" cy="'+cy(i)+'" r="6" class="dotD"/>'; } }
+  s+='</svg>'; return s;
+}
+/* ---- normal curve tail (reused) ---- */
+function svgNormal(opts){
+  opts=opts||{}; var W=opts.w||300,H=opts.h||150,m=18,base=H-20,top=16, xmin=-3.6,xmax=3.6;
+  function PX(x){ return m+(x-xmin)/(xmax-xmin)*(W-2*m); }
+  function PY(y){ return base-y/0.42*(base-top); }
+  function pdf(x){ return Math.exp(-x*x/2)/Math.sqrt(2*Math.PI); }
+  function tail(from,to){ var p='M'+PX(from).toFixed(1)+' '+base.toFixed(1),xx; for(xx=from;xx<=to+1e-9;xx+=0.1) p+=' L'+PX(xx).toFixed(1)+' '+PY(pdf(xx)).toFixed(1); return p+' L'+PX(to).toFixed(1)+' '+base.toFixed(1)+' Z'; }
+  var d='',x,first=true; for(x=xmin;x<=xmax+1e-9;x+=0.1){ d+=(first?'M':'L')+PX(x).toFixed(1)+' '+PY(pdf(x)).toFixed(1)+' '; first=false; }
+  var z=opts.z!=null?opts.z:1.7, t=opts.tail||'right';
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="ncurve" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="sampling distribution with tail">';
+  if(t==='right') s+='<path d="'+tail(z,xmax)+'" class="tailfill"/>';
+  else if(t==='left') s+='<path d="'+tail(xmin,-z)+'" class="tailfill"/>';
+  else if(t==='two'){ s+='<path d="'+tail(xmin,-Math.abs(z))+'" class="tailfill"/><path d="'+tail(Math.abs(z),xmax)+'" class="tailfill"/>'; }
+  s+='<line x1="'+PX(xmin).toFixed(1)+'" y1="'+base+'" x2="'+PX(xmax).toFixed(1)+'" y2="'+base+'" class="axis"/>';
+  s+='<path d="'+d+'" class="curveline"/>';
+  if(opts.marker){ var mx=(t==='left'?-z:z); s+='<line x1="'+PX(mx).toFixed(1)+'" y1="'+top+'" x2="'+PX(mx).toFixed(1)+'" y2="'+base.toFixed(1)+'" class="statline"/>'; }
+  s+='</svg>'; return s;
+}
+
+if(typeof module!=='undefined' && module.exports){
+  module.exports={ RECOG:RECOG, IND:IND, PAIR:PAIR, OPS:OPS, genInd:genInd, genPair:genPair, genScen:genScen,
+    classifyOpts:classifyOpts, whyOpts:whyOpts, rvOpts:rvOpts, hypoOpts:hypoOpts, signOpts:signOpts,
+    assumeOpts:assumeOpts, normalOpts:normalOpts, decisionPA:decisionPA, decisionOpts:decisionOpts,
+    conclusionOpts:conclusionOpts, errorOpts:errorOpts, pTypeIOpts:pTypeIOpts,
+    svgStructure:svgStructure, svgNormal:svgNormal };
+}
+/* =================================================================
+   ===== CORE LOGIC END =====
+   ================================================================= */
+
+
+/* ---------------- UI LAYER ---------------- */
+var KEY='twoMeanLadder', NEED=4;
+var state=load();
+function load(){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.rungs) return s; }catch(e){} return {rungs:{}}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+document.getElementById('heroInd').innerHTML = svgStructure('independent');
+document.getElementById('heroPair').innerHTML = svgStructure('paired');
+
+var RUNGS=[
+  {
+    id:'classify', title:'Paired or independent?', desc:'The fork that decides the test.',
+    strategy:'<p>Ask: <b>can I match each value in group 1 to a specific partner in group 2?</b> Same person before/after, same item at two stores, same day \u2014 that\u2019s <b>matched pairs</b>. Two separate, unrelated groups \u2014 that\u2019s <b>independent</b>.</p>',
+    build:function(){ var item=pick(RECOG), o=classifyOpts(item.kind);
+      return {mode:'mc', recog:item,
+        scenario:'<span class="tag">Identify the design</span>'+item.text,
+        ask:'Is this a matched-pairs or an independent two-sample study?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'why', title:'What makes it so?', desc:'Name the reason it\u2019s paired \u2014 or not.',
+    strategy:'<p>Pairing comes from a <b>structural link</b>: the same subjects, items, or days appear in both columns, or subjects were matched into pairs. Independence means <b>two unrelated groups</b> with no such link.</p>',
+    build:function(){ var item=pick(RECOG), o=whyOpts(item);
+      return {mode:'mc',
+        scenario:'<span class="tag">'+(item.kind==='paired'?'Matched pairs':'Independent')+'</span>'+item.text,
+        ask:'Why is this design '+(item.kind==='paired'?'matched pairs':'independent')+'?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'rv', title:'The random variable', desc:'Two means, or one mean of differences.',
+    strategy:'<p>Independent \u2192 you study the <b>difference of the two means</b>, <code>x\u0304\u2081 \u2212 x\u0304\u2082</code> (parameters \u03bc\u2081, \u03bc\u2082). Paired \u2192 you collapse to one column and study the <b>mean of the differences</b>, <code>d\u0304</code> (parameter \u03bc_d).</p>',
+    build:function(){ var kind=pick(['paired','independent']), o=rvOpts(kind);
+      var s=kind==='paired'?genPair():genInd();
+      return {mode:'mc',
+        scenario:'<span class="tag">'+s.ctx+' \u00b7 '+(kind==='paired'?'matched pairs':'independent')+'</span>This is a '+(kind==='paired'?'matched-pairs':'two-sample independent')+' study.',
+        ask:'What is the random variable being analyzed?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'hypo', title:'State the hypotheses', desc:'About μ₁, μ₂ \u2014 or μ_d.',
+    strategy:'<p>Independent: <code>H\u2080: \u03bc\u2081 = \u03bc\u2082</code>, <code>H\u2090: \u03bc\u2081 >, <, or \u2260 \u03bc\u2082</code>. Paired: <code>H\u2080: \u03bc_d = 0</code>, <code>H\u2090: \u03bc_d >, <, or \u2260 0</code>. Never mix the two forms.</p>',
+    build:function(){ var kind=pick(['paired','independent']), s=genScen(kind), o=hypoOpts(s);
+      var scen = kind==='paired'
+        ? '<span class="tag">'+s.ctx+' \u00b7 matched pairs</span>Let d = '+s.diffDef+'. The claim to test is that <b>'+s.claimShort+'</b>.'
+        : '<span class="tag">'+s.ctx+' \u00b7 independent</span>Comparing '+s.g1+' (\u03bc\u2081) and '+s.g2+' (\u03bc\u2082). The claim to test is that <b>'+s.claimShort+'</b>.';
+      return {mode:'mc', scenario:scen, ask:'What are the correct hypotheses?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'sign', title:'Direction of Hₐ (the sign trap)', desc:'How you define d sets the sign.',
+    strategy:'<p>For a paired test, the alternative\u2019s direction depends on <b>how the difference is defined</b>. Work out which way the claim pushes the difference. If d = Before \u2212 After and the treatment <em>reduces</em> the value, then After &lt; Before, so d &gt; 0 \u2014 the alternative is <code>\u03bc_d &gt; 0</code>.</p>',
+    build:function(){ var s=genPair(), o=signOpts(s);
+      return {mode:'mc',
+        scenario:'<span class="tag">'+s.ctx+' \u00b7 matched pairs</span>The difference is defined as <b>d = '+s.diffDef+'</b>. The claim to test is that <b>'+s.claimShort+'</b>.',
+        ask:'What is the correct alternative hypothesis, H\u2090?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'assume', title:'Check the assumptions', desc:'The right conditions for the design.',
+    strategy:'<p>Both need randomization and approximate normality (here guaranteed by <code>n \u2265 30</code> via the CLT). The difference: a two-sample test needs the groups <b>independent</b>; a paired test needs the data <b>properly paired</b>.</p>',
+    build:function(){ var useNormal=Math.random()<0.35;
+      if(useNormal){ var o=normalOpts();
+        return {mode:'mc', scenario:'<span class="tag">Assumptions</span>Each group has a sample size of at least 30.',
+          ask:'Why can we treat the sampling distribution as approximately normal?', options:o.options, answer:o.answer}; }
+      var kind=pick(['paired','independent']), s=genScen(kind), oo=assumeOpts(kind);
+      return {mode:'mc',
+        scenario:'<span class="tag">'+s.ctx+' \u00b7 '+(kind==='paired'?'matched pairs':'independent')+'</span>You are running a '+(kind==='paired'?'paired':'two-sample independent')+' t-test (n \u2265 30).',
+        ask:'Which conditions must hold?', options:oo.options, answer:oo.answer}; }
+  },
+  {
+    id:'decide', title:'Decision from p vs α', desc:'The calculator gives p; you decide.',
+    strategy:'<p>Compare the calculator\u2019s p-value to \u03b1: <b>p &lt; \u03b1 \u2192 reject H\u2080</b>; <b>p \u2265 \u03b1 \u2192 fail to reject</b>. The shaded tail is the p-value.</p>',
+    build:function(){ var pa=decisionPA(), o=decisionOpts(pa.reject);
+      return {mode:'mc', curve:true,
+        scenario:'<span class="tag">Decision</span>A two-sample t-test returns a p-value of <b>'+pa.p+'</b> at <b>\u03b1 = '+pa.alpha+'</b>.',
+        ask:'What is the decision?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'conclude', title:'Conclusion in context', desc:'Read the decision back into the claim.',
+    strategy:'<p>Reject \u2192 "There is <b>sufficient</b> evidence to conclude [claim]." Fail to reject \u2192 "There is <b>not enough</b> evidence to conclude [claim]." Never "proves."</p>',
+    build:function(){ var kind=pick(['paired','independent']), s=genScen(kind), pa=decisionPA(), o=conclusionOpts(s, pa.reject);
+      return {mode:'mc',
+        scenario:'<span class="tag">'+s.ctx+'</span>The claim is that <b>'+s.claimShort+'</b>. The decision is to <b>'+(pa.reject?'reject':'fail to reject')+' H\u2080</b> (p = '+pa.p+', \u03b1 = '+pa.alpha+').',
+        ask:'Which is the correct conclusion in context?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'error', title:'Type I / II error in context', desc:'Name the mistake for this claim.',
+    strategy:'<p>A <b>Type I</b> error rejects a true H\u2080 (concludes a difference that isn\u2019t there). A <b>Type II</b> error keeps a false H\u2080 (misses a real difference). Its probability, P(Type I), equals \u03b1.</p>',
+    build:function(){ var usePT=Math.random()<0.3;
+      if(usePT){ var o=pTypeIOpts();
+        return {mode:'mc', scenario:'<span class="tag">Error analysis</span>A two-sample t-test is run at significance level \u03b1.',
+          ask:'What is the probability of making a Type I error?', options:o.options, answer:o.answer}; }
+      var kind=pick(['paired','independent']), s=genScen(kind), which=pick(['I','II']), oo=errorOpts(s, which);
+      return {mode:'mc',
+        scenario:'<span class="tag">'+s.ctx+'</span>H\u2080 says there is no difference; the test looks for evidence that <b>'+s.claimShort+'</b>.',
+        ask:'What would a <span class="hl">Type '+which+' error</span> mean here?', options:oo.options, answer:oo.answer}; }
+  },
+  {
+    id:'capstone', title:'Capstone \u2014 full setup', desc:'Classify, hypothesize, conclude. One miss restarts.', cap:true,
+    strategy:'<p>The whole setup: decide paired or independent, choose the hypotheses, then state the conclusion in context. Both parts must be right, or the streak resets.</p>',
+    build:function(){ var kind=pick(['paired','independent']), s=genScen(kind), pa=decisionPA(), h=hypoOpts(s), c=conclusionOpts(s, pa.reject);
+      var scen = kind==='paired'
+        ? '<span class="tag">'+s.ctx+' \u00b7 matched pairs</span>The same subjects are measured twice; let d = '+s.diffDef+'. Claim: <b>'+s.claimShort+'</b>. After the test, the decision is to <b>'+(pa.reject?'reject':'fail to reject')+' H\u2080</b> (p = '+pa.p+', \u03b1 = '+pa.alpha+').'
+        : '<span class="tag">'+s.ctx+' \u00b7 independent</span>Two separate groups, '+s.g1+' (\u03bc\u2081) and '+s.g2+' (\u03bc\u2082). Claim: <b>'+s.claimShort+'</b>. The decision is to <b>'+(pa.reject?'reject':'fail to reject')+' H\u2080</b> (p = '+pa.p+', \u03b1 = '+pa.alpha+').';
+      return {mode:'mc2', capScen:s,
+        sub:[{ask:'1. What are the correct hypotheses?', options:h.options, answer:h.answer},
+             {ask:'2. What is the correct conclusion in context?', options:c.options, answer:c.answer}]}; }
+  }
+];
+
+/* ---------- render skeleton ---------- */
+var rungsEl=document.getElementById('rungs');
+RUNGS.forEach(function(def,idx){
+  if(!state.rungs[def.id]) state.rungs[def.id]={streak:0,done:false};
+  var el=document.createElement('div');
+  el.className='rung'+(def.cap?' cap':'')+(state.rungs[def.id].done?' done':'');
+  el.dataset.id=def.id;
+  el.innerHTML='<div class="rung-top"><div class="rung-num">'+(idx+1)+'</div>'+
+    '<div class="rung-title"><div class="rt">'+def.title+'</div><div class="rd">'+def.desc+'</div></div>'+
+    '<div class="rung-badge"><span class="medal">🏅</span><span class="dots"></span><span class="txt"></span></div>'+
+    '<div class="chev">▶</div></div><div class="rung-body"></div>';
+  rungsEl.appendChild(el);
+  el.querySelector('.rung-top').addEventListener('click', function(){ toggleRung(def.id); });
+  renderBadge(def.id);
+});
+function rungEl(id){ return rungsEl.querySelector('.rung[data-id="'+id+'"]'); }
+function rungDef(id){ return RUNGS.filter(function(r){return r.id===id;})[0]; }
+function renderBadge(id){
+  var el=rungEl(id),st=state.rungs[id],dots=el.querySelector('.dots'); dots.innerHTML='';
+  for(var i=0;i<NEED;i++){ var d=document.createElement('span'); d.className='dot-b'+(i<st.streak?' on':''); dots.appendChild(d); }
+  el.querySelector('.txt').textContent=st.done?'earned':(st.streak+'/'+NEED); el.classList.toggle('done',st.done);
+}
+var openId=null;
+function toggleRung(id){
+  var el=rungEl(id);
+  if(el.classList.contains('open')){ el.classList.remove('open'); openId=null; return; }
+  if(openId) rungEl(openId).classList.remove('open');
+  el.classList.add('open'); openId=id; newQuestion(id);
+}
+
+var current={};
+function newQuestion(id){
+  var def=rungDef(id), q=def.build(); current[id]={def:def,q:q};
+  var body=rungEl(id).querySelector('.rung-body');
+  var html='<details class="strategy"><summary>Strategy</summary><div class="inner">'+def.strategy+'</div></details><div class="qwrap">';
+  if(q.scenario) html+='<div class="scenario">'+q.scenario+'</div>';
+  if(q.curve) html+='<div class="vizbox">'+svgNormal({tail:'right',z:1.7,marker:true,w:300,h:150})+'<div class="vizcap">shaded tail = p-value</div></div>';
+  if(q.mode==='mc2'){
+    html+='<div class="ask">'+q.sub[0].ask+'</div><div class="choices" data-sub="0">';
+    q.sub[0].options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span class="mono">'+opt+'</span></button>'; });
+    html+='</div><div class="sub2" style="display:none;margin-top:18px"></div>';
+  } else {
+    html+='<div class="ask">'+q.ask+'</div><div class="choices">';
+    q.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>';
+  }
+  html+='<div class="feedback"></div><div class="streak-note"></div></div>';
+  body.innerHTML=html; updateStreakNote(id);
+  if(q.mode==='mc2'){ body.querySelectorAll('.choices[data-sub="0"] .choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap1(id, parseInt(c.dataset.i,10)); }); }); }
+  else { body.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerMC(id, parseInt(c.dataset.i,10)); }); }); }
+}
+function updateStreakNote(id){ var st=state.rungs[id],note=rungEl(id).querySelector('.streak-note'); if(!note) return;
+  note.textContent=st.done?'✓ Badge earned — keep going for more practice.':(st.streak>0?('Streak: '+st.streak+' of '+NEED):''); }
+function nextBtn(){ return '<div class="next"><button class="btn ghost" data-next="1">Next question →</button></div>'; }
+function wireNext(id){ var b=rungEl(id).querySelector('[data-next]'); if(b) b.addEventListener('click', function(){ newQuestion(id); }); }
+
+function answerMC(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), choices=body.querySelectorAll('.choice');
+  if(choices[0].disabled) return; choices.forEach(function(c){c.disabled=true;});
+  var correct=(choice===q.answer); choices[q.answer].classList.add('correct'); if(!correct) choices[choice].classList.add('wrong');
+  var fb=body.querySelector('.feedback'); fb.className='feedback show '+(correct?'right':'wrong');
+  var extra='';
+  if(cur.def.id==='classify' && q.recog){ extra='<div class="vizbox" style="margin-top:10px">'+svgStructure(q.recog.kind)+'<div class="vizcap">'+(q.recog.kind==='paired'?'linked \u2192 analyze the differences':'two separate groups')+'</div></div>'; }
+  fb.innerHTML=(correct?'Correct.':'Not quite — the right choice is highlighted.')+extra+nextBtn();
+  wireNext(id); recordResult(id, correct);
+}
+function answerCap1(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c0=body.querySelectorAll('.choices[data-sub="0"] .choice'); if(c0[0].disabled) return;
+  c0.forEach(function(c){c.disabled=true;});
+  cur.ok1=(choice===q.sub[0].answer); c0[q.sub[0].answer].classList.add('correct'); if(!cur.ok1) c0[choice].classList.add('wrong');
+  var s2=body.querySelector('.sub2'); s2.style.display='block';
+  var html='<div class="ask">'+q.sub[1].ask+'</div><div class="choices" data-sub="1">';
+  q.sub[1].options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+  html+='</div>'; s2.innerHTML=html;
+  s2.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap2(id, parseInt(c.dataset.i,10)); }); });
+}
+function answerCap2(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c1=body.querySelectorAll('.choices[data-sub="1"] .choice'); if(c1[0].disabled) return;
+  c1.forEach(function(c){c.disabled=true;});
+  var ok2=(choice===q.sub[1].answer); c1[q.sub[1].answer].classList.add('correct'); if(!ok2) c1[choice].classList.add('wrong');
+  var both=cur.ok1&&ok2, fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(both?'right':'wrong');
+  fb.innerHTML=(both?'Both correct — test set up cleanly.':'Not both correct — the streak resets.')+nextBtn();
+  wireNext(id); recordResult(id, both);
+}
+function recordResult(id, correct){
+  var st=state.rungs[id],wasDone=st.done;
+  if(correct){ st.streak++; if(st.streak>=NEED) st.done=true; } else st.streak=0;
+  save(); renderBadge(id); updateStreakNote(id); updateProgress();
+  if(st.done&&!wasDone) celebrate(id);
+}
+function updateProgress(){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  document.getElementById('progLabel').textContent=done+' of '+RUNGS.length+' badges earned';
+  document.getElementById('progFill').style.width=(100*done/RUNGS.length)+'%';
+}
+function celebrate(id){ var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  showToast('🏅 '+(done===RUNGS.length?'All 10 badges — paired and independent, mastered.':'Badge earned · '+rungDef(id).title)); }
+var toastT; function showToast(t){ var el=document.getElementById('toast'); el.innerHTML=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2600); }
+
+document.addEventListener('keydown', function(e){
+  if(!openId) return; var cur=current[openId]; if(!cur) return;
+  var n=parseInt(e.key,10); if(isNaN(n)||n<1||n>4) return;
+  var body=rungEl(openId).querySelector('.rung-body');
+  if(cur.q.mode==='mc2'){
+    var s1=body.querySelectorAll('.choices[data-sub="0"] .choice'), s2=body.querySelectorAll('.choices[data-sub="1"] .choice');
+    if(s2.length&&!s2[0].disabled){ if(s2[n-1]) answerCap2(openId,n-1); }
+    else if(s1.length&&!s1[0].disabled){ if(s1[n-1]) answerCap1(openId,n-1); }
+  } else { var cs=body.querySelectorAll('.choice'); if(cs[n-1]&&!cs[0].disabled) answerMC(openId,n-1); }
+});
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!confirm('Reset all progress on the Two-Sample Ladder?')) return;
+  state={rungs:{}}; RUNGS.forEach(function(r){state.rungs[r.id]={streak:0,done:false};});
+  save(); RUNGS.forEach(function(r){renderBadge(r.id);updateStreakNote(r.id);});
+  if(openId) newQuestion(openId); updateProgress(); showToast('Progress reset');
+});
+updateProgress();
+</script>
+</body>
+</html>
