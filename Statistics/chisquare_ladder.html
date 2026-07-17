@@ -1,0 +1,710 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Chi-Square Ladder — how far do the counts stray from what you expected?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#2E2A26;
+  --paper:#FAF6F1;
+  --surface:#FFFFFF;
+  --line:#EBE3D9;
+  --accent:#C4652C;         /* observed / brand */
+  --accent-soft:#F6E3D3;
+  --exp:#3E7C8C;            /* expected / model */
+  --exp-soft:#DAE8EC;
+  --good:#2E9E51;
+  --good-soft:#E1F3E6;
+  --bad:#C6403D;
+  --bad-soft:#FBE4E3;
+  --muted:#6E6656;
+  --shadow:0 1px 2px rgba(46,42,38,.06),0 8px 24px rgba(46,42,38,.06);
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--disp);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin:0}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(250,246,241,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand .glyph{color:var(--accent)}
+.navlinks{margin-left:auto;display:flex;gap:22px;font-size:14px;font-weight:500}
+.navlinks a{color:var(--muted)}.navlinks a:hover{color:var(--ink)}
+@media(max-width:560px){.navlinks{display:none}}
+
+header{padding:66px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+header h1{font-size:clamp(28px,5vw,48px);font-weight:600}
+header h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:660px;margin:20px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+.heroviz{margin:38px 0 6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:26px 26px 20px}
+.heroviz .cap{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:12px;text-align:center}
+.legend{display:flex;gap:20px;justify-content:center;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px}
+.legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.legend .sw.o{background:var(--accent)}.legend .sw.e{background:var(--exp)}
+
+svg.ove{display:block;width:100%;max-width:420px;height:auto;margin:0 auto}
+.ove .obsbar{fill:var(--accent)}
+.ove .expbar{fill:var(--exp)}
+.ove .axis{stroke:var(--muted);opacity:.5}
+.ove .blab{font-family:var(--mono);font-size:10px;fill:var(--muted);text-anchor:middle}
+
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+section h2{font-size:clamp(23px,3.4vw,31px);margin-bottom:8px}
+.sec-sub{color:var(--muted);max-width:660px;margin:0 0 30px}
+
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:680px){.trio{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card .n{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+.card h3{font-size:17px;margin:10px 0 6px}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card kbd{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--ink)}
+
+.limits{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px}
+@media(max-width:760px){.limits{grid-template-columns:1fr}}
+.lbox{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.lbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:5px}
+.lbox .d{font-size:13.5px;color:var(--muted)}
+.lbox code{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px;color:var(--accent)}
+
+.callout{display:flex;gap:16px;background:var(--exp-soft);border:1px solid #ABCCD4;border-radius:14px;padding:20px 22px;margin-top:26px}
+.callout .hand{font-size:22px;line-height:1.2}
+.callout p{margin:0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout .mono{color:#2c5a68}
+
+.ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.progress-wrap{width:100%;margin:16px 0 26px}
+.progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.progress-track{height:9px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.reset{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--bad);color:var(--bad)}
+
+.rungs{display:flex;flex-direction:column;gap:14px}
+.rung{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+.rung.cap{border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--shadow)}
+.rung-top{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;user-select:none}
+.rung-num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.rung.done .rung-num{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rung.cap .rung-num{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.rung-title{flex:1 1 auto}
+.rung-title .rt{font-family:var(--disp);font-weight:600;font-size:16px}
+.rung-title .rd{font-size:13px;color:var(--muted);margin-top:1px}
+.rung-badge{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.dots{display:flex;gap:4px}
+.dot-b{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dot-b.on{background:var(--accent)}
+.rung.done .dot-b.on{background:var(--good)}
+.chev{transition:transform .25s;color:var(--muted);font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.medal{display:none}.rung.done .medal{display:inline}
+.rung.done .rung-badge .txt{color:var(--good)}
+.rung-body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+.rung.open .rung-body{display:block}
+
+.strategy{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:18px 0;overflow:hidden}
+.strategy summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--accent);list-style:none;display:flex;align-items:center;gap:8px}
+.strategy summary::-webkit-details-marker{display:none}
+.strategy summary::before{content:"▸";transition:transform .2s;display:inline-block}
+.strategy[open] summary::before{transform:rotate(90deg)}
+.strategy .inner{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+.strategy .inner p{margin:.5em 0}
+.strategy code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--accent)}
+
+.scenario{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:15px;margin-bottom:16px}
+.scenario .tag{font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:8px}
+.scenario b{color:var(--ink)}
+.ask{font-weight:600;font-family:var(--disp);font-size:16px;margin:4px 0 14px}
+.ask .hl{color:var(--accent)}
+
+.ctable{border-collapse:collapse;font-family:var(--mono);font-size:12.5px;margin:6px 0 4px;width:100%;max-width:440px}
+.ctable th,.ctable td{border:1px solid var(--line);padding:6px 9px;text-align:center}
+.ctable th{background:var(--surface);color:var(--muted);font-weight:700}
+.ctable td.rh{background:var(--surface);color:var(--ink);font-weight:700;text-align:left}
+.ctable td.tot{background:var(--paper);color:var(--muted);font-weight:700}
+.ctable td.hi{background:var(--accent-soft);color:#8a3d13;font-weight:700;outline:2px solid var(--accent)}
+.catlist{font-family:var(--mono);font-size:13px;color:var(--ink);margin:6px 0}
+.catlist span{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:3px 8px;margin:3px 5px 0 0}
+
+.bars-wrap{margin:4px 0 14px}
+
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:14.5px;font-family:var(--body);color:var(--ink);transition:.12s}
+.choice:hover{border-color:var(--accent)}
+.choice .key{flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.choice .mono{font-family:var(--mono)}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .key{background:var(--good);border-color:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.choice:disabled{cursor:default}
+
+.btn{font-family:var(--disp);font-weight:600;font-size:14.5px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
+.btn:hover{background:#a9541f}
+.btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--accent)}
+.feedback{margin-top:15px;font-size:14.5px;display:none;border-radius:10px;padding:12px 15px}
+.feedback.show{display:block}
+.feedback.right{background:var(--good-soft);border:1px solid var(--good);color:#1c6b37}
+.feedback.wrong{background:var(--bad-soft);border:1px solid var(--bad);color:#96302d}
+.feedback .mono{font-weight:700}
+.feedback .next{margin-top:9px}
+.streak-note{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:12px}
+
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:680px){.why-grid{grid-template-columns:1fr}}
+.why-grid h3{font-size:16px;margin-bottom:6px;color:var(--accent)}
+.why-grid p{font-size:14px;color:var(--muted);margin:0}
+.why-close{font-size:15px;color:var(--ink);max-width:690px}
+.why-close .mono{color:var(--accent)}
+
+footer{padding:30px 0 50px;border-top:1px solid var(--line)}
+.foot{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-family:var(--disp);font-weight:600;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:.35s;z-index:80;display:flex;gap:10px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="glyph">χ²</span> The Chi-Square Ladder</div>
+    <div class="navlinks"><a href="#how">How it works</a><a href="#ladder">The ladder</a><a href="#why">Why it matters</a></div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Chi-square tests · Lesson 24</div>
+    <h1>How far do the counts stray from <em>what you expected?</em></h1>
+    <p class="lede">Every chi-square test is the same idea: under H₀, work out the counts you'd <b>expect</b> in each category, then measure how far the <b>observed</b> counts drift from them. That total gap, <b>χ² = Σ(O−E)²/E</b>, is one right-skewed number. Three tests share this one machine — goodness of fit, independence, and homogeneity — and knowing which question you're asking is most of the skill.</p>
+
+    <div class="heroviz">
+      <div class="cap">Observed vs. expected counts</div>
+      <div id="heroBars"></div>
+      <div class="legend"><span><span class="sw o"></span>Observed</span><span><span class="sw e"></span>Expected</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Name the test, read the setup, call the result</h2>
+    <p class="sec-sub">Eleven rungs run from "observed vs. expected" to a full setup, across all three chi-square tests. The calculator returns the expected counts, df, χ², and p-value — every rung here is about identifying the <em>right</em> information: which test, which hypotheses, which df, which expected count.</p>
+    <div class="trio">
+      <div class="card"><div class="n">01</div><h3>One statistic, three questions</h3><p>Does one variable fit a claimed distribution? Are two variables linked? Do several groups share one distribution? Same χ², different question.</p></div>
+      <div class="card"><div class="n">02</div><h3>Earn each badge</h3><p><b>Four in a row</b> earns a rung's badge. Click a choice or press <kbd>1</kbd>–<kbd>4</kbd>. Miss one and the streak resets.</p></div>
+      <div class="card"><div class="n">03</div><h3>Expected counts rule</h3><p>Every expected count must be <b>at least 5</b>. Chi-square is upper-tailed: a <b>large</b> χ² (counts far from expected) is the evidence against H₀.</p></div>
+    </div>
+
+    <div style="margin-top:34px">
+      <div class="sec-eyebrow">The three tests</div>
+      <div class="limits">
+        <div class="lbox"><div class="t">Goodness of fit</div><div class="d">One variable, one sample, vs. a <em>claimed</em> distribution. <code>E = n × claimed proportion</code>. <code>df = k − 1</code>.</div></div>
+        <div class="lbox"><div class="t">Independence</div><div class="d"><em>One</em> sample, cross-classified by <em>two</em> variables. <code>E = row×col/total</code>. <code>df = (r−1)(c−1)</code>.</div></div>
+        <div class="lbox"><div class="t">Homogeneity</div><div class="d"><em>Several</em> independent samples, <em>one</em> variable. Same math as independence — only the hypotheses change.</div></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="hand">📐</div>
+      <p><b>Independence and homogeneity use the exact same table math.</b> Same expected counts, same df, same χ². The only thing that tells them apart is the <em>design</em>: independence takes <span class="mono">one sample and splits it by two variables</span>; homogeneity takes <span class="mono">several separate samples and compares one variable</span> across them. Read how the data was collected, and the hypotheses follow.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="ladder-head"><div><div class="sec-eyebrow">The ladder</div><h2>Pick a rung and practice</h2></div><button class="reset" id="resetBtn">Reset progress</button></div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span id="progLabel">0 of 11 badges earned</span><span>4 in a row = badge</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow">Why it matters</div>
+    <h2>The test for "does the pattern hold?"</h2>
+    <div class="why-grid">
+      <div><h3>Counts, not averages</h3><p>When the data is categories — colors, preferences, outcomes — there's no mean to compare. Chi-square is how you ask whether the <em>pattern of counts</em> matches a claim or links two traits.</p></div>
+      <div><h3>Expected is the whole idea</h3><p>The test lives or dies on the expected counts: what H₀ predicts each cell should hold. Get those right and the gap tells the story; get them wrong and the test is meaningless.</p></div>
+      <div><h3>Design names the test</h3><p>Independence or homogeneity isn't a math question — it's about how the data was sampled. The same table can belong to either, depending on where the numbers came from.</p></div>
+    </div>
+    <p class="why-close">Lesson 24 is one machine and one habit: <span class="mono">build the expected counts under H₀, measure the gap, and read a right-skewed number.</span> Decide which of the three questions you're asking, state the hypotheses in context, confirm every expected count is at least 5, and let the calculator turn observed-minus-expected into a p-value — then say what that means about the categories in front of you.</p>
+  </div>
+</section>
+
+<footer><div class="wrap"><div class="foot">The Chi-Square Ladder · χ² = Σ(O−E)²/E · GOF · independence · homogeneity · expected ≥ 5 · upper-tailed</div></div></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   ===== CORE LOGIC START  (pure; extracted for stress-testing) =====
+   ================================================================= */
+
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function r2(x){ var s=x<0?-1:1, v=Math.abs(x)*100; return s*Math.round(v+1e-7)/100; }
+function onBoundary2(x){ var s=Math.abs(x)*100, f=s-Math.floor(s); return Math.abs(f-0.5)<0.02; }
+function pickOpts(correct, distractors){
+  var opts=[correct], i;
+  for(i=0;i<distractors.length && opts.length<4;i++){ if(opts.indexOf(distractors[i])===-1) opts.push(distractors[i]); }
+  var packed=opts.map(function(o,idx){return {o:o,c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+function numOpts(correct, distractors){
+  var seen={}, opts=[]; seen[correct]=1; opts.push(correct);
+  for(var i=0;i<distractors.length && opts.length<4;i++){ var v=distractors[i]; if(!seen[v]){ seen[v]=1; opts.push(v); } }
+  var k=1; while(opts.length<4){ var v=r2(correct+k*( correct>10?1.37:0.37 )); if(!seen[v]){seen[v]=1;opts.push(v);} k++; if(k>50)break; }
+  var packed=opts.map(function(o,idx){return {o:o,c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return String(p.o);}), answer:ans, correct:correct};
+}
+
+/* ---- goodness-of-fit scenarios ---- */
+var GOF=[
+  {ctx:'Zodiac signs of CEOs', varName:'zodiac sign', equal:true, k:12, n:240, claim:'top CEOs are equally likely to be born under each zodiac sign', haCtx:'top CEOs are more likely to be born under some zodiac signs than others'},
+  {ctx:'Fairness of a die', varName:'face', equal:true, k:6, n:120, claim:'the die is fair (each face equally likely)', haCtx:'the die is not fair'},
+  {ctx:'Accidents by weekday', varName:'weekday', equal:true, k:5, n:200, claim:'accidents are equally likely on each weekday', haCtx:'accidents are not equally likely across the weekdays'},
+  {ctx:'Peanut M&M colors', varName:'color', equal:false, cats:[['Red',0.13],['Yellow',0.14],['Green',0.16],['Orange',0.20],['Brown',0.13],['Blue',0.24]], n:200, claim:'peanut M&M colors follow the plain M&M distribution', haCtx:'the peanut M&M color distribution differs from the plain distribution'},
+  {ctx:'Blood types', varName:'blood type', equal:false, cats:[['O',0.44],['A',0.42],['B',0.10],['AB',0.04]], n:300, claim:'blood types follow the claimed national distribution', haCtx:'the blood-type distribution differs from the national one'}
+];
+function genGOF(){
+  var t=pick(GOF), cats=[], i, k, n=t.n;
+  if(t.equal){ k=t.k; for(i=0;i<k;i++){ cats.push({name:'C'+(i+1), p:1/k, exp:r2(n/k)}); } cats[0].name='Cat 1'; }
+  else { k=t.cats.length; for(i=0;i<k;i++){ cats.push({name:t.cats[i][0], p:t.cats[i][1], exp:r2(n*t.cats[i][1])}); } }
+  // observed: near expected, integers summing to n (display only)
+  var obs=[], i2; for(i=0;i<k;i++) obs.push(Math.max(1, Math.round(cats[i].exp + (Math.random()*8-4))));
+  var sum=0; for(i=0;i<k;i++) sum+=obs[i];
+  var diff=n-sum, guard=0;
+  while(diff!==0 && guard++<100000){
+    var j=Math.floor(Math.random()*k);
+    if(diff>0){ obs[j]++; diff--; }
+    else if(obs[j]>1){ obs[j]--; diff++; }
+  }
+  for(i=0;i<k;i++) cats[i].obs=obs[i];
+  return {kind:'gof', ctx:t.ctx, varName:t.varName, equal:t.equal, k:k, n:n, cats:cats, claim:t.claim, haCtx:t.haCtx};
+}
+
+/* ---- contingency scenarios (independence + homogeneity) ---- */
+var IND=[
+  {ctx:'Beef preference and region', rowVar:'cut of meat preferred', colVar:'geographic region', rows:['Cut A','Cut B','Cut C'], cols:['North','South'], sample:'a single random sample of 500 customers', haCtx:'cut preference and region are associated'},
+  {ctx:'Party and education', rowVar:'political party', colVar:'education level', rows:['Democrat','Republican','Independent'], cols:['No degree','Degree'], sample:'a single random sample of 600 voters', haCtx:'political party and education level are associated'},
+  {ctx:'Genre and age', rowVar:'favorite genre', colVar:'age group', rows:['Pop','Rock','Classical'], cols:['Under 30','30+'], sample:'a single random sample of 450 listeners', haCtx:'favorite genre and age group are associated'}
+];
+var HOM=[
+  {ctx:'Drinking behavior by gender', varName:'drinking level', groupNoun:'genders', rows:['None','Low','Moderate','High'], cols:['Men','Women'], sample:'independent random samples of male and female students', haCtx:'the distribution of drinking level differs between men and women'},
+  {ctx:'Snack choice across schools', varName:'snack choice', groupNoun:'schools', rows:['Chips','Fruit','Candy'], cols:['School A','School B','School C'], sample:'separate random samples drawn from three schools', haCtx:'the distribution of snack choice differs across the schools'},
+  {ctx:'Recovery by treatment', varName:'recovery outcome', groupNoun:'treatments', rows:['Full','Partial','None'], cols:['Drug A','Drug B','Placebo'], sample:'separate random samples assigned to three treatments', haCtx:'the distribution of recovery outcome differs across the treatments'}
+];
+function genCont(kind){
+  var pool = kind==='independence'?IND:HOM;
+  for(var tries=0;tries<200;tries++){
+    var t=pick(pool), r=t.rows.length, c=t.cols.length, table=[], i, j;
+    for(i=0;i<r;i++){ var row=[]; for(j=0;j<c;j++) row.push(22+Math.floor(Math.random()*70)); table.push(row); }
+    var rowTot=[], colTot=[], grand=0;
+    for(i=0;i<r;i++){ var rs=0; for(j=0;j<c;j++) rs+=table[i][j]; rowTot.push(rs); grand+=rs; }
+    for(j=0;j<c;j++){ var cs=0; for(i=0;i<r;i++) cs+=table[i][j]; colTot.push(cs); }
+    var ok=true;
+    for(i=0;i<r && ok;i++) for(j=0;j<c && ok;j++){ if(rowTot[i]*colTot[j]/grand < 5) ok=false; }
+    if(!ok) continue;
+    return {kind:kind, ctx:t.ctx, rowVar:t.rowVar, colVar:t.colVar, varName:t.varName, groupNoun:t.groupNoun,
+      rows:t.rows, cols:t.cols, sample:t.sample, haCtx:t.haCtx, r:r, c:c, table:table, rowTot:rowTot, colTot:colTot, grand:grand, df:(r-1)*(c-1)};
+  }
+  return null;
+}
+function genScen(kind){ return kind==='gof'?genGOF():genCont(kind); }
+function anyKind(){ return pick(['gof','independence','homogeneity']); }
+
+/* ---- option builders ---- */
+function conceptOpts(){
+  return pickOpts('The observed counts differ greatly from the expected counts.',
+    ['The observed counts equal the expected counts.','The sample size is small.','There are only two categories.']);
+}
+function classify3Opts(kind){
+  var lab={gof:'Goodness-of-fit test', independence:'Test for independence', homogeneity:'Test for homogeneity'};
+  var all=['Goodness-of-fit test','Test for independence','Test for homogeneity'];
+  var packed=all.map(function(o){return {o:o,c:o===lab[kind]};}); shuffle(packed);
+  var ans=0; for(var i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+function indVsHomOpts(kind){
+  var correct=kind==='independence'?'Test for independence':'Test for homogeneity';
+  var packed=['Test for independence','Test for homogeneity'].map(function(o){return {o:o,c:o===correct};}); shuffle(packed);
+  var ans=0; for(var i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+function chiDistOpts(mode){
+  if(mode==='shape') return pickOpts('It is skewed to the right and never negative.',
+    ['It is symmetric like the normal curve.','It can take negative values.','It is uniform for all df.']);
+  if(mode==='df') return pickOpts('It shifts right and becomes more like a normal curve.',
+    ['It stays exactly the same.','It becomes more strongly right-skewed.','It shifts to the left.']);
+  return pickOpts('A large χ² value (in the upper tail).',
+    ['A χ² value near 0.','A negative χ² value.','A χ² value in the lower tail.']); // reject
+}
+function hypoOpts(s){
+  if(s.kind==='gof') return pickOpts('H\u2080: the '+s.varName+' proportions match the claimed distribution.  H\u2090: at least one proportion differs.',
+    ['H\u2080: the two variables are independent.  H\u2090: the two variables are associated.',
+     'H\u2080: the population mean equals the claim.  H\u2090: the mean differs.',
+     'H\u2080: at least one proportion differs.  H\u2090: all proportions match.']);
+  if(s.kind==='independence') return pickOpts('H\u2080: '+s.rowVar+' and '+s.colVar+' are independent.  H\u2090: '+s.rowVar+' and '+s.colVar+' are associated.',
+    ['H\u2080: the distributions are the same across groups.  H\u2090: at least one differs.',
+     'H\u2080: the proportions match a claimed distribution.  H\u2090: at least one differs.',
+     'H\u2080: the two variables are associated.  H\u2090: the two variables are independent.']);
+  return pickOpts('H\u2080: the distribution of '+s.varName+' is the same across the '+s.groupNoun+'.  H\u2090: at least one distribution differs.',
+    ['H\u2080: the two variables are independent.  H\u2090: the two variables are associated.',
+     'H\u2080: the proportions match a claimed distribution.  H\u2090: at least one differs.',
+     'H\u2080: at least one distribution differs.  H\u2090: all distributions are the same.']);
+}
+function dfOpts(s){
+  if(s.kind==='gof'){ var k=s.k, correct=k-1;
+    return numOpts(correct, [k, k+1, (k-2>0?k-2:k+2)]); }
+  var r=s.r, c=s.c, correct=(r-1)*(c-1);
+  return numOpts(correct, [r*c, r*c-1, correct+1]);
+}
+function expGofOpts(s){
+  var idx=Math.floor(Math.random()*s.k), cat=s.cats[idx];
+  var correct=r2(s.n*cat.p);
+  var distractors=[cat.obs, r2(s.n*s.cats[(idx+1)%s.k].p)];
+  if(s.equal) distractors=[cat.obs, r2(s.n/(s.k+1)), r2(s.n/(s.k-1))];
+  else distractors.push(r2(cat.p*100));
+  var o=numOpts(correct, distractors);
+  return {options:o.options, answer:o.answer, idx:idx, cat:cat, correct:correct};
+}
+function expContOpts(s){
+  var i,j,raw,tries=0;
+  do{ i=Math.floor(Math.random()*s.r); j=Math.floor(Math.random()*s.c); raw=s.rowTot[i]*s.colTot[j]/s.grand; tries++; }
+  while(onBoundary2(raw) && tries<60);
+  var correct=r2(raw);
+  var i2=(i+1)%s.r, j2=(j+1)%s.c;
+  var distractors=[s.table[i][j], r2(s.rowTot[i2]*s.colTot[j]/s.grand), r2(s.rowTot[i]*s.colTot[j2]/s.grand)];
+  var o=numOpts(correct, distractors);
+  return {options:o.options, answer:o.answer, i:i, j:j, correct:correct};
+}
+function assumeOpts(mode){
+  if(mode==='exp') return pickOpts('Every expected count is at least 5.',
+    ['Every observed count is at least 30.','The sample is more than 10% of the population.','The data are approximately normal.']);
+  return pickOpts('Categorical count data from a random sample.',
+    ['Quantitative measurements.','A single mean from a normal model.','Paired difference values.']);
+}
+function decisionPA(){
+  var alpha=pick([0.05,0.05,0.05,0.10,0.01]);
+  var reject=Math.random()<0.5, p;
+  if(reject){ p=0.0005+Math.random()*(alpha*0.55-0.0005); }
+  else { p=alpha*1.7+Math.random()*(0.72-alpha*1.7); }
+  p=Math.round(p*1e4)/1e4; if(p<=0) p=0.0005;
+  return {alpha:alpha, p:p, reject:reject};
+}
+function decisionOpts(reject){
+  return pickOpts(reject?'Reject H\u2080':'Fail to reject H\u2080', [reject?'Fail to reject H\u2080':'Reject H\u2080','Accept H\u2080','The test is inconclusive']);
+}
+function conclusionOpts(haCtx, reject){
+  var enough='There is sufficient evidence to conclude '+haCtx+'.';
+  var notenough='There is not enough evidence to conclude '+haCtx+'.';
+  if(reject) return pickOpts(enough, [notenough, 'This proves '+haCtx+'.', 'There is sufficient evidence that H\u2080 is true.']);
+  return pickOpts(notenough, [enough, 'This proves '+haCtx+' is false.', 'We accept that H\u2080 is true.']);
+}
+
+/* ---- observed vs expected bars ---- */
+function svgOvE(items, showExp){
+  var W=380,H=180,m=22,base=H-26,top=16, n=items.length, i;
+  var maxv=1; for(i=0;i<n;i++){ maxv=Math.max(maxv, items[i].obs, showExp?items[i].exp:0); }
+  var slot=(W-2*m)/n, bw=showExp?slot*0.30:slot*0.42;
+  function Y(v){ return base - v/maxv*(base-top); }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="ove" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="observed vs expected counts">';
+  s+='<line x1="'+m+'" y1="'+base+'" x2="'+(W-m)+'" y2="'+base+'" class="axis"/>';
+  for(i=0;i<n;i++){
+    var cx=m+slot*(i+0.5);
+    if(showExp){
+      s+='<rect x="'+(cx-bw-1).toFixed(1)+'" y="'+Y(items[i].obs).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(base-Y(items[i].obs)).toFixed(1)+'" class="obsbar"/>';
+      s+='<rect x="'+(cx+1).toFixed(1)+'" y="'+Y(items[i].exp).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(base-Y(items[i].exp)).toFixed(1)+'" class="expbar"/>';
+    } else {
+      s+='<rect x="'+(cx-bw/2).toFixed(1)+'" y="'+Y(items[i].obs).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(base-Y(items[i].obs)).toFixed(1)+'" class="obsbar"/>';
+    }
+    s+='<text x="'+cx.toFixed(1)+'" y="'+(base+13)+'" class="blab">'+String(items[i].name).slice(0,5)+'</text>';
+  }
+  s+='</svg>'; return s;
+}
+
+if(typeof module!=='undefined' && module.exports){
+  module.exports={ GOF:GOF, IND:IND, HOM:HOM, r2:r2, genGOF:genGOF, genCont:genCont, genScen:genScen, anyKind:anyKind,
+    conceptOpts:conceptOpts, classify3Opts:classify3Opts, indVsHomOpts:indVsHomOpts, chiDistOpts:chiDistOpts,
+    hypoOpts:hypoOpts, dfOpts:dfOpts, expGofOpts:expGofOpts, expContOpts:expContOpts, assumeOpts:assumeOpts,
+    decisionPA:decisionPA, decisionOpts:decisionOpts, conclusionOpts:conclusionOpts, svgOvE:svgOvE };
+}
+/* =================================================================
+   ===== CORE LOGIC END =====
+   ================================================================= */
+
+
+/* ---------------- UI LAYER ---------------- */
+var KEY='chiLadder', NEED=4;
+var state=load();
+function load(){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.rungs) return s; }catch(e){} return {rungs:{}}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+(function(){ var g=genGOF();
+  var items=g.cats.map(function(c){ return {name:c.name, obs:c.obs, exp:c.exp}; });
+  document.getElementById('heroBars').innerHTML = svgOvE(items, true);
+})();
+
+/* contingency table HTML (data display, not decoration) */
+function tableHTML(s, hi){
+  var i,j, h='<table class="ctable"><tr><th></th>';
+  for(j=0;j<s.c;j++) h+='<th>'+s.cols[j]+'</th>'; h+='<th>Total</th></tr>';
+  for(i=0;i<s.r;i++){ h+='<tr><td class="rh">'+s.rows[i]+'</td>';
+    for(j=0;j<s.c;j++){ var cls=(hi&&hi[0]===i&&hi[1]===j)?'hi':''; h+='<td class="'+cls+'">'+s.table[i][j]+'</td>'; }
+    h+='<td class="tot">'+s.rowTot[i]+'</td></tr>'; }
+  h+='<tr><td class="rh">Total</td>'; for(j=0;j<s.c;j++) h+='<td class="tot">'+s.colTot[j]+'</td>'; h+='<td class="tot">'+s.grand+'</td></tr>';
+  h+='</table>'; return h;
+}
+function gofDesc(s){
+  return 'A random sample of <b>'+s.n+'</b> is classified by <b>'+s.varName+'</b> ('+s.k+' categories). The claim: <b>'+s.claim+'</b>.';
+}
+function contDesc(s){
+  if(s.kind==='independence') return 'From <b>'+s.sample+'</b>, each individual is classified by <b>'+s.rowVar+'</b> and <b>'+s.colVar+'</b>.';
+  return 'Using <b>'+s.sample+'</b>, each individual\u2019s <b>'+s.varName+'</b> is recorded.';
+}
+function scenDesc(s){ return s.kind==='gof'?gofDesc(s):contDesc(s); }
+
+var RUNGS=[
+  {
+    id:'concept', title:'Observed vs. expected', desc:'What makes χ² large.',
+    strategy:'<p>χ² = Σ(O−E)²/E adds up, across every category, how far the <b>observed</b> count sits from the <b>expected</b> count. Big gaps \u2192 big χ² \u2192 evidence against H\u2080. If observed matched expected exactly, χ² would be 0.</p>',
+    build:function(){ var g=genGOF(), o=conceptOpts();
+      var items=g.cats.map(function(c){ return {name:c.name, obs:c.obs, exp:c.exp}; });
+      return {mode:'mc', bars:items, barsExp:true,
+        scenario:'<span class="tag">'+g.ctx+'</span>The bars show the observed and expected counts in each category.',
+        ask:'The χ² statistic is large when\u2026', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'which', title:'Which of the three tests?', desc:'GOF, independence, or homogeneity.',
+    strategy:'<p><b>GOF</b>: one variable vs. a claimed distribution. <b>Independence</b>: one sample split by two variables. <b>Homogeneity</b>: several separate samples compared on one variable.</p>',
+    build:function(){ var kind=anyKind(), s=genScen(kind), o=classify3Opts(kind);
+      return {mode:'mc', scenario:'<span class="tag">'+s.ctx+'</span>'+scenDesc(s),
+        ask:'Which chi-square test applies?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'indhom', title:'Independence or homogeneity?', desc:'Read how the data was sampled.',
+    strategy:'<p>Same table, same math \u2014 the <b>design</b> decides. <b>One</b> sample split by two variables \u2192 independence. <b>Several</b> separate samples compared on one variable \u2192 homogeneity.</p>',
+    build:function(){ var kind=pick(['independence','homogeneity']), s=genCont(kind), o=indVsHomOpts(kind);
+      return {mode:'mc', scenario:'<span class="tag">'+s.ctx+'</span>'+contDesc(s),
+        ask:'Is this a test for independence or homogeneity?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'dist', title:'The χ² distribution', desc:'Right-skewed, df-based, upper-tailed.',
+    strategy:'<p>The χ² curve is <b>skewed right</b> and never negative. As df grows it shifts right and looks more <b>normal</b>. The test is <b>upper-tailed</b>: only a large χ² (counts far from expected) is evidence against H\u2080.</p>',
+    build:function(){ var mode=pick(['shape','df','reject']), o=chiDistOpts(mode);
+      var ask=mode==='shape'?'What is the shape of the χ² distribution?':mode==='df'?'As the degrees of freedom increase, the χ² curve\u2026':'A χ² test rejects H\u2080 when the test statistic is\u2026';
+      return {mode:'mc', ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'hypo', title:'State the hypotheses', desc:'In words, in context.',
+    strategy:'<p>GOF: proportions match the claim / at least one differs. Independence: the two variables are independent / associated. Homogeneity: the distributions are the same across groups / at least one differs.</p>',
+    build:function(){ var kind=anyKind(), s=genScen(kind), o=hypoOpts(s);
+      return {mode:'mc', scenario:'<span class="tag">'+s.ctx+'</span>'+scenDesc(s),
+        ask:'What are the correct hypotheses?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'df', title:'Identify the degrees of freedom', desc:'k−1, or (r−1)(c−1).',
+    strategy:'<p>GOF: <code>df = number of categories − 1</code>. Independence &amp; homogeneity: <code>df = (rows − 1)(columns − 1)</code>, counting only the category rows and columns \u2014 not the totals.</p>',
+    build:function(){ var kind=anyKind(), s=genScen(kind), o=dfOpts(s);
+      var scen, extra='';
+      if(s.kind==='gof'){ scen='<span class="tag">'+s.ctx+' \u00b7 goodness of fit</span>The variable <b>'+s.varName+'</b> has <b>'+s.k+'</b> categories.'; }
+      else { scen='<span class="tag">'+s.ctx+' \u00b7 '+(s.kind==='independence'?'independence':'homogeneity')+'</span>The table has <b>'+s.r+'</b> category rows and <b>'+s.c+'</b> category columns.'; extra=tableHTML(s); }
+      return {mode:'mc', scenario:scen, tableHTML:extra, ask:'What are the degrees of freedom?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'expgof', title:'Expected count — goodness of fit', desc:'E = n × claimed proportion.',
+    strategy:'<p>For each category, the expected count is <code>E = n × (claimed proportion)</code>. If the claim is "equally likely," that\u2019s <code>E = n ÷ (number of categories)</code>. Round to 2 decimals.</p>',
+    build:function(){ var g=genGOF(), o=expGofOpts(g);
+      var pTxt = g.equal ? ('equally likely, so each claimed proportion is 1/'+g.k) : ('a claimed proportion of '+o.cat.p);
+      var items=g.cats.map(function(c){ return {name:c.name, obs:c.obs, exp:c.exp}; });
+      return {mode:'mc', bars:items, barsExp:false,
+        scenario:'<span class="tag">'+g.ctx+' \u00b7 goodness of fit</span>Sample size <b>n = '+g.n+'</b>. Category <b>'+o.cat.name+'</b> has '+pTxt+'.',
+        ask:'What is the expected count for '+o.cat.name+'?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'expcont', title:'Expected count — contingency', desc:'E = (row × column) / total.',
+    strategy:'<p>For any cell, <code>E = (row total × column total) ÷ grand total</code>. It depends only on the margins, not the cell\u2019s own observed value. Round to 2 decimals.</p>',
+    build:function(){ var kind=pick(['independence','homogeneity']), s=genCont(kind), o=expContOpts(s);
+      return {mode:'mc', tableHTML:tableHTML(s,[o.i,o.j]),
+        scenario:'<span class="tag">'+s.ctx+'</span>The highlighted cell is <b>'+s.rows[o.i]+' / '+s.cols[o.j]+'</b> (row total '+s.rowTot[o.i]+', column total '+s.colTot[o.j]+', grand total '+s.grand+').',
+        ask:'What is the expected count for the highlighted cell?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'assume', title:'Check the assumptions', desc:'Counts, random sample, expected ≥ 5.',
+    strategy:'<p>Chi-square needs <b>categorical count data</b> from a <b>random sample</b>, and \u2014 the size condition \u2014 <b>every expected count at least 5</b>. Always list the expected counts to check it.</p>',
+    build:function(){ var mode=pick(['exp','exp','data']), o=assumeOpts(mode);
+      var ask=mode==='data'?'What kind of data does a χ² test require?':'Which condition confirms the sample is large enough?';
+      return {mode:'mc', ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'decide', title:'Decision & conclusion', desc:'p vs α, then in context.',
+    strategy:'<p>Compare the calculator\u2019s p-value to \u03b1: <b>p &lt; \u03b1 \u2192 reject H\u2080</b>. Then in context: rejecting means "sufficient evidence" for H\u2090; failing means "not enough evidence."</p>',
+    build:function(){ var pa=decisionPA(), askConcl=Math.random()<0.5;
+      if(askConcl){ var kind=anyKind(), s=genScen(kind), o=conclusionOpts(s.haCtx, pa.reject);
+        return {mode:'mc',
+          scenario:'<span class="tag">'+s.ctx+'</span>The test gives <b>p = '+pa.p+'</b> at <b>\u03b1 = '+pa.alpha+'</b>, so we <b>'+(pa.reject?'reject':'fail to reject')+' H\u2080</b>.',
+          ask:'Which is the correct conclusion in context?', options:o.options, answer:o.answer}; }
+      var o2=decisionOpts(pa.reject);
+      return {mode:'mc', scenario:'<span class="tag">Decision</span>A χ² test returns <b>p = '+pa.p+'</b> at <b>\u03b1 = '+pa.alpha+'</b>.',
+        ask:'What is the decision?', options:o2.options, answer:o2.answer}; }
+  },
+  {
+    id:'capstone', title:'Capstone \u2014 full setup', desc:'Classify, then hypothesize. One miss restarts.', cap:true,
+    strategy:'<p>Put it together: identify which of the three tests the design calls for, then choose the hypotheses in context. Both parts must be right, or the streak resets.</p>',
+    build:function(){ var kind=anyKind(), s=genScen(kind), c3=classify3Opts(kind), h=hypoOpts(s);
+      return {mode:'mc2', scenario:'<span class="tag">'+s.ctx+'</span>'+scenDesc(s),
+        sub:[{ask:'1. Which chi-square test applies?', options:c3.options, answer:c3.answer},
+             {ask:'2. What are the correct hypotheses?', options:h.options, answer:h.answer}]}; }
+  }
+];
+
+/* ---------- render skeleton ---------- */
+var rungsEl=document.getElementById('rungs');
+RUNGS.forEach(function(def,idx){
+  if(!state.rungs[def.id]) state.rungs[def.id]={streak:0,done:false};
+  var el=document.createElement('div');
+  el.className='rung'+(def.cap?' cap':'')+(state.rungs[def.id].done?' done':'');
+  el.dataset.id=def.id;
+  el.innerHTML='<div class="rung-top"><div class="rung-num">'+(idx+1)+'</div>'+
+    '<div class="rung-title"><div class="rt">'+def.title+'</div><div class="rd">'+def.desc+'</div></div>'+
+    '<div class="rung-badge"><span class="medal">🏅</span><span class="dots"></span><span class="txt"></span></div>'+
+    '<div class="chev">▶</div></div><div class="rung-body"></div>';
+  rungsEl.appendChild(el);
+  el.querySelector('.rung-top').addEventListener('click', function(){ toggleRung(def.id); });
+  renderBadge(def.id);
+});
+function rungEl(id){ return rungsEl.querySelector('.rung[data-id="'+id+'"]'); }
+function rungDef(id){ return RUNGS.filter(function(r){return r.id===id;})[0]; }
+function renderBadge(id){
+  var el=rungEl(id),st=state.rungs[id],dots=el.querySelector('.dots'); dots.innerHTML='';
+  for(var i=0;i<NEED;i++){ var d=document.createElement('span'); d.className='dot-b'+(i<st.streak?' on':''); dots.appendChild(d); }
+  el.querySelector('.txt').textContent=st.done?'earned':(st.streak+'/'+NEED); el.classList.toggle('done',st.done);
+}
+var openId=null;
+function toggleRung(id){
+  var el=rungEl(id);
+  if(el.classList.contains('open')){ el.classList.remove('open'); openId=null; return; }
+  if(openId) rungEl(openId).classList.remove('open');
+  el.classList.add('open'); openId=id; newQuestion(id);
+}
+
+var current={};
+function newQuestion(id){
+  var def=rungDef(id), q=def.build(); current[id]={def:def,q:q};
+  var body=rungEl(id).querySelector('.rung-body');
+  var html='<details class="strategy"><summary>Strategy</summary><div class="inner">'+def.strategy+'</div></details><div class="qwrap">';
+  if(q.scenario) html+='<div class="scenario">'+q.scenario+'</div>';
+  if(q.tableHTML) html+='<div style="overflow-x:auto">'+q.tableHTML+'</div>';
+  if(q.bars) html+='<div class="bars-wrap">'+svgOvE(q.bars, q.barsExp)+(q.barsExp?'<div class="legend"><span><span class="sw o"></span>Observed</span><span><span class="sw e"></span>Expected</span></div>':'<div class="legend"><span><span class="sw o"></span>Observed counts</span></div>')+'</div>';
+  if(q.mode==='mc2'){
+    html+='<div class="ask">'+q.sub[0].ask+'</div><div class="choices" data-sub="0">';
+    q.sub[0].options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span class="mono">'+opt+'</span></button>'; });
+    html+='</div><div class="sub2" style="display:none;margin-top:18px"></div>';
+  } else {
+    html+='<div class="ask">'+q.ask+'</div><div class="choices">';
+    q.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>';
+  }
+  html+='<div class="feedback"></div><div class="streak-note"></div></div>';
+  body.innerHTML=html; updateStreakNote(id);
+  if(q.mode==='mc2'){ body.querySelectorAll('.choices[data-sub="0"] .choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap1(id, parseInt(c.dataset.i,10)); }); }); }
+  else { body.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerMC(id, parseInt(c.dataset.i,10)); }); }); }
+}
+function updateStreakNote(id){ var st=state.rungs[id],note=rungEl(id).querySelector('.streak-note'); if(!note) return;
+  note.textContent=st.done?'✓ Badge earned — keep going for more practice.':(st.streak>0?('Streak: '+st.streak+' of '+NEED):''); }
+function nextBtn(){ return '<div class="next"><button class="btn ghost" data-next="1">Next question →</button></div>'; }
+function wireNext(id){ var b=rungEl(id).querySelector('[data-next]'); if(b) b.addEventListener('click', function(){ newQuestion(id); }); }
+
+function answerMC(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), choices=body.querySelectorAll('.choice');
+  if(choices[0].disabled) return; choices.forEach(function(c){c.disabled=true;});
+  var correct=(choice===q.answer); choices[q.answer].classList.add('correct'); if(!correct) choices[choice].classList.add('wrong');
+  var fb=body.querySelector('.feedback'); fb.className='feedback show '+(correct?'right':'wrong');
+  fb.innerHTML=(correct?'Correct.':'Not quite — the right choice is highlighted.')+nextBtn();
+  wireNext(id); recordResult(id, correct);
+}
+function answerCap1(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c0=body.querySelectorAll('.choices[data-sub="0"] .choice'); if(c0[0].disabled) return;
+  c0.forEach(function(c){c.disabled=true;});
+  cur.ok1=(choice===q.sub[0].answer); c0[q.sub[0].answer].classList.add('correct'); if(!cur.ok1) c0[choice].classList.add('wrong');
+  var s2=body.querySelector('.sub2'); s2.style.display='block';
+  var html='<div class="ask">'+q.sub[1].ask+'</div><div class="choices" data-sub="1">';
+  q.sub[1].options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span class="mono">'+opt+'</span></button>'; });
+  html+='</div>'; s2.innerHTML=html;
+  s2.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap2(id, parseInt(c.dataset.i,10)); }); });
+}
+function answerCap2(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c1=body.querySelectorAll('.choices[data-sub="1"] .choice'); if(c1[0].disabled) return;
+  c1.forEach(function(c){c.disabled=true;});
+  var ok2=(choice===q.sub[1].answer); c1[q.sub[1].answer].classList.add('correct'); if(!ok2) c1[choice].classList.add('wrong');
+  var both=cur.ok1&&ok2, fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(both?'right':'wrong');
+  fb.innerHTML=(both?'Both correct — test identified cleanly.':'Not both correct — the streak resets.')+nextBtn();
+  wireNext(id); recordResult(id, both);
+}
+function recordResult(id, correct){
+  var st=state.rungs[id],wasDone=st.done;
+  if(correct){ st.streak++; if(st.streak>=NEED) st.done=true; } else st.streak=0;
+  save(); renderBadge(id); updateStreakNote(id); updateProgress();
+  if(st.done&&!wasDone) celebrate(id);
+}
+function updateProgress(){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  document.getElementById('progLabel').textContent=done+' of '+RUNGS.length+' badges earned';
+  document.getElementById('progFill').style.width=(100*done/RUNGS.length)+'%';
+}
+function celebrate(id){ var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  showToast('🏅 '+(done===RUNGS.length?'All 11 badges — three tests, one machine.':'Badge earned · '+rungDef(id).title)); }
+var toastT; function showToast(t){ var el=document.getElementById('toast'); el.innerHTML=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2600); }
+
+document.addEventListener('keydown', function(e){
+  if(!openId) return; var cur=current[openId]; if(!cur) return;
+  var n=parseInt(e.key,10); if(isNaN(n)||n<1||n>4) return;
+  var body=rungEl(openId).querySelector('.rung-body');
+  if(cur.q.mode==='mc2'){
+    var s1=body.querySelectorAll('.choices[data-sub="0"] .choice'), s2=body.querySelectorAll('.choices[data-sub="1"] .choice');
+    if(s2.length&&!s2[0].disabled){ if(s2[n-1]) answerCap2(openId,n-1); }
+    else if(s1.length&&!s1[0].disabled){ if(s1[n-1]) answerCap1(openId,n-1); }
+  } else { var cs=body.querySelectorAll('.choice'); if(cs[n-1]&&!cs[0].disabled) answerMC(openId,n-1); }
+});
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!confirm('Reset all progress on the Chi-Square Ladder?')) return;
+  state={rungs:{}}; RUNGS.forEach(function(r){state.rungs[r.id]={streak:0,done:false};});
+  save(); RUNGS.forEach(function(r){renderBadge(r.id);updateStreakNote(r.id);});
+  if(openId) newQuestion(openId); updateProgress(); showToast('Progress reset');
+});
+updateProgress();
+</script>
+</body>
+</html>
