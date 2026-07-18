@@ -1,0 +1,754 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Combine Ladder — means add, variances add, standard deviations never do</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#242E29;
+  --paper:#F4F8F5;
+  --surface:#FFFFFF;
+  --line:#DFE8E2;
+  --accent:#2E7D5B;         /* brand / the combination */
+  --accent-soft:#D8ECE2;
+  --xv:#3C6E9F;             /* variable X */
+  --xv-soft:#DCE7F1;
+  --yv:#C08A2E;             /* variable Y */
+  --yv-soft:#F5E9D2;
+  --good:#2E9E51;
+  --good-soft:#E1F3E6;
+  --bad:#C6403D;
+  --bad-soft:#FBE4E3;
+  --muted:#5F6B65;
+  --shadow:0 1px 2px rgba(36,46,41,.06),0 8px 24px rgba(36,46,41,.06);
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--disp);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin:0}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(244,248,245,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand .glyph{color:var(--accent)}
+.navlinks{margin-left:auto;display:flex;gap:22px;font-size:14px;font-weight:500}
+.navlinks a{color:var(--muted)}.navlinks a:hover{color:var(--ink)}
+@media(max-width:560px){.navlinks{display:none}}
+
+header{padding:66px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+header h1{font-size:clamp(28px,5vw,48px);font-weight:600}
+header h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:665px;margin:20px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+.heroviz{margin:38px 0 6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:26px 22px 18px}
+.heroviz .cap{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:14px;text-align:center}
+.legend{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px}
+.legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.legend .sw.x{background:var(--xv)}.legend .sw.y{background:var(--yv)}
+
+svg.stack{display:block;width:100%;max-width:470px;height:auto;margin:0 auto}
+.stack .vx{fill:var(--xv)}
+.stack .vy{fill:var(--yv)}
+.stack .frame{fill:none;stroke:var(--line);stroke-width:1.2}
+.stack .lab{font-family:var(--mono);font-size:10.5px;fill:var(--muted);text-anchor:middle}
+.stack .val{font-family:var(--mono);font-size:11px;fill:#fff;text-anchor:middle;font-weight:700}
+.stack .opsign{font-family:var(--disp);font-size:19px;fill:var(--muted);text-anchor:middle;font-weight:600}
+.stack .base{stroke:var(--muted);stroke-width:1;opacity:.45}
+.stack .tot{font-family:var(--mono);font-size:11px;fill:var(--accent);text-anchor:middle;font-weight:700}
+
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+section h2{font-size:clamp(23px,3.4vw,31px);margin-bottom:8px}
+.sec-sub{color:var(--muted);max-width:665px;margin:0 0 30px}
+
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:680px){.trio{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card .n{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+.card h3{font-size:17px;margin:10px 0 6px}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card kbd{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--ink)}
+
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+@media(max-width:680px){.rules{grid-template-columns:1fr}}
+.rbox{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.rbox.warn{border-left-color:var(--bad)}
+.rbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:5px}
+.rbox .d{font-size:13.5px;color:var(--muted)}
+.rbox code{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12.5px;color:var(--accent)}
+.rbox.warn code{color:var(--bad)}
+
+.callout{display:flex;gap:16px;background:var(--accent-soft);border:1px solid #A9D3BF;border-radius:14px;padding:20px 22px;margin-top:26px}
+.callout .hand{font-size:22px;line-height:1.2}
+.callout p{margin:0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout .mono{color:#1f5f44}
+
+.ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.progress-wrap{width:100%;margin:16px 0 26px}
+.progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.progress-track{height:9px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.reset{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--bad);color:var(--bad)}
+
+.rungs{display:flex;flex-direction:column;gap:14px}
+.rung{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+.rung.cap{border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--shadow)}
+.rung-top{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;user-select:none}
+.rung-num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.rung.done .rung-num{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rung.cap .rung-num{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.rung-title{flex:1 1 auto}
+.rung-title .rt{font-family:var(--disp);font-weight:600;font-size:16px}
+.rung-title .rd{font-size:13px;color:var(--muted);margin-top:1px}
+.rung-badge{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.dots{display:flex;gap:4px}
+.dot-b{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dot-b.on{background:var(--accent)}
+.rung.done .dot-b.on{background:var(--good)}
+.chev{transition:transform .25s;color:var(--muted);font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.medal{display:none}.rung.done .medal{display:inline}
+.rung.done .rung-badge .txt{color:var(--good)}
+.rung-body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+.rung.open .rung-body{display:block}
+
+.strategy{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:18px 0;overflow:hidden}
+.strategy summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--accent);list-style:none;display:flex;align-items:center;gap:8px}
+.strategy summary::-webkit-details-marker{display:none}
+.strategy summary::before{content:"▸";transition:transform .2s;display:inline-block}
+.strategy[open] summary::before{transform:rotate(90deg)}
+.strategy .inner{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+.strategy .inner p{margin:.5em 0}
+.strategy code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--accent)}
+
+.scenario{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:15px;margin-bottom:16px}
+.scenario .tag{font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:8px}
+.scenario b{color:var(--ink)}
+.givens{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.gcard{flex:1 1 180px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-family:var(--mono);font-size:13px}
+.gcard.x{border-left:3px solid var(--xv)}
+.gcard.y{border-left:3px solid var(--yv)}
+.gcard .gn{font-family:var(--body);font-size:12.5px;color:var(--muted);display:block;margin-bottom:2px}
+.ask{font-weight:600;font-family:var(--disp);font-size:16px;margin:4px 0 14px}
+.ask .hl{color:var(--accent)}
+.vizbox{margin:8px 0 16px}
+
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:14.5px;font-family:var(--body);color:var(--ink);transition:.12s}
+.choice:hover{border-color:var(--accent)}
+.choice .key{flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.choice .mono{font-family:var(--mono)}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .key{background:var(--good);border-color:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.choice:disabled{cursor:default}
+
+.numrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.field input{font-family:var(--mono);font-size:16px;width:128px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);outline:none}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field input.ok{border-color:var(--good);background:var(--good-soft)}
+.field input.no{border-color:var(--bad);background:var(--bad-soft)}
+.btn{font-family:var(--disp);font-weight:600;font-size:14.5px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
+.btn:hover{background:#256849}
+.btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--accent)}
+.feedback{margin-top:15px;font-size:14.5px;display:none;border-radius:10px;padding:12px 15px}
+.feedback.show{display:block}
+.feedback.right{background:var(--good-soft);border:1px solid var(--good);color:#1c6b37}
+.feedback.wrong{background:var(--bad-soft);border:1px solid var(--bad);color:#96302d}
+.feedback .mono{font-weight:700}
+.feedback .next{margin-top:9px}
+.streak-note{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:12px}
+
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:680px){.why-grid{grid-template-columns:1fr}}
+.why-grid h3{font-size:16px;margin-bottom:6px;color:var(--accent)}
+.why-grid p{font-size:14px;color:var(--muted);margin:0}
+.why-close{font-size:15px;color:var(--ink);max-width:690px}
+.why-close .mono{color:var(--accent)}
+
+footer{padding:30px 0 50px;border-top:1px solid var(--line)}
+.foot{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-family:var(--disp);font-weight:600;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:.35s;z-index:80;display:flex;gap:10px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="glyph">⊕</span> The Combine Ladder</div>
+    <div class="navlinks"><a href="#how">How it works</a><a href="#ladder">The ladder</a><a href="#why">Why it matters</a></div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Combining random variables · sums, differences, transformations</div>
+    <h1>Means add. Variances add too — <em>even when you subtract.</em></h1>
+    <p class="lede">Put two independent random variables together and the means behave exactly as you'd guess: <b>E(X + Y) = E(X) + E(Y)</b>, and for a difference they subtract. Variability doesn't play along. Combining two uncertain things always makes the result <b>more</b> variable, never less — so the variances <b>add</b> either way, and the standard deviation comes from the square root at the end. Standard deviations themselves never add.</p>
+
+    <div class="heroviz">
+      <div class="cap">Variance stacks the same way for X + Y and X − Y</div>
+      <div id="heroStack"></div>
+      <div class="legend"><span><span class="sw x"></span>Var(X)</span><span><span class="sw y"></span>Var(Y)</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Two rules, and one very common mistake</h2>
+    <p class="sec-sub">Eleven rungs run from a single sum to totals of many independent copies. You compute everything here yourself; the numbers stay small on purpose so the rules, not the arithmetic, are what you're practicing.</p>
+    <div class="trio">
+      <div class="card"><div class="n">01</div><h3>Go through variance</h3><p>Never add standard deviations. Square them into variances, add those, then take the square root. That round trip is the entire method.</p></div>
+      <div class="card"><div class="n">02</div><h3>Earn each badge</h3><p><b>Four in a row</b> earns a rung's badge. Click a choice or press <kbd>1</kbd>–<kbd>4</kbd>; type answers and press <kbd>Enter</kbd> to move between boxes.</p></div>
+      <div class="card"><div class="n">03</div><h3>Round at the end</h3><p>Answers are accepted to <b>2 or 3 decimal places</b>. Keep full precision through the arithmetic and round only the final value.</p></div>
+    </div>
+
+    <div style="margin-top:34px">
+      <div class="sec-eyebrow">The rules</div>
+      <div class="rules">
+        <div class="rbox"><div class="t">Sums and differences (independent)</div><div class="d"><code>E(X ± Y) = E(X) ± E(Y)</code><br><code>Var(X ± Y) = Var(X) + Var(Y)</code><br>Then <code>SD = √Var</code>.</div></div>
+        <div class="rbox"><div class="t">Linear transformations</div><div class="d"><code>E(aX + b) = a·E(X) + b</code><br><code>SD(aX + b) = |a|·SD(X)</code><br><code>Var(aX + b) = a²·Var(X)</code></div></div>
+        <div class="rbox warn"><div class="t">The mistake to avoid</div><div class="d"><code>SD(X + Y) ≠ SD(X) + SD(Y)</code>. Adding standard deviations always overstates the spread. Square first.</div></div>
+        <div class="rbox"><div class="t">n independent copies</div><div class="d">Total of n items: <code>Var = n·Var(X)</code>, so <code>SD = √n·SD(X)</code>. But <code>SD(nX) = n·SD(X)</code> — not the same thing.</div></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="hand">➕</div>
+      <p><b>Why does variance still add for a difference?</b> Because variance measures how much a value bounces around, and subtracting doesn't calm anything down — both variables are still wobbling, and the gap between them wobbles from <em>both</em> sources. Uncertainty accumulates no matter which operation you use: <span class="mono">combining never reduces variability.</span></p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="ladder-head"><div><div class="sec-eyebrow">The ladder</div><h2>Pick a rung and practice</h2></div><button class="reset" id="resetBtn">Reset progress</button></div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span id="progLabel">0 of 11 badges earned</span><span>4 in a row = badge</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow">Why it matters</div>
+    <h2>This is where every standard error comes from</h2>
+    <div class="why-grid">
+      <div><h3>It explains the formulas</h3><p>Why does the standard error of a mean divide by √n? Because a total of n independent copies has variance n·Var(X), and dividing by n scales the SD by 1/n. The formula isn't arbitrary — it's this rule.</p></div>
+      <div><h3>Differences are everywhere</h3><p>Profit is revenue minus cost; a gap is one time minus another; a treatment effect is one group minus another. Every one of those needs variances added, not subtracted.</p></div>
+      <div><h3>Independence is the price</h3><p>These rules for variance hold because the variables don't influence each other. When they do, the arithmetic changes — which is exactly why you check independence before adding.</p></div>
+    </div>
+    <p class="why-close">The whole topic reduces to a habit: <span class="mono">handle the means directly, and handle the spread through variance.</span> Add or subtract expected values as the situation asks, add the variances whichever operation you used, square-root at the end, and never add standard deviations. Once that's automatic, two-sample standard errors and the Central Limit Theorem stop looking like new formulas and start looking like this rule applied again.</p>
+  </div>
+</section>
+
+<footer><div class="wrap"><div class="foot">The Combine Ladder · E(X ± Y) = E(X) ± E(Y) · Var(X ± Y) = Var(X) + Var(Y) · SD(aX + b) = |a|·SD(X) · total of n: SD = √n·SD(X)</div></div></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   ===== CORE LOGIC START  (pure; extracted for stress-testing) =====
+   ================================================================= */
+
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function r3(x){ var s=x<0?-1:1, v=Math.abs(x)*1000; return s*Math.round(v+1e-9)/1000; }
+function fmt(x){ var v=Math.round(x*1000)/1000; return (Math.abs(v-Math.round(v))<1e-9)? String(Math.round(v)) : String(v); }
+function pickOpts(correct, distractors){
+  var opts=[correct], i;
+  for(i=0;i<distractors.length && opts.length<4;i++){ if(opts.indexOf(distractors[i])===-1) opts.push(distractors[i]); }
+  var packed=opts.map(function(o,idx){return {o:o,c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+
+/* ---------- normal CDF (for the normal-combination rung) ---------- */
+function erfc(x){
+  var z=Math.abs(x), t=1/(1+0.5*z);
+  var ans=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(0.37409196+t*(0.09678418+
+    t*(-0.18628806+t*(0.27886807+t*(-1.13520398+t*(1.48851587+t*(-0.82215223+t*0.17087277)))))))));
+  return x>=0?ans:2-ans;
+}
+function normCdf(z){ return 0.5*erfc(-z/Math.SQRT2); }
+
+/* ---------- two-variable contexts ---------- */
+var CTX=[
+  {ctx:'Coffee shop', x:'morning sales', y:'afternoon sales', unit:'dollars', exR:[180,340], eyR:[120,280], sumName:'total daily sales', diffName:'the amount by which morning sales exceed afternoon sales'},
+  {ctx:'Commute', x:'the drive to the station', y:'the train ride', unit:'minutes', exR:[12,26], eyR:[22,44], sumName:'the total commute time', diffName:'the difference between the two legs'},
+  {ctx:'Shipping', x:'the weight of the box', y:'the weight of the contents', unit:'ounces', exR:[8,18], eyR:[24,52], sumName:'the total shipping weight', diffName:'the difference between contents and box'},
+  {ctx:'Small business', x:'weekly revenue', y:'weekly cost', unit:'dollars', exR:[900,1600], eyR:[400,850], sumName:'total money moved', diffName:'the weekly profit'},
+  {ctx:'Assembly line', x:'the time to cut a part', y:'the time to finish it', unit:'seconds', exR:[30,70], eyR:[40,90], sumName:'the total production time', diffName:'the difference between the two stages'},
+  {ctx:'Two runners', x:"Ana's race time", y:"Ben's race time", unit:'seconds', exR:[210,260], eyR:[205,265], sumName:'their combined time', diffName:'the gap between their times'},
+  {ctx:'Bookstore', x:'spending on textbooks', y:'spending on supplies', unit:'dollars', exR:[180,320], eyR:[40,110], sumName:'total spending', diffName:'the amount by which textbook spending exceeds supplies'}
+];
+var SDPOOL=[2,3,4,5,6,7,8,9,10,12,15];
+
+function genPair(opts){
+  opts=opts||{};
+  var c=pick(CTX), op=opts.op||pick(['+','-']);
+  var ex=c.exR[0]+Math.floor(Math.random()*(c.exR[1]-c.exR[0]+1));
+  var ey=c.eyR[0]+Math.floor(Math.random()*(c.eyR[1]-c.eyR[0]+1));
+  var sx=pick(SDPOOL), sy=pick(SDPOOL);
+  return {ctx:c.ctx, xLab:c.x, yLab:c.y, unit:c.unit, op:op,
+    comboName: op==='+'?c.sumName:c.diffName,
+    ex:ex, ey:ey, sx:sx, sy:sy, varX:sx*sx, varY:sy*sy,
+    eCombo: op==='+'? ex+ey : ex-ey,
+    varCombo: sx*sx+sy*sy,
+    sdCombo: Math.sqrt(sx*sx+sy*sy)};
+}
+
+/* ---------- linear transformations ---------- */
+function genLinear(mode){
+  var c=pick(CTX);
+  var ex=c.exR[0]+Math.floor(Math.random()*(c.exR[1]-c.exR[0]+1));
+  var sx=pick(SDPOOL);
+  var a=1, b=0;
+  if(mode==='shift'){ b=pick([5,10,12,15,20,25,-5,-10,-15]); }
+  else if(mode==='scale'){ a=pick([2,3,4,5,1.5,0.5,-1,-2]); }
+  else { a=pick([2,3,4,1.5,0.5,-2]); b=pick([5,10,15,20,-10]); }
+  return {ctx:c.ctx, xLab:c.x, unit:c.unit, ex:ex, sx:sx, varX:sx*sx, a:a, b:b,
+    eNew: a*ex+b, sdNew: Math.abs(a)*sx, varNew: a*a*sx*sx};
+}
+
+/* ---------- n independent copies ---------- */
+function genCopies(){
+  var c=pick(CTX);
+  var ex=c.exR[0]+Math.floor(Math.random()*(c.exR[1]-c.exR[0]+1));
+  var sx=pick(SDPOOL);
+  var n=pick([2,3,4,5,6,9,10]);
+  return {ctx:c.ctx, xLab:c.x, unit:c.unit, ex:ex, sx:sx, n:n,
+    eTotal:n*ex, varTotal:n*sx*sx, sdTotal:Math.sqrt(n)*sx,
+    eMult:n*ex, varMult:n*n*sx*sx, sdMult:n*sx};
+}
+function copiesCompareOpts(){
+  return pickOpts('n times one item, because its SD is n\u00b7SD(X) while the total of n items is only \u221an\u00b7SD(X).',
+    ['The total of n separate items, because it involves more variables.',
+     'They have exactly the same standard deviation.',
+     'Neither \u2014 standard deviation does not change under either operation.']);
+}
+
+/* ---------- normal combination ---------- */
+var PYTH=[[3,4],[4,3],[6,8],[8,6],[9,12],[12,9],[12,16],[16,12],[15,20],[20,15],[7,24],[24,7]];
+function genNormalCombo(){
+  for(var tries=0;tries<500;tries++){
+    var c=pick(CTX), pr=pick(PYTH), sx=pr[0], sy=pr[1];
+    var sd=Math.round(Math.sqrt(sx*sx+sy*sy));
+    if(Math.abs(sd*sd-(sx*sx+sy*sy))>1e-9) continue;
+    var op=pick(['+','-']);
+    var ex=c.exR[0]+Math.floor(Math.random()*(c.exR[1]-c.exR[0]+1));
+    var ey=c.eyR[0]+Math.floor(Math.random()*(c.eyR[1]-c.eyR[0]+1));
+    var mu = op==='+'? ex+ey : ex-ey;
+    var z=pick([0.5,0.75,1,1.25,1.5,1.75,2,0.4,0.6,0.8,1.2,1.4,1.6,1.8]);
+    var sign=Math.random()<0.5?1:-1;
+    var delta=z*sd*sign;
+    if(Math.abs(delta-Math.round(delta))>1e-9) continue;      /* cutoff must be a whole number */
+    var cut=mu+delta;
+    var zz=(cut-mu)/sd;
+    if(Math.abs(zz*100-Math.round(zz*100))>1e-9) continue;      /* z exact to 2 dp */
+    var tail=pick(['left','right']);
+    var p = tail==='left'? normCdf(zz) : 1-normCdf(zz);
+    var scaled=p*10000, frac=scaled-Math.floor(scaled);
+    if(Math.abs(frac-0.5)<0.06) continue;                      /* avoid 4-dp rounding ties */
+    if(p<0.0002||p>0.9998) continue;
+    return {ctx:c.ctx, xLab:c.x, yLab:c.y, unit:c.unit, op:op, sx:sx, sy:sy,
+      ex:ex, ey:ey, mu:mu, sd:sd, cut:cut, z:Math.round(zz*100)/100, tail:tail,
+      p:Math.round(p*10000)/10000,
+      comboName: op==='+'? c.sumName : c.diffName};
+  }
+  return null;
+}
+
+/* ---------- conceptual option builders ---------- */
+function meanRuleOpts(op){
+  return pickOpts(op==='+'?'E(X) + E(Y)':'E(X) \u2212 E(Y)',
+    [op==='+'?'E(X) \u2212 E(Y)':'E(X) + E(Y)', 'E(X) \u00d7 E(Y)', '\u221a(E(X) + E(Y))']);
+}
+function varRuleOpts(){
+  return pickOpts('Var(X) + Var(Y) \u2014 the variances add either way.',
+    ['Var(X) \u2212 Var(Y) \u2014 the variances subtract.',
+     'SD(X) + SD(Y) \u2014 the standard deviations add.',
+     'Var(X) \u00d7 Var(Y) \u2014 the variances multiply.']);
+}
+function sdTrapOpts(sx,sy){
+  var right=r3(Math.sqrt(sx*sx+sy*sy));
+  return pickOpts(fmt(right)+'  (\u221a(Var(X) + Var(Y)))',
+    [fmt(sx+sy)+'  (SD(X) + SD(Y))',
+     fmt(r3(Math.abs(sx-sy)))+'  (SD(X) \u2212 SD(Y))',
+     fmt(r3(sx*sx+sy*sy))+'  (the variance, not the SD)']);
+}
+function independenceOpts(mode){
+  if(mode==='why') return pickOpts('Only when the two variables are independent.',
+    ['Always, no condition is needed.','Only when the two variables have equal means.','Only when both variables are normal.']);
+  if(mode==='which') return pickOpts('Two separate randomly chosen items measured independently.',
+    ['The same item measured twice under identical conditions.',
+     'A total and one of its own parts.',
+     'A value and that same value doubled.']);
+  return pickOpts('Nothing about the means \u2014 E(X ± Y) still works; only the variance rule fails.',
+    ['Both the mean and variance rules fail.','The mean rule fails but the variance rule still holds.','All expected values become undefined.']);
+}
+
+/* ---------- variance stacking SVG ---------- */
+function svgStack(varX, varY, op){
+  var W=470,H=190, base=H-30, top=22, colW=74;
+  var total=varX+varY, maxv=Math.max(total,1);
+  function h(v){ return Math.max(3,(v/maxv)*(base-top)); }
+  var x1=52, x2=170, x3=330;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="stack" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="variance stacking">';
+  s+='<line x1="20" y1="'+base+'" x2="'+(W-20)+'" y2="'+base+'" class="base"/>';
+  /* Var(X) */
+  var hx=h(varX);
+  s+='<rect x="'+x1+'" y="'+(base-hx)+'" width="'+colW+'" height="'+hx+'" class="vx" rx="3"/>';
+  s+='<text x="'+(x1+colW/2)+'" y="'+(base-hx/2+4)+'" class="val">'+fmt(varX)+'</text>';
+  s+='<text x="'+(x1+colW/2)+'" y="'+(base+15)+'" class="lab">Var(X)</text>';
+  /* Var(Y) */
+  var hy=h(varY);
+  s+='<rect x="'+x2+'" y="'+(base-hy)+'" width="'+colW+'" height="'+hy+'" class="vy" rx="3"/>';
+  s+='<text x="'+(x2+colW/2)+'" y="'+(base-hy/2+4)+'" class="val">'+fmt(varY)+'</text>';
+  s+='<text x="'+(x2+colW/2)+'" y="'+(base+15)+'" class="lab">Var(Y)</text>';
+  /* signs */
+  s+='<text x="'+((x1+colW+x2)/2)+'" y="'+(base-12)+'" class="opsign">+</text>';
+  s+='<text x="'+((x2+colW+x3)/2)+'" y="'+(base-12)+'" class="opsign">=</text>';
+  /* stacked total */
+  var hty=h(varY), htx=h(varX);
+  s+='<rect x="'+x3+'" y="'+(base-hty)+'" width="'+colW+'" height="'+hty+'" class="vy" rx="3"/>';
+  s+='<rect x="'+x3+'" y="'+(base-hty-htx)+'" width="'+colW+'" height="'+htx+'" class="vx" rx="3"/>';
+  s+='<text x="'+(x3+colW/2)+'" y="'+(base-hty-htx-7)+'" class="tot">'+fmt(varX+varY)+'</text>';
+  s+='<text x="'+(x3+colW/2)+'" y="'+(base+15)+'" class="lab">Var(X '+(op||'\u00b1')+' Y)</text>';
+  s+='</svg>';
+  return s;
+}
+
+if(typeof module!=='undefined' && module.exports){
+  module.exports={ r3:r3, fmt:fmt, normCdf:normCdf, CTX:CTX, SDPOOL:SDPOOL,
+    genPair:genPair, genLinear:genLinear, genCopies:genCopies, genNormalCombo:genNormalCombo,
+    meanRuleOpts:meanRuleOpts, varRuleOpts:varRuleOpts, sdTrapOpts:sdTrapOpts,
+    independenceOpts:independenceOpts, copiesCompareOpts:copiesCompareOpts, svgStack:svgStack };
+}
+/* =================================================================
+   ===== CORE LOGIC END =====
+   ================================================================= */
+
+
+/* ---------------- UI LAYER ---------------- */
+var KEY='combineLadder', NEED=4;
+var state=load();
+function load(){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.rungs) return s; }catch(e){} return {rungs:{}}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+(function(){ var p=genPair(); document.getElementById('heroStack').innerHTML=svgStack(p.varX,p.varY,'\u00b1'); })();
+
+function givens(p){
+  return '<div class="givens">'+
+    '<div class="gcard x"><span class="gn">X = '+p.xLab+'</span>E(X) = '+fmt(p.ex)+'&nbsp; SD(X) = '+fmt(p.sx)+'</div>'+
+    '<div class="gcard y"><span class="gn">Y = '+p.yLab+'</span>E(Y) = '+fmt(p.ey)+'&nbsp; SD(Y) = '+fmt(p.sy)+'</div></div>';
+}
+function opWord(op){ return op==='+'?'X + Y':'X \u2212 Y'; }
+
+var RUNGS=[
+  {
+    id:'mean', title:'Mean of a sum or difference', desc:'E(X ± Y) = E(X) ± E(Y).',
+    strategy:'<p>Expected values behave exactly as you\u2019d hope: <code>E(X + Y) = E(X) + E(Y)</code> and <code>E(X \u2212 Y) = E(X) \u2212 E(Y)</code>. No square roots, no conditions \u2014 this one even holds without independence.</p>',
+    build:function(){ var p=genPair();
+      return {mode:'num',
+        scenario:'<span class="tag">'+p.ctx+'</span>Let X be '+p.xLab+' and Y be '+p.yLab+' (in '+p.unit+'), independent of each other.'+givens(p),
+        ask:'What is E('+opWord(p.op)+')?', fields:[{label:'E('+opWord(p.op)+') =', answer:p.eCombo}]}; }
+  },
+  {
+    id:'var', title:'Variance always adds', desc:'Even for a difference.',
+    strategy:'<p>For <b>independent</b> X and Y, <code>Var(X + Y) = Var(X) + Var(Y)</code> \u2014 and so does <code>Var(X \u2212 Y)</code>. Subtracting the variables does not subtract the variability; both are still wobbling.</p>',
+    build:function(){ var p=genPair(), askRule=Math.random()<0.35;
+      if(askRule){ var o=varRuleOpts();
+        return {mode:'mc', stack:[p.varX,p.varY,p.op],
+          scenario:'<span class="tag">The rule</span>X and Y are independent random variables.',
+          ask:'For independent X and Y, Var('+opWord(p.op)+') equals\u2026', options:o.options, answer:o.answer}; }
+      return {mode:'num', stack:[p.varX,p.varY,p.op],
+        scenario:'<span class="tag">'+p.ctx+'</span>X and Y are independent.'+givens(p),
+        ask:'What is Var('+opWord(p.op)+')?', fields:[{label:'Var('+opWord(p.op)+') =', answer:p.varCombo}]}; }
+  },
+  {
+    id:'sd', title:'Standard deviation of a combination', desc:'Square, add, square-root.',
+    strategy:'<p>Never add standard deviations. Square them to variances, add, then take the square root: <code>SD(X ± Y) = \u221a(SD(X)\u00b2 + SD(Y)\u00b2)</code>. Adding the SDs always gives too big an answer.</p>',
+    build:function(){ var p=genPair(), asMC=Math.random()<0.35;
+      if(asMC){ var o=sdTrapOpts(p.sx,p.sy);
+        return {mode:'mc',
+          scenario:'<span class="tag">'+p.ctx+'</span>X and Y are independent, with SD(X) = '+fmt(p.sx)+' and SD(Y) = '+fmt(p.sy)+'.',
+          ask:'What is SD('+opWord(p.op)+')?', options:o.options, answer:o.answer}; }
+      return {mode:'num',
+        scenario:'<span class="tag">'+p.ctx+'</span>X and Y are independent.'+givens(p),
+        ask:'What is SD('+opWord(p.op)+')? Round to 2 or 3 decimals.', fields:[{label:'SD('+opWord(p.op)+') =', answer:p.sdCombo}]}; }
+  },
+  {
+    id:'shift', title:'Shifting by a constant', desc:'Moves the center, not the spread.',
+    strategy:'<p>Adding a constant slides every value the same distance: <code>E(X + b) = E(X) + b</code>, but <code>SD(X + b) = SD(X)</code>. The distribution moves; its width is untouched.</p>',
+    build:function(){ var L=genLinear('shift');
+      var expr='X '+(L.b<0?'\u2212 '+Math.abs(L.b):'+ '+L.b);
+      return {mode:'num',
+        scenario:'<span class="tag">'+L.ctx+'</span>X is '+L.xLab+' (in '+L.unit+'), with <b>E(X) = '+fmt(L.ex)+'</b> and <b>SD(X) = '+fmt(L.sx)+'</b>. A constant of '+fmt(L.b)+' is added to every value.',
+        ask:'Find E('+expr+') and SD('+expr+').',
+        fields:[{label:'E =', answer:L.eNew},{label:'SD =', answer:L.sdNew}]}; }
+  },
+  {
+    id:'scale', title:'Scaling by a constant', desc:'SD uses |a|; variance uses a².',
+    strategy:'<p>Multiplying stretches everything: <code>E(aX) = a\u00b7E(X)</code>, <code>SD(aX) = |a|\u00b7SD(X)</code>, and <code>Var(aX) = a\u00b2\u00b7Var(X)</code>. The absolute value matters \u2014 a standard deviation is never negative.</p>',
+    build:function(){ var L=genLinear('scale'), wantVar=Math.random()<0.4;
+      var expr=fmt(L.a)+'X';
+      if(wantVar) return {mode:'num',
+        scenario:'<span class="tag">'+L.ctx+'</span>X is '+L.xLab+', with <b>E(X) = '+fmt(L.ex)+'</b> and <b>SD(X) = '+fmt(L.sx)+'</b> (so Var(X) = '+fmt(L.varX)+').',
+        ask:'Find E('+expr+') and Var('+expr+').',
+        fields:[{label:'E =', answer:L.eNew},{label:'Var =', answer:L.varNew}]};
+      return {mode:'num',
+        scenario:'<span class="tag">'+L.ctx+'</span>X is '+L.xLab+', with <b>E(X) = '+fmt(L.ex)+'</b> and <b>SD(X) = '+fmt(L.sx)+'</b>.',
+        ask:'Find E('+expr+') and SD('+expr+').',
+        fields:[{label:'E =', answer:L.eNew},{label:'SD =', answer:L.sdNew}]}; }
+  },
+  {
+    id:'both', title:'Scale and shift together', desc:'aX + b, all at once.',
+    strategy:'<p>Combine the two rules: <code>E(aX + b) = a\u00b7E(X) + b</code> and <code>SD(aX + b) = |a|\u00b7SD(X)</code>. The <b>+ b</b> never affects the spread \u2014 only the multiplier does.</p>',
+    build:function(){ var L=genLinear('both');
+      var expr=fmt(L.a)+'X '+(L.b<0?'\u2212 '+Math.abs(L.b):'+ '+L.b);
+      return {mode:'num',
+        scenario:'<span class="tag">'+L.ctx+'</span>X is '+L.xLab+' (in '+L.unit+'), with <b>E(X) = '+fmt(L.ex)+'</b> and <b>SD(X) = '+fmt(L.sx)+'</b>.',
+        ask:'Find E('+expr+') and SD('+expr+').',
+        fields:[{label:'E =', answer:L.eNew},{label:'SD =', answer:L.sdNew}]}; }
+  },
+  {
+    id:'indep', title:'When can you add variances?', desc:'Independence is the condition.',
+    strategy:'<p>The variance rule <code>Var(X ± Y) = Var(X) + Var(Y)</code> requires the variables to be <b>independent</b> \u2014 knowing one tells you nothing about the other. The <em>mean</em> rule needs no such condition.</p>',
+    build:function(){ var mode=pick(['why','which','fails']), o=independenceOpts(mode);
+      var ask=mode==='why'?'When may you write Var(X + Y) = Var(X) + Var(Y)?':
+              mode==='which'?'Which situation lets you add the variances?':
+              'If the variables are NOT independent, what breaks?';
+      return {mode:'mc', ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'context', title:'A combination in context', desc:'Profit, totals, gaps.',
+    strategy:'<p>Translate the story into X ± Y, then apply both rules. A <b>total</b> is a sum; a <b>profit</b>, <b>gap</b>, or <b>difference</b> is a subtraction \u2014 but the variances add in either case.</p>',
+    build:function(){ var p=genPair();
+      return {mode:'num',
+        scenario:'<span class="tag">'+p.ctx+'</span>X is '+p.xLab+' and Y is '+p.yLab+' (in '+p.unit+'), independent of each other. Consider <b>'+p.comboName+'</b>, which equals '+opWord(p.op)+'.'+givens(p),
+        ask:'Find the mean and standard deviation of '+opWord(p.op)+'.',
+        fields:[{label:'mean =', answer:p.eCombo},{label:'SD =', answer:p.sdCombo}]}; }
+  },
+  {
+    id:'copies', title:'Total of n copies vs. n times one', desc:'√n·SD versus n·SD.',
+    strategy:'<p>The total of <b>n independent items</b> has <code>Var = n\u00b7Var(X)</code>, so <code>SD = \u221an\u00b7SD(X)</code>. But <b>n times a single item</b> is a scaling: <code>SD(nX) = n\u00b7SD(X)</code>. Multiplying one value amplifies its wobble; adding separate values lets them partly cancel.</p>',
+    build:function(){ var C=genCopies(), mode=pick(['total','multiple','compare']);
+      if(mode==='compare'){ var o=copiesCompareOpts();
+        return {mode:'mc',
+          scenario:'<span class="tag">'+C.ctx+'</span>X is '+C.xLab+', with SD(X) = '+fmt(C.sx)+'. Compare the total of <b>'+C.n+' independent items</b> with <b>'+C.n+' times a single item</b>.',
+          ask:'Which has the larger standard deviation?', options:o.options, answer:o.answer}; }
+      if(mode==='total') return {mode:'num',
+        scenario:'<span class="tag">'+C.ctx+'</span>X is '+C.xLab+' (in '+C.unit+'), with <b>E(X) = '+fmt(C.ex)+'</b> and <b>SD(X) = '+fmt(C.sx)+'</b>. Consider the <b>total of '+C.n+' independently chosen items</b>.',
+        ask:'Find the mean and standard deviation of that total.',
+        fields:[{label:'mean =', answer:C.eTotal},{label:'SD =', answer:C.sdTotal}]};
+      return {mode:'num',
+        scenario:'<span class="tag">'+C.ctx+'</span>X is '+C.xLab+' (in '+C.unit+'), with <b>E(X) = '+fmt(C.ex)+'</b> and <b>SD(X) = '+fmt(C.sx)+'</b>. Now consider <b>'+C.n+'X</b> \u2014 that is, '+C.n+' times a <em>single</em> item.',
+        ask:'Find E('+C.n+'X) and SD('+C.n+'X).',
+        fields:[{label:'E =', answer:C.eMult},{label:'SD =', answer:C.sdMult}]}; }
+  },
+  {
+    id:'normal', title:'Combining normal variables', desc:'A sum of independent normals is normal.',
+    strategy:'<p>If X and Y are independent and <b>normal</b>, then X ± Y is also <b>normal</b>, with the mean and SD from the usual rules. So find the combined mean and SD, standardize, and use the z-table as always.</p>',
+    build:function(){ var N=genNormalCombo();
+      if(!N){ var p=genPair(); return {mode:'num',
+        scenario:'<span class="tag">'+p.ctx+'</span>X and Y are independent.'+givens(p),
+        ask:'What is SD('+opWord(p.op)+')?', fields:[{label:'SD =', answer:p.sdCombo}]}; }
+      var word = N.tail==='left' ? 'less than' : 'greater than';
+      return {mode:'num',
+        scenario:'<span class="tag">'+N.ctx+'</span>X is '+N.xLab+' and Y is '+N.yLab+' (in '+N.unit+'), both <b>normal</b> and independent.'+
+          '<div class="givens"><div class="gcard x"><span class="gn">X</span>E(X) = '+fmt(N.ex)+'&nbsp; SD(X) = '+fmt(N.sx)+'</div>'+
+          '<div class="gcard y"><span class="gn">Y</span>E(Y) = '+fmt(N.ey)+'&nbsp; SD(Y) = '+fmt(N.sy)+'</div></div>'+
+          '<div style="margin-top:8px;font-size:13.5px;color:var(--muted)">Let T = '+opWord(N.op)+'.</div>',
+        ask:'Find P(T is '+word+' '+fmt(N.cut)+'). Round the probability to 4 decimals.',
+        fields:[{label:'P =', answer:N.p, tol:0.0015}]}; }
+  },
+  {
+    id:'capstone', title:'Capstone \u2014 full combination', desc:'Mean and SD, then the follow-up. One miss restarts.', cap:true,
+    strategy:'<p>The whole routine: find the mean and standard deviation of a combination, then answer a follow-up about the rules. Both parts must be right, or the streak resets.</p>',
+    build:function(){ var p=genPair(), C=genCopies();
+      var useCopies=Math.random()<0.5, o;
+      if(useCopies){ o=pickOpts(fmt(r3(Math.sqrt(C.n)*p.sx))+'  (\u221an \u00b7 SD(X))',
+          [fmt(r3(C.n*p.sx))+'  (n \u00b7 SD(X))', fmt(p.sx)+'  (unchanged)', fmt(r3(p.sx/Math.sqrt(C.n)))+'  (SD(X) / \u221an)']);
+        var sub2={ask:'2. If instead you totaled '+C.n+' independent copies of X, what would the SD of that total be?', options:o.options, answer:o.answer};
+      } else { o=varRuleOpts();
+        var sub2={ask:'2. For independent X and Y, Var(X \u2212 Y) equals\u2026', options:o.options, answer:o.answer}; }
+      return {mode:'numthenmc',
+        scenario:'<span class="tag">'+p.ctx+'</span>X is '+p.xLab+' and Y is '+p.yLab+' (in '+p.unit+'), independent of each other.'+givens(p),
+        ask:'1. Find the mean and standard deviation of '+opWord(p.op)+'.',
+        fields:[{label:'mean =', answer:p.eCombo},{label:'SD =', answer:p.sdCombo}],
+        sub2:sub2, stackAfter:[p.varX,p.varY,p.op]}; }
+  }
+];
+
+/* ---------- render skeleton ---------- */
+var rungsEl=document.getElementById('rungs');
+RUNGS.forEach(function(def,idx){
+  if(!state.rungs[def.id]) state.rungs[def.id]={streak:0,done:false};
+  var el=document.createElement('div');
+  el.className='rung'+(def.cap?' cap':'')+(state.rungs[def.id].done?' done':'');
+  el.dataset.id=def.id;
+  el.innerHTML='<div class="rung-top"><div class="rung-num">'+(idx+1)+'</div>'+
+    '<div class="rung-title"><div class="rt">'+def.title+'</div><div class="rd">'+def.desc+'</div></div>'+
+    '<div class="rung-badge"><span class="medal">🏅</span><span class="dots"></span><span class="txt"></span></div>'+
+    '<div class="chev">▶</div></div><div class="rung-body"></div>';
+  rungsEl.appendChild(el);
+  el.querySelector('.rung-top').addEventListener('click', function(){ toggleRung(def.id); });
+  renderBadge(def.id);
+});
+function rungEl(id){ return rungsEl.querySelector('.rung[data-id="'+id+'"]'); }
+function rungDef(id){ return RUNGS.filter(function(r){return r.id===id;})[0]; }
+function renderBadge(id){
+  var el=rungEl(id),st=state.rungs[id],dots=el.querySelector('.dots'); dots.innerHTML='';
+  for(var i=0;i<NEED;i++){ var d=document.createElement('span'); d.className='dot-b'+(i<st.streak?' on':''); dots.appendChild(d); }
+  el.querySelector('.txt').textContent=st.done?'earned':(st.streak+'/'+NEED); el.classList.toggle('done',st.done);
+}
+var openId=null;
+function toggleRung(id){
+  var el=rungEl(id);
+  if(el.classList.contains('open')){ el.classList.remove('open'); openId=null; return; }
+  if(openId) rungEl(openId).classList.remove('open');
+  el.classList.add('open'); openId=id; newQuestion(id);
+}
+
+var current={};
+function newQuestion(id){
+  var def=rungDef(id), q=def.build(); current[id]={def:def,q:q};
+  var body=rungEl(id).querySelector('.rung-body');
+  var html='<details class="strategy"><summary>Strategy</summary><div class="inner">'+def.strategy+'</div></details><div class="qwrap">';
+  if(q.scenario) html+='<div class="scenario">'+q.scenario+'</div>';
+  if(q.stack) html+='<div class="vizbox">'+svgStack(q.stack[0],q.stack[1],q.stack[2])+'</div>';
+  if(q.mode==='mc'){
+    html+='<div class="ask">'+q.ask+'</div><div class="choices">';
+    q.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>';
+  } else {
+    html+='<div class="ask">'+q.ask+'</div><div class="numrow">';
+    q.fields.forEach(function(f,i){ html+='<div class="field"><label>'+f.label+'</label><input type="number" step="any" data-i="'+i+'" autocomplete="off"></div>'; });
+    html+='<button class="btn" data-check="1">Check</button></div>';
+    if(q.mode==='numthenmc') html+='<div class="sub2" style="display:none;margin-top:18px"></div>';
+  }
+  html+='<div class="feedback"></div><div class="streak-note"></div></div>';
+  body.innerHTML=html; updateStreakNote(id);
+  if(q.mode==='mc'){ body.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerMC(id, parseInt(c.dataset.i,10)); }); }); }
+  else {
+    var inputs=body.querySelectorAll('.numrow input');
+    body.querySelector('[data-check]').addEventListener('click', function(){ answerNum(id); });
+    inputs.forEach(function(inp,i){ inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ if(i<inputs.length-1) inputs[i+1].focus(); else answerNum(id); } }); });
+    if(inputs[0]) inputs[0].focus();
+  }
+}
+function updateStreakNote(id){ var st=state.rungs[id],note=rungEl(id).querySelector('.streak-note'); if(!note) return;
+  note.textContent=st.done?'✓ Badge earned — keep going for more practice.':(st.streak>0?('Streak: '+st.streak+' of '+NEED):''); }
+function nextBtn(){ return '<div class="next"><button class="btn ghost" data-next="1">Next question →</button></div>'; }
+function wireNext(id){ var b=rungEl(id).querySelector('[data-next]'); if(b) b.addEventListener('click', function(){ newQuestion(id); }); }
+
+function answerMC(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), choices=body.querySelectorAll('.choices .choice');
+  if(choices[0].disabled) return; choices.forEach(function(c){c.disabled=true;});
+  var correct=(choice===q.answer); choices[q.answer].classList.add('correct'); if(!correct) choices[choice].classList.add('wrong');
+  var fb=body.querySelector('.feedback'); fb.className='feedback show '+(correct?'right':'wrong');
+  fb.innerHTML=(correct?'Correct.':'Not quite — the right choice is highlighted.')+nextBtn();
+  wireNext(id); recordResult(id, correct);
+}
+function answerNum(id){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), inputs=body.querySelectorAll('.numrow input');
+  if(inputs[0].disabled) return;
+  var allOk=true;
+  q.fields.forEach(function(f,i){
+    var tol=(f.tol!=null)?f.tol:0.005;
+    var v=parseFloat(inputs[i].value.trim());
+    var ok=!isNaN(v)&&Math.abs(v-f.answer)<=tol+1e-9;
+    inputs[i].classList.toggle('ok',ok); inputs[i].classList.toggle('no',!ok);
+    if(!ok) allOk=false;
+  });
+  inputs.forEach(function(i){i.disabled=true;}); body.querySelector('[data-check]').disabled=true;
+  var fb=body.querySelector('.feedback');
+  if(q.mode==='numthenmc'){
+    cur.ok1=allOk;
+    fb.className='feedback show '+(allOk?'right':'wrong');
+    fb.innerHTML=allOk?'Part 1 correct.':('Not quite. '+q.fields.map(function(f){return f.label+' <span class="mono">'+fmt(f.answer)+'</span>';}).join(',&nbsp; '));
+    var s2=body.querySelector('.sub2'); s2.style.display='block';
+    var html=(q.stackAfter?'<div class="vizbox">'+svgStack(q.stackAfter[0],q.stackAfter[1],q.stackAfter[2])+'</div>':'')+
+      '<div class="ask">'+q.sub2.ask+'</div><div class="choices" data-sub="1">';
+    q.sub2.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>'; s2.innerHTML=html;
+    s2.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap2(id, parseInt(c.dataset.i,10)); }); });
+    return;
+  }
+  fb.className='feedback show '+(allOk?'right':'wrong');
+  var ansTxt=q.fields.map(function(f){ return f.label+' '+fmt(f.answer); }).join(',&nbsp; ');
+  fb.innerHTML=(allOk?'Correct.':'Not quite. <span class="mono">'+ansTxt+'</span>')+nextBtn();
+  wireNext(id); recordResult(id, allOk);
+}
+function answerCap2(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c1=body.querySelectorAll('.choices[data-sub="1"] .choice'); if(c1[0].disabled) return;
+  c1.forEach(function(c){c.disabled=true;});
+  var ok2=(choice===q.sub2.answer); c1[q.sub2.answer].classList.add('correct'); if(!ok2) c1[choice].classList.add('wrong');
+  var both=cur.ok1&&ok2, fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(both?'right':'wrong');
+  fb.innerHTML=(both?'Both correct — combination handled cleanly.':'Not both correct — the streak resets.')+nextBtn();
+  wireNext(id); recordResult(id, both);
+}
+function recordResult(id, correct){
+  var st=state.rungs[id],wasDone=st.done;
+  if(correct){ st.streak++; if(st.streak>=NEED) st.done=true; } else st.streak=0;
+  save(); renderBadge(id); updateStreakNote(id); updateProgress();
+  if(st.done&&!wasDone) celebrate(id);
+}
+function updateProgress(){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  document.getElementById('progLabel').textContent=done+' of '+RUNGS.length+' badges earned';
+  document.getElementById('progFill').style.width=(100*done/RUNGS.length)+'%';
+}
+function celebrate(id){ var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  showToast('🏅 '+(done===RUNGS.length?'All 11 badges — means add, variances stack.':'Badge earned · '+rungDef(id).title)); }
+var toastT; function showToast(t){ var el=document.getElementById('toast'); el.innerHTML=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2600); }
+
+document.addEventListener('keydown', function(e){
+  if(!openId) return; var cur=current[openId]; if(!cur) return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  var n=parseInt(e.key,10); if(isNaN(n)||n<1||n>4) return;
+  var body=rungEl(openId).querySelector('.rung-body');
+  var s2=body.querySelectorAll('.choices[data-sub="1"] .choice');
+  if(s2.length&&!s2[0].disabled){ if(s2[n-1]) answerCap2(openId,n-1); return; }
+  if(cur.q.mode==='mc'){ var cs=body.querySelectorAll('.choices .choice'); if(cs[n-1]&&!cs[0].disabled) answerMC(openId,n-1); }
+});
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!confirm('Reset all progress on the Combine Ladder?')) return;
+  state={rungs:{}}; RUNGS.forEach(function(r){state.rungs[r.id]={streak:0,done:false};});
+  save(); RUNGS.forEach(function(r){renderBadge(r.id);updateStreakNote(r.id);});
+  if(openId) newQuestion(openId); updateProgress(); showToast('Progress reset');
+});
+updateProgress();
+</script>
+</body>
+</html>
