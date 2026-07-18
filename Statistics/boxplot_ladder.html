@@ -1,0 +1,820 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Boxplot Ladder — five numbers, and the picture draws itself</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#282A3A;
+  --paper:#F5F5FA;
+  --surface:#FFFFFF;
+  --line:#E3E2EE;
+  --accent:#4C5BB3;         /* the box */
+  --accent-soft:#DEE1F4;
+  --out:#D95D39;            /* outliers */
+  --out-soft:#FAE2DA;
+  --good:#2E9E51;
+  --good-soft:#E1F3E6;
+  --bad:#C6403D;
+  --bad-soft:#FBE4E3;
+  --muted:#65637A;
+  --shadow:0 1px 2px rgba(40,42,58,.06),0 8px 24px rgba(40,42,58,.06);
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--disp);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin:0}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(245,245,250,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand .glyph{color:var(--accent)}
+.navlinks{margin-left:auto;display:flex;gap:22px;font-size:14px;font-weight:500}
+.navlinks a{color:var(--muted)}.navlinks a:hover{color:var(--ink)}
+@media(max-width:560px){.navlinks{display:none}}
+
+header{padding:66px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+header h1{font-size:clamp(28px,5vw,48px);font-weight:600}
+header h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:660px;margin:20px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+.heroviz{margin:38px 0 6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:26px 22px 18px}
+.heroviz .cap{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:14px;text-align:center}
+.legend{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+.legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.legend .sw.b{background:var(--accent-soft);border:1.5px solid var(--accent)}
+.legend .sw.o{background:var(--out);border-radius:50%}
+
+svg.bp{display:block;width:100%;max-width:520px;height:auto;margin:0 auto}
+.bp .axisline{stroke:var(--muted);stroke-width:1.1;opacity:.55}
+.bp .tick{stroke:var(--muted);stroke-width:1;opacity:.4}
+.bp .ticklab{font-family:var(--mono);font-size:10px;fill:var(--muted);text-anchor:middle}
+.bp .boxrect{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.8}
+.bp .medline{stroke:var(--accent);stroke-width:3}
+.bp .whisk{stroke:var(--accent);stroke-width:1.8}
+.bp .outdot{fill:var(--out)}
+.bp .datadot{fill:var(--muted);opacity:.5}
+.bp .fenceline{stroke:var(--out);stroke-width:1.4;stroke-dasharray:4 3;opacity:.85}
+.bp .fencelab{font-family:var(--mono);font-size:9.5px;fill:var(--out);text-anchor:middle}
+.bp .serieslab{font-family:var(--mono);font-size:11px;fill:var(--muted);text-anchor:end}
+
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+section h2{font-size:clamp(23px,3.4vw,31px);margin-bottom:8px}
+.sec-sub{color:var(--muted);max-width:660px;margin:0 0 30px}
+
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:680px){.trio{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card .n{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+.card h3{font-size:17px;margin:10px 0 6px}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card kbd{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--ink)}
+
+.limits{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+@media(max-width:680px){.limits{grid-template-columns:1fr}}
+.lbox{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.lbox.o{border-left-color:var(--out)}
+.lbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:5px}
+.lbox .d{font-size:13.5px;color:var(--muted)}
+.lbox code{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12.5px;color:var(--accent)}
+
+.callout{display:flex;gap:16px;background:var(--accent-soft);border:1px solid #B9C0E6;border-radius:14px;padding:20px 22px;margin-top:26px}
+.callout .hand{font-size:22px;line-height:1.2}
+.callout p{margin:0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout .mono{color:#39469a}
+
+.ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.progress-wrap{width:100%;margin:16px 0 26px}
+.progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.progress-track{height:9px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.reset{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--bad);color:var(--bad)}
+
+.rungs{display:flex;flex-direction:column;gap:14px}
+.rung{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+.rung.cap{border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--shadow)}
+.rung-top{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;user-select:none}
+.rung-num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.rung.done .rung-num{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rung.cap .rung-num{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.rung-title{flex:1 1 auto}
+.rung-title .rt{font-family:var(--disp);font-weight:600;font-size:16px}
+.rung-title .rd{font-size:13px;color:var(--muted);margin-top:1px}
+.rung-badge{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.dots{display:flex;gap:4px}
+.dot-b{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dot-b.on{background:var(--accent)}
+.rung.done .dot-b.on{background:var(--good)}
+.chev{transition:transform .25s;color:var(--muted);font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.medal{display:none}.rung.done .medal{display:inline}
+.rung.done .rung-badge .txt{color:var(--good)}
+.rung-body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+.rung.open .rung-body{display:block}
+
+.strategy{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:18px 0;overflow:hidden}
+.strategy summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--accent);list-style:none;display:flex;align-items:center;gap:8px}
+.strategy summary::-webkit-details-marker{display:none}
+.strategy summary::before{content:"▸";transition:transform .2s;display:inline-block}
+.strategy[open] summary::before{transform:rotate(90deg)}
+.strategy .inner{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+.strategy .inner p{margin:.5em 0}
+.strategy code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--accent)}
+
+.scenario{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:15px;margin-bottom:16px}
+.scenario .tag{font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:8px}
+.scenario b{color:var(--ink)}
+.dataline{font-family:var(--mono);font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-top:10px;word-spacing:2px;line-height:1.9}
+.ask{font-weight:600;font-family:var(--disp);font-size:16px;margin:4px 0 14px}
+.ask .hl{color:var(--accent)}
+.vizbox{margin:8px 0 16px}
+
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:14.5px;font-family:var(--body);color:var(--ink);transition:.12s}
+.choice:hover{border-color:var(--accent)}
+.choice .key{flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.choice .mono{font-family:var(--mono)}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .key{background:var(--good);border-color:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.choice:disabled{cursor:default}
+
+.numrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.field input{font-family:var(--mono);font-size:16px;width:104px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);outline:none}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field input.ok{border-color:var(--good);background:var(--good-soft)}
+.field input.no{border-color:var(--bad);background:var(--bad-soft)}
+.btn{font-family:var(--disp);font-weight:600;font-size:14.5px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
+.btn:hover{background:#3e4c9c}
+.btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--accent)}
+.feedback{margin-top:15px;font-size:14.5px;display:none;border-radius:10px;padding:12px 15px}
+.feedback.show{display:block}
+.feedback.right{background:var(--good-soft);border:1px solid var(--good);color:#1c6b37}
+.feedback.wrong{background:var(--bad-soft);border:1px solid var(--bad);color:#96302d}
+.feedback .mono{font-weight:700}
+.feedback .next{margin-top:9px}
+.streak-note{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:12px}
+
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:680px){.why-grid{grid-template-columns:1fr}}
+.why-grid h3{font-size:16px;margin-bottom:6px;color:var(--accent)}
+.why-grid p{font-size:14px;color:var(--muted);margin:0}
+.why-close{font-size:15px;color:var(--ink);max-width:690px}
+.why-close .mono{color:var(--accent)}
+
+footer{padding:30px 0 50px;border-top:1px solid var(--line)}
+.foot{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-family:var(--disp);font-weight:600;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:.35s;z-index:80;display:flex;gap:10px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="glyph">⊟</span> The Boxplot Ladder</div>
+    <div class="navlinks"><a href="#how">How it works</a><a href="#ladder">The ladder</a><a href="#why">Why it matters</a></div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Five-number summary · boxplots · outliers</div>
+    <h1>Five numbers, and <em>the picture draws itself.</em></h1>
+    <p class="lede">Minimum, Q1, median, Q3, maximum — that's the entire summary. The box spans the middle half of the data, the line inside marks the median, and the whiskers reach out to the rest. Anything more than <b>1.5 IQRs</b> beyond the box stops being part of the whisker and gets plotted as its own dot: an <b>outlier</b>. Learn to build those five numbers and you can read any distribution's center, spread, and skew at a glance.</p>
+
+    <div class="heroviz">
+      <div class="cap">A modified boxplot</div>
+      <div id="heroBox"></div>
+      <div class="legend"><span><span class="sw b"></span>middle 50% (Q1 to Q3)</span><span><span class="sw o"></span>outlier beyond a fence</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Build the five numbers, then read the picture</h2>
+    <p class="sec-sub">Eleven rungs run from ordering a data list to comparing two distributions side by side. Unlike the inference ladders, you compute everything here yourself — the numbers are small and the arithmetic is honest.</p>
+    <div class="trio">
+      <div class="card"><div class="n">01</div><h3>Order first, always</h3><p>Every quartile depends on sorted data. Sort the list, find the median, then find the medians of the two halves — <b>leaving the median out</b> of both.</p></div>
+      <div class="card"><div class="n">02</div><h3>Earn each badge</h3><p><b>Four in a row</b> earns a rung's badge. Click a choice or press <kbd>1</kbd>–<kbd>4</kbd>; type numbers and press <kbd>Enter</kbd> to move between boxes.</p></div>
+      <div class="card"><div class="n">03</div><h3>Fences find outliers</h3><p>Compute <b>Q1 − 1.5·IQR</b> and <b>Q3 + 1.5·IQR</b>. Any value outside those fences is an outlier and gets its own dot.</p></div>
+    </div>
+
+    <div style="margin-top:34px">
+      <div class="sec-eyebrow">The two rules that matter</div>
+      <div class="limits">
+        <div class="lbox"><div class="t">Quartiles</div><div class="d">Q1 is the median of the values <em>below</em> the median; Q3 is the median of the values <em>above</em> it. When n is odd, the median itself belongs to <b>neither</b> half. <code>IQR = Q3 − Q1</code>.</div></div>
+        <div class="lbox o"><div class="t">The 1.5 × IQR rule</div><div class="d">Fences at <code>Q1 − 1.5·IQR</code> and <code>Q3 + 1.5·IQR</code>. Values outside are outliers, drawn as dots; whiskers stop at the most extreme value that is <em>not</em> an outlier.</div></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="hand">📏</div>
+      <p><b>A boxplot hides the shape but shows the skeleton.</b> You can't see gaps, clusters, or how many values sit in one spot — a boxplot of a bell curve and of a two-humped distribution can look identical. What it does show beautifully is <span class="mono">center, spread, skew, and outliers</span>, which is exactly what you need when comparing several groups at once.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="ladder-head"><div><div class="sec-eyebrow">The ladder</div><h2>Pick a rung and practice</h2></div><button class="reset" id="resetBtn">Reset progress</button></div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span id="progLabel">0 of 11 badges earned</span><span>4 in a row = badge</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow">Why it matters</div>
+    <h2>The fastest honest picture of a distribution</h2>
+    <div class="why-grid">
+      <div><h3>Comparison is the point</h3><p>One boxplot is useful; five stacked side by side are powerful. Comparing salaries across departments or scores across sections is where boxplots beat every other graph.</p></div>
+      <div><h3>Outliers are information</h3><p>The 1.5 IQR rule flags unusual values automatically. Sometimes it's a typo; sometimes it's the most interesting data point you have. Either way you want to know.</p></div>
+      <div><h3>Resistance decides the summary</h3><p>The median and IQR barely move when one value goes extreme. That's why skewed data with outliers gets reported with median and IQR, not mean and standard deviation.</p></div>
+    </div>
+    <p class="why-close">This whole topic is one habit and one rule: <span class="mono">sort, split, and check the fences.</span> Sort the data and take the median; split at the median and take the median of each half for Q1 and Q3; subtract for the IQR; step 1.5 IQRs past each side of the box to see whether anything falls outside. What's left is a picture you can read in a second — and compare against another one just as fast.</p>
+  </div>
+</section>
+
+<footer><div class="wrap"><div class="foot">The Boxplot Ladder · min · Q1 · median · Q3 · max · IQR = Q3 − Q1 · outlier if outside Q1 − 1.5·IQR or Q3 + 1.5·IQR</div></div></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   ===== CORE LOGIC START  (pure; extracted for stress-testing) =====
+   ================================================================= */
+
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function num(x){ return (Math.round(x*100)/100); }
+function fmt(x){ var v=num(x); return (Math.abs(v-Math.round(v))<1e-9)? String(Math.round(v)) : String(v); }
+function pickOpts(correct, distractors){
+  var opts=[correct], i;
+  for(i=0;i<distractors.length && opts.length<4;i++){ if(opts.indexOf(distractors[i])===-1) opts.push(distractors[i]); }
+  var packed=opts.map(function(o,idx){return {o:o,c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+function numOpts(correct, distractors){
+  var seen={}, opts=[correct], i; seen[fmt(correct)]=1;
+  for(i=0;i<distractors.length && opts.length<4;i++){
+    var v=num(distractors[i]);
+    if(!seen[fmt(v)]){ seen[fmt(v)]=1; opts.push(v); }
+  }
+  var k=1;
+  while(opts.length<4){ var c=num(correct+k); if(!seen[fmt(c)]){seen[fmt(c)]=1;opts.push(c);} k++; if(k>60)break; }
+  var packed=opts.map(function(o,idx){return {o:fmt(o),c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans, correct:num(correct)};
+}
+
+/* ---------- five-number summary (median of halves, median EXCLUDED) ---------- */
+function medianOf(sorted){
+  var n=sorted.length;
+  if(n===0) return null;
+  return (n%2===1)? sorted[(n-1)/2] : (sorted[n/2-1]+sorted[n/2])/2;
+}
+function summarize(arr){
+  var s=arr.slice().sort(function(a,b){return a-b;}), n=s.length;
+  var med=medianOf(s), lower, upper;
+  if(n%2===0){ lower=s.slice(0,n/2); upper=s.slice(n/2); }
+  else { lower=s.slice(0,(n-1)/2); upper=s.slice((n+1)/2); }
+  var q1=medianOf(lower), q3=medianOf(upper), iqr=q3-q1;
+  var lf=q1-1.5*iqr, hf=q3+1.5*iqr;
+  var outliers=[], inliers=[], i;
+  for(i=0;i<n;i++){ if(s[i]<lf || s[i]>hf) outliers.push(s[i]); else inliers.push(s[i]); }
+  return {sorted:s, n:n, min:s[0], max:s[n-1], med:med, q1:q1, q3:q3, iqr:iqr,
+    lf:num(lf), hf:num(hf), outliers:outliers, lower:lower, upper:upper,
+    whiskLo:inliers[0], whiskHi:inliers[inliers.length-1], range:s[n-1]-s[0]};
+}
+
+/* ---------- contexts ---------- */
+var CTX=[
+  {ctx:'Quiz scores', unit:'points', noun:'scores', base:[55,95]},
+  {ctx:'Commute times', unit:'minutes', noun:'commute times', base:[12,45]},
+  {ctx:'Plant heights', unit:'cm', noun:'heights', base:[18,52]},
+  {ctx:'Daily customers', unit:'customers', noun:'daily counts', base:[24,68]},
+  {ctx:'Textbook prices', unit:'dollars', noun:'prices', base:[42,96]},
+  {ctx:'Ages at a workshop', unit:'years', noun:'ages', base:[19,58]},
+  {ctx:'Rainfall', unit:'mm', noun:'daily totals', base:[8,40]},
+  {ctx:'Service calls', unit:'calls', noun:'weekly totals', base:[15,48]}
+];
+
+/* margin so no value sits on or near a fence, and quartiles stay clean */
+function cleanSummary(s){
+  if(s.iqr<=0) return false;
+  if(Math.abs(s.iqr-Math.round(s.iqr))>1e-9) return false;   /* integer IQR -> tidy fences */
+  var i;
+  for(i=0;i<s.n;i++){
+    if(Math.abs(s.sorted[i]-s.lf)<0.75) return false;
+    if(Math.abs(s.sorted[i]-s.hf)<0.75) return false;
+  }
+  return true;
+}
+/* generate a dataset with a required number of outliers (0, or 1-2) */
+function genData(opts){
+  opts=opts||{};
+  var wantOut = opts.outliers==null ? pick([0,0,1,1,2]) : opts.outliers;
+  for(var tries=0;tries<600;tries++){
+    var c=pick(CTX);
+    var n = opts.n || (8+Math.floor(Math.random()*8));           /* 8..15 */
+    var lo=c.base[0], hi=c.base[1];
+    var k = wantOut>0 ? n-wantOut : n;
+    if(k<7) continue;
+    var core=[], i;
+    var spanLo=lo+Math.floor(Math.random()*6), spanHi=hi-Math.floor(Math.random()*6);
+    if(spanHi-spanLo<10) continue;
+    for(i=0;i<k;i++) core.push(spanLo+Math.floor(Math.random()*(spanHi-spanLo+1)));
+    var vals=core.slice();
+    if(wantOut>0){
+      var base=summarize(core);
+      if(base.iqr<=0) continue;
+      for(i=0;i<wantOut;i++){
+        var high=Math.random()<0.5;
+        var push=Math.ceil(base.iqr*1.5)+2+Math.floor(Math.random()*Math.max(2,base.iqr));
+        vals.push(high? Math.round(base.q3+push) : Math.round(base.q1-push));
+      }
+    }
+    var s=summarize(vals);
+    if(s.outliers.length!==wantOut) continue;
+    if(!cleanSummary(s)) continue;
+    if(s.min<0) continue;
+    if(s.range<8) continue;
+    return {ctx:c.ctx, unit:c.unit, noun:c.noun, values:shuffle(vals.slice()), sum:s};
+  }
+  return null;
+}
+
+/* ---------- synthetic five-number summaries for shape reading ---------- */
+function genShape(kind){
+  for(var tries=0;tries<400;tries++){
+    var med=30+Math.floor(Math.random()*30);
+    var lBox, rBox, lWhisk, rWhisk;
+    if(kind==='symmetric'){
+      lBox=5+Math.floor(Math.random()*6); rBox=lBox+(Math.random()<0.5?0:(Math.random()<0.5?1:-1));
+      lWhisk=8+Math.floor(Math.random()*7); rWhisk=lWhisk+(Math.random()<0.5?0:(Math.random()<0.5?1:-1));
+      if(rBox<3||rWhisk<4) continue;
+      if(Math.abs(rBox-lBox)>1 || Math.abs(rWhisk-lWhisk)>1) continue;
+    } else if(kind==='right'){
+      lBox=4+Math.floor(Math.random()*4); rBox=Math.round(lBox*(2+Math.random()*1.5));
+      lWhisk=5+Math.floor(Math.random()*4); rWhisk=Math.round(lWhisk*(2.4+Math.random()*1.6));
+      if(rBox<lBox*1.8 || rWhisk<lWhisk*2) continue;
+    } else {
+      rBox=4+Math.floor(Math.random()*4); lBox=Math.round(rBox*(2+Math.random()*1.5));
+      rWhisk=5+Math.floor(Math.random()*4); lWhisk=Math.round(rWhisk*(2.4+Math.random()*1.6));
+      if(lBox<rBox*1.8 || lWhisk<rWhisk*2) continue;
+    }
+    var q1=med-lBox, q3=med+rBox, mn=q1-lWhisk, mx=q3+rWhisk;
+    if(mn<0) continue;
+    if(!(mn<q1 && q1<med && med<q3 && q3<mx)) continue;
+    var c=pick(CTX);
+    return {kind:kind, ctx:c.ctx, unit:c.unit,
+      sum:{min:mn,q1:q1,med:med,q3:q3,max:mx,iqr:q3-q1,outliers:[],whiskLo:mn,whiskHi:mx,n:null,sorted:null,range:mx-mn}};
+  }
+  return null;
+}
+function shapeOpts(kind){
+  var lab={symmetric:'Roughly symmetric',right:'Skewed to the right',left:'Skewed to the left'};
+  var all=['Roughly symmetric','Skewed to the right','Skewed to the left'];
+  var packed=all.map(function(o){ return {o:o,c:o===lab[kind]}; }); shuffle(packed);
+  var ans=0; for(var i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+
+/* ---------- reading a boxplot ---------- */
+function readOpts(s, mode){
+  if(mode==='q1') return numOpts(s.q1,[s.med,s.q3,s.min]);
+  if(mode==='q3') return numOpts(s.q3,[s.med,s.q1,s.max]);
+  if(mode==='med') return numOpts(s.med,[s.q1,s.q3,(s.min+s.max)/2]);
+  if(mode==='iqr') return numOpts(s.iqr,[s.max-s.min,s.q3-s.med,s.med-s.q1]);
+  return numOpts(s.max-s.min,[s.iqr,s.q3-s.min,s.max-s.q1]); /* range */
+}
+function pctOpts(mode){
+  if(mode==='box') return pickOpts('About 50%',['About 25%','About 75%','About 100%']);
+  if(mode==='aboveQ3') return pickOpts('About 25%',['About 50%','About 75%','About 10%']);
+  if(mode==='belowMed') return pickOpts('About 50%',['About 25%','About 75%','About 33%']);
+  return pickOpts('About 25%',['About 50%','About 75%','About 12.5%']); /* medToQ3 */
+}
+
+/* ---------- which summary to report ---------- */
+function summaryChoiceOpts(useMedian){
+  return pickOpts(useMedian?'The median and IQR \u2014 they resist outliers and skew.':'The mean and standard deviation \u2014 the distribution is roughly symmetric with no outliers.',
+    [useMedian?'The mean and standard deviation \u2014 the distribution is roughly symmetric with no outliers.':'The median and IQR \u2014 they resist outliers and skew.',
+     'The range, since it uses every value.',
+     'The mode, since it is always resistant.']);
+}
+
+/* ---------- comparing two distributions ---------- */
+function genCompare(){
+  for(var tries=0;tries<400;tries++){
+    var a=genData({outliers:0}), b=genData({outliers:0});
+    if(!a||!b) continue;
+    var mode=pick(['median','iqr','range']);
+    var da=a.sum, db=b.sum, diff;
+    if(mode==='median') diff=Math.abs(da.med-db.med);
+    else if(mode==='iqr') diff=Math.abs(da.iqr-db.iqr);
+    else diff=Math.abs(da.range-db.range);
+    if(diff<3) continue;
+    var aWins;
+    if(mode==='median') aWins=da.med>db.med;
+    else if(mode==='iqr') aWins=da.iqr>db.iqr;
+    else aWins=da.range>db.range;
+    return {a:a, b:b, mode:mode, aWins:aWins};
+  }
+  return null;
+}
+function compareOpts(aWins, labA, labB){
+  var packed=[{o:labA,c:aWins},{o:labB,c:!aWins}]; shuffle(packed);
+  var ans=0; for(var i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+
+/* ---------- boxplot SVG ---------- */
+function bpScale(lo,hi,W,m){
+  var span=hi-lo; if(span<=0) span=1;
+  return function(v){ return m+(v-lo)/span*(W-2*m); };
+}
+function niceTicks(lo,hi){
+  var span=hi-lo, raw=span/5, mag=Math.pow(10,Math.floor(Math.log(raw)/Math.LN10));
+  var step=mag; if(raw/mag>=5) step=5*mag; else if(raw/mag>=2) step=2*mag;
+  var start=Math.ceil(lo/step)*step, out=[], v;
+  for(v=start; v<=hi+1e-9; v+=step){ out.push(Math.round(v*100)/100); if(out.length>12) break; }
+  return out;
+}
+function svgBox(sums, opts){
+  opts=opts||{};
+  var list = Object.prototype.toString.call(sums)==='[object Array]' ? sums : [{s:sums,label:opts.label||''}];
+  var W=520, rowH=opts.dots?86:64, H=32+rowH*list.length, m=34;
+  var lo=Infinity, hi=-Infinity, i, j;
+  for(i=0;i<list.length;i++){
+    var s=list[i].s;
+    lo=Math.min(lo, s.min); hi=Math.max(hi, s.max);
+    if(opts.fences){ lo=Math.min(lo,s.lf); hi=Math.max(hi,s.hf); }
+  }
+  var pad=Math.max(1,(hi-lo)*0.1); lo-=pad; hi+=pad;
+  var X=bpScale(lo,hi,W,m);
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" class="bp" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="boxplot">';
+  for(i=0;i<list.length;i++){
+    var s2=list[i].s, cy=20+rowH*i+ (opts.dots?22:20), bh=26;
+    if(opts.fences){
+      svg+='<line x1="'+X(s2.lf).toFixed(1)+'" y1="'+(cy-bh/2-8)+'" x2="'+X(s2.lf).toFixed(1)+'" y2="'+(cy+bh/2+8)+'" class="fenceline"/>';
+      svg+='<line x1="'+X(s2.hf).toFixed(1)+'" y1="'+(cy-bh/2-8)+'" x2="'+X(s2.hf).toFixed(1)+'" y2="'+(cy+bh/2+8)+'" class="fenceline"/>';
+      svg+='<text x="'+X(s2.lf).toFixed(1)+'" y="'+(cy-bh/2-11)+'" class="fencelab">'+fmt(s2.lf)+'</text>';
+      svg+='<text x="'+X(s2.hf).toFixed(1)+'" y="'+(cy-bh/2-11)+'" class="fencelab">'+fmt(s2.hf)+'</text>';
+    }
+    /* whiskers */
+    svg+='<line x1="'+X(s2.whiskLo).toFixed(1)+'" y1="'+cy+'" x2="'+X(s2.q1).toFixed(1)+'" y2="'+cy+'" class="whisk"/>';
+    svg+='<line x1="'+X(s2.q3).toFixed(1)+'" y1="'+cy+'" x2="'+X(s2.whiskHi).toFixed(1)+'" y2="'+cy+'" class="whisk"/>';
+    svg+='<line x1="'+X(s2.whiskLo).toFixed(1)+'" y1="'+(cy-8)+'" x2="'+X(s2.whiskLo).toFixed(1)+'" y2="'+(cy+8)+'" class="whisk"/>';
+    svg+='<line x1="'+X(s2.whiskHi).toFixed(1)+'" y1="'+(cy-8)+'" x2="'+X(s2.whiskHi).toFixed(1)+'" y2="'+(cy+8)+'" class="whisk"/>';
+    /* box */
+    var bx=X(s2.q1), bw=X(s2.q3)-X(s2.q1);
+    svg+='<rect x="'+bx.toFixed(1)+'" y="'+(cy-bh/2)+'" width="'+Math.max(1,bw).toFixed(1)+'" height="'+bh+'" class="boxrect" rx="2"/>';
+    svg+='<line x1="'+X(s2.med).toFixed(1)+'" y1="'+(cy-bh/2)+'" x2="'+X(s2.med).toFixed(1)+'" y2="'+(cy+bh/2)+'" class="medline"/>';
+    /* outliers */
+    for(j=0;j<(s2.outliers||[]).length;j++) svg+='<circle cx="'+X(s2.outliers[j]).toFixed(1)+'" cy="'+cy+'" r="4" class="outdot"/>';
+    /* series label */
+    if(list[i].label) svg+='<text x="'+(m-6)+'" y="'+(cy+4)+'" class="serieslab">'+list[i].label+'</text>';
+    /* raw data dots */
+    if(opts.dots && s2.sorted){
+      for(j=0;j<s2.sorted.length;j++) svg+='<circle cx="'+X(s2.sorted[j]).toFixed(1)+'" cy="'+(cy+30)+'" r="2.6" class="datadot"/>';
+    }
+  }
+  /* axis */
+  var ay=H-14;
+  svg+='<line x1="'+m+'" y1="'+ay+'" x2="'+(W-m)+'" y2="'+ay+'" class="axisline"/>';
+  var ticks=niceTicks(lo,hi);
+  for(i=0;i<ticks.length;i++){
+    svg+='<line x1="'+X(ticks[i]).toFixed(1)+'" y1="'+ay+'" x2="'+X(ticks[i]).toFixed(1)+'" y2="'+(ay+4)+'" class="tick"/>';
+    svg+='<text x="'+X(ticks[i]).toFixed(1)+'" y="'+(ay+13)+'" class="ticklab">'+fmt(ticks[i])+'</text>';
+  }
+  svg+='</svg>'; return svg;
+}
+
+if(typeof module!=='undefined' && module.exports){
+  module.exports={ medianOf:medianOf, summarize:summarize, genData:genData, cleanSummary:cleanSummary,
+    genShape:genShape, shapeOpts:shapeOpts, readOpts:readOpts, pctOpts:pctOpts,
+    summaryChoiceOpts:summaryChoiceOpts, genCompare:genCompare, compareOpts:compareOpts,
+    numOpts:numOpts, fmt:fmt, svgBox:svgBox, CTX:CTX };
+}
+/* =================================================================
+   ===== CORE LOGIC END =====
+   ================================================================= */
+
+
+/* ---------------- UI LAYER ---------------- */
+var KEY='boxplotLadder', NEED=4;
+var state=load();
+function load(){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.rungs) return s; }catch(e){} return {rungs:{}}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+(function(){ var d=genData({outliers:1}) || genData({outliers:0});
+  document.getElementById('heroBox').innerHTML = svgBox(d.sum, {dots:true}); })();
+
+function dataLine(d){ return '<div class="dataline">'+d.values.join('&nbsp; ')+'</div>'; }
+function sortedLine(d){ return '<div class="dataline">'+d.sum.sorted.join('&nbsp; ')+'</div>'; }
+
+var RUNGS=[
+  {
+    id:'median', title:'Order the data, find the median', desc:'Sort first \u2014 always.',
+    strategy:'<p>Sort the values from smallest to largest. If <b>n is odd</b>, the median is the single middle value. If <b>n is even</b>, it\u2019s the average of the two middle values.</p>',
+    build:function(){ var d=genData({outliers:0}); var s=d.sum;
+      return {mode:'num', data:d,
+        scenario:'<span class="tag">'+d.ctx+'</span>These '+s.n+' '+d.noun+' were recorded (in '+d.unit+'), in no particular order:'+dataLine(d),
+        ask:'What is the median?', fields:[{label:'median =', answer:s.med}]}; }
+  },
+  {
+    id:'quartiles', title:'Find Q1 and Q3', desc:'Medians of the halves \u2014 median excluded.',
+    strategy:'<p>Split the sorted data at the median. <b>Q1</b> is the median of the lower half, <b>Q3</b> the median of the upper half. When n is odd, the median value itself goes in <b>neither</b> half.</p>',
+    build:function(){ var d=genData({outliers:0}); var s=d.sum;
+      return {mode:'num', data:d,
+        scenario:'<span class="tag">'+d.ctx+'</span>Sorted, the '+s.n+' '+d.noun+' are:'+sortedLine(d)+
+          '<div style="margin-top:8px;font-size:13.5px;color:var(--muted)">The median is <b>'+fmt(s.med)+'</b>.</div>',
+        ask:'What are Q1 and Q3?', fields:[{label:'Q1 =', answer:s.q1},{label:'Q3 =', answer:s.q3}]}; }
+  },
+  {
+    id:'five', title:'The five-number summary', desc:'Min, Q1, median, Q3, max.',
+    strategy:'<p>All five, in order: the smallest value, Q1, the median, Q3, and the largest value. Together they describe center, spread, and skew \u2014 and they\u2019re everything a boxplot draws.</p>',
+    build:function(){ var d=genData({outliers:0}); var s=d.sum;
+      return {mode:'num', data:d, showBox:true,
+        scenario:'<span class="tag">'+d.ctx+'</span>These '+s.n+' '+d.noun+' were recorded (in '+d.unit+'):'+dataLine(d),
+        ask:'Give the complete five-number summary.',
+        fields:[{label:'min =', answer:s.min},{label:'Q1 =', answer:s.q1},{label:'median =', answer:s.med},{label:'Q3 =', answer:s.q3},{label:'max =', answer:s.max}]}; }
+  },
+  {
+    id:'spread', title:'IQR and range', desc:'The middle half, and the whole span.',
+    strategy:'<p><code>IQR = Q3 \u2212 Q1</code> measures the spread of the <b>middle 50%</b>. <code>Range = max \u2212 min</code> measures the whole span and is badly affected by a single extreme value.</p>',
+    build:function(){ var d=genData({outliers:0}); var s=d.sum, both=Math.random()<0.5;
+      var scen='<span class="tag">'+d.ctx+'</span>The five-number summary is <b>'+[s.min,s.q1,s.med,s.q3,s.max].map(fmt).join(', ')+'</b> ('+d.unit+').';
+      if(both) return {mode:'num', scenario:scen, ask:'Find the IQR and the range.',
+        fields:[{label:'IQR =', answer:s.iqr},{label:'range =', answer:s.max-s.min}]};
+      return {mode:'num', scenario:scen, ask:'What is the IQR?', fields:[{label:'IQR =', answer:s.iqr}]}; }
+  },
+  {
+    id:'fences', title:'The fences', desc:'Q1 \u2212 1.5\u00b7IQR and Q3 + 1.5\u00b7IQR.',
+    strategy:'<p>Step <b>1.5 IQRs</b> below Q1 and above Q3: <code>lower fence = Q1 \u2212 1.5\u00b7IQR</code>, <code>upper fence = Q3 + 1.5\u00b7IQR</code>. Anything outside them is an outlier. The fences are boundaries, not data values \u2014 they may be negative.</p>',
+    build:function(){ var d=genData(); var s=d.sum;
+      return {mode:'num',
+        scenario:'<span class="tag">'+d.ctx+'</span>For this data, <b>Q1 = '+fmt(s.q1)+'</b> and <b>Q3 = '+fmt(s.q3)+'</b>, so the IQR is <b>'+fmt(s.iqr)+'</b>.',
+        ask:'Find both fences.', fields:[{label:'lower fence =', answer:s.lf},{label:'upper fence =', answer:s.hf}]}; }
+  },
+  {
+    id:'outliers', title:'Identify the outliers', desc:'Which values fall outside the fences?',
+    strategy:'<p>Compare every value to the fences. A value is an outlier if it is <b>below the lower fence</b> or <b>above the upper fence</b>. If none are, say so \u2014 "no outliers" is a real answer.</p>',
+    build:function(){ var d=genData(); var s=d.sum;
+      var correct = s.outliers.length===0 ? 'There are no outliers.' : ('Outlier'+(s.outliers.length>1?'s':'')+': '+s.outliers.map(fmt).join(' and '));
+      var distractors=[];
+      if(s.outliers.length===0){
+        distractors.push('Outlier: '+fmt(s.min));
+        distractors.push('Outlier: '+fmt(s.max));
+        distractors.push('Outliers: '+fmt(s.min)+' and '+fmt(s.max));
+      } else {
+        distractors.push('There are no outliers.');
+        var alt = s.outliers.indexOf(s.min)>-1 ? s.max : s.min;
+        distractors.push('Outlier: '+fmt(alt));
+        distractors.push('Outliers: '+fmt(s.min)+' and '+fmt(s.max));
+      }
+      var o=pickOpts(correct, distractors);
+      return {mode:'mc', showBoxFences:s,
+        scenario:'<span class="tag">'+d.ctx+'</span>Sorted values ('+d.unit+'):'+sortedLine(d)+
+          '<div style="margin-top:8px;font-size:13.5px;color:var(--muted)">Q1 = <b>'+fmt(s.q1)+'</b>, Q3 = <b>'+fmt(s.q3)+'</b>, IQR = <b>'+fmt(s.iqr)+'</b>, fences at <b>'+fmt(s.lf)+'</b> and <b>'+fmt(s.hf)+'</b>.</div>',
+        ask:'Which values are outliers?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'read', title:'Read a boxplot', desc:'Pull the numbers off the picture.',
+    strategy:'<p>The box edges are <b>Q1</b> and <b>Q3</b>; the line inside is the <b>median</b>. Whisker ends are the most extreme non-outliers. Remember the quarters: 25% of the data falls in each section, so half of it lies inside the box.</p>',
+    build:function(){ var d=genData({outliers:0}); var s=d.sum;
+      if(Math.random()<0.4){ var pm=pick(['box','aboveQ3','belowMed','medToQ3']), po=pctOpts(pm);
+        var qtext={box:'lies inside the box (between Q1 and Q3)',aboveQ3:'lies above Q3',belowMed:'lies below the median',medToQ3:'lies between the median and Q3'}[pm];
+        return {mode:'mc', showBoxOf:s,
+          scenario:'<span class="tag">'+d.ctx+'</span>The boxplot below summarizes the '+d.noun+'.',
+          ask:'About what percent of the data '+qtext+'?', options:po.options, answer:po.answer}; }
+      var mode=pick(['q1','q3','med','iqr','range']), o=readOpts(s,mode);
+      var lab={q1:'Q1',q3:'Q3',med:'the median',iqr:'the IQR',range:'the range'}[mode];
+      return {mode:'mc', showBoxOf:s,
+        scenario:'<span class="tag">'+d.ctx+'</span>The boxplot below summarizes the '+d.noun+' (in '+d.unit+').',
+        ask:'From the boxplot, what is '+lab+'?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'shape', title:'Shape from a boxplot', desc:'Where the long side is.',
+    strategy:'<p>Compare the two sides. A longer <b>right</b> whisker and a bigger gap from the median to Q3 means <b>skewed right</b>. Longer on the <b>left</b> means <b>skewed left</b>. Roughly equal on both sides means <b>symmetric</b>.</p>',
+    build:function(){ var kind=pick(['symmetric','right','left']), g=genShape(kind), o=shapeOpts(kind);
+      return {mode:'mc', showBoxOf:g.sum,
+        scenario:'<span class="tag">'+g.ctx+'</span>The boxplot below summarizes the data (in '+g.unit+').',
+        ask:'What is the shape of this distribution?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'which', title:'Which summary is best?', desc:'Resistance decides.',
+    strategy:'<p>The <b>median and IQR</b> barely move when a value goes extreme \u2014 use them when the data is <b>skewed or has outliers</b>. The <b>mean and standard deviation</b> use every value, which is fine when the distribution is <b>roughly symmetric with no outliers</b>.</p>',
+    build:function(){ var useMedian=Math.random()<0.5, o=summaryChoiceOpts(useMedian);
+      if(useMedian){ var d=genData({outliers:pick([1,2])}); var s=d.sum;
+        return {mode:'mc', showBoxFences:s,
+          scenario:'<span class="tag">'+d.ctx+'</span>The '+d.noun+' produce this boxplot, which flags '+(s.outliers.length>1?'outliers':'an outlier')+' at <b>'+s.outliers.map(fmt).join(' and ')+'</b> '+d.unit+'.',
+          ask:'Which summary should you report?', options:o.options, answer:o.answer}; }
+      var g=genShape('symmetric');
+      return {mode:'mc', showBoxOf:g.sum,
+        scenario:'<span class="tag">'+g.ctx+'</span>The data produce this roughly symmetric boxplot, with no outliers flagged.',
+        ask:'Which summary should you report?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'compare', title:'Compare two distributions', desc:'Two boxplots, one question.',
+    strategy:'<p>Compare like with like: median against median for <b>center</b>, IQR against IQR (box width) for <b>spread</b>, and overall length for <b>range</b>. Never compare a median to a maximum.</p>',
+    build:function(){ var c=genCompare(); var labA='Group A', labB='Group B';
+      var o=compareOpts(c.aWins, labA, labB);
+      var q={median:'has the higher median?', iqr:'has the larger IQR (wider box)?', range:'has the larger range?'}[c.mode];
+      return {mode:'mc', showTwo:[{s:c.a.sum,label:labA},{s:c.b.sum,label:labB}],
+        scenario:'<span class="tag">Two groups</span>The boxplots below summarize two groups of '+c.a.noun+'.',
+        ask:'Which group '+q, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'capstone', title:'Capstone \u2014 summary and outliers', desc:'Five numbers, then the verdict. One miss restarts.', cap:true,
+    strategy:'<p>The full routine on raw data: sort, find all five numbers, compute the IQR and fences, then decide whether anything falls outside. Both parts must be right, or the streak resets.</p>',
+    build:function(){ var d=genData(); var s=d.sum;
+      var correct = s.outliers.length===0 ? 'No \u2014 every value is inside the fences.' : ('Yes \u2014 '+s.outliers.map(fmt).join(' and ')+(s.outliers.length>1?' are outliers.':' is an outlier.'));
+      var distractors = s.outliers.length===0
+        ? ['Yes \u2014 '+fmt(s.min)+' is an outlier.','Yes \u2014 '+fmt(s.max)+' is an outlier.','Yes \u2014 '+fmt(s.min)+' and '+fmt(s.max)+' are outliers.']
+        : ['No \u2014 every value is inside the fences.','Yes \u2014 '+fmt(s.outliers.indexOf(s.min)>-1?s.max:s.min)+' is an outlier.','Yes \u2014 '+fmt(s.min)+' and '+fmt(s.max)+' are outliers.'];
+      var o=pickOpts(correct, distractors);
+      return {mode:'numthenmc', data:d, capSum:s,
+        scenario:'<span class="tag">'+d.ctx+'</span>These '+s.n+' '+d.noun+' were recorded (in '+d.unit+'):'+dataLine(d),
+        ask:'1. Give the five-number summary.',
+        fields:[{label:'min =', answer:s.min},{label:'Q1 =', answer:s.q1},{label:'median =', answer:s.med},{label:'Q3 =', answer:s.q3},{label:'max =', answer:s.max}],
+        sub2:{ask:'2. Is there an outlier?', options:o.options, answer:o.answer}}; }
+  }
+];
+
+/* ---------- render skeleton ---------- */
+var rungsEl=document.getElementById('rungs');
+RUNGS.forEach(function(def,idx){
+  if(!state.rungs[def.id]) state.rungs[def.id]={streak:0,done:false};
+  var el=document.createElement('div');
+  el.className='rung'+(def.cap?' cap':'')+(state.rungs[def.id].done?' done':'');
+  el.dataset.id=def.id;
+  el.innerHTML='<div class="rung-top"><div class="rung-num">'+(idx+1)+'</div>'+
+    '<div class="rung-title"><div class="rt">'+def.title+'</div><div class="rd">'+def.desc+'</div></div>'+
+    '<div class="rung-badge"><span class="medal">🏅</span><span class="dots"></span><span class="txt"></span></div>'+
+    '<div class="chev">▶</div></div><div class="rung-body"></div>';
+  rungsEl.appendChild(el);
+  el.querySelector('.rung-top').addEventListener('click', function(){ toggleRung(def.id); });
+  renderBadge(def.id);
+});
+function rungEl(id){ return rungsEl.querySelector('.rung[data-id="'+id+'"]'); }
+function rungDef(id){ return RUNGS.filter(function(r){return r.id===id;})[0]; }
+function renderBadge(id){
+  var el=rungEl(id),st=state.rungs[id],dots=el.querySelector('.dots'); dots.innerHTML='';
+  for(var i=0;i<NEED;i++){ var d=document.createElement('span'); d.className='dot-b'+(i<st.streak?' on':''); dots.appendChild(d); }
+  el.querySelector('.txt').textContent=st.done?'earned':(st.streak+'/'+NEED); el.classList.toggle('done',st.done);
+}
+var openId=null;
+function toggleRung(id){
+  var el=rungEl(id);
+  if(el.classList.contains('open')){ el.classList.remove('open'); openId=null; return; }
+  if(openId) rungEl(openId).classList.remove('open');
+  el.classList.add('open'); openId=id; newQuestion(id);
+}
+
+var current={};
+function newQuestion(id){
+  var def=rungDef(id), q=def.build(); current[id]={def:def,q:q};
+  var body=rungEl(id).querySelector('.rung-body');
+  var html='<details class="strategy"><summary>Strategy</summary><div class="inner">'+def.strategy+'</div></details><div class="qwrap">';
+  if(q.scenario) html+='<div class="scenario">'+q.scenario+'</div>';
+  if(q.showBoxOf) html+='<div class="vizbox">'+svgBox(q.showBoxOf,{})+'</div>';
+  if(q.showBoxFences) html+='<div class="vizbox">'+svgBox(q.showBoxFences,{fences:true})+'</div>';
+  if(q.showTwo) html+='<div class="vizbox">'+svgBox(q.showTwo,{})+'</div>';
+  if(q.mode==='mc'){
+    html+='<div class="ask">'+q.ask+'</div><div class="choices">';
+    q.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>';
+  } else {
+    html+='<div class="ask">'+q.ask+'</div><div class="numrow">';
+    q.fields.forEach(function(f,i){ html+='<div class="field"><label>'+f.label+'</label><input type="number" step="any" data-i="'+i+'" autocomplete="off"></div>'; });
+    html+='<button class="btn" data-check="1">Check</button></div>';
+    if(q.mode==='numthenmc') html+='<div class="sub2" style="display:none;margin-top:18px"></div>';
+  }
+  html+='<div class="feedback"></div><div class="streak-note"></div></div>';
+  body.innerHTML=html; updateStreakNote(id);
+  if(q.mode==='mc'){ body.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerMC(id, parseInt(c.dataset.i,10)); }); }); }
+  else {
+    var inputs=body.querySelectorAll('.numrow input');
+    body.querySelector('[data-check]').addEventListener('click', function(){ answerNum(id); });
+    inputs.forEach(function(inp,i){ inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ if(i<inputs.length-1) inputs[i+1].focus(); else answerNum(id); } }); });
+    if(inputs[0]) inputs[0].focus();
+  }
+}
+function updateStreakNote(id){ var st=state.rungs[id],note=rungEl(id).querySelector('.streak-note'); if(!note) return;
+  note.textContent=st.done?'✓ Badge earned — keep going for more practice.':(st.streak>0?('Streak: '+st.streak+' of '+NEED):''); }
+function nextBtn(){ return '<div class="next"><button class="btn ghost" data-next="1">Next question →</button></div>'; }
+function wireNext(id){ var b=rungEl(id).querySelector('[data-next]'); if(b) b.addEventListener('click', function(){ newQuestion(id); }); }
+
+function answerMC(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), choices=body.querySelectorAll('.choices .choice');
+  if(choices[0].disabled) return; choices.forEach(function(c){c.disabled=true;});
+  var correct=(choice===q.answer); choices[q.answer].classList.add('correct'); if(!correct) choices[choice].classList.add('wrong');
+  var fb=body.querySelector('.feedback'); fb.className='feedback show '+(correct?'right':'wrong');
+  fb.innerHTML=(correct?'Correct.':'Not quite — the right choice is highlighted.')+nextBtn();
+  wireNext(id); recordResult(id, correct);
+}
+function answerNum(id){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), inputs=body.querySelectorAll('.numrow input');
+  if(inputs[0].disabled) return;
+  var allOk=true;
+  q.fields.forEach(function(f,i){
+    var v=parseFloat(inputs[i].value.trim());
+    var ok=!isNaN(v)&&Math.abs(v-f.answer)<=0.001;
+    inputs[i].classList.toggle('ok',ok); inputs[i].classList.toggle('no',!ok);
+    if(!ok) allOk=false;
+  });
+  inputs.forEach(function(i){i.disabled=true;}); body.querySelector('[data-check]').disabled=true;
+  var fb=body.querySelector('.feedback');
+  if(q.mode==='numthenmc'){
+    cur.ok1=allOk;
+    fb.className='feedback show '+(allOk?'right':'wrong');
+    fb.innerHTML=allOk?'Summary correct.':('Not quite. Correct summary: <span class="mono">'+q.fields.map(function(f){return fmt(f.answer);}).join(', ')+'</span>.');
+    var s2=body.querySelector('.sub2'); s2.style.display='block';
+    var html='<div class="vizbox">'+svgBox(q.capSum,{fences:true})+'</div><div class="ask">'+q.sub2.ask+'</div><div class="choices" data-sub="1">';
+    q.sub2.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>'; s2.innerHTML=html;
+    s2.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap2(id, parseInt(c.dataset.i,10)); }); });
+    return;
+  }
+  fb.className='feedback show '+(allOk?'right':'wrong');
+  var ansTxt=q.fields.map(function(f){ return f.label+' '+fmt(f.answer); }).join(',&nbsp; ');
+  var viz='';
+  if(q.showBox && q.data) viz='<div class="vizbox" style="margin-top:10px">'+svgBox(q.data.sum,{dots:true})+'</div>';
+  fb.innerHTML=(allOk?'Correct.':'Not quite. <span class="mono">'+ansTxt+'</span>')+viz+nextBtn();
+  wireNext(id); recordResult(id, allOk);
+}
+function answerCap2(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c1=body.querySelectorAll('.choices[data-sub="1"] .choice'); if(c1[0].disabled) return;
+  c1.forEach(function(c){c.disabled=true;});
+  var ok2=(choice===q.sub2.answer); c1[q.sub2.answer].classList.add('correct'); if(!ok2) c1[choice].classList.add('wrong');
+  var both=cur.ok1&&ok2, fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(both?'right':'wrong');
+  fb.innerHTML=(both?'Both correct — summary built and outliers checked.':'Not both correct — the streak resets.')+nextBtn();
+  wireNext(id); recordResult(id, both);
+}
+function recordResult(id, correct){
+  var st=state.rungs[id],wasDone=st.done;
+  if(correct){ st.streak++; if(st.streak>=NEED) st.done=true; } else st.streak=0;
+  save(); renderBadge(id); updateStreakNote(id); updateProgress();
+  if(st.done&&!wasDone) celebrate(id);
+}
+function updateProgress(){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  document.getElementById('progLabel').textContent=done+' of '+RUNGS.length+' badges earned';
+  document.getElementById('progFill').style.width=(100*done/RUNGS.length)+'%';
+}
+function celebrate(id){ var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  showToast('🏅 '+(done===RUNGS.length?'All 11 badges — five numbers, mastered.':'Badge earned · '+rungDef(id).title)); }
+var toastT; function showToast(t){ var el=document.getElementById('toast'); el.innerHTML=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2600); }
+
+document.addEventListener('keydown', function(e){
+  if(!openId) return; var cur=current[openId]; if(!cur) return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  var n=parseInt(e.key,10); if(isNaN(n)||n<1||n>4) return;
+  var body=rungEl(openId).querySelector('.rung-body');
+  var s2=body.querySelectorAll('.choices[data-sub="1"] .choice');
+  if(s2.length&&!s2[0].disabled){ if(s2[n-1]) answerCap2(openId,n-1); return; }
+  if(cur.q.mode==='mc'){ var cs=body.querySelectorAll('.choices .choice'); if(cs[n-1]&&!cs[0].disabled) answerMC(openId,n-1); }
+});
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!confirm('Reset all progress on the Boxplot Ladder?')) return;
+  state={rungs:{}}; RUNGS.forEach(function(r){state.rungs[r.id]={streak:0,done:false};});
+  save(); RUNGS.forEach(function(r){renderBadge(r.id);updateStreakNote(r.id);});
+  if(openId) newQuestion(openId); updateProgress(); showToast('Progress reset');
+});
+updateProgress();
+</script>
+</body>
+</html>
