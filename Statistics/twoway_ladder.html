@@ -1,0 +1,971 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Two-Way Table Ladder — a count means nothing until you ask "out of what?"</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#22303A;
+  --paper:#F4F7F9;
+  --surface:#FFFFFF;
+  --line:#DFE7EC;
+  --accent:#1F5E7A;         /* brand */
+  --accent-soft:#D7E7EE;
+  --row-hi:#FBE9D2;         /* row denominator */
+  --row-bd:#D98E4A;
+  --col-hi:#DDEBDF;         /* column denominator */
+  --col-bd:#5B9E6B;
+  --all-hi:#E3E0F0;         /* grand total */
+  --all-bd:#7A6BA8;
+  --good:#2E9E51;
+  --good-soft:#E1F3E6;
+  --bad:#C6403D;
+  --bad-soft:#FBE4E3;
+  --muted:#5F6E77;
+  --shadow:0 1px 2px rgba(34,48,58,.06),0 8px 24px rgba(34,48,58,.06);
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--disp);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin:0}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(244,247,249,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand .glyph{color:var(--accent)}
+.navlinks{margin-left:auto;display:flex;gap:22px;font-size:14px;font-weight:500}
+.navlinks a{color:var(--muted)}.navlinks a:hover{color:var(--ink)}
+@media(max-width:560px){.navlinks{display:none}}
+
+header{padding:66px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+header h1{font-size:clamp(28px,5vw,48px);font-weight:600}
+header h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:665px;margin:20px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+.heroviz{margin:38px 0 6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:24px 22px 18px}
+.heroviz .cap{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:14px;text-align:center}
+.denkey{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px}
+.denkey span .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.denkey .r .sw{background:var(--row-hi);border:1.5px solid var(--row-bd)}
+.denkey .c .sw{background:var(--col-hi);border:1.5px solid var(--col-bd)}
+.denkey .g .sw{background:var(--all-hi);border:1.5px solid var(--all-bd)}
+
+table.tw{border-collapse:collapse;font-family:var(--mono);font-size:13px;margin:0 auto;min-width:340px}
+table.tw th,table.tw td{border:1px solid var(--line);padding:8px 12px;text-align:center;background:var(--surface)}
+table.tw th{background:#F0F5F7;color:var(--muted);font-weight:700;font-size:12px}
+table.tw td.rh{background:#F0F5F7;color:var(--ink);font-weight:700;text-align:left}
+table.tw td.tot,table.tw th.tot{background:#EDF2F5;color:var(--muted);font-weight:700}
+table.tw td.hiRow{background:var(--row-hi)}
+table.tw td.hiCol{background:var(--col-hi)}
+table.tw td.hiAll{background:var(--all-hi)}
+table.tw td.cell{color:var(--ink);font-weight:700}
+table.tw td.target{outline:2.5px solid var(--accent);outline-offset:-2px;color:var(--accent)}
+table.tw td.blank{background:#FFF6E8;color:var(--row-bd);font-weight:700}
+.twwrap{overflow-x:auto}
+.tcap{font-family:var(--mono);font-size:11.5px;color:var(--muted);text-align:center;margin-top:8px}
+
+svg.seg{display:block;width:100%;max-width:470px;height:auto;margin:0 auto}
+.seg .s0{fill:#1F5E7A}.seg .s1{fill:#E0A458}.seg .s2{fill:#9CBFCF}
+.seg .slab{font-family:var(--mono);font-size:10.5px;fill:#fff;text-anchor:middle;font-weight:700}
+.seg .glab{font-family:var(--mono);font-size:11px;fill:var(--muted);text-anchor:end}
+.seglegend{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px}
+.seglegend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.seglegend .k0 .sw{background:#1F5E7A}.seglegend .k1 .sw{background:#E0A458}.seglegend .k2 .sw{background:#9CBFCF}
+
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+section h2{font-size:clamp(23px,3.4vw,31px);margin-bottom:8px}
+.sec-sub{color:var(--muted);max-width:665px;margin:0 0 30px}
+
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:680px){.trio{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card .n{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+.card h3{font-size:17px;margin:10px 0 6px}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card kbd{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--ink)}
+
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px}
+@media(max-width:760px){.three{grid-template-columns:1fr}}
+.tbox{background:var(--surface);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.tbox.r{border-top-color:var(--row-bd)}
+.tbox.c{border-top-color:var(--col-bd)}
+.tbox.g{border-top-color:var(--all-bd)}
+.tbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:5px}
+.tbox .d{font-size:13.5px;color:var(--muted)}
+.tbox code{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12.5px;color:var(--accent)}
+
+.callout{display:flex;gap:16px;background:var(--accent-soft);border:1px solid #A9CBD9;border-radius:14px;padding:20px 22px;margin-top:26px}
+.callout .hand{font-size:22px;line-height:1.2}
+.callout p{margin:0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout .mono{color:#164B62}
+
+.ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.progress-wrap{width:100%;margin:16px 0 26px}
+.progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.progress-track{height:9px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.reset{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--bad);color:var(--bad)}
+
+.rungs{display:flex;flex-direction:column;gap:14px}
+.rung{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+.rung.cap{border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--shadow)}
+.rung-top{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;user-select:none}
+.rung-num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.rung.done .rung-num{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rung.cap .rung-num{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.rung-title{flex:1 1 auto}
+.rung-title .rt{font-family:var(--disp);font-weight:600;font-size:16px}
+.rung-title .rd{font-size:13px;color:var(--muted);margin-top:1px}
+.rung-badge{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.dots{display:flex;gap:4px}
+.dot-b{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dot-b.on{background:var(--accent)}
+.rung.done .dot-b.on{background:var(--good)}
+.chev{transition:transform .25s;color:var(--muted);font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.medal{display:none}.rung.done .medal{display:inline}
+.rung.done .rung-badge .txt{color:var(--good)}
+.rung-body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+.rung.open .rung-body{display:block}
+
+.strategy{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:18px 0;overflow:hidden}
+.strategy summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--accent);list-style:none;display:flex;align-items:center;gap:8px}
+.strategy summary::-webkit-details-marker{display:none}
+.strategy summary::before{content:"▸";transition:transform .2s;display:inline-block}
+.strategy[open] summary::before{transform:rotate(90deg)}
+.strategy .inner{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+.strategy .inner p{margin:.5em 0}
+.strategy code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--accent)}
+
+.scenario{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:15px;margin-bottom:16px}
+.scenario .tag{font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:8px}
+.scenario b{color:var(--ink)}
+.ask{font-weight:600;font-family:var(--disp);font-size:16px;margin:4px 0 14px}
+.ask .hl{color:var(--accent)}
+.vizbox{margin:8px 0 16px}
+.condlist{font-family:var(--mono);font-size:13px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-top:10px;line-height:1.85}
+.condlist b{color:var(--accent)}
+
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:14.5px;font-family:var(--body);color:var(--ink);transition:.12s}
+.choice:hover{border-color:var(--accent)}
+.choice .key{flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.choice .mono{font-family:var(--mono)}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .key{background:var(--good);border-color:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.choice:disabled{cursor:default}
+
+.numrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.field input{font-family:var(--mono);font-size:16px;width:130px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);outline:none}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field input.ok{border-color:var(--good);background:var(--good-soft)}
+.field input.no{border-color:var(--bad);background:var(--bad-soft)}
+.btn{font-family:var(--disp);font-weight:600;font-size:14.5px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
+.btn:hover{background:#194E66}
+.btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--accent)}
+.feedback{margin-top:15px;font-size:14.5px;display:none;border-radius:10px;padding:12px 15px}
+.feedback.show{display:block}
+.feedback.right{background:var(--good-soft);border:1px solid var(--good);color:#1c6b37}
+.feedback.wrong{background:var(--bad-soft);border:1px solid var(--bad);color:#96302d}
+.feedback .mono{font-weight:700}
+.feedback .next{margin-top:9px}
+.streak-note{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:12px}
+
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:680px){.why-grid{grid-template-columns:1fr}}
+.why-grid h3{font-size:16px;margin-bottom:6px;color:var(--accent)}
+.why-grid p{font-size:14px;color:var(--muted);margin:0}
+.why-close{font-size:15px;color:var(--ink);max-width:690px}
+.why-close .mono{color:var(--accent)}
+
+footer{padding:30px 0 50px;border-top:1px solid var(--line)}
+.foot{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-family:var(--disp);font-weight:600;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:.35s;z-index:80;display:flex;gap:10px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="glyph">▦</span> The Two-Way Table Ladder</div>
+    <div class="navlinks"><a href="#how">How it works</a><a href="#ladder">The ladder</a><a href="#why">Why it matters</a></div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Two-way tables · marginal, joint &amp; conditional distributions</div>
+    <h1>A count means nothing until you ask <em>"out of what?"</em></h1>
+    <p class="lede">One number sitting in a cell can answer three different questions. Divide it by the <b>grand total</b> and you get its share of everyone. Divide by its <b>row total</b> and you get a percent within that group. Divide by its <b>column total</b> and you get a percent within the other group — a completely different number from the same cell. The wording of the question picks the denominator, and picking the wrong one is how most mistakes here happen.</p>
+
+    <div class="heroviz">
+      <div class="cap">Same cell, three denominators</div>
+      <div id="heroTable"></div>
+      <div class="denkey"><span class="r"><span class="sw"></span>row total</span><span class="c"><span class="sw"></span>column total</span><span class="g"><span class="sw"></span>grand total</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Pick the denominator, then divide</h2>
+    <p class="sec-sub">Twelve rungs run from reading a table to spotting Simpson's paradox. Everything is computed by hand — the numbers are small, and the point is knowing what to divide by, not the arithmetic. Percents are given to one decimal place.</p>
+    <div class="trio">
+      <div class="card"><div class="n">01</div><h3>Read the question first</h3><p>"Of the students who passed…" means a column total. "Among group-study students…" means a row total. "Of everyone surveyed…" means the grand total.</p></div>
+      <div class="card"><div class="n">02</div><h3>Earn each badge</h3><p><b>Four in a row</b> earns a rung's badge. Click a choice or press <kbd>1</kbd>–<kbd>4</kbd>; type percents and press <kbd>Enter</kbd>.</p></div>
+      <div class="card"><div class="n">03</div><h3>Association is comparison</h3><p>Two variables are associated when the conditional distributions <b>differ across groups</b>. If every group looks the same, there's no association.</p></div>
+    </div>
+
+    <div style="margin-top:34px">
+      <div class="sec-eyebrow">The three distributions</div>
+      <div class="three">
+        <div class="tbox g"><div class="t">Marginal</div><div class="d">One variable on its own, ignoring the other. <code>row total ÷ grand total</code>. It lives in the margins of the table — hence the name.</div></div>
+        <div class="tbox g"><div class="t">Joint</div><div class="d">Both categories at once, as a share of everyone. <code>cell ÷ grand total</code>. "What percent of all people are both A and B?"</div></div>
+        <div class="tbox r"><div class="t">Conditional</div><div class="d">Restricted to one group. <code>cell ÷ that group's total</code>. Each group's conditional distribution adds to 100%.</div></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="hand">🔍</div>
+      <p><b>Two questions that sound the same and aren't.</b> "What percent of smokers develop the disease?" divides by the number of smokers. "What percent of disease cases are smokers?" divides by the number of cases. Same cell on top, <span class="mono">completely different denominators underneath</span> — and often wildly different answers. Whenever you read a percent in the news, the first thing to ask is which one it is.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="ladder-head"><div><div class="sec-eyebrow">The ladder</div><h2>Pick a rung and practice</h2></div><button class="reset" id="resetBtn">Reset progress</button></div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span id="progLabel">0 of 12 badges earned</span><span>4 in a row = badge</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow">Why it matters</div>
+    <h2>Most statistics you meet are conditional percents</h2>
+    <div class="why-grid">
+      <div><h3>The denominator is the claim</h3><p>Headlines quote percentages without saying what they're out of. Knowing which denominator was used is often the difference between an alarming statistic and a boring one.</p></div>
+      <div><h3>It sets up the chi-square test</h3><p>Comparing conditional distributions by eye is exactly what the test for independence does formally. This is the picture behind that arithmetic.</p></div>
+      <div><h3>Grouped data can lie</h3><p>Simpson's paradox — where a pattern in every subgroup reverses when you combine them — is only visible if you know how to look at the tables separately.</p></div>
+    </div>
+    <p class="why-close">The habit this builds is small and permanent: <span class="mono">before computing any percent, name its denominator out loud.</span> Grand total for joint and marginal, row or column total for conditional. Then to judge association, line up the conditional distributions side by side and ask whether the groups look alike — because that comparison, not any single number, is what tells you whether the two variables travel together.</p>
+  </div>
+</section>
+
+<footer><div class="wrap"><div class="foot">The Two-Way Table Ladder · marginal = margin ÷ grand · joint = cell ÷ grand · conditional = cell ÷ group total · association = conditional distributions differ</div></div></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   ===== CORE LOGIC START  (pure; extracted for stress-testing) =====
+   ================================================================= */
+
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function r1(x){ var s=x<0?-1:1, v=Math.abs(x)*10; return s*Math.round(v+1e-9)/10; }
+function pct(part, whole){ return 100*part/whole; }
+function fmtP(x){ return r1(x).toFixed(1)+'%'; }
+function pickOpts(correct, distractors){
+  var opts=[correct], i;
+  for(i=0;i<distractors.length && opts.length<4;i++){ if(opts.indexOf(distractors[i])===-1) opts.push(distractors[i]); }
+  var packed=opts.map(function(o,idx){return {o:o,c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+
+/* ---------- contexts ---------- */
+var CTX=[
+  {ctx:'Exercise and energy', rowVar:'exercise habit', colVar:'energy level',
+   rows:['Exercises regularly','Rarely exercises'], cols:['High energy','Low energy'], unit:'adults', unitOne:'adult'},
+  {ctx:'Study method and outcome', rowVar:'study method', colVar:'exam outcome',
+   rows:['Group study','Solo study'], cols:['Passed','Did not pass'], unit:'students', unitOne:'student'},
+  {ctx:'Class year and housing', rowVar:'class year', colVar:'housing',
+   rows:['Freshman','Sophomore','Junior'], cols:['On campus','Off campus'], unit:'students', unitOne:'student'},
+  {ctx:'Commute mode by city', rowVar:'city', colVar:'commute mode',
+   rows:['Riverton','Oakdale'], cols:['Car','Transit','Walk or bike'], unit:'commuters', unitOne:'commuter'},
+  {ctx:'Snack choice by age group', rowVar:'age group', colVar:'snack choice',
+   rows:['Under 30','30 and over'], cols:['Sweet','Salty','Neither'], unit:'shoppers', unitOne:'shopper'},
+  {ctx:'Pets by household type', rowVar:'household type', colVar:'pet owned',
+   rows:['Apartment','House'], cols:['Dog','Cat','No pet'], unit:'households', unitOne:'household'},
+  {ctx:'Coffee preference by shift', rowVar:'shift', colVar:'coffee preference',
+   rows:['Day shift','Night shift'], cols:['Regular','Decaf'], unit:'employees', unitOne:'employee'}
+];
+
+/* ---------- table generation ---------- */
+function randDist(c){
+  for(var tries=0;tries<200;tries++){
+    var v=[], s=0, i;
+    for(i=0;i<c;i++){ var x=Math.random(); v.push(x); s+=x; }
+    for(i=0;i<c;i++) v[i]/=s;
+    var ok=true; for(i=0;i<c;i++) if(v[i]<0.16) ok=false;
+    if(ok) return v;
+  }
+  var u=[]; for(var j=0;j<c;j++) u.push(1/c); return u;
+}
+function rowFromDist(total, dist){
+  var c=dist.length, out=[], i, sum=0;
+  for(i=0;i<c;i++){ out.push(Math.round(total*dist[i])); sum+=out[i]; }
+  var diff=total-sum, guard=0;
+  while(diff!==0 && guard++<10000){
+    var j=Math.floor(Math.random()*c);
+    if(diff>0){ out[j]++; diff--; }
+    else if(out[j]>1){ out[j]--; diff++; }
+  }
+  return out;
+}
+/* biggest spread, in percentage points, between groups' conditional percents */
+function assocGap(counts, rowTot){
+  var r=counts.length, c=counts[0].length, gap=0, i, j;
+  for(j=0;j<c;j++){
+    var lo=Infinity, hi=-Infinity;
+    for(i=0;i<r;i++){ var p=pct(counts[i][j], rowTot[i]); if(p<lo) lo=p; if(p>hi) hi=p; }
+    if(hi-lo>gap) gap=hi-lo;
+  }
+  return gap;
+}
+/* reject any table where a 1-dp percent would sit on a rounding tie */
+function tieOK(v){ var s=Math.abs(v)*10, f=s-Math.floor(s); return Math.abs(f-0.5)>=0.03; }
+function allPercentsClean(counts, rowTot, colTot, grand){
+  var r=counts.length, c=counts[0].length, i, j;
+  for(i=0;i<r;i++){
+    if(!tieOK(pct(rowTot[i], grand))) return false;
+    for(j=0;j<c;j++){
+      if(!tieOK(pct(counts[i][j], grand))) return false;
+      if(!tieOK(pct(counts[i][j], rowTot[i]))) return false;
+      if(!tieOK(pct(counts[i][j], colTot[j]))) return false;
+    }
+  }
+  for(j=0;j<c;j++) if(!tieOK(pct(colTot[j], grand))) return false;
+  return true;
+}
+function buildTable(c0, counts){
+  var r=counts.length, c=counts[0].length, rowTot=[], colTot=[], grand=0, i, j;
+  for(i=0;i<r;i++){ var s=0; for(j=0;j<c;j++) s+=counts[i][j]; rowTot.push(s); grand+=s; }
+  for(j=0;j<c;j++){ var t=0; for(i=0;i<r;i++) t+=counts[i][j]; colTot.push(t); }
+  return {ctx:c0.ctx, rowVar:c0.rowVar, colVar:c0.colVar, rows:c0.rows, cols:c0.cols,
+    unit:c0.unit, unitOne:c0.unitOne, r:r, c:c, counts:counts, rowTot:rowTot, colTot:colTot, grand:grand};
+}
+function genTable(kind){
+  for(var tries=0;tries<800;tries++){
+    var c0=pick(CTX), r=c0.rows.length, c=c0.cols.length;
+    var base=randDist(c), counts=[], i, ok=true;
+    for(i=0;i<r;i++){
+      var total=80+Math.floor(Math.random()*320);
+      var dist = (kind==='none') ? base : randDist(c);
+      counts.push(rowFromDist(total, dist));
+    }
+    for(i=0;i<r && ok;i++) for(var j=0;j<c && ok;j++) if(counts[i][j]<8) ok=false;
+    if(!ok) continue;
+    var T=buildTable(c0, counts);
+    var gap=assocGap(T.counts, T.rowTot);
+    if(kind==='none' && gap>3) continue;
+    if(kind==='assoc' && gap<18) continue;
+    if(!allPercentsClean(T.counts, T.rowTot, T.colTot, T.grand)) continue;
+    T.kind=kind; T.gap=gap;
+    return T;
+  }
+  return null;
+}
+function anyTable(){ return genTable(pick(['assoc','assoc','none'])); }
+
+/* ---------- the three percents ---------- */
+function marginalPct(T, which, idx){ return which==='row' ? pct(T.rowTot[idx], T.grand) : pct(T.colTot[idx], T.grand); }
+function jointPct(T, i, j){ return pct(T.counts[i][j], T.grand); }
+function rowCondPct(T, i, j){ return pct(T.counts[i][j], T.rowTot[i]); }
+function colCondPct(T, i, j){ return pct(T.counts[i][j], T.colTot[j]); }
+
+/* ---------- "out of what?" wording ---------- */
+function genDenominator(T){
+  var i=Math.floor(Math.random()*T.r), j=Math.floor(Math.random()*T.c);
+  var mode=pick(['grand','row','col','rowAmong']);
+  var q, den, val;
+  if(mode==='grand'){
+    q='What percent of all '+T.unit+' surveyed are both <b>'+T.rows[i]+'</b> and <b>'+T.cols[j]+'</b>?';
+    den='grand'; val=jointPct(T,i,j);
+  } else if(mode==='row'){
+    q='What percent of <b>'+T.rows[i]+'</b> '+T.unit+' are <b>'+T.cols[j]+'</b>?';
+    den='row'; val=rowCondPct(T,i,j);
+  } else if(mode==='rowAmong'){
+    q='Among the <b>'+T.rows[i]+'</b> '+T.unit+', what percent are <b>'+T.cols[j]+'</b>?';
+    den='row'; val=rowCondPct(T,i,j);
+  } else {
+    q='Of the '+T.unit+' who are <b>'+T.cols[j]+'</b>, what percent are <b>'+T.rows[i]+'</b>?';
+    den='col'; val=colCondPct(T,i,j);
+  }
+  return {i:i, j:j, mode:mode, den:den, question:q, value:val};
+}
+function denominatorOpts(T, D){
+  var correct = D.den==='grand' ? 'The grand total \u2014 all '+T.grand+' '+T.unit+'.'
+              : D.den==='row'   ? 'The row total for '+T.rows[D.i]+' \u2014 '+T.rowTot[D.i]+' '+T.unit+'.'
+              : 'The column total for '+T.cols[D.j]+' \u2014 '+T.colTot[D.j]+' '+T.unit+'.';
+  var pool=['The grand total \u2014 all '+T.grand+' '+T.unit+'.',
+            'The row total for '+T.rows[D.i]+' \u2014 '+T.rowTot[D.i]+' '+T.unit+'.',
+            'The column total for '+T.cols[D.j]+' \u2014 '+T.colTot[D.j]+' '+T.unit+'.',
+            'The cell count itself \u2014 '+T.counts[D.i][D.j]+' '+T.unit+'.'];
+  var others=pool.filter(function(o){ return o!==correct; });
+  return pickOpts(correct, others);
+}
+/* the wording trap: row-conditional vs column-conditional vs joint on the same cell */
+function genTrap(T){
+  var i, j, k, cells=[];
+  for(i=0;i<T.r;i++) for(j=0;j<T.c;j++) cells.push([i,j]);
+  shuffle(cells);
+  var best=null;
+  for(k=0;k<cells.length;k++){
+    var a=cells[k][0], b=cells[k][1];
+    if(Math.abs(rowCondPct(T,a,b)-colCondPct(T,a,b))>=5){ best=[a,b]; break; }
+  }
+  if(!best) return null;                       /* this table can't make a real trap */
+  i=best[0]; j=best[1];
+  var useRow=Math.random()<0.5;
+  var q = useRow
+    ? 'What percent of <b>'+T.rows[i]+'</b> '+T.unit+' are <b>'+T.cols[j]+'</b>?'
+    : 'What percent of <b>'+T.cols[j]+'</b> '+T.unit+' are <b>'+T.rows[i]+'</b>?';
+  var correct = useRow ? rowCondPct(T,i,j) : colCondPct(T,i,j);
+  var other   = useRow ? colCondPct(T,i,j) : rowCondPct(T,i,j);
+  return {i:i, j:j, useRow:useRow, question:q, correct:correct, other:other, joint:jointPct(T,i,j)};
+}
+/* a table plus a cell where the two readings genuinely differ */
+function genTrapCase(){
+  for(var tries=0;tries<300;tries++){
+    var T=anyTable();
+    if(!T) continue;
+    var TR=genTrap(T);
+    if(TR) return {T:T, TR:TR};
+  }
+  return null;
+}
+/* percent options, deduped and always padded to four */
+function pctOptsFrom(correctVal, poolVals){
+  var correctStr=fmtP(correctVal), seen={}, opts=[correctStr], k;
+  seen[correctStr]=1;
+  for(k=0;k<poolVals.length && opts.length<4;k++){
+    var s=fmtP(poolVals[k]);
+    if(!seen[s]){ seen[s]=1; opts.push(s); }
+  }
+  var step=1;
+  while(opts.length<4 && step<600){
+    var v=r1(correctVal)+step*3.3;
+    if(v>99.4) v=r1(correctVal)-step*3.3;
+    if(v>0.2 && v<99.9){ var cand=fmtP(v); if(!seen[cand]){ seen[cand]=1; opts.push(cand); } }
+    step++;
+  }
+  var packed=opts.map(function(o){ return {o:o, c:(o===correctStr)}; }); shuffle(packed);
+  var ans=0; for(k=0;k<packed.length;k++) if(packed[k].c){ ans=k; break; }
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+function trapOpts(TR){
+  return pctOptsFrom(TR.correct, [TR.other, TR.joint]);
+}
+
+/* ---------- missing-value rung ---------- */
+function genMissing(T){
+  var mode=pick(['cell','rowTot','colTot','grand']);
+  var i=Math.floor(Math.random()*T.r), j=Math.floor(Math.random()*T.c);
+  if(mode==='cell')   return {mode:mode, i:i, j:j, answer:T.counts[i][j],
+    ask:'What value belongs in the highlighted cell?'};
+  if(mode==='rowTot') return {mode:mode, i:i, answer:T.rowTot[i],
+    ask:'What is the row total for '+T.rows[i]+'?'};
+  if(mode==='colTot') return {mode:mode, j:j, answer:T.colTot[j],
+    ask:'What is the column total for '+T.cols[j]+'?'};
+  return {mode:mode, answer:T.grand, ask:'What is the grand total?'};
+}
+
+/* ---------- reading the table ---------- */
+function genRead(T){
+  var mode=pick(['cell','rowTot','colTot','grand']);
+  var i=Math.floor(Math.random()*T.r), j=Math.floor(Math.random()*T.c);
+  var correct, q;
+  if(mode==='cell'){ correct=T.counts[i][j];
+    q='How many '+T.unit+' are both '+T.rows[i]+' and '+T.cols[j]+'?'; }
+  else if(mode==='rowTot'){ correct=T.rowTot[i];
+    q='How many '+T.unit+' are '+T.rows[i]+' in total?'; }
+  else if(mode==='colTot'){ correct=T.colTot[j];
+    q='How many '+T.unit+' are '+T.cols[j]+' in total?'; }
+  else { correct=T.grand; q='How many '+T.unit+' were surveyed in all?'; }
+  var pool=[T.counts[i][j], T.rowTot[i], T.colTot[j], T.grand];
+  var seen={}, opts=[String(correct)]; seen[String(correct)]=1;
+  for(var k=0;k<pool.length && opts.length<4;k++){
+    var s=String(pool[k]); if(!seen[s]){ seen[s]=1; opts.push(s); }
+  }
+  var d=1;
+  while(opts.length<4 && d<500){ var cand=String(correct+d*7); if(!seen[cand]){ seen[cand]=1; opts.push(cand); } d++; }
+  var packed=opts.map(function(o,idx){ return {o:o, c:idx===0}; }); shuffle(packed);
+  var ans=0; for(k=0;k<packed.length;k++) if(packed[k].c){ans=k;break;}
+  return {question:q, options:packed.map(function(p){return p.o;}), answer:ans};
+}
+
+/* ---------- association ---------- */
+function assocOpts(kind){
+  var correct = kind==='assoc'
+    ? 'Yes \u2014 the conditional distributions differ noticeably between the groups.'
+    : 'No \u2014 the conditional distributions are nearly the same for every group.';
+  return pickOpts(correct,
+    [kind==='assoc'
+      ? 'No \u2014 the conditional distributions are nearly the same for every group.'
+      : 'Yes \u2014 the conditional distributions differ noticeably between the groups.',
+     'You cannot compare groups of different sizes.',
+     'Association can only be judged from the raw counts, never from percents.']);
+}
+function independenceOpts(mode){
+  if(mode==='look') return pickOpts('Every group\u2019s conditional distribution would look the same as the overall distribution.',
+    ['Every cell would contain the same count.',
+     'Every row total would equal every column total.',
+     'The grand total would be a round number.']);
+  if(mode==='counts') return pickOpts('No \u2014 groups of different sizes will have different counts even with no association; compare percents instead.',
+    ['Yes \u2014 equal counts always mean no association.',
+     'Yes \u2014 counts are the only fair comparison.',
+     'No \u2014 association cannot be judged from a table at all.']);
+  return pickOpts('Compare the conditional distributions across the groups.',
+    ['Compare the two marginal distributions.',
+     'Compare the joint percents to the grand total.',
+     'Compare the largest cell to the smallest cell.']);
+}
+
+/* ---------- Simpson's paradox ---------- */
+function genSimpson(){
+  var SETUPS=[
+    {ctx:'Two hospitals', a:'Hospital A', b:'Hospital B', g1:'Routine cases', g2:'Serious cases', out:'survival rate', unit:'patients'},
+    {ctx:'Two treatments', a:'Treatment A', b:'Treatment B', g1:'Mild cases', g2:'Severe cases', out:'success rate', unit:'patients'},
+    {ctx:'Two tutors', a:'Tutor A', b:'Tutor B', g1:'Intro course', g2:'Advanced course', out:'pass rate', unit:'students'}
+  ];
+  for(var tries=0;tries<800;tries++){
+    var S=pick(SETUPS);
+    var nA1=pick([40,50,60,80]), nA2=pick([300,400,500,600]);
+    var nB1=pick([300,400,500,600]), nB2=pick([40,50,60,80]);
+    var p1=0.72+Math.random()*0.14, p2=0.20+Math.random()*0.14, d=0.05+Math.random()*0.08;
+    var sB1=Math.round(nB1*p1), sB2=Math.round(nB2*p2);
+    var sA1=Math.round(nA1*(p1+d)), sA2=Math.round(nA2*(p2+d));
+    if(sA1>nA1||sA2>nA2||sB1>nB1||sB2>nB2) continue;
+    var rA1=pct(sA1,nA1), rB1=pct(sB1,nB1), rA2=pct(sA2,nA2), rB2=pct(sB2,nB2);
+    var oA=pct(sA1+sA2, nA1+nA2), oB=pct(sB1+sB2, nB1+nB2);
+    if(rA1-rB1<2.5 || rA2-rB2<2.5) continue;      /* A clearly better in BOTH groups */
+    if(oB-oA<3) continue;                          /* but B clearly better overall */
+    var vals=[rA1,rB1,rA2,rB2,oA,oB], k, clean=true;
+    for(k=0;k<vals.length;k++) if(!tieOK(vals[k])) clean=false;
+    if(!clean) continue;
+    return {setup:S, nA1:nA1,nA2:nA2,nB1:nB1,nB2:nB2, sA1:sA1,sA2:sA2,sB1:sB1,sB2:sB2,
+      rA1:rA1,rB1:rB1,rA2:rA2,rB2:rB2, oA:oA, oB:oB};
+  }
+  return null;
+}
+function simpsonOpts(mode, P){
+  var A=P.setup.a, B=P.setup.b;
+  if(mode==='within') return pickOpts(A+' \u2014 in both groups separately.',
+    [B+' \u2014 in both groups separately.', 'They are tied in both groups.', 'It differs from one group to the other.']);
+  if(mode==='overall') return pickOpts(B+' \u2014 once the groups are combined.',
+    [A+' \u2014 once the groups are combined.', 'They are exactly tied overall.', 'The overall rates cannot be computed.']);
+  return pickOpts('Most of '+A+'\u2019s cases came from the harder group, which drags its combined rate down.',
+    ['The combined totals were added up incorrectly.',
+     'Percentages cannot be compared across groups of different sizes.',
+     'The two groups were measured with different definitions.']);
+}
+
+/* ---------- table HTML with denominator highlighting ---------- */
+function tableHTML(T, opts){
+  opts=opts||{};
+  var i,j,h='<div class="twwrap"><table class="tw"><tr><th></th>';
+  for(j=0;j<T.c;j++) h+='<th>'+T.cols[j]+'</th>';
+  h+='<th class="tot">Total</th></tr>';
+  for(i=0;i<T.r;i++){
+    h+='<tr><td class="rh">'+T.rows[i]+'</td>';
+    for(j=0;j<T.c;j++){
+      var cls='cell';
+      if(opts.hi==='row' && i===opts.i) cls+=' hiRow';
+      if(opts.hi==='col' && j===opts.j) cls+=' hiCol';
+      if(opts.hi==='grand') cls+=' hiAll';
+      var blank=(opts.blank && opts.blank.mode==='cell' && opts.blank.i===i && opts.blank.j===j);
+      if(opts.target && opts.target[0]===i && opts.target[1]===j) cls+=' target';
+      h+='<td class="'+cls+(blank?' blank':'')+'">'+(blank?'?':T.counts[i][j])+'</td>';
+    }
+    var rcls='tot';
+    if(opts.hi==='row' && i===opts.i) rcls+=' hiRow';
+    if(opts.hi==='grand') rcls+=' hiAll';
+    var rblank=(opts.blank && opts.blank.mode==='rowTot' && opts.blank.i===i);
+    h+='<td class="'+rcls+(rblank?' blank':'')+'">'+(rblank?'?':T.rowTot[i])+'</td></tr>';
+  }
+  h+='<tr><td class="rh tot">Total</td>';
+  for(j=0;j<T.c;j++){
+    var ccls='tot';
+    if(opts.hi==='col' && j===opts.j) ccls+=' hiCol';
+    if(opts.hi==='grand') ccls+=' hiAll';
+    var cblank=(opts.blank && opts.blank.mode==='colTot' && opts.blank.j===j);
+    h+='<td class="'+ccls+(cblank?' blank':'')+'">'+(cblank?'?':T.colTot[j])+'</td>';
+  }
+  var gcls='tot'+((opts.hi==='grand')?' hiAll':'');
+  var gblank=(opts.blank && opts.blank.mode==='grand');
+  h+='<td class="'+gcls+(gblank?' blank':'')+'">'+(gblank?'?':T.grand)+'</td></tr>';
+  h+='</table></div>';
+  if(opts.caption) h+='<div class="tcap">'+opts.caption+'</div>';
+  return h;
+}
+
+/* ---------- segmented bar chart of conditional distributions ---------- */
+function svgSegmented(T){
+  var W=470, rowH=44, top=16, labW=118, H=top+rowH*T.r+26, i, j;
+  var barW=W-labW-24;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="seg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="segmented bar chart of conditional distributions">';
+  for(i=0;i<T.r;i++){
+    var y=top+rowH*i, x=labW, acc=0;
+    s+='<text x="'+(labW-10)+'" y="'+(y+19)+'" class="glab">'+T.rows[i]+'</text>';
+    for(j=0;j<T.c;j++){
+      var p=rowCondPct(T,i,j), w=barW*p/100;
+      s+='<rect x="'+x.toFixed(1)+'" y="'+y+'" width="'+Math.max(0,w).toFixed(1)+'" height="28" class="s'+(j%3)+'"/>';
+      if(w>42) s+='<text x="'+(x+w/2).toFixed(1)+'" y="'+(y+18)+'" class="slab">'+r1(p).toFixed(1)+'%</text>';
+      x+=w; acc+=p;
+    }
+  }
+  s+='</svg>';
+  return s;
+}
+
+if(typeof module!=='undefined' && module.exports){
+  module.exports={ r1:r1, pct:pct, fmtP:fmtP, CTX:CTX, genTable:genTable, anyTable:anyTable,
+    assocGap:assocGap, buildTable:buildTable, tieOK:tieOK, allPercentsClean:allPercentsClean,
+    marginalPct:marginalPct, jointPct:jointPct, rowCondPct:rowCondPct, colCondPct:colCondPct,
+    genDenominator:genDenominator, denominatorOpts:denominatorOpts, genTrap:genTrap, genTrapCase:genTrapCase, trapOpts:trapOpts, pctOptsFrom:pctOptsFrom,
+    genMissing:genMissing, genRead:genRead, assocOpts:assocOpts, independenceOpts:independenceOpts,
+    genSimpson:genSimpson, simpsonOpts:simpsonOpts, tableHTML:tableHTML, svgSegmented:svgSegmented };
+}
+/* =================================================================
+   ===== CORE LOGIC END =====
+   ================================================================= */
+
+
+/* ---------------- UI LAYER ---------------- */
+var KEY='twowayLadder', NEED=4;
+var state=load();
+function load(){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.rungs) return s; }catch(e){} return {rungs:{}}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+(function(){ var T=genTable('assoc');
+  document.getElementById('heroTable').innerHTML=tableHTML(T,{target:[0,0], caption:'the highlighted cell \u00f7 row total, \u00f7 column total, or \u00f7 grand total'}); })();
+
+function segLegend(T){
+  var h='<div class="seglegend">', j;
+  for(j=0;j<T.c;j++) h+='<span class="k'+(j%3)+'"><span class="sw"></span>'+T.cols[j]+'</span>';
+  return h+'</div>';
+}
+function condList(T){
+  var h='<div class="condlist">', i, j;
+  for(i=0;i<T.r;i++){
+    h+='<b>'+T.rows[i]+':</b> ';
+    var parts=[];
+    for(j=0;j<T.c;j++) parts.push(T.cols[j]+' '+fmtP(rowCondPct(T,i,j)));
+    h+=parts.join(' \u00b7 ')+'<br>';
+  }
+  return h+'</div>';
+}
+
+var RUNGS=[
+  {
+    id:'read', title:'Read the table', desc:'Cells, row totals, column totals.',
+    strategy:'<p>A cell is the count that is <b>both</b> its row category and its column category. The right-hand column holds <b>row totals</b>, the bottom row holds <b>column totals</b>, and the corner holds the <b>grand total</b> \u2014 everyone in the study.</p>',
+    build:function(){ var T=anyTable(), R=genRead(T);
+      return {mode:'mc', table:T,
+        scenario:'<span class="tag">'+T.ctx+'</span>'+T.unit.charAt(0).toUpperCase()+T.unit.slice(1)+' were classified by '+T.rowVar+' and '+T.colVar+'.',
+        ask:R.question, options:R.options, answer:R.answer}; }
+  },
+  {
+    id:'missing', title:'Fill in what\u2019s missing', desc:'Totals have to add up.',
+    strategy:'<p>Every row must add to its row total, every column to its column total, and both sets of totals must add to the same grand total. Any one missing entry can be recovered by subtraction or addition.</p>',
+    build:function(){ var T=anyTable(), Mg=genMissing(T);
+      return {mode:'num', table:T, tableOpts:{blank:Mg},
+        scenario:'<span class="tag">'+T.ctx+'</span>One entry has been removed from this table.',
+        ask:Mg.ask, fields:[{label:'value =', answer:Mg.answer, tol:0.001}]}; }
+  },
+  {
+    id:'marginal', title:'Marginal distribution', desc:'One variable, ignoring the other.',
+    strategy:'<p>A marginal distribution uses only the <b>margins</b> \u2014 the totals. Divide a row total (or column total) by the <b>grand total</b>. It describes one variable on its own, as if the other had never been recorded.</p>',
+    build:function(){ var T=anyTable(), useRow=Math.random()<0.5;
+      var i=Math.floor(Math.random()*(useRow?T.r:T.c));
+      var val=marginalPct(T, useRow?'row':'col', i);
+      var name=useRow?T.rows[i]:T.cols[i];
+      return {mode:'num', table:T, tableOpts:{hi:'grand'},
+        scenario:'<span class="tag">'+T.ctx+'</span>Look at the '+(useRow?'row':'column')+' totals against the grand total.',
+        ask:'What percent of all '+T.unit+' are <span class="hl">'+name+'</span>? (1 decimal)',
+        fields:[{label:'percent =', answer:val, tol:0.051}]}; }
+  },
+  {
+    id:'joint', title:'Joint percent', desc:'Both categories, out of everyone.',
+    strategy:'<p>A joint percent asks what share of <b>everyone</b> falls in one particular cell: <code>cell \u00f7 grand total</code>. The giveaway wording is "of all the people surveyed" combined with <b>both</b> categories.</p>',
+    build:function(){ var T=anyTable();
+      var i=Math.floor(Math.random()*T.r), j=Math.floor(Math.random()*T.c);
+      return {mode:'num', table:T, tableOpts:{hi:'grand', target:[i,j]},
+        scenario:'<span class="tag">'+T.ctx+'</span>The highlighted cell holds '+T.counts[i][j]+' '+T.unit+'.',
+        ask:'What percent of <span class="hl">all '+T.unit+'</span> are both '+T.rows[i]+' and '+T.cols[j]+'? (1 decimal)',
+        fields:[{label:'percent =', answer:jointPct(T,i,j), tol:0.051}]}; }
+  },
+  {
+    id:'conditional', title:'Conditional distribution', desc:'Restricted to one group.',
+    strategy:'<p>A conditional percent stays <b>inside one group</b>: divide the cell by that group\u2019s own total. Within a single row, the conditional percents across all the columns add up to 100%.</p>',
+    build:function(){ var T=anyTable();
+      var i=Math.floor(Math.random()*T.r), j=Math.floor(Math.random()*T.c);
+      return {mode:'num', table:T, tableOpts:{hi:'row', i:i, target:[i,j]},
+        scenario:'<span class="tag">'+T.ctx+'</span>Work only within the highlighted row: '+T.rowTot[i]+' '+T.unit+' are '+T.rows[i]+'.',
+        ask:'Among the <span class="hl">'+T.rows[i]+'</span> '+T.unit+', what percent are '+T.cols[j]+'? (1 decimal)',
+        fields:[{label:'percent =', answer:rowCondPct(T,i,j), tol:0.051}]}; }
+  },
+  {
+    id:'denom', title:'Out of what?', desc:'Name the denominator first.',
+    strategy:'<p>Read the wording before touching the numbers. "Of <b>all</b> \u2026" \u2192 grand total. "Of the <b>[row group]</b> \u2026" \u2192 that row\u2019s total. "Of the <b>[column group]</b> \u2026" \u2192 that column\u2019s total. The group named right after "of" or "among" is your denominator.</p>',
+    build:function(){ var T=anyTable(), D=genDenominator(T), o=denominatorOpts(T,D);
+      return {mode:'mc', table:T, tableOpts:{target:[D.i,D.j]}, revealHi:D,
+        scenario:'<span class="tag">'+T.ctx+'</span>Consider this question: <i>'+D.question+'</i>',
+        ask:'What should you divide by?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'trap', title:'The wording trap', desc:'Same cell, two very different percents.',
+    strategy:'<p>"What percent of <b>A</b> are <b>B</b>?" divides by the <b>A</b> total. "What percent of <b>B</b> are <b>A</b>?" divides by the <b>B</b> total. The numerator is the same cell both times \u2014 only the denominator changes, and the answers can be far apart.</p>',
+    build:function(){ var C=genTrapCase(); var T=C.T, TR=C.TR, o=trapOpts(TR);
+      return {mode:'mc', table:T, tableOpts:{target:[TR.i,TR.j], hi:TR.useRow?'row':'col', i:TR.i, j:TR.j},
+        scenario:'<span class="tag">'+T.ctx+'</span>The highlighted cell holds '+T.counts[TR.i][TR.j]+' '+T.unit+'. Read the question carefully.',
+        ask:TR.question, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'segbar', title:'Read a segmented bar chart', desc:'One bar per group, split by category.',
+    strategy:'<p>Each bar is <b>one group\u2019s conditional distribution</b>, so every bar totals 100%. Find the group\u2019s bar first, then the segment for the category you want. Comparing segments across bars is how you spot association.</p>',
+    build:function(){ var T=anyTable();
+      var i=Math.floor(Math.random()*T.r), j=Math.floor(Math.random()*T.c);
+      var pool=[], a, bIdx;
+      for(a=0;a<T.r;a++) for(bIdx=0;bIdx<T.c;bIdx++) if(a!==i||bIdx!==j) pool.push(rowCondPct(T,a,bIdx));
+      shuffle(pool);
+      var o=pctOptsFrom(rowCondPct(T,i,j), pool);
+      return {mode:'mc', seg:T,
+        scenario:'<span class="tag">'+T.ctx+'</span>Each bar shows the '+T.colVar+' distribution within one '+T.rowVar+' group.',
+        ask:'What percent of <span class="hl">'+T.rows[i]+'</span> '+T.unit+' are '+T.cols[j]+'?',
+        options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'assoc', title:'Is there an association?', desc:'Compare the groups.',
+    strategy:'<p>Line up the conditional distributions. If the groups look <b>clearly different</b>, the variables appear associated. If they look <b>about the same</b>, there is no apparent association. Always compare percents, never raw counts.</p>',
+    build:function(){ var kind=pick(['assoc','none']), T=genTable(kind), o=assocOpts(kind);
+      return {mode:'mc', seg:T, condList:T,
+        scenario:'<span class="tag">'+T.ctx+'</span>Here is each group\u2019s '+T.colVar+' distribution.',
+        ask:'Does there appear to be an association between '+T.rowVar+' and '+T.colVar+'?',
+        options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'indep', title:'What "no association" looks like', desc:'Every group matches the whole.',
+    strategy:'<p>If two variables are not associated, knowing the group tells you nothing: <b>every group\u2019s conditional distribution matches the overall one</b>. On a segmented bar chart, all the bars are split the same way.</p>',
+    build:function(){ var mode=pick(['look','counts','how']), o=independenceOpts(mode);
+      var ask=mode==='look'?'If two variables were not associated at all, what would you see?':
+              mode==='counts'?'Two groups have very different sizes. Does an equal count in each mean no association?':
+              'What is the right way to check for association in a two-way table?';
+      return {mode:'mc', ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'simpson', title:'Simpson\u2019s paradox', desc:'The pattern can reverse when you combine.',
+    strategy:'<p>A group can win in <b>every</b> subgroup and still lose overall \u2014 if it faced the harder subgroup far more often. Combining tables hides that imbalance. Whenever a pattern flips, look for the lurking variable that splits the data.</p>',
+    build:function(){ var P=genSimpson();
+      if(!P){ var o0=independenceOpts('how');
+        return {mode:'mc', ask:'What is the right way to check for association in a two-way table?', options:o0.options, answer:o0.answer}; }
+      var mode=pick(['within','overall','why']), o=simpsonOpts(mode,P), S=P.setup;
+      var scen='<span class="tag">'+S.ctx+'</span>'+
+        '<div class="condlist">'+
+        '<b>'+S.g1+':</b> '+S.a+' '+P.sA1+' of '+P.nA1+' ('+fmtP(P.rA1)+') \u00b7 '+S.b+' '+P.sB1+' of '+P.nB1+' ('+fmtP(P.rB1)+')<br>'+
+        '<b>'+S.g2+':</b> '+S.a+' '+P.sA2+' of '+P.nA2+' ('+fmtP(P.rA2)+') \u00b7 '+S.b+' '+P.sB2+' of '+P.nB2+' ('+fmtP(P.rB2)+')<br>'+
+        '<b>Combined:</b> '+S.a+' '+(P.sA1+P.sA2)+' of '+(P.nA1+P.nA2)+' ('+fmtP(P.oA)+') \u00b7 '+S.b+' '+(P.sB1+P.sB2)+' of '+(P.nB1+P.nB2)+' ('+fmtP(P.oB)+')'+
+        '</div>';
+      var ask=mode==='within'?'Which has the higher '+S.out+' <span class="hl">within each group</span>?':
+              mode==='overall'?'Which has the higher '+S.out+' <span class="hl">overall</span>?':
+              'Why does the pattern reverse when the groups are combined?';
+      return {mode:'mc', scenario:scen, ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'capstone', title:'Capstone \u2014 percent, then verdict', desc:'Compute, then judge. One miss restarts.', cap:true,
+    strategy:'<p>The full routine: pick the right denominator and compute a conditional percent, then compare the groups to judge association. Both parts must be right, or the streak resets.</p>',
+    build:function(){ var kind=pick(['assoc','none']), T=genTable(kind);
+      var i=Math.floor(Math.random()*T.r), j=Math.floor(Math.random()*T.c);
+      var o=assocOpts(kind);
+      return {mode:'numthenmc', table:T, tableOpts:{target:[i,j]}, segAfter:T,
+        scenario:'<span class="tag">'+T.ctx+'</span>'+T.unit.charAt(0).toUpperCase()+T.unit.slice(1)+' classified by '+T.rowVar+' and '+T.colVar+'.',
+        ask:'1. Among the '+T.rows[i]+' '+T.unit+', what percent are '+T.cols[j]+'? (1 decimal)',
+        fields:[{label:'percent =', answer:rowCondPct(T,i,j), tol:0.051}],
+        sub2:{ask:'2. Does there appear to be an association between '+T.rowVar+' and '+T.colVar+'?', options:o.options, answer:o.answer}}; }
+  }
+];
+
+/* ---------- render skeleton ---------- */
+var rungsEl=document.getElementById('rungs');
+RUNGS.forEach(function(def,idx){
+  if(!state.rungs[def.id]) state.rungs[def.id]={streak:0,done:false};
+  var el=document.createElement('div');
+  el.className='rung'+(def.cap?' cap':'')+(state.rungs[def.id].done?' done':'');
+  el.dataset.id=def.id;
+  el.innerHTML='<div class="rung-top"><div class="rung-num">'+(idx+1)+'</div>'+
+    '<div class="rung-title"><div class="rt">'+def.title+'</div><div class="rd">'+def.desc+'</div></div>'+
+    '<div class="rung-badge"><span class="medal">🏅</span><span class="dots"></span><span class="txt"></span></div>'+
+    '<div class="chev">▶</div></div><div class="rung-body"></div>';
+  rungsEl.appendChild(el);
+  el.querySelector('.rung-top').addEventListener('click', function(){ toggleRung(def.id); });
+  renderBadge(def.id);
+});
+function rungEl(id){ return rungsEl.querySelector('.rung[data-id="'+id+'"]'); }
+function rungDef(id){ return RUNGS.filter(function(r){return r.id===id;})[0]; }
+function renderBadge(id){
+  var el=rungEl(id),st=state.rungs[id],dots=el.querySelector('.dots'); dots.innerHTML='';
+  for(var i=0;i<NEED;i++){ var d=document.createElement('span'); d.className='dot-b'+(i<st.streak?' on':''); dots.appendChild(d); }
+  el.querySelector('.txt').textContent=st.done?'earned':(st.streak+'/'+NEED); el.classList.toggle('done',st.done);
+}
+var openId=null;
+function toggleRung(id){
+  var el=rungEl(id);
+  if(el.classList.contains('open')){ el.classList.remove('open'); openId=null; return; }
+  if(openId) rungEl(openId).classList.remove('open');
+  el.classList.add('open'); openId=id; newQuestion(id);
+}
+
+var current={};
+function newQuestion(id){
+  var def=rungDef(id), q=def.build(); current[id]={def:def,q:q};
+  var body=rungEl(id).querySelector('.rung-body');
+  var html='<details class="strategy"><summary>Strategy</summary><div class="inner">'+def.strategy+'</div></details><div class="qwrap">';
+  if(q.scenario) html+='<div class="scenario">'+q.scenario+'</div>';
+  if(q.table) html+='<div class="vizbox">'+tableHTML(q.table, q.tableOpts||{})+'</div>';
+  if(q.seg) html+='<div class="vizbox">'+svgSegmented(q.seg)+segLegend(q.seg)+'</div>';
+  if(q.condList) html+=condList(q.condList);
+  if(q.mode==='mc'){
+    html+='<div class="ask">'+q.ask+'</div><div class="choices">';
+    q.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>';
+  } else {
+    html+='<div class="ask">'+q.ask+'</div><div class="numrow">';
+    q.fields.forEach(function(f,i){ html+='<div class="field"><label>'+f.label+'</label><input type="number" step="any" data-i="'+i+'" autocomplete="off"></div>'; });
+    html+='<button class="btn" data-check="1">Check</button></div>';
+    if(q.mode==='numthenmc') html+='<div class="sub2" style="display:none;margin-top:18px"></div>';
+  }
+  html+='<div class="feedback"></div><div class="streak-note"></div></div>';
+  body.innerHTML=html; updateStreakNote(id);
+  if(q.mode==='mc'){ body.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerMC(id, parseInt(c.dataset.i,10)); }); }); }
+  else {
+    var inputs=body.querySelectorAll('.numrow input');
+    body.querySelector('[data-check]').addEventListener('click', function(){ answerNum(id); });
+    inputs.forEach(function(inp,i){ inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ if(i<inputs.length-1) inputs[i+1].focus(); else answerNum(id); } }); });
+    if(inputs[0]) inputs[0].focus();
+  }
+}
+function updateStreakNote(id){ var st=state.rungs[id],note=rungEl(id).querySelector('.streak-note'); if(!note) return;
+  note.textContent=st.done?'✓ Badge earned — keep going for more practice.':(st.streak>0?('Streak: '+st.streak+' of '+NEED):''); }
+function nextBtn(){ return '<div class="next"><button class="btn ghost" data-next="1">Next question →</button></div>'; }
+function wireNext(id){ var b=rungEl(id).querySelector('[data-next]'); if(b) b.addEventListener('click', function(){ newQuestion(id); }); }
+
+function answerMC(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), choices=body.querySelectorAll('.choices .choice');
+  if(choices[0].disabled) return; choices.forEach(function(c){c.disabled=true;});
+  var correct=(choice===q.answer); choices[q.answer].classList.add('correct'); if(!correct) choices[choice].classList.add('wrong');
+  var fb=body.querySelector('.feedback'); fb.className='feedback show '+(correct?'right':'wrong');
+  var extra='';
+  if(q.revealHi && q.table){
+    var D=q.revealHi;
+    extra='<div class="vizbox" style="margin-top:10px">'+tableHTML(q.table,{hi:D.den, i:D.i, j:D.j, target:[D.i,D.j],
+      caption:'answer: '+fmtP(D.value)})+'</div>';
+  }
+  fb.innerHTML=(correct?'Correct.':'Not quite — the right choice is highlighted.')+extra+nextBtn();
+  wireNext(id); recordResult(id, correct);
+}
+function answerNum(id){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), inputs=body.querySelectorAll('.numrow input');
+  if(inputs[0].disabled) return;
+  var allOk=true;
+  q.fields.forEach(function(f,i){
+    var tol=(f.tol!=null)?f.tol:0.051;
+    var v=parseFloat(inputs[i].value.trim());
+    var ok=!isNaN(v)&&Math.abs(v-f.answer)<=tol+1e-9;
+    inputs[i].classList.toggle('ok',ok); inputs[i].classList.toggle('no',!ok);
+    if(!ok) allOk=false;
+  });
+  inputs.forEach(function(i){i.disabled=true;}); body.querySelector('[data-check]').disabled=true;
+  var fb=body.querySelector('.feedback');
+  var showAns=q.fields.map(function(f){ return (f.tol&&f.tol<0.01)? String(f.answer) : fmtP(f.answer); }).join(',&nbsp; ');
+  if(q.mode==='numthenmc'){
+    cur.ok1=allOk;
+    fb.className='feedback show '+(allOk?'right':'wrong');
+    fb.innerHTML=allOk?'Part 1 correct.':('Not quite. Answer: <span class="mono">'+showAns+'</span>');
+    var s2=body.querySelector('.sub2'); s2.style.display='block';
+    var html=(q.segAfter?'<div class="vizbox">'+svgSegmented(q.segAfter)+segLegend(q.segAfter)+'</div>':'')+
+      '<div class="ask">'+q.sub2.ask+'</div><div class="choices" data-sub="1">';
+    q.sub2.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>'; s2.innerHTML=html;
+    s2.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap2(id, parseInt(c.dataset.i,10)); }); });
+    return;
+  }
+  fb.className='feedback show '+(allOk?'right':'wrong');
+  fb.innerHTML=(allOk?'Correct.':'Not quite. Answer: <span class="mono">'+showAns+'</span>')+nextBtn();
+  wireNext(id); recordResult(id, allOk);
+}
+function answerCap2(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c1=body.querySelectorAll('.choices[data-sub="1"] .choice'); if(c1[0].disabled) return;
+  c1.forEach(function(c){c.disabled=true;});
+  var ok2=(choice===q.sub2.answer); c1[q.sub2.answer].classList.add('correct'); if(!ok2) c1[choice].classList.add('wrong');
+  var both=cur.ok1&&ok2, fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(both?'right':'wrong');
+  fb.innerHTML=(both?'Both correct — table read cleanly.':'Not both correct — the streak resets.')+nextBtn();
+  wireNext(id); recordResult(id, both);
+}
+function recordResult(id, correct){
+  var st=state.rungs[id],wasDone=st.done;
+  if(correct){ st.streak++; if(st.streak>=NEED) st.done=true; } else st.streak=0;
+  save(); renderBadge(id); updateStreakNote(id); updateProgress();
+  if(st.done&&!wasDone) celebrate(id);
+}
+function updateProgress(){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  document.getElementById('progLabel').textContent=done+' of '+RUNGS.length+' badges earned';
+  document.getElementById('progFill').style.width=(100*done/RUNGS.length)+'%';
+}
+function celebrate(id){ var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  showToast('🏅 '+(done===RUNGS.length?'All 12 badges — every denominator, named.':'Badge earned · '+rungDef(id).title)); }
+var toastT; function showToast(t){ var el=document.getElementById('toast'); el.innerHTML=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2600); }
+
+document.addEventListener('keydown', function(e){
+  if(!openId) return; var cur=current[openId]; if(!cur) return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  var n=parseInt(e.key,10); if(isNaN(n)||n<1||n>4) return;
+  var body=rungEl(openId).querySelector('.rung-body');
+  var s2=body.querySelectorAll('.choices[data-sub="1"] .choice');
+  if(s2.length&&!s2[0].disabled){ if(s2[n-1]) answerCap2(openId,n-1); return; }
+  if(cur.q.mode==='mc'){ var cs=body.querySelectorAll('.choices .choice'); if(cs[n-1]&&!cs[0].disabled) answerMC(openId,n-1); }
+});
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!confirm('Reset all progress on the Two-Way Table Ladder?')) return;
+  state={rungs:{}}; RUNGS.forEach(function(r){state.rungs[r.id]={streak:0,done:false};});
+  save(); RUNGS.forEach(function(r){renderBadge(r.id);updateStreakNote(r.id);});
+  if(openId) newQuestion(openId); updateProgress(); showToast('Progress reset');
+});
+updateProgress();
+</script>
+</body>
+</html>
