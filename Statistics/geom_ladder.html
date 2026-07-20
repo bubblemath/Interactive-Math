@@ -1,0 +1,765 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Geometric Ladder — how many trials until the first success?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#232935;
+  --paper:#F5F6F9;
+  --surface:#FFFFFF;
+  --line:#E1E4EC;
+  --accent:#2F4B7C;         /* brand */
+  --accent-soft:#DCE3F0;
+  --succ:#D99C2B;           /* the success trial */
+  --succ-soft:#F8ECD3;
+  --failc:#AEB6C2;          /* the failures before it */
+  --fail-soft:#EBEEF2;
+  --good:#2E9E51;
+  --good-soft:#E1F3E6;
+  --bad:#C6403D;
+  --bad-soft:#FBE4E3;
+  --muted:#616B7C;
+  --shadow:0 1px 2px rgba(35,41,53,.06),0 8px 24px rgba(35,41,53,.06);
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--disp);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin:0}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(245,246,249,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand .glyph{color:var(--accent)}
+.navlinks{margin-left:auto;display:flex;gap:22px;font-size:14px;font-weight:500}
+.navlinks a{color:var(--muted)}.navlinks a:hover{color:var(--ink)}
+@media(max-width:560px){.navlinks{display:none}}
+
+header{padding:66px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+header h1{font-size:clamp(28px,5vw,48px);font-weight:600}
+header h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:665px;margin:20px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+.heroviz{margin:38px 0 6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:24px 22px 18px}
+.heroviz .cap{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:14px;text-align:center}
+.legend{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px}
+.legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.legend .f .sw{background:var(--failc)}
+.legend .s .sw{background:var(--succ)}
+
+svg.strip,svg.decay{display:block;width:100%;max-width:490px;height:auto;margin:0 auto}
+.strip .slotF{fill:var(--fail-soft);stroke:var(--failc);stroke-width:1.6}
+.strip .slotS{fill:var(--succ-soft);stroke:var(--succ);stroke-width:2.2}
+.strip .lF{font-family:var(--disp);font-size:15px;fill:var(--muted);text-anchor:middle;font-weight:700}
+.strip .lS{font-family:var(--disp);font-size:15px;fill:#9c6c10;text-anchor:middle;font-weight:700}
+.strip .pl{font-family:var(--mono);font-size:9.5px;fill:var(--muted);text-anchor:middle}
+.strip .pls{font-family:var(--mono);font-size:9.5px;fill:#9c6c10;text-anchor:middle}
+.strip .form{font-family:var(--mono);font-size:12.5px;fill:var(--accent);text-anchor:middle;font-weight:700}
+.strip .tnum{font-family:var(--mono);font-size:9px;fill:var(--muted);text-anchor:middle}
+.decay .bar{fill:var(--accent)}
+.decay .bar1{fill:var(--succ)}
+.decay .axis{stroke:var(--muted);stroke-width:1;opacity:.5}
+.decay .klab{font-family:var(--mono);font-size:10px;fill:var(--muted);text-anchor:middle}
+.decay .vlab{font-family:var(--mono);font-size:8.5px;fill:var(--muted);text-anchor:middle}
+
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+section h2{font-size:clamp(23px,3.4vw,31px);margin-bottom:8px}
+.sec-sub{color:var(--muted);max-width:665px;margin:0 0 30px}
+
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:680px){.trio{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card .n{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+.card h3{font-size:17px;margin:10px 0 6px}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card kbd{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--ink)}
+
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+@media(max-width:680px){.vs{grid-template-columns:1fr}}
+.vbox{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--failc);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.vbox.g{border-left-color:var(--accent)}
+.vbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:5px}
+.vbox .d{font-size:13.5px;color:var(--muted)}
+.vbox code{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12.5px;color:var(--accent)}
+
+.cmdbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-top:14px;box-shadow:var(--shadow)}
+.cmdbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:8px}
+table.cmd{border-collapse:collapse;font-size:13.5px;width:100%}
+table.cmd td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.cmd td:first-child{font-family:var(--mono);color:var(--accent);white-space:nowrap;font-size:12.5px}
+table.cmd tr:last-child td{border-bottom:none}
+
+.callout{display:flex;gap:16px;background:var(--accent-soft);border:1px solid #B4C2DC;border-radius:14px;padding:20px 22px;margin-top:26px}
+.callout .hand{font-size:22px;line-height:1.2}
+.callout p{margin:0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout .mono{color:#243C66}
+
+.ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.progress-wrap{width:100%;margin:16px 0 26px}
+.progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.progress-track{height:9px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.reset{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--bad);color:var(--bad)}
+
+.rungs{display:flex;flex-direction:column;gap:14px}
+.rung{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+.rung.cap{border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--shadow)}
+.rung-top{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;user-select:none}
+.rung-num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.rung.done .rung-num{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rung.cap .rung-num{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.rung-title{flex:1 1 auto}
+.rung-title .rt{font-family:var(--disp);font-weight:600;font-size:16px}
+.rung-title .rd{font-size:13px;color:var(--muted);margin-top:1px}
+.rung-badge{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.dots{display:flex;gap:4px}
+.dot-b{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dot-b.on{background:var(--accent)}
+.rung.done .dot-b.on{background:var(--good)}
+.chev{transition:transform .25s;color:var(--muted);font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.medal{display:none}.rung.done .medal{display:inline}
+.rung.done .rung-badge .txt{color:var(--good)}
+.rung-body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+.rung.open .rung-body{display:block}
+
+.strategy{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:18px 0;overflow:hidden}
+.strategy summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--accent);list-style:none;display:flex;align-items:center;gap:8px}
+.strategy summary::-webkit-details-marker{display:none}
+.strategy summary::before{content:"▸";transition:transform .2s;display:inline-block}
+.strategy[open] summary::before{transform:rotate(90deg)}
+.strategy .inner{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+.strategy .inner p{margin:.5em 0}
+.strategy code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--accent)}
+
+.scenario{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:15px;margin-bottom:16px}
+.scenario .tag{font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:8px}
+.scenario b{color:var(--ink)}
+.ask{font-weight:600;font-family:var(--disp);font-size:16px;margin:4px 0 14px}
+.ask .hl{color:var(--accent)}
+.vizbox{margin:8px 0 16px}
+
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:14.5px;font-family:var(--body);color:var(--ink);transition:.12s}
+.choice:hover{border-color:var(--accent)}
+.choice .key{flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.choice .mono{font-family:var(--mono)}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .key{background:var(--good);border-color:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.choice:disabled{cursor:default}
+
+.numrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.field input{font-family:var(--mono);font-size:16px;width:132px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);outline:none}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field input.ok{border-color:var(--good);background:var(--good-soft)}
+.field input.no{border-color:var(--bad);background:var(--bad-soft)}
+.btn{font-family:var(--disp);font-weight:600;font-size:14.5px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
+.btn:hover{background:#273E68}
+.btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--accent)}
+.feedback{margin-top:15px;font-size:14.5px;display:none;border-radius:10px;padding:12px 15px}
+.feedback.show{display:block}
+.feedback.right{background:var(--good-soft);border:1px solid var(--good);color:#1c6b37}
+.feedback.wrong{background:var(--bad-soft);border:1px solid var(--bad);color:#96302d}
+.feedback .mono{font-weight:700}
+.feedback .next{margin-top:9px}
+.streak-note{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:12px}
+
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:680px){.why-grid{grid-template-columns:1fr}}
+.why-grid h3{font-size:16px;margin-bottom:6px;color:var(--accent)}
+.why-grid p{font-size:14px;color:var(--muted);margin:0}
+.why-close{font-size:15px;color:var(--ink);max-width:690px}
+.why-close .mono{color:var(--accent)}
+
+footer{padding:30px 0 50px;border-top:1px solid var(--line)}
+.foot{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-family:var(--disp);font-weight:600;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:.35s;z-index:80;display:flex;gap:10px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="glyph">⋯◆</span> The Geometric Ladder</div>
+    <div class="navlinks"><a href="#how">How it works</a><a href="#ladder">The ladder</a><a href="#why">Why it matters</a></div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Geometric distribution · waiting for the first success</div>
+    <h1>Binomial counts successes. Geometric counts <em>trials until the first one.</em></h1>
+    <p class="lede">A binomial setting fixes the number of trials and asks how many succeed. A <b>geometric</b> setting flips that: you keep going until you succeed, so the <b>number of trials is what's random</b>. To need exactly <em>k</em> trials, the first <em>k</em> − 1 must all fail and the <em>k</em>th must succeed — which is why the formula is <b>(1 − p)<sup>k−1</sup> · p</b>, with no combinations anywhere. There's only one arrangement that works: the success has to come last.</p>
+
+    <div class="heroviz">
+      <div class="cap">To need exactly k trials, everything before the last one must fail</div>
+      <div id="heroStrip"></div>
+      <div class="legend"><span class="f"><span class="sw"></span>failure, probability 1 − p</span><span class="s"><span class="sw"></span>first success, probability p</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Recognize it, then let technology do the arithmetic</h2>
+    <p class="sec-sub">Twelve rungs run from telling geometric apart from binomial to the memoryless property. Probabilities come from <span class="mono">geometpdf</span> and <span class="mono">geometcdf</span>, so the skill being practiced is choosing the right command and the right boundary. Round probabilities to 4 decimal places.</p>
+    <div class="trio">
+      <div class="card"><div class="n">01</div><h3>Look for "until"</h3><p>"How many out of 20?" is binomial. "How many <b>until</b> the first success?" is geometric — no fixed number of trials.</p></div>
+      <div class="card"><div class="n">02</div><h3>Earn each badge</h3><p><b>Four in a row</b> earns a rung's badge. Click a choice or press <kbd>1</kbd>–<kbd>4</kbd>; type answers and press <kbd>Enter</kbd>.</p></div>
+      <div class="card"><div class="n">03</div><h3>X starts at 1</h3><p>X counts trials <b>including</b> the successful one, so the smallest possible value is 1 — you can't succeed in zero trials.</p></div>
+    </div>
+
+    <div style="margin-top:34px">
+      <div class="sec-eyebrow">The two settings, side by side</div>
+      <div class="vs">
+        <div class="vbox"><div class="t">Binomial</div><div class="d">A <b>fixed</b> number of trials n. X counts how many succeed, so X = 0, 1, …, n. <code>E(X) = np</code></div></div>
+        <div class="vbox g"><div class="t">Geometric</div><div class="d">Trials continue <b>until the first success</b>. X counts trials used, so X = 1, 2, 3, … with no upper limit. <code>E(X) = 1/p</code></div></div>
+      </div>
+      <div class="cmdbox">
+        <div class="t">The commands</div>
+        <table class="cmd">
+          <tr><td>geometpdf(p, k)</td><td>P(X = k) — exactly k trials needed</td></tr>
+          <tr><td>geometcdf(p, k)</td><td>P(X ≤ k) — success within the first k trials</td></tr>
+          <tr><td>1 − geometcdf(p, k)</td><td>P(X &gt; k) — still no success after k trials</td></tr>
+          <tr><td>1 − geometcdf(p, k − 1)</td><td>P(X ≥ k) — takes at least k trials</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="hand">🎯</div>
+      <p><b>Why E(X) = 1/p makes sense.</b> If a success happens about one time in six, you should expect to wait about six trials for one — so a probability of 1/6 gives an expected wait of 6. The rarer the event, the longer the wait, and <span class="mono">the expected wait is just the reciprocal</span>. No summation required.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="ladder-head"><div><div class="sec-eyebrow">The ladder</div><h2>Pick a rung and practice</h2></div><button class="reset" id="resetBtn">Reset progress</button></div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span id="progLabel">0 of 12 badges earned</span><span>4 in a row = badge</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow">Why it matters</div>
+    <h2>Waiting-time questions are everywhere</h2>
+    <div class="why-grid">
+      <div><h3>The natural question</h3><p>How many calls until a sale? How many parts until a defect? How many attempts until it works? These are waiting-time questions, and binomial can't answer them.</p></div>
+      <div><h3>Rare events wait a long time</h3><p>E(X) = 1/p turns a small probability into a concrete expectation. A 2% response rate means about 50 attempts per response — a fact worth knowing before you start.</p></div>
+      <div><h3>The past doesn't count</h3><p>Independent trials have no memory. Ten failures in a row don't make the next attempt any likelier to succeed — the gambler's fallacy, formally disproved.</p></div>
+    </div>
+    <p class="why-close">Everything here follows from one picture: <span class="mono">fail, fail, …, fail, succeed.</span> Multiply k − 1 failures by one success and you have the formula; add up the first k terms and you have "within k trials"; subtract from 1 and you have "still waiting." Recognize the setting, pick the boundary carefully, and let <span class="mono">geometpdf</span> and <span class="mono">geometcdf</span> handle the rest.</p>
+  </div>
+</section>
+
+<footer><div class="wrap"><div class="foot">The Geometric Ladder · P(X = k) = (1 − p)<sup>k−1</sup>·p · P(X ≤ k) = geometcdf(p, k) · P(X &gt; k) = (1 − p)<sup>k</sup> · E(X) = 1/p</div></div></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   ===== CORE LOGIC START  (pure; extracted for stress-testing) =====
+   ================================================================= */
+
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function r4(x){ var s=x<0?-1:1, v=Math.abs(x)*10000; return s*Math.round(v+1e-9)/10000; }
+function f4(x){ return r4(x).toFixed(4); }
+function pickOpts(correct, distractors){
+  var opts=[correct], i;
+  for(i=0;i<distractors.length && opts.length<4;i++){ if(opts.indexOf(distractors[i])===-1) opts.push(distractors[i]); }
+  var packed=opts.map(function(o,idx){return {o:o,c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+
+/* ---------- the distribution: X = number of trials up to and including the first success ---------- */
+function geompdf(p,k){ return Math.pow(1-p, k-1)*p; }
+function geomcdf(p,k){ return 1-Math.pow(1-p, k); }
+function geomEV(p){ return 1/p; }
+
+/* ---------- contexts ---------- */
+var CTX=[
+  {ctx:'Free throws', unit:'free throw', unitPl:'free throws', verb:'shoots', event:'makes the shot',
+   evShort:'a make', pPool:[0.55,0.6,0.65,0.7,0.75,0.8]},
+  {ctx:'Rolling a die', unit:'roll', unitPl:'rolls', verb:'rolls a fair die', event:'gets a six',
+   evShort:'a six', pFixed:1/6, pDisp:'1/6'},
+  {ctx:'Sales calls', unit:'call', unitPl:'calls', verb:'makes calls', event:'makes a sale',
+   evShort:'a sale', pPool:[0.08,0.1,0.12,0.15,0.2,0.25]},
+  {ctx:'Quality control', unit:'component', unitPl:'components', verb:'tests components', event:'finds a defective one',
+   evShort:'a defective part', pPool:[0.05,0.08,0.1,0.12,0.15]},
+  {ctx:'Spinner', unit:'spin', unitPl:'spins', verb:'spins', event:'lands on red',
+   evShort:'red', pPool:[0.2,0.25,0.3,0.4]},
+  {ctx:'Archery', unit:'arrow', unitPl:'arrows', verb:'shoots arrows', event:'hits the bullseye',
+   evShort:'a bullseye', pPool:[0.3,0.35,0.4,0.45,0.5]},
+  {ctx:'Random digits', unit:'digit', unitPl:'digits', verb:'generates random digits', event:'gets a 7',
+   evShort:'a 7', pFixed:0.1, pDisp:'0.1'},
+  {ctx:'Cards with replacement', unit:'draw', unitPl:'draws', verb:'draws with replacement', event:'draws an ace',
+   evShort:'an ace', pFixed:1/13, pDisp:'1/13'}
+];
+
+/* reject any probability that would sit on a 4-dp rounding tie */
+function tieOK(v){ var s=Math.abs(v)*10000, f=s-Math.floor(s); return Math.abs(f-0.5)>=0.05; }
+function usable(v){ return v>=0.0002 && v<=0.9995 && tieOK(v); }
+
+function genCase(opts){
+  opts=opts||{};
+  for(var tries=0;tries<600;tries++){
+    var c=pick(CTX);
+    var p = c.pFixed!=null ? c.pFixed : pick(c.pPool);
+    var pDisp = c.pDisp || String(p);
+    var k = opts.k || (2+Math.floor(Math.random()*6));         /* 2..7 */
+    var vals=[geompdf(p,k), geomcdf(p,k), 1-geomcdf(p,k), 1-geomcdf(p,k-1), geomcdf(p,k-1), geompdf(p,1)];
+    var ok=true, i;
+    for(i=0;i<vals.length;i++) if(!usable(vals[i])) ok=false;
+    if(!ok) continue;
+    return {ctx:c.ctx, unit:c.unit, unitPl:c.unitPl, verb:c.verb, event:c.event, evShort:c.evShort,
+      p:p, pDisp:pDisp, k:k, ev:geomEV(p)};
+  }
+  return null;
+}
+
+/* ---------- the five phrasings and their commands ---------- */
+function phrasings(C){
+  var p=C.pDisp, k=C.k;
+  return [
+    {key:'exactly', words:'exactly '+k+' '+C.unitPl,        cmd:'geometpdf('+p+', '+k+')',      val:geompdf(C.p,k)},
+    {key:'atmost',  words:'at most '+k+' '+C.unitPl,        cmd:'geometcdf('+p+', '+k+')',      val:geomcdf(C.p,k)},
+    {key:'fewer',   words:'fewer than '+k+' '+C.unitPl,     cmd:'geometcdf('+p+', '+(k-1)+')',  val:geomcdf(C.p,k-1)},
+    {key:'atleast', words:'at least '+k+' '+C.unitPl,       cmd:'1 \u2212 geometcdf('+p+', '+(k-1)+')', val:1-geomcdf(C.p,k-1)},
+    {key:'more',    words:'more than '+k+' '+C.unitPl,      cmd:'1 \u2212 geometcdf('+p+', '+k+')',     val:1-geomcdf(C.p,k)}
+  ];
+}
+function phraseBy(C, key){ var ps=phrasings(C), i; for(i=0;i<ps.length;i++) if(ps[i].key===key) return ps[i]; return null; }
+function commandOpts(C, key){
+  var ps=phrasings(C), correct=null, pool=[], i;
+  for(i=0;i<ps.length;i++){ if(ps[i].key===key) correct=ps[i].cmd; else pool.push(ps[i].cmd); }
+  return pickOpts(correct, shuffle(pool));
+}
+
+/* ---------- binomial vs geometric discrimination ---------- */
+var SCEN=[
+  {kind:'geo', t:'A player makes 70% of free throws. How many shots until the first make?'},
+  {kind:'bin', t:'A player makes 70% of free throws and takes 15 shots. How many of the 15 does she make?'},
+  {kind:'geo', t:'A die is rolled repeatedly until a six appears. How many rolls does it take?'},
+  {kind:'bin', t:'A die is rolled 20 times. How many sixes appear?'},
+  {kind:'geo', t:'Components are tested one at a time until the first defective one is found. How many are tested?'},
+  {kind:'bin', t:'A batch of 40 components is tested. How many are defective?'},
+  {kind:'geo', t:'A salesperson calls until making the first sale. How many calls are needed?'},
+  {kind:'bin', t:'A salesperson makes 30 calls. How many result in a sale?'},
+  {kind:'geo', t:'Cards are drawn with replacement until the first ace appears. How many draws are needed?'},
+  {kind:'bin', t:'Twelve cards are drawn with replacement. How many are aces?'},
+  {kind:'geo', t:'A spinner is spun until it first lands on red. How many spins does that take?'},
+  {kind:'bin', t:'A spinner is spun 25 times. How many times does it land on red?'}
+];
+function genDiscrim(){
+  var s=pick(SCEN);
+  return {scen:s, opts:pickOpts(s.kind==='geo'?'Geometric':'Binomial',
+    [s.kind==='geo'?'Binomial':'Geometric','Neither \u2014 the trials are not independent','Both describe it equally well'])};
+}
+function conditionOpts(mode){
+  if(mode==='which') return pickOpts('The number of trials is not fixed \u2014 you stop at the first success.',
+    ['The number of trials is fixed in advance.',
+     'The probability of success changes from trial to trial.',
+     'Each trial can have three or more outcomes.']);
+  if(mode==='values') return pickOpts('X = 1, 2, 3, \u2026 with no upper limit.',
+    ['X = 0, 1, 2, \u2026 with no upper limit.',
+     'X = 0, 1, 2, \u2026, n.',
+     'X can be any positive number, including decimals.']);
+  return pickOpts('Two outcomes per trial, independent trials, and the same p every trial.',
+    ['Two outcomes per trial, but p may change as you go.',
+     'A fixed number of trials with the same p.',
+     'Trials that depend on the previous result.']);
+}
+
+/* ---------- shape ---------- */
+function shapeOpts(mode){
+  if(mode==='shape') return pickOpts('Right-skewed, and always decreasing as k grows.',
+    ['Symmetric and bell-shaped.','Left-skewed, with a long tail to the left.','Flat \u2014 every value equally likely.']);
+  if(mode==='peak') return pickOpts('k = 1 \u2014 the first trial is always the single most likely.',
+    ['k equal to the expected value, 1/p.','The largest k shown.','It depends on p.']);
+  return pickOpts('Every bar is shorter than the one before it, no matter what p is.',
+    ['The bars rise to a peak and then fall.',
+     'The bars are equal until k reaches 1/p.',
+     'The bars increase as k grows.']);
+}
+
+/* ---------- memoryless ---------- */
+function genMemoryless(C){
+  var m=2+Math.floor(Math.random()*4);        /* trials already failed */
+  var n=2+Math.floor(Math.random()*4);        /* further trials asked about */
+  return {m:m, n:n, pNext:C.p, pMore:Math.pow(1-C.p, n)};
+}
+function memorylessOpts(mode, C, ML){
+  if(mode==='next') return pickOpts('Still '+C.pDisp+' \u2014 the earlier failures change nothing.',
+    ['Higher than '+C.pDisp+', because a success is overdue.',
+     'Lower than '+C.pDisp+', because this attempt is unlucky.',
+     'It cannot be determined without knowing how many trials remain.']);
+  if(mode==='concept') return pickOpts('The trials are independent, so past results carry no information about future ones.',
+    ['Probabilities must even out over the long run, so a success becomes likelier.',
+     'The distribution keeps track of how many failures have occurred.',
+     'After enough failures, success becomes certain.']);
+  return pickOpts('The same as the probability of needing more than '+ML.n+' trials from the very start.',
+    ['Smaller, because '+ML.m+' trials have already been used.',
+     'Larger, because a success is now overdue.',
+     'Zero, because the first success must come eventually.']);
+}
+
+/* ---------- SVG: the trial strip ---------- */
+function svgStrip(p, k, pDisp){
+  var show=Math.min(k,7), W=490, boxW=44, gap=10, i;
+  var totalW=show*boxW+(show-1)*gap;
+  var x0=(W-totalW)/2, y=30, H=132;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="strip" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="trial strip">';
+  for(i=0;i<show;i++){
+    var x=x0+i*(boxW+gap), last=(i===show-1);
+    s+='<rect x="'+x.toFixed(1)+'" y="'+y+'" width="'+boxW+'" height="40" rx="7" class="'+(last?'slotS':'slotF')+'"/>';
+    s+='<text x="'+(x+boxW/2).toFixed(1)+'" y="'+(y+26)+'" class="'+(last?'lS':'lF')+'">'+(last?'S':'F')+'</text>';
+    s+='<text x="'+(x+boxW/2).toFixed(1)+'" y="'+(y+55)+'" class="'+(last?'pls':'pl')+'">'+(last?'p':'1\u2212p')+'</text>';
+    s+='<text x="'+(x+boxW/2).toFixed(1)+'" y="'+(y-8)+'" class="tnum">'+(i+1)+'</text>';
+  }
+  var kk=(k>7?'k':String(k)), km1=(k>7?'k\u22121':String(k-1));
+  s+='<text x="'+(W/2)+'" y="'+(y+88)+'" class="form">P(X = '+kk+') = (1\u2212p)'+
+     '<tspan baseline-shift="super" font-size="9">'+km1+'</tspan> \u00b7 p'+
+     (pDisp?'   with p = '+pDisp:'')+'</text>';
+  s+='</svg>'; return s;
+}
+/* ---------- SVG: the decaying bar chart ---------- */
+function svgDecay(p, kmax){
+  kmax=kmax||8;
+  var W=490, H=190, m=32, base=H-30, i;
+  var barW=(W-2*m)/kmax*0.68, step=(W-2*m)/kmax;
+  var top=geompdf(p,1);
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="decay" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="probability bars">';
+  s+='<line x1="'+m+'" y1="'+base+'" x2="'+(W-m)+'" y2="'+base+'" class="axis"/>';
+  for(i=1;i<=kmax;i++){
+    var v=geompdf(p,i), h=Math.max(1,(v/top)*(base-40));
+    var x=m+(i-0.5)*step-barW/2;
+    s+='<rect x="'+x.toFixed(1)+'" y="'+(base-h).toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="2" class="'+(i===1?'bar1':'bar')+'"/>';
+    s+='<text x="'+(m+(i-0.5)*step).toFixed(1)+'" y="'+(base+13)+'" class="klab">'+i+'</text>';
+    if(h>26) s+='<text x="'+(m+(i-0.5)*step).toFixed(1)+'" y="'+(base-h-4).toFixed(1)+'" class="vlab">'+f4(v)+'</text>';
+  }
+  s+='<text x="'+(W/2)+'" y="'+(H-4)+'" class="klab">k = number of trials until the first success</text>';
+  s+='</svg>'; return s;
+}
+
+if(typeof module!=='undefined' && module.exports){
+  module.exports={ r4:r4, f4:f4, geompdf:geompdf, geomcdf:geomcdf, geomEV:geomEV, CTX:CTX, SCEN:SCEN,
+    tieOK:tieOK, usable:usable, genCase:genCase, phrasings:phrasings, phraseBy:phraseBy,
+    commandOpts:commandOpts, genDiscrim:genDiscrim, conditionOpts:conditionOpts, shapeOpts:shapeOpts,
+    genMemoryless:genMemoryless, memorylessOpts:memorylessOpts, svgStrip:svgStrip, svgDecay:svgDecay };
+}
+/* =================================================================
+   ===== CORE LOGIC END =====
+   ================================================================= */
+
+
+/* ---------------- UI LAYER ---------------- */
+var KEY='geomLadder', NEED=4;
+var state=load();
+function load(){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.rungs) return s; }catch(e){} return {rungs:{}}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+(function(){ document.getElementById('heroStrip').innerHTML=svgStrip(0.3,5,null); })();
+
+function setup(C){
+  return '<span class="tag">'+C.ctx+'</span>On each '+C.unit+', the probability of '+C.evShort+' is <b>'+C.pDisp+
+    '</b>, independently of the others. Let <b>X</b> be the number of '+C.unitPl+' up to and including the first time it happens.';
+}
+
+var RUNGS=[
+  {
+    id:'which', title:'Binomial or geometric?', desc:'Is n fixed, or are you waiting?',
+    strategy:'<p>Ask what is being counted. A <b>fixed number of trials</b>, counting successes \u2192 binomial. Trials continuing <b>until the first success</b>, counting trials \u2192 geometric. The phrase "until" is the strongest signal there is.</p>',
+    build:function(){ var D=genDiscrim();
+      return {mode:'mc',
+        scenario:'<span class="tag">Which setting?</span>'+D.scen.t,
+        ask:'Which distribution describes this?', options:D.opts.options, answer:D.opts.answer}; }
+  },
+  {
+    id:'conditions', title:'The geometric setting', desc:'Same conditions, but n is free.',
+    strategy:'<p>Geometric needs the same three things binomial does \u2014 <b>two outcomes</b>, <b>independent</b> trials, <b>constant p</b> \u2014 but drops the fourth. There is <b>no fixed n</b>: you stop as soon as you succeed, so X can be any whole number from 1 upward.</p>',
+    build:function(){ var mode=pick(['which','values','conds']), o=conditionOpts(mode);
+      var ask=mode==='which'?'What separates a geometric setting from a binomial one?':
+              mode==='values'?'What values can X take in a geometric setting?':
+              'Which conditions must hold?';
+      return {mode:'mc', ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'pdf', title:'P(X = k) exactly', desc:'(1 \u2212 p)^(k\u22121) \u00b7 p, or geometpdf.',
+    strategy:'<p>For the first success to land on trial k, the first <b>k \u2212 1</b> trials must all fail and trial k must succeed: <code>(1\u2212p)^(k\u22121) \u00b7 p</code>. On a calculator this is <code>geometpdf(p, k)</code>. Round to 4 decimals.</p>',
+    build:function(){ var C=genCase();
+      return {mode:'num', strip:[C.p,C.k,C.pDisp],
+        scenario:setup(C),
+        ask:'Find P(X = '+C.k+') \u2014 the probability the first '+C.evShort+' comes on exactly '+C.unit+' number '+C.k+'. (4 decimals)',
+        fields:[{label:'P(X = '+C.k+') =', answer:geompdf(C.p,C.k), tol:0.00051}]}; }
+  },
+  {
+    id:'command', title:'Which command?', desc:'pdf or cdf \u2014 and which argument.',
+    strategy:'<p><code>geometpdf(p, k)</code> gives <b>exactly</b> k. <code>geometcdf(p, k)</code> accumulates everything <b>up to and including</b> k. For "at least" or "more than," subtract from 1 \u2014 and watch whether the boundary value itself is included.</p>',
+    build:function(){ var C=genCase(), key=pick(['exactly','atmost','fewer','atleast','more']);
+      if(key==='fewer' && C.k<3) key='atmost';
+      var ph=phraseBy(C,key), o=commandOpts(C,key);
+      return {mode:'mc',
+        scenario:setup(C),
+        ask:'Which command gives the probability that it takes <span class="hl">'+ph.words+'</span>?',
+        options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'cdf', title:'Success within k trials', desc:'P(X \u2264 k) = geometcdf(p, k).',
+    strategy:'<p>"Within k trials" means the first success happened on trial 1, 2, \u2026, or k \u2014 that is <code>P(X \u2264 k) = geometcdf(p, k)</code>. By hand it equals <code>1 \u2212 (1\u2212p)^k</code>: one minus the chance of failing every one of the k trials.</p>',
+    build:function(){ var C=genCase();
+      return {mode:'num',
+        scenario:setup(C),
+        ask:'Find the probability that the first '+C.evShort+' happens <span class="hl">within the first '+C.k+' '+C.unitPl+'</span>. (4 decimals)',
+        fields:[{label:'P(X \u2264 '+C.k+') =', answer:geomcdf(C.p,C.k), tol:0.00051}]}; }
+  },
+  {
+    id:'tail', title:'Still waiting after k trials', desc:'P(X > k) = (1 \u2212 p)^k.',
+    strategy:'<p>To still be waiting after k trials, <b>every one of those k trials failed</b>: <code>P(X &gt; k) = (1\u2212p)^k</code>, which is also <code>1 \u2212 geometcdf(p, k)</code>. This is the cleanest formula in the topic \u2014 no k \u2212 1 anywhere.</p>',
+    build:function(){ var C=genCase();
+      return {mode:'num',
+        scenario:setup(C),
+        ask:'Find the probability that the first '+C.k+' '+C.unitPl+' produce <span class="hl">no '+C.evShort+' at all</span>. (4 decimals)',
+        fields:[{label:'P(X > '+C.k+') =', answer:1-geomcdf(C.p,C.k), tol:0.00051}]}; }
+  },
+  {
+    id:'boundary', title:'The wording boundary', desc:'At most, fewer than, at least, more than.',
+    strategy:'<p>X is a whole number, so these differ: <b>at most k</b> includes k; <b>fewer than k</b> stops at k \u2212 1; <b>at least k</b> includes k; <b>more than k</b> starts at k + 1. Decide whether the boundary value is in or out <em>before</em> touching the calculator.</p>',
+    build:function(){ var C=genCase(), key=pick(['atmost','fewer','atleast','more']);
+      if(key==='fewer' && C.k<3) key='atmost';
+      var ph=phraseBy(C,key);
+      return {mode:'num',
+        scenario:setup(C),
+        ask:'Find the probability that it takes <span class="hl">'+ph.words+'</span> to get the first '+C.evShort+'. (4 decimals)',
+        fields:[{label:'probability =', answer:ph.val, tol:0.00051}]}; }
+  },
+  {
+    id:'ev', title:'Expected number of trials', desc:'E(X) = 1/p.',
+    strategy:'<p>The expected wait is the reciprocal of the success probability: <code>E(X) = 1/p</code>. If something happens one time in five, expect about five trials. Round to 2 decimals.</p>',
+    build:function(){ var C=genCase();
+      return {mode:'num',
+        scenario:setup(C),
+        ask:'On average, how many '+C.unitPl+' are needed to get the first '+C.evShort+'? (2 decimals)',
+        fields:[{label:'E(X) =', answer:C.ev, tol:0.0051}]}; }
+  },
+  {
+    id:'shape', title:'The shape of the distribution', desc:'Always decreasing, always right-skewed.',
+    strategy:'<p>Each extra trial multiplies by another (1\u2212p), so the bars <b>always shrink</b>. That makes every geometric distribution right-skewed with its tallest bar at <b>k = 1</b> \u2014 even when the expected wait is long.</p>',
+    build:function(){ var C=genCase(), mode=pick(['shape','peak','bars']), o=shapeOpts(mode);
+      var ask=mode==='shape'?'What is the shape of this distribution?':
+              mode==='peak'?'Which value of k has the highest probability?':
+              'What is always true of the bars?';
+      return {mode:'mc', decay:C.p,
+        scenario:'<span class="tag">'+C.ctx+'</span>Each '+C.unit+' gives '+C.evShort+' with probability <b>'+C.pDisp+'</b>. The bars show P(X = k).',
+        ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'memory', title:'The memoryless property', desc:'Past failures change nothing.',
+    strategy:'<p>Because the trials are independent, the process has <b>no memory</b>. After any number of failures, the probability the next trial succeeds is still p, and the wait from here on has exactly the same distribution as it did at the start. A run of bad luck does not make you "due."</p>',
+    build:function(){ var C=genCase(), ML=genMemoryless(C), mode=pick(['next','concept','more']);
+      var o=memorylessOpts(mode,C,ML);
+      var scen=setup(C)+'<div style="margin-top:8px;font-size:14px">So far there have been <b>'+ML.m+' '+C.unitPl+' with no '+C.evShort+'</b>.</div>';
+      var ask=mode==='next'?'What is the probability the next '+C.unit+' produces '+C.evShort+'?':
+              mode==='concept'?'Why does the earlier run of failures not matter?':
+              'What is the probability that more than '+ML.n+' further '+C.unitPl+' are still needed?';
+      return {mode:'mc', scenario:scen, ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'context', title:'Put it together', desc:'Read the wording, pick the tool.',
+    strategy:'<p>Identify the boundary from the words, choose <code>geometpdf</code> or <code>geometcdf</code>, and compute. Then sanity-check against E(X) = 1/p: if the expected wait is 8 trials, succeeding within 3 should not be likely.</p>',
+    build:function(){ var C=genCase(), key=pick(['exactly','atmost','atleast','more']);
+      var ph=phraseBy(C,key);
+      return {mode:'num',
+        scenario:setup(C),
+        ask:'Find the probability that it takes <span class="hl">'+ph.words+'</span>, and give the expected number of '+C.unitPl+'.',
+        fields:[{label:'probability =', answer:ph.val, tol:0.00051},{label:'E(X) =', answer:C.ev, tol:0.0051}]}; }
+  },
+  {
+    id:'capstone', title:'Capstone \u2014 identify, then compute', desc:'Name the setting, then the probability. One miss restarts.', cap:true,
+    strategy:'<p>The full routine: decide whether the setting is geometric, then compute the requested probability with the right command. Both parts must be right, or the streak resets.</p>',
+    build:function(){ var C=genCase(), key=pick(['exactly','atmost','atleast','more']);
+      var ph=phraseBy(C,key), o=conditionOpts('values');
+      return {mode:'numthenmc', strip:[C.p,C.k,C.pDisp],
+        scenario:setup(C),
+        ask:'1. Find the probability that it takes '+ph.words+'. (4 decimals)',
+        fields:[{label:'probability =', answer:ph.val, tol:0.00051}],
+        sub2:{ask:'2. What values can X take here?', options:o.options, answer:o.answer}}; }
+  }
+];
+
+/* ---------- render skeleton ---------- */
+var rungsEl=document.getElementById('rungs');
+RUNGS.forEach(function(def,idx){
+  if(!state.rungs[def.id]) state.rungs[def.id]={streak:0,done:false};
+  var el=document.createElement('div');
+  el.className='rung'+(def.cap?' cap':'')+(state.rungs[def.id].done?' done':'');
+  el.dataset.id=def.id;
+  el.innerHTML='<div class="rung-top"><div class="rung-num">'+(idx+1)+'</div>'+
+    '<div class="rung-title"><div class="rt">'+def.title+'</div><div class="rd">'+def.desc+'</div></div>'+
+    '<div class="rung-badge"><span class="medal">🏅</span><span class="dots"></span><span class="txt"></span></div>'+
+    '<div class="chev">▶</div></div><div class="rung-body"></div>';
+  rungsEl.appendChild(el);
+  el.querySelector('.rung-top').addEventListener('click', function(){ toggleRung(def.id); });
+  renderBadge(def.id);
+});
+function rungEl(id){ return rungsEl.querySelector('.rung[data-id="'+id+'"]'); }
+function rungDef(id){ return RUNGS.filter(function(r){return r.id===id;})[0]; }
+function renderBadge(id){
+  var el=rungEl(id),st=state.rungs[id],dots=el.querySelector('.dots'); dots.innerHTML='';
+  for(var i=0;i<NEED;i++){ var d=document.createElement('span'); d.className='dot-b'+(i<st.streak?' on':''); dots.appendChild(d); }
+  el.querySelector('.txt').textContent=st.done?'earned':(st.streak+'/'+NEED); el.classList.toggle('done',st.done);
+}
+var openId=null;
+function toggleRung(id){
+  var el=rungEl(id);
+  if(el.classList.contains('open')){ el.classList.remove('open'); openId=null; return; }
+  if(openId) rungEl(openId).classList.remove('open');
+  el.classList.add('open'); openId=id; newQuestion(id);
+}
+
+var current={};
+function newQuestion(id){
+  var def=rungDef(id), q=def.build(); current[id]={def:def,q:q};
+  var body=rungEl(id).querySelector('.rung-body');
+  var html='<details class="strategy"><summary>Strategy</summary><div class="inner">'+def.strategy+'</div></details><div class="qwrap">';
+  if(q.scenario) html+='<div class="scenario">'+q.scenario+'</div>';
+  if(q.strip) html+='<div class="vizbox">'+svgStrip(q.strip[0],q.strip[1],q.strip[2])+'</div>';
+  if(q.decay!=null) html+='<div class="vizbox">'+svgDecay(q.decay)+'</div>';
+  if(q.mode==='mc'){
+    html+='<div class="ask">'+q.ask+'</div><div class="choices">';
+    q.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span class="mono">'+opt+'</span></button>'; });
+    html+='</div>';
+  } else {
+    html+='<div class="ask">'+q.ask+'</div><div class="numrow">';
+    q.fields.forEach(function(f,i){ html+='<div class="field"><label>'+f.label+'</label><input type="number" step="any" data-i="'+i+'" autocomplete="off"></div>'; });
+    html+='<button class="btn" data-check="1">Check</button></div>';
+    if(q.mode==='numthenmc') html+='<div class="sub2" style="display:none;margin-top:18px"></div>';
+  }
+  html+='<div class="feedback"></div><div class="streak-note"></div></div>';
+  body.innerHTML=html; updateStreakNote(id);
+  if(q.mode==='mc'){ body.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerMC(id, parseInt(c.dataset.i,10)); }); }); }
+  else {
+    var inputs=body.querySelectorAll('.numrow input');
+    body.querySelector('[data-check]').addEventListener('click', function(){ answerNum(id); });
+    inputs.forEach(function(inp,i){ inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ if(i<inputs.length-1) inputs[i+1].focus(); else answerNum(id); } }); });
+    if(inputs[0]) inputs[0].focus();
+  }
+}
+function updateStreakNote(id){ var st=state.rungs[id],note=rungEl(id).querySelector('.streak-note'); if(!note) return;
+  note.textContent=st.done?'✓ Badge earned — keep going for more practice.':(st.streak>0?('Streak: '+st.streak+' of '+NEED):''); }
+function nextBtn(){ return '<div class="next"><button class="btn ghost" data-next="1">Next question →</button></div>'; }
+function wireNext(id){ var b=rungEl(id).querySelector('[data-next]'); if(b) b.addEventListener('click', function(){ newQuestion(id); }); }
+
+function answerMC(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), choices=body.querySelectorAll('.choices .choice');
+  if(choices[0].disabled) return; choices.forEach(function(c){c.disabled=true;});
+  var correct=(choice===q.answer); choices[q.answer].classList.add('correct'); if(!correct) choices[choice].classList.add('wrong');
+  var fb=body.querySelector('.feedback'); fb.className='feedback show '+(correct?'right':'wrong');
+  fb.innerHTML=(correct?'Correct.':'Not quite — the right choice is highlighted.')+nextBtn();
+  wireNext(id); recordResult(id, correct);
+}
+function answerNum(id){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), inputs=body.querySelectorAll('.numrow input');
+  if(inputs[0].disabled) return;
+  var allOk=true;
+  q.fields.forEach(function(f,i){
+    var tol=(f.tol!=null)?f.tol:0.00051;
+    var v=parseFloat(inputs[i].value.trim());
+    var ok=!isNaN(v)&&Math.abs(v-f.answer)<=tol+1e-9;
+    inputs[i].classList.toggle('ok',ok); inputs[i].classList.toggle('no',!ok);
+    if(!ok) allOk=false;
+  });
+  inputs.forEach(function(i){i.disabled=true;}); body.querySelector('[data-check]').disabled=true;
+  var fb=body.querySelector('.feedback');
+  var showAns=q.fields.map(function(f){ return f.label+' '+(f.tol>0.001? (Math.round(f.answer*100)/100).toFixed(2) : f4(f.answer)); }).join(',&nbsp; ');
+  if(q.mode==='numthenmc'){
+    cur.ok1=allOk;
+    fb.className='feedback show '+(allOk?'right':'wrong');
+    fb.innerHTML=allOk?'Part 1 correct.':('Not quite. <span class="mono">'+showAns+'</span>');
+    var s2=body.querySelector('.sub2'); s2.style.display='block';
+    var html='<div class="ask">'+q.sub2.ask+'</div><div class="choices" data-sub="1">';
+    q.sub2.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span class="mono">'+opt+'</span></button>'; });
+    html+='</div>'; s2.innerHTML=html;
+    s2.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap2(id, parseInt(c.dataset.i,10)); }); });
+    return;
+  }
+  fb.className='feedback show '+(allOk?'right':'wrong');
+  fb.innerHTML=(allOk?'Correct.':'Not quite. <span class="mono">'+showAns+'</span>')+nextBtn();
+  wireNext(id); recordResult(id, allOk);
+}
+function answerCap2(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c1=body.querySelectorAll('.choices[data-sub="1"] .choice'); if(c1[0].disabled) return;
+  c1.forEach(function(c){c.disabled=true;});
+  var ok2=(choice===q.sub2.answer); c1[q.sub2.answer].classList.add('correct'); if(!ok2) c1[choice].classList.add('wrong');
+  var both=cur.ok1&&ok2, fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(both?'right':'wrong');
+  fb.innerHTML=(both?'Both correct — setting named and probability found.':'Not both correct — the streak resets.')+nextBtn();
+  wireNext(id); recordResult(id, both);
+}
+function recordResult(id, correct){
+  var st=state.rungs[id],wasDone=st.done;
+  if(correct){ st.streak++; if(st.streak>=NEED) st.done=true; } else st.streak=0;
+  save(); renderBadge(id); updateStreakNote(id); updateProgress();
+  if(st.done&&!wasDone) celebrate(id);
+}
+function updateProgress(){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  document.getElementById('progLabel').textContent=done+' of '+RUNGS.length+' badges earned';
+  document.getElementById('progFill').style.width=(100*done/RUNGS.length)+'%';
+}
+function celebrate(id){ var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  showToast('🏅 '+(done===RUNGS.length?'All 12 badges — the wait is over.':'Badge earned · '+rungDef(id).title)); }
+var toastT; function showToast(t){ var el=document.getElementById('toast'); el.innerHTML=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2600); }
+
+document.addEventListener('keydown', function(e){
+  if(!openId) return; var cur=current[openId]; if(!cur) return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  var n=parseInt(e.key,10); if(isNaN(n)||n<1||n>4) return;
+  var body=rungEl(openId).querySelector('.rung-body');
+  var s2=body.querySelectorAll('.choices[data-sub="1"] .choice');
+  if(s2.length&&!s2[0].disabled){ if(s2[n-1]) answerCap2(openId,n-1); return; }
+  if(cur.q.mode==='mc'){ var cs=body.querySelectorAll('.choices .choice'); if(cs[n-1]&&!cs[0].disabled) answerMC(openId,n-1); }
+});
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!confirm('Reset all progress on the Geometric Ladder?')) return;
+  state={rungs:{}}; RUNGS.forEach(function(r){state.rungs[r.id]={streak:0,done:false};});
+  save(); RUNGS.forEach(function(r){renderBadge(r.id);updateStreakNote(r.id);});
+  if(openId) newQuestion(openId); updateProgress(); showToast('Progress reset');
+});
+updateProgress();
+</script>
+</body>
+</html>
