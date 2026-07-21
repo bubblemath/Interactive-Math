@@ -1,0 +1,962 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The p-Value Ladder — what a small p-value does and doesn't tell you</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#26291F;
+  --paper:#F7F7F2;
+  --surface:#FFFFFF;
+  --line:#E4E4D8;
+  --accent:#5A6B35;         /* brand */
+  --accent-soft:#E2E8D2;
+  --warn:#C25B3A;           /* the extreme tail / the caution */
+  --warn-soft:#F7E0D6;
+  --nullc:#B8BCA8;          /* the null world */
+  --good:#2E9E51;
+  --good-soft:#E1F3E6;
+  --bad:#C6403D;
+  --bad-soft:#FBE4E3;
+  --muted:#63684F;
+  --shadow:0 1px 2px rgba(38,41,31,.06),0 8px 24px rgba(38,41,31,.06);
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--disp);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin:0}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(247,247,242,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand .glyph{color:var(--accent)}
+.navlinks{margin-left:auto;display:flex;gap:22px;font-size:14px;font-weight:500}
+.navlinks a{color:var(--muted)}.navlinks a:hover{color:var(--ink)}
+@media(max-width:560px){.navlinks{display:none}}
+
+header{padding:66px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+header h1{font-size:clamp(28px,5vw,48px);font-weight:600}
+header h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:670px;margin:20px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+.heroviz{margin:38px 0 6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:24px 22px 16px}
+.heroviz .cap{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:12px;text-align:center}
+.legend{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+.legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.legend .n .sw{background:var(--nullc)}
+.legend .e .sw{background:var(--warn)}
+
+svg.nullw,svg.cliff{display:block;width:100%;max-width:490px;height:auto;margin:0 auto}
+.nullw .nb{fill:var(--nullc)}
+.nullw .eb{fill:var(--warn)}
+.nullw .axis{stroke:var(--muted);stroke-width:1;opacity:.5}
+.nullw .obs{stroke:var(--ink);stroke-width:2}
+.nullw .olab{font-family:var(--mono);font-size:10px;fill:var(--ink);text-anchor:middle;font-weight:700}
+.nullw .elab{font-family:var(--mono);font-size:10px;fill:var(--warn);text-anchor:middle;font-weight:700}
+.nullw .ax{font-family:var(--mono);font-size:9.5px;fill:var(--muted);text-anchor:middle}
+.cliff .track{fill:var(--accent-soft)}
+.cliff .cut{stroke:var(--warn);stroke-width:2;stroke-dasharray:5 3}
+.cliff .pin{fill:var(--accent)}
+.cliff .pinw{fill:var(--warn)}
+.cliff .plab{font-family:var(--mono);font-size:10px;fill:var(--ink);text-anchor:middle}
+.cliff .vlab{font-family:var(--mono);font-size:9.5px;fill:var(--muted);text-anchor:middle}
+.cliff .verd{font-family:var(--disp);font-size:11px;font-weight:600;text-anchor:middle}
+
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+section h2{font-size:clamp(23px,3.4vw,31px);margin-bottom:8px}
+.sec-sub{color:var(--muted);max-width:670px;margin:0 0 30px}
+
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:680px){.trio{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card .n{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+.card h3{font-size:17px;margin:10px 0 6px}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card kbd{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--ink)}
+
+.saysgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+@media(max-width:680px){.saysgrid{grid-template-columns:1fr}}
+.sbox{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.sbox.no{border-left-color:var(--warn)}
+.sbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:7px}
+.sbox ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--muted)}
+.sbox li{margin:3px 0}
+.sbox code{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12.5px;color:var(--accent)}
+
+.callout{display:flex;gap:16px;background:var(--accent-soft);border:1px solid #C2CEA9;border-radius:14px;padding:20px 22px;margin-top:26px}
+.callout .hand{font-size:22px;line-height:1.2}
+.callout p{margin:0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout .mono{color:#42501F}
+
+.ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.progress-wrap{width:100%;margin:16px 0 26px}
+.progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.progress-track{height:9px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.reset{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--bad);color:var(--bad)}
+
+.rungs{display:flex;flex-direction:column;gap:14px}
+.rung{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+.rung.cap{border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--shadow)}
+.rung-top{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;user-select:none}
+.rung-num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.rung.done .rung-num{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rung.cap .rung-num{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.rung-title{flex:1 1 auto}
+.rung-title .rt{font-family:var(--disp);font-weight:600;font-size:16px}
+.rung-title .rd{font-size:13px;color:var(--muted);margin-top:1px}
+.rung-badge{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.dots{display:flex;gap:4px}
+.dot-b{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dot-b.on{background:var(--accent)}
+.rung.done .dot-b.on{background:var(--good)}
+.chev{transition:transform .25s;color:var(--muted);font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.medal{display:none}.rung.done .medal{display:inline}
+.rung.done .rung-badge .txt{color:var(--good)}
+.rung-body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+.rung.open .rung-body{display:block}
+
+.strategy{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:18px 0;overflow:hidden}
+.strategy summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--accent);list-style:none;display:flex;align-items:center;gap:8px}
+.strategy summary::-webkit-details-marker{display:none}
+.strategy summary::before{content:"▸";transition:transform .2s;display:inline-block}
+.strategy[open] summary::before{transform:rotate(90deg)}
+.strategy .inner{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+.strategy .inner p{margin:.5em 0}
+.strategy code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--accent)}
+
+.scenario{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:15px;margin-bottom:16px}
+.scenario .tag{font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:8px}
+.scenario b{color:var(--ink)}
+.claimbox{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:9px;padding:12px 15px;margin-top:10px;font-size:14.5px;font-style:italic;color:var(--ink)}
+.claimbox .src{font-style:normal;font-family:var(--mono);font-size:11.5px;color:var(--muted);display:block;margin-top:6px}
+.ask{font-weight:600;font-family:var(--disp);font-size:16px;margin:4px 0 14px}
+.ask .hl{color:var(--accent)}
+.vizbox{margin:8px 0 16px}
+
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:flex-start;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:14.5px;font-family:var(--body);color:var(--ink);transition:.12s;line-height:1.5}
+.choice:hover{border-color:var(--accent)}
+.choice .key{flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--muted);margin-top:1px}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .key{background:var(--good);border-color:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.choice:disabled{cursor:default}
+
+.numrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.field input{font-family:var(--mono);font-size:16px;width:132px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);outline:none}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field input.ok{border-color:var(--good);background:var(--good-soft)}
+.field input.no{border-color:var(--bad);background:var(--bad-soft)}
+.btn{font-family:var(--disp);font-weight:600;font-size:14.5px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
+.btn:hover{background:#4A5A2A}
+.btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--accent)}
+.feedback{margin-top:15px;font-size:14.5px;display:none;border-radius:10px;padding:12px 15px}
+.feedback.show{display:block}
+.feedback.right{background:var(--good-soft);border:1px solid var(--good);color:#1c6b37}
+.feedback.wrong{background:var(--bad-soft);border:1px solid var(--bad);color:#96302d}
+.feedback .mono{font-weight:700}
+.feedback .next{margin-top:9px}
+.streak-note{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:12px}
+
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:680px){.why-grid{grid-template-columns:1fr}}
+.why-grid h3{font-size:16px;margin-bottom:6px;color:var(--accent)}
+.why-grid p{font-size:14px;color:var(--muted);margin:0}
+.why-close{font-size:15px;color:var(--ink);max-width:690px}
+.why-close .mono{color:var(--accent)}
+
+footer{padding:30px 0 50px;border-top:1px solid var(--line)}
+.foot{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-family:var(--disp);font-weight:600;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:.35s;z-index:80;display:flex;gap:10px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="glyph">𝑝</span> The p-Value Ladder</div>
+    <div class="navlinks"><a href="#how">How it works</a><a href="#ladder">The ladder</a><a href="#why">Why it matters</a></div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">p-values · significance · reading claims critically</div>
+    <h1>A p-value answers one question — <em>and it isn't the one you want.</em></h1>
+    <p class="lede">It answers: <b>if nothing were really going on, how surprising would data like this be?</b> That's it. It does not tell you the probability that nothing is going on, it does not tell you the result was "3% luck," and it says nothing at all about whether the effect is big enough to care about. Nearly every misreading of a p-value comes from quietly flipping that conditional around — the same reversal you met in conditional probability, now with real consequences.</p>
+
+    <div class="heroviz">
+      <div class="cap">A world where H₀ is true — and how often it produces data like yours</div>
+      <div id="heroNull"></div>
+      <div class="legend"><span class="n"><span class="sw"></span>results if H₀ were true</span><span class="e"><span class="sw"></span>as extreme as observed</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Twelve rungs on reading a p-value honestly</h2>
+    <p class="sec-sub">Two rungs are computational and the rest ask you to diagnose claims, all fictional but written the way real ones are. The picture above is a <b>thinking tool</b>, not a new procedure: imagine the study repeated many times in a world where H₀ is true, and ask how often that world would hand you a result like yours. That fraction <em>is</em> the p-value.</p>
+    <div class="trio">
+      <div class="card"><div class="n">01</div><h3>Mind the direction</h3><p>p = P(data this extreme <b>given</b> H₀ true). It is <b>not</b> P(H₀ true given the data). Reversing a conditional changes everything.</p></div>
+      <div class="card"><div class="n">02</div><h3>Earn each badge</h3><p><b>Four in a row</b> earns a rung's badge. Click a choice or press <kbd>1</kbd>–<kbd>4</kbd>; type answers and press <kbd>Enter</kbd>.</p></div>
+      <div class="card"><div class="n">03</div><h3>Small p ≠ big effect</h3><p>A p-value reflects evidence <em>that</em> an effect exists. How large it is, and whether that matters, is a separate question entirely.</p></div>
+    </div>
+
+    <div style="margin-top:34px">
+      <div class="sec-eyebrow">What it does and doesn't say</div>
+      <div class="saysgrid">
+        <div class="sbox"><div class="t">A small p-value does say</div><ul>
+          <li>Data like this would be unusual if H₀ were true.</li>
+          <li>There is evidence against H₀.</li>
+          <li>Something other than chance may be at work.</li>
+        </ul></div>
+        <div class="sbox no"><div class="t">A small p-value does not say</div><ul>
+          <li>The probability that H₀ is true is small.</li>
+          <li>The effect is large or practically important.</li>
+          <li>The result will replicate next time.</li>
+          <li>The study was well designed or free of bias.</li>
+        </ul></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="hand">🔎</div>
+      <p><b>The cliff that isn't there.</b> One study reports p = 0.049 and another p = 0.051. One gets called "significant" and the other doesn't — but the evidence in them is <span class="mono">very nearly identical</span>. The 0.05 line is a useful convention, not a boundary in nature, and treating it as a wall is how a smooth scale of evidence turns into a misleading yes-or-no verdict.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="ladder-head"><div><div class="sec-eyebrow">The ladder</div><h2>Pick a rung and practice</h2></div><button class="reset" id="resetBtn">Reset progress</button></div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span id="progLabel">0 of 12 badges earned</span><span>4 in a row = badge</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow">Why it matters</div>
+    <h2>You will read these claims for the rest of your life</h2>
+    <div class="why-grid">
+      <div><h3>Headlines quote p-values</h3><p>"Statistically significant" appears in news about medicine, education, and policy every week — usually without an effect size, an interval, or a count of how many things were tested.</p></div>
+      <div><h3>The errors are systematic</h3><p>The common misreadings aren't random slips. They all flip the conditional in the same direction, and they all make results sound more certain than they are.</p></div>
+      <div><h3>Good questions are short</h3><p>How big was the effect? How precise is the estimate? How many analyses were run? Three questions will tell you more than any p-value on its own.</p></div>
+    </div>
+    <p class="why-close">The honest summary is modest: <span class="mono">a p-value measures how surprising your data would be in a world where nothing is going on.</span> That is genuinely useful and genuinely limited. It cannot tell you how likely that world is, how big the effect is, whether the study was any good, or whether anyone tried twenty analyses before settling on this one. Ask for the interval, ask for the effect size, ask what else was tested — and treat 0.05 as a signpost rather than a verdict.</p>
+  </div>
+</section>
+
+<footer><div class="wrap"><div class="foot">The p-Value Ladder · p = P(data at least this extreme | H₀ true) · not P(H₀ true | data) · significant ≠ large · with k tests, P(at least one false positive) = 1 − (1 − α)<sup>k</sup></div></div></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   ===== CORE LOGIC START  (pure; extracted for stress-testing) =====
+   ================================================================= */
+
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function rN(x,d){ var f=Math.pow(10,d), s=x<0?-1:1, v=Math.abs(x)*f; return s*Math.round(v+1e-9)/f; }
+function f4(x){ return rN(x,4).toFixed(4); }
+function pickOpts(correct, distractors){
+  var opts=[correct], i;
+  for(i=0;i<distractors.length && opts.length<4;i++){ if(opts.indexOf(distractors[i])===-1) opts.push(distractors[i]); }
+  var packed=opts.map(function(o,idx){return {o:o,c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+function tie(v,d){ var s=Math.abs(v)*Math.pow(10,d), f=s-Math.floor(s); return Math.abs(f-0.5)<0.04; }
+
+/* ---------- fictional study claims ---------- */
+var CLAIMS=[
+  {org:'a supplement maker', outcome:'reaction time', group:'adults', unit:'milliseconds'},
+  {org:'a study-skills app', outcome:'exam scores', group:'students', unit:'points'},
+  {org:'a workplace program', outcome:'reported job satisfaction', group:'employees', unit:'points'},
+  {org:'a sleep-tracking company', outcome:'time to fall asleep', group:'users', unit:'minutes'},
+  {org:'a tutoring service', outcome:'reading scores', group:'children', unit:'points'},
+  {org:'a fitness brand', outcome:'weekly step counts', group:'members', unit:'steps'},
+  {org:'a nutrition startup', outcome:'afternoon alertness ratings', group:'volunteers', unit:'points'},
+  {org:'a language-learning site', outcome:'vocabulary test scores', group:'learners', unit:'points'}
+];
+
+/* ---------- rung 2: estimating p from a null-world simulation ---------- */
+function genSim(){
+  for(var t=0;t<300;t++){
+    var total=pick([200,400,500,1000,2000]);
+    var p=pick([0.005,0.01,0.02,0.025,0.03,0.04,0.05,0.06,0.08,0.10,0.12,0.15,0.20,0.28]);
+    var count=Math.round(p*total);
+    if(count<3) continue;
+    var val=count/total;
+    if(tie(val,4)) continue;
+    var c=pick(CLAIMS);
+    return {total:total, count:count, p:val, ctx:c};
+  }
+  return null;
+}
+
+/* ---------- rung 8: many tests ---------- */
+function genMulti(){
+  for(var t=0;t<300;t++){
+    var alpha=pick([0.05,0.05,0.05,0.10,0.01]);
+    var k=pick([3,4,5,6,8,10,12,15,20,25,30,40]);
+    var pAny=1-Math.pow(1-alpha,k);
+    var expected=k*alpha;
+    if(pAny<0.03 || pAny>0.93) continue;
+    if(tie(pAny,4) || tie(expected,4)) continue;
+    var c=pick(CLAIMS);
+    return {alpha:alpha, k:k, pAny:pAny, expected:expected, ctx:c};
+  }
+  return null;
+}
+
+/* ---------- option builders (distractors are real misconceptions, length-matched) ---------- */
+function defOpts(mode){
+  if(mode==='what') return pickOpts(
+    'The probability of a result at least this extreme, if H\u2080 is true.',
+    ['The probability that H\u2080 is true, given the data observed.',
+     'The probability that the observed result was caused by chance alone.',
+     'The probability that H\u2080 is false, given the particular data we observed.']);
+  if(mode==='assumes') return pickOpts(
+    'That H\u2080 is true \u2014 the p-value is computed inside that assumption.',
+    ['That H\u2090 is true \u2014 the p-value measures how strong the effect is.',
+     'That the study design was completely free of bias and confounding factors.',
+     'That the sample is large enough for the result to be reliable.']);
+  return pickOpts(
+    'How surprising the data would be in a world where H\u2080 is true.',
+    ['How likely it is that the world where H\u2080 is true is the real one.',
+     'How large the effect in the population is likely to be.',
+     'How likely the study is to give the same answer if repeated.']);
+}
+function inversionOpts(pv){
+  var s=(pv*100).toFixed(0);
+  return pickOpts(
+    'If nothing were going on, data this extreme would arise '+s+'% of the time.',
+    ['There is about a '+s+'% probability that the null hypothesis is true.',
+     'There is about a '+s+'% probability that this result was produced by chance alone.',
+     'There is about a '+(100-parseFloat(s)).toFixed(0)+'% probability that the effect being studied is real.']);
+}
+function errorNameOpts(kind){
+  if(kind==='nullTrue') return pickOpts(
+    'It reverses the conditional \u2014 the p-value assumes H\u2080, not weighs it.',
+    ['It uses the wrong significance level for a study of this particular size.',
+     'It should have been doubled, because the test was a two-sided one.',
+     'It confuses the p-value with the width of the confidence interval.']);
+  if(kind==='chance') return pickOpts(
+    'Every result involves chance; the p-value assumes chance alone acted.',
+    ['Chance can be ruled out entirely once the p-value falls below 0.05.',
+     'It should refer to the sample size rather than to random chance alone.',
+     'The phrase is fine, since a p-value is a probability about the data.']);
+  return pickOpts(
+    'A large p-value means the data are consistent with H\u2080, nothing more.',
+    ['A large p-value proves that the effect in the population is exactly zero.',
+     'A large p-value means the study used too small a significance level.',
+     'A large p-value means the alternative hypothesis has been disproved.']);
+}
+function decisionOpts(mode){
+  if(mode==='fail') return pickOpts(
+    'We fail to reject H\u2080 \u2014 the evidence for an effect is not strong enough.',
+    ['We accept H\u2080 and conclude that there is no effect in the population.',
+     'We conclude that the effect is exactly zero, since the test was not passed.',
+     'We have shown that the null hypothesis is true for this population.']);
+  return pickOpts(
+    'Absence of evidence for an effect is not evidence that there is none.',
+    ['A non-significant result confirms that the true effect is zero.',
+     'A non-significant result means the study must have been performed incorrectly.',
+     'A non-significant result means the sample must have been biased.']);
+}
+function practicalOpts(mode){
+  if(mode==='tiny') return pickOpts(
+    'The effect is probably real, but far too small to matter in practice.',
+    ['The effect is large, because the p-value came out extremely small.',
+     'The effect is important, since the result reached significance.',
+     'The effect must be measured again, because the p-value came out too small.']);
+  if(mode==='means') return pickOpts(
+    'Statistical significance and practical importance are separate questions.',
+    ['Statistical significance is another way of saying the effect is large.',
+     'A significant result is always worth acting on in the real world.',
+     'Practical importance is what the significance level is chosen to measure.']);
+  return pickOpts(
+    'How big the effect is, measured in units someone actually cares about.',
+    ['How small the p-value is, since that shows the size of the effect.',
+     'How many participants were used, since that number shows the effect size.',
+     'How confident the researchers say they are about their conclusion.']);
+}
+function cliffOpts(mode){
+  if(mode==='compare') return pickOpts(
+    'They are almost identical as evidence, despite the different verdicts.',
+    ['The first is far stronger evidence, because it crossed the usual threshold.',
+     'The second gives no evidence at all against the null hypothesis.',
+     'The first is about ten times as strong, since it is below the cutoff.']);
+  return pickOpts(
+    'It is a widely used convention, not a fact about how the world works.',
+    ['It is the level at which chance can be ruled out completely.',
+     'It is derived mathematically from the properties of the normal curve.',
+     'It is the point where the probability of a wrong conclusion becomes zero.']);
+}
+function sizeOpts(mode){
+  if(mode==='big') return pickOpts(
+    'With a big enough sample, even a trivial difference turns significant.',
+    ['A significant result from a big sample proves the effect is important.',
+     'Larger samples make significance harder to reach, so this is impressive.',
+     'Sample size affects the estimate but never affects the p-value at all.']);
+  if(mode==='small') return pickOpts(
+    'The study may simply be too small to detect an effect that is real.',
+    ['The result shows convincingly that there is no effect in this group.',
+     'The researchers should lower the significance level and test again.',
+     'A small sample makes a significant result more likely, not less.']);
+  return pickOpts(
+    'The same effect can be significant in one study and not in a smaller one.',
+    ['An effect that is real will be significant in any study, whatever its size.',
+     'Two studies of the same effect must always reach the same conclusion.',
+     'Disagreement between two studies means one of them made an error.']);
+}
+function multiOpts(mode){
+  if(mode==='why') return pickOpts(
+    'Testing many things makes at least one small p-value likely all by itself.',
+    ['Testing many things makes each individual p-value smaller than it should be.',
+     'Testing many things has no effect, since each test is judged separately.',
+     'Testing many things raises the significance level of every test at once.']);
+  return pickOpts(
+    'Report every outcome tested, so readers can judge the one that stood out.',
+    ['Report only the outcome that reached significance, to keep the paper readable.',
+     'Repeat the whole study until the same outcome is significant twice.',
+     'Raise the significance level so that more of the outcomes qualify.']);
+}
+function hackOpts(mode){
+  if(mode==='select') return pickOpts(
+    'The p-value ignores the other analyses that were run and set aside.',
+    ['The p-value should have been computed with a larger significance level.',
+     'The p-value is fine, because each analysis was carried out correctly.',
+     'The p-value applies only to the subgroup, not to the whole sample.']);
+  if(mode==='stop') return pickOpts(
+    'Stopping as soon as p dips below 0.05 makes a false positive likelier.',
+    ['Stopping early is fine, because the data collected are still random.',
+     'Stopping early reduces the false positive rate by shortening the study period.',
+     'Stopping early only matters when the sample is smaller than thirty.']);
+  return pickOpts(
+    'Deciding what to test after seeing the data, then reporting it as planned.',
+    ['Deciding what to test before collecting any of the data, then testing just that.',
+     'Collecting a large sample and reporting the interval alongside the test.',
+     'Repeating a study independently and reporting both results together.']);
+}
+function intervalOpts(mode){
+  if(mode==='more') return pickOpts(
+    'The interval shows the plausible size of the effect, not just its existence.',
+    ['The interval is easier to compute than the p-value for most studies.',
+     'The interval avoids the need to state a null hypothesis at all.',
+     'The interval proves the effect is real, while the p-value only suggests it.']);
+  if(mode==='narrow') return pickOpts(
+    'A narrow interval near zero shows the effect is real but very small.',
+    ['A narrow interval near zero shows the study failed to find anything.',
+     'A narrow interval near zero shows the effect is large and important.',
+     'A narrow interval near zero cannot occur if the result is significant.']);
+  return pickOpts(
+    'It reports that an effect exists without saying how big it might be.',
+    ['It reports the size of the effect but not whether it is significant.',
+     'It reports the sample size without saying how it was collected.',
+     'It reports the confidence level but not the hypotheses being tested.']);
+}
+function askOpts(mode){
+  if(mode==='first') return pickOpts(
+    'How large was the effect, and how precise is that estimate?',
+    ['How small was the p-value that the researchers obtained?',
+     'Did the result come out below the usual 0.05 threshold?',
+     'How confident do the researchers say they are in the finding?']);
+  if(mode==='howmany') return pickOpts(
+    'How many outcomes were analysed before this one was reported?',
+    ['How many authors were listed on the published paper?',
+     'How many decimal places were used to report the p-value?',
+     'How many years the research team has studied the topic?']);
+  return pickOpts(
+    'Has anyone else run the study and found the same thing?',
+    ['Has the p-value been recomputed by a second statistician?',
+     'Has the result been reported in more than one newspaper?',
+     'Has the significance level been lowered to make it stricter?']);
+}
+
+/* ---------- claim generators for the diagnosis rungs ---------- */
+function genFlawedClaim(flaw){
+  var c=pick(CLAIMS);
+  if(flaw==='inversion'){
+    var pv=pick([0.01,0.02,0.03,0.04]);
+    return {flaw:flaw, ctx:c, pv:pv,
+      text:'Our trial found p = '+pv.toFixed(2)+', so there is only a '+(pv*100).toFixed(0)+
+        '% chance that '+c.org.replace(/^a /,'our ')+'\u2019s effect on '+c.outcome+' is not real.',
+      src:c.org};
+  }
+  if(flaw==='accept'){
+    return {flaw:flaw, ctx:c, pv:0.42,
+      text:'The test returned p = 0.42, which proves that our programme has no effect on '+c.outcome+' whatsoever.',
+      src:c.org};
+  }
+  if(flaw==='practical'){
+    return {flaw:flaw, ctx:c, pv:0.001,
+      text:'With over 40,000 '+c.group+' we found p < 0.001, so the improvement in '+c.outcome+' is substantial.',
+      src:c.org};
+  }
+  if(flaw==='chance'){
+    var pv2=pick([0.02,0.03,0.04]);
+    return {flaw:flaw, ctx:c, pv:pv2,
+      text:'With p = '+pv2.toFixed(2)+', there is only a '+(pv2*100).toFixed(0)+
+        '% probability that our result on '+c.outcome+' was just chance.',
+      src:c.org};
+  }
+  var k=pick([12,15,18,20,24]);
+  return {flaw:'selective', ctx:c, k:k, pv:0.04,
+    text:'Across '+k+' measures we found a significant improvement in '+c.outcome+' (p = 0.04), confirming the product works.',
+    src:c.org};
+}
+function diagnoseOpts(flaw){
+  var correct={
+    inversion:'It treats the p-value as the probability that the effect is not real.',
+    accept:'It treats a large p-value as proof that there is no effect at all.',
+    practical:'It treats a very small p-value as though it showed a large effect.',
+    chance:'It treats the p-value as the probability that chance produced the result.',
+    selective:'It reports one significant measure out of many that were tested.'
+  }[flaw];
+  var pool=['It treats the p-value as the probability that the effect is not real.',
+            'It treats a large p-value as proof that there is no effect at all.',
+            'It treats a very small p-value as though it showed a large effect.',
+            'It treats the p-value as the probability that chance produced the result.',
+            'It reports one significant measure out of many that were tested.'];
+  var others=pool.filter(function(o){ return o!==correct; });
+  return pickOpts(correct, shuffle(others).slice(0,3));
+}
+function missingOpts(){
+  return pickOpts(
+    'The size of the effect and a confidence interval showing its precision.',
+    ['A smaller p-value, obtained by collecting a much larger sample.',
+     'A statement of the significance level the researchers decided on.',
+     'A restatement of the null hypothesis in plain, non-technical everyday language.']);
+}
+
+/* ---------- SVG: the null world ---------- */
+function svgNull(pval, label){
+  var W=490,H=200,m=38, base=H-38, i;
+  var bins=29, lo=-3.4, hi=3.4, step=(hi-lo)/bins;
+  /* the observed statistic sits at the (1-p) quantile of the null distribution */
+  var zObs=quantile(1-pval);
+  function dens(z){ return Math.exp(-z*z/2); }
+  var top=dens(0);
+  function PX(z){ return m+(z-lo)/(hi-lo)*(W-2*m); }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="nullw" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="null distribution with extreme region shaded">';
+  for(i=0;i<bins;i++){
+    var zL=lo+i*step, zR=zL+step, zc=(zL+zR)/2;
+    var h=Math.max(2,(dens(zc)/top)*(base-30));
+    var x=PX(zL), w=PX(zR)-PX(zL)-1.5;
+    var extreme=(zc>=zObs);
+    s+='<rect x="'+x.toFixed(1)+'" y="'+(base-h).toFixed(1)+'" width="'+Math.max(1,w).toFixed(1)+
+       '" height="'+h.toFixed(1)+'" rx="1.5" class="'+(extreme?'eb':'nb')+'"/>';
+  }
+  s+='<line x1="'+m+'" y1="'+base+'" x2="'+(W-m)+'" y2="'+base+'" class="axis"/>';
+  var xo=PX(zObs);
+  s+='<line x1="'+xo.toFixed(1)+'" y1="'+(base-  (base-24))+'" x2="'+xo.toFixed(1)+'" y2="'+(base+6)+'" class="obs"/>';
+  s+='<text x="'+xo.toFixed(1)+'" y="'+(base-(base-24)-5)+'" class="olab">observed</text>';
+  s+='<text x="'+Math.min(W-m-4,(xo+ (W-m))/2).toFixed(1)+'" y="'+(base+18)+'" class="elab">'+(label||('p \u2248 '+f4(pval)))+'</text>';
+  s+='<text x="'+PX(0).toFixed(1)+'" y="'+(base+18)+'" class="ax">results if H\u2080 were true</text>';
+  s+='</svg>'; return s;
+}
+/* standard normal quantile (Acklam) — used only for placing the marker */
+function quantile(p){
+  var a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,
+         1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00];
+  var b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,
+         6.680131188771972e+01,-1.328068155288572e+01];
+  var c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,
+         -2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00];
+  var d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+  var pl=0.02425, q, r;
+  if(p<pl){ q=Math.sqrt(-2*Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if(p<=1-pl){ q=p-0.5; r=q*q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1); }
+  q=Math.sqrt(-2*Math.log(1-p));
+  return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+}
+
+/* ---------- SVG: the significance cliff ---------- */
+function svgCliff(pA, pB, alpha){
+  alpha=alpha||0.05;
+  var W=490,H=140,m=44, y=62, hgt=22;
+  var lo=0, hi=0.15;
+  function PX(p){ return m+(p-lo)/(hi-lo)*(W-2*m); }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="cliff" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="p-value scale with the 0.05 cutoff">';
+  s+='<rect x="'+m+'" y="'+y+'" width="'+(W-2*m)+'" height="'+hgt+'" rx="6" class="track"/>';
+  var xc=PX(alpha);
+  s+='<line x1="'+xc.toFixed(1)+'" y1="'+(y-16)+'" x2="'+xc.toFixed(1)+'" y2="'+(y+hgt+16)+'" class="cut"/>';
+  s+='<text x="'+xc.toFixed(1)+'" y="'+(y-21)+'" class="plab">\u03b1 = '+alpha+'</text>';
+  var pts=[{p:pA},{p:pB}], i;
+  for(i=0;i<pts.length;i++){
+    var x=PX(pts[i].p), sig=(pts[i].p<alpha);
+    s+='<circle cx="'+x.toFixed(1)+'" cy="'+(y+hgt/2)+'" r="6" class="'+(sig?'pin':'pinw')+'"/>';
+    s+='<text x="'+x.toFixed(1)+'" y="'+(y+hgt+18)+'" class="vlab">p = '+pts[i].p.toFixed(3)+'</text>';
+    s+='<text x="'+x.toFixed(1)+'" y="'+(y+hgt+32)+'" class="verd" fill="'+(sig?'#5A6B35':'#C25B3A')+'">'+
+       (sig?'significant':'not significant')+'</text>';
+  }
+  for(i=0;i<=3;i++){
+    var pv=lo+(hi-lo)*i/3;
+    s+='<text x="'+PX(pv).toFixed(1)+'" y="'+(y-6)+'" class="vlab">'+pv.toFixed(2)+'</text>';
+  }
+  s+='</svg>'; return s;
+}
+
+if(typeof module!=='undefined' && module.exports){
+  module.exports={ rN:rN, f4:f4, tie:tie, CLAIMS:CLAIMS, genSim:genSim, genMulti:genMulti,
+    defOpts:defOpts, inversionOpts:inversionOpts, errorNameOpts:errorNameOpts, decisionOpts:decisionOpts,
+    practicalOpts:practicalOpts, cliffOpts:cliffOpts, sizeOpts:sizeOpts, multiOpts:multiOpts,
+    hackOpts:hackOpts, intervalOpts:intervalOpts, askOpts:askOpts,
+    genFlawedClaim:genFlawedClaim, diagnoseOpts:diagnoseOpts, missingOpts:missingOpts,
+    svgNull:svgNull, svgCliff:svgCliff, quantile:quantile };
+}
+/* =================================================================
+   ===== CORE LOGIC END =====
+   ================================================================= */
+
+
+/* ---------------- UI LAYER ---------------- */
+var KEY='pvalueLadder', NEED=4;
+var state=load();
+function load(){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.rungs) return s; }catch(e){} return {rungs:{}}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+(function(){ document.getElementById('heroNull').innerHTML=svgNull(0.087,'p \u2248 0.087'); })();
+
+function claimBox(C){
+  return '<div class="claimbox">\u201c'+C.text+'\u201d<span class="src">\u2014 press release from '+C.src+' (fictional)</span></div>';
+}
+
+var RUNGS=[
+  {
+    id:'define', title:'What a p-value is', desc:'A probability about data, not about H\u2080.',
+    strategy:'<p>A p-value is <code>P(a result at least this extreme | H\u2080 is true)</code>. Read the bar as "assuming". The whole calculation takes place <b>inside a world where H\u2080 holds</b>, so it can never tell you how likely that world is.</p>',
+    build:function(){ var mode=pick(['what','assumes','measures']), o=defOpts(mode);
+      var ask=mode==='what'?'What does a p-value measure?':
+              mode==='assumes'?'What does the calculation of a p-value assume?':
+              'A p-value tells you\u2026';
+      return {mode:'mc', ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'simulate', title:'Read it off the null world', desc:'How often would H\u2080 produce this?',
+    strategy:'<p>Imagine repeating the study many times in a world where H\u2080 is true. The p-value is simply the <b>fraction of those runs</b> that produce a result at least as extreme as yours. This is a way of picturing the definition \u2014 not a separate procedure.</p>',
+    build:function(){ var S=genSim();
+      return {mode:'num', nullViz:S.p,
+        scenario:'<span class="tag">The null world</span>A computer generated <b>'+S.total+'</b> datasets in a world where H\u2080 is true. Of those, <b>'+
+          S.count+'</b> gave a result at least as extreme as the one actually observed.',
+        ask:'Estimate the p-value. (4 decimals)',
+        fields:[{label:'p \u2248', answer:S.p, tol:0.00051}]}; }
+  },
+  {
+    id:'inversion', title:'The inversion error', desc:'p is not the chance H\u2080 is true.',
+    strategy:'<p>The most common mistake flips the conditional. <code>P(data | H\u2080)</code> is <b>not</b> <code>P(H\u2080 | data)</code> \u2014 the same reversal that makes "most tested people are healthy" and "most healthy people test negative" different statements.</p>',
+    build:function(){ if(Math.random()<0.5){ var pv=pick([0.01,0.02,0.03,0.04,0.05]), o=inversionOpts(pv);
+        return {mode:'mc',
+          scenario:'<span class="tag">Interpretation</span>A study reports <b>p = '+pv.toFixed(2)+'</b>.',
+          ask:'Which interpretation is correct?', options:o.options, answer:o.answer}; }
+      var kind=pick(['nullTrue','chance','large']), o2=errorNameOpts(kind);
+      var said=kind==='nullTrue'?'p = 0.03, so there is a 3% chance the null hypothesis is true.':
+               kind==='chance'?'p = 0.03, so there is only a 3% chance our result was due to chance.':
+               'p = 0.61, so we have shown the null hypothesis is correct.';
+      return {mode:'mc',
+        scenario:'<span class="tag">Diagnose the error</span>A researcher writes: <b>\u201c'+said+'\u201d</b>',
+        ask:'What is wrong with that statement?', options:o2.options, answer:o2.answer}; }
+  },
+  {
+    id:'decision', title:'Reject, or fail to reject', desc:'Never "accept H\u2080".',
+    strategy:'<p>A test can reject H\u2080 or fail to reject it \u2014 never <b>accept</b> it. Failing to find evidence of an effect is not the same as finding evidence that there is none; the study may simply not have been able to see it.</p>',
+    build:function(){ var mode=pick(['fail','absence']), o=decisionOpts(mode);
+      if(mode==='fail') return {mode:'mc',
+        scenario:'<span class="tag">Conclusion</span>A test gives <b>p = 0.42</b> at \u03b1 = 0.05.',
+        ask:'Which conclusion is correct?', options:o.options, answer:o.answer};
+      return {mode:'mc',
+        scenario:'<span class="tag">Conclusion</span>A study fails to reject H\u2080.',
+        ask:'What does that tell you?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'practical', title:'Significant \u2260 large', desc:'Detectable is not the same as important.',
+    strategy:'<p>A p-value answers <em>whether</em> an effect is detectable, not <em>how big</em> it is. With a large enough study, a difference too small to matter to anyone can still produce a very small p-value.</p>',
+    build:function(){ var mode=pick(['tiny','means','which']), o=practicalOpts(mode);
+      if(mode==='tiny'){ var C=genFlawedClaim('practical');
+        return {mode:'mc',
+          scenario:'<span class="tag">'+C.ctx.org+'</span>A study of 40,000 '+C.ctx.group+' finds an average improvement of <b>0.3 '+C.ctx.unit+
+            '</b> in '+C.ctx.outcome+', with <b>p &lt; 0.001</b>.',
+          ask:'What is the right reading?', options:o.options, answer:o.answer}; }
+      var ask=mode==='means'?'What does "statistically significant" tell you about importance?':
+              'To judge whether a finding matters in practice, what do you most need to know?';
+      return {mode:'mc', ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'cliff', title:'The 0.05 cliff', desc:'0.049 and 0.051 are nearly the same evidence.',
+    strategy:'<p>Evidence is a smooth scale; the 0.05 line is a <b>convention</b> laid across it. Two studies either side of the line carry almost identical evidence, even though only one gets called significant.</p>',
+    build:function(){ var mode=pick(['compare','convention']), o=cliffOpts(mode);
+      if(mode==='compare') return {mode:'mc', cliff:[0.049,0.051],
+        scenario:'<span class="tag">Two studies</span>One study reports <b>p = 0.049</b> and another reports <b>p = 0.051</b>. Both used \u03b1 = 0.05.',
+        ask:'How do the two results compare as evidence?', options:o.options, answer:o.answer};
+      return {mode:'mc', cliff:[0.049,0.051],
+        scenario:'<span class="tag">The threshold</span>Most fields treat 0.05 as the cutoff for significance.',
+        ask:'What is the status of that 0.05 value?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'samplesize', title:'Sample size drives significance', desc:'Big n finds everything; small n finds nothing.',
+    strategy:'<p>The same true effect can be significant in a large study and not significant in a small one. A tiny p-value from a huge sample may reflect a trivial effect; a large p-value from a small sample may just mean the study was underpowered.</p>',
+    build:function(){ var mode=pick(['big','small','both']), o=sizeOpts(mode);
+      var c=pick(CLAIMS);
+      if(mode==='big') return {mode:'mc',
+        scenario:'<span class="tag">'+c.org+'</span>With <b>60,000</b> '+c.group+', a difference of <b>0.2 '+c.unit+'</b> in '+c.outcome+' comes out significant.',
+        ask:'What does that tell you?', options:o.options, answer:o.answer};
+      if(mode==='small') return {mode:'mc',
+        scenario:'<span class="tag">'+c.org+'</span>With <b>18</b> '+c.group+', a fairly large difference in '+c.outcome+' gives <b>p = 0.21</b>.',
+        ask:'What is the right reading?', options:o.options, answer:o.answer};
+      return {mode:'mc',
+        scenario:'<span class="tag">Two studies</span>Two studies examine the same effect. The larger one finds significance; the smaller one does not.',
+        ask:'What does that show?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'multiple', title:'Many tests, many false alarms', desc:'1 \u2212 (1 \u2212 \u03b1)\u1d4f.',
+    strategy:'<p>If every null is true, each test still has probability \u03b1 of coming out significant. Across <b>k independent tests</b>, the chance of at least one false alarm is <code>1 \u2212 (1 \u2212 \u03b1)\u1d4f</code>, and the expected number is <code>k\u00b7\u03b1</code>.</p>',
+    build:function(){ var M=genMulti();
+      if(Math.random()<0.3){ var o=multiOpts(pick(['why','fix']));
+        return {mode:'mc',
+          scenario:'<span class="tag">'+M.ctx.org+'</span>A team tests <b>'+M.k+'</b> different outcomes at \u03b1 = '+M.alpha+' and reports the one that came out significant.',
+          ask:'What is the problem, or the fix?', options:o.options, answer:o.answer}; }
+      var wantExpected=Math.random()<0.4;
+      if(wantExpected) return {mode:'num',
+        scenario:'<span class="tag">'+M.ctx.org+'</span>A team runs <b>'+M.k+'</b> independent tests at <b>\u03b1 = '+M.alpha+
+          '</b>. Suppose every null hypothesis is actually true.',
+        ask:'How many significant results should they expect by chance? (4 decimals)',
+        fields:[{label:'expected =', answer:M.expected, tol:0.00051}]};
+      return {mode:'num',
+        scenario:'<span class="tag">'+M.ctx.org+'</span>A team runs <b>'+M.k+'</b> independent tests at <b>\u03b1 = '+M.alpha+
+          '</b>. Suppose every null hypothesis is actually true.',
+        ask:'What is the probability that at least one comes out significant? (4 decimals)',
+        fields:[{label:'P(at least one) =', answer:M.pAny, tol:0.00051}]}; }
+  },
+  {
+    id:'hacking', title:'p-hacking and selective reporting', desc:'What you don\u2019t see changes what you see.',
+    strategy:'<p>A p-value assumes the analysis was fixed <b>in advance</b>. Trying many outcomes, many subgroups, or checking repeatedly and stopping when p dips below 0.05 all quietly inflate the false-positive rate \u2014 and the reported p-value does not show it.</p>',
+    build:function(){ var mode=pick(['select','stop','define']), o=hackOpts(mode);
+      if(mode==='select'){ var C=genFlawedClaim('selective');
+        return {mode:'mc',
+          scenario:'<span class="tag">'+C.ctx.org+'</span>A team measured <b>'+C.k+'</b> outcomes and published only the single one that reached significance.'+claimBox(C),
+          ask:'Why is the reported p-value misleading?', options:o.options, answer:o.answer}; }
+      if(mode==='stop') return {mode:'mc',
+        scenario:'<span class="tag">Study conduct</span>A team analysed their data after every 10 participants and stopped collecting as soon as p fell below 0.05.',
+        ask:'What is wrong with that?', options:o.options, answer:o.answer};
+      return {mode:'mc',
+        scenario:'<span class="tag">Definitions</span>Researchers describe a practice known as p-hacking.',
+        ask:'Which describes it?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'interval', title:'The interval says more', desc:'Size and precision, not just existence.',
+    strategy:'<p>A p-value says an effect is detectable. A <b>confidence interval</b> says how big it plausibly is. "Between 0.1 and 0.4 points" tells you far more than "p &lt; 0.05" \u2014 including whether the effect is too small to care about.</p>',
+    build:function(){ var mode=pick(['more','narrow','only']), o=intervalOpts(mode);
+      if(mode==='narrow'){ var c=pick(CLAIMS);
+        return {mode:'mc',
+          scenario:'<span class="tag">'+c.org+'</span>A study reports a significant result, with a 95% confidence interval for the improvement in '+
+            c.outcome+' of <b>(0.05, 0.21) '+c.unit+'</b>.',
+          ask:'What does that interval tell you?', options:o.options, answer:o.answer}; }
+      var ask=mode==='more'?'Why is a confidence interval more informative than a p-value alone?':
+              'A report gives only "p &lt; 0.05" and nothing else. What is the limitation?';
+      return {mode:'mc', ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'ask', title:'What to ask about a study', desc:'Three questions beat one p-value.',
+    strategy:'<p>Ask what the p-value cannot answer: <b>how big</b> the effect was, <b>how precise</b> the estimate is, <b>how many</b> analyses were run, and whether anyone has <b>replicated</b> it. A single p-value answers none of those.</p>',
+    build:function(){ var mode=pick(['first','howmany','replicate']), o=askOpts(mode);
+      var ask=mode==='first'?'A claim reports only that the result was statistically significant. What should you ask first?':
+              mode==='howmany'?'Which question best protects you against a cherry-picked result?':
+              'Which question best tells you whether a finding will hold up?';
+      return {mode:'mc', ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'capstone', title:'Capstone \u2014 diagnose a claim', desc:'Do the arithmetic, then name the flaw. One miss restarts.', cap:true,
+    strategy:'<p>Work out what the numbers actually support, then name what the claim gets wrong. Both parts must be right, or the streak resets.</p>',
+    build:function(){ var M=genMulti(), C=genFlawedClaim('selective');
+      var o=diagnoseOpts('selective');
+      return {mode:'numthenmc',
+        scenario:'<span class="tag">'+M.ctx.org+'</span>A company tested <b>'+M.k+'</b> separate outcomes at <b>\u03b1 = '+M.alpha+
+          '</b> and published only the one that reached significance.'+
+          '<div class="claimbox">\u201cAcross '+M.k+' measures we found a significant improvement in '+M.ctx.outcome+
+          ' (p = 0.04), confirming the product works.\u201d<span class="src">\u2014 press release from '+M.ctx.org+' (fictional)</span></div>',
+        ask:'1. If every null hypothesis were true, what is the probability that at least one of the '+M.k+' tests would come out significant? (4 decimals)',
+        fields:[{label:'P(at least one) =', answer:M.pAny, tol:0.00051}],
+        sub2:{ask:'2. What is the central flaw in the claim?', options:o.options, answer:o.answer}}; }
+  }
+];
+
+/* ---------- render skeleton ---------- */
+var rungsEl=document.getElementById('rungs');
+RUNGS.forEach(function(def,idx){
+  if(!state.rungs[def.id]) state.rungs[def.id]={streak:0,done:false};
+  var el=document.createElement('div');
+  el.className='rung'+(def.cap?' cap':'')+(state.rungs[def.id].done?' done':'');
+  el.dataset.id=def.id;
+  el.innerHTML='<div class="rung-top"><div class="rung-num">'+(idx+1)+'</div>'+
+    '<div class="rung-title"><div class="rt">'+def.title+'</div><div class="rd">'+def.desc+'</div></div>'+
+    '<div class="rung-badge"><span class="medal">🏅</span><span class="dots"></span><span class="txt"></span></div>'+
+    '<div class="chev">▶</div></div><div class="rung-body"></div>';
+  rungsEl.appendChild(el);
+  el.querySelector('.rung-top').addEventListener('click', function(){ toggleRung(def.id); });
+  renderBadge(def.id);
+});
+function rungEl(id){ return rungsEl.querySelector('.rung[data-id="'+id+'"]'); }
+function rungDef(id){ return RUNGS.filter(function(r){return r.id===id;})[0]; }
+function renderBadge(id){
+  var el=rungEl(id),st=state.rungs[id],dots=el.querySelector('.dots'); dots.innerHTML='';
+  for(var i=0;i<NEED;i++){ var d=document.createElement('span'); d.className='dot-b'+(i<st.streak?' on':''); dots.appendChild(d); }
+  el.querySelector('.txt').textContent=st.done?'earned':(st.streak+'/'+NEED); el.classList.toggle('done',st.done);
+}
+var openId=null;
+function toggleRung(id){
+  var el=rungEl(id);
+  if(el.classList.contains('open')){ el.classList.remove('open'); openId=null; return; }
+  if(openId) rungEl(openId).classList.remove('open');
+  el.classList.add('open'); openId=id; newQuestion(id);
+}
+
+var current={};
+function newQuestion(id){
+  var def=rungDef(id), q=def.build(); current[id]={def:def,q:q};
+  var body=rungEl(id).querySelector('.rung-body');
+  var html='<details class="strategy"><summary>Strategy</summary><div class="inner">'+def.strategy+'</div></details><div class="qwrap">';
+  if(q.scenario) html+='<div class="scenario">'+q.scenario+'</div>';
+  if(q.nullViz!=null) html+='<div class="vizbox">'+svgNull(q.nullViz)+'</div>';
+  if(q.cliff) html+='<div class="vizbox">'+svgCliff(q.cliff[0],q.cliff[1],0.05)+'</div>';
+  if(q.mode==='mc'){
+    html+='<div class="ask">'+q.ask+'</div><div class="choices">';
+    q.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>';
+  } else {
+    html+='<div class="ask">'+q.ask+'</div><div class="numrow">';
+    q.fields.forEach(function(f,i){ html+='<div class="field"><label>'+f.label+'</label><input type="number" step="any" data-i="'+i+'" autocomplete="off"></div>'; });
+    html+='<button class="btn" data-check="1">Check</button></div>';
+    if(q.mode==='numthenmc') html+='<div class="sub2" style="display:none;margin-top:18px"></div>';
+  }
+  html+='<div class="feedback"></div><div class="streak-note"></div></div>';
+  body.innerHTML=html; updateStreakNote(id);
+  if(q.mode==='mc'){ body.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerMC(id, parseInt(c.dataset.i,10)); }); }); }
+  else {
+    var inputs=body.querySelectorAll('.numrow input');
+    body.querySelector('[data-check]').addEventListener('click', function(){ answerNum(id); });
+    inputs.forEach(function(inp,i){ inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ if(i<inputs.length-1) inputs[i+1].focus(); else answerNum(id); } }); });
+    if(inputs[0]) inputs[0].focus();
+  }
+}
+function updateStreakNote(id){ var st=state.rungs[id],note=rungEl(id).querySelector('.streak-note'); if(!note) return;
+  note.textContent=st.done?'✓ Badge earned — keep going for more practice.':(st.streak>0?('Streak: '+st.streak+' of '+NEED):''); }
+function nextBtn(){ return '<div class="next"><button class="btn ghost" data-next="1">Next question →</button></div>'; }
+function wireNext(id){ var b=rungEl(id).querySelector('[data-next]'); if(b) b.addEventListener('click', function(){ newQuestion(id); }); }
+
+function answerMC(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), choices=body.querySelectorAll('.choices .choice');
+  if(choices[0].disabled) return; choices.forEach(function(c){c.disabled=true;});
+  var correct=(choice===q.answer); choices[q.answer].classList.add('correct'); if(!correct) choices[choice].classList.add('wrong');
+  var fb=body.querySelector('.feedback'); fb.className='feedback show '+(correct?'right':'wrong');
+  fb.innerHTML=(correct?'Correct.':'Not quite — the right choice is highlighted.')+nextBtn();
+  wireNext(id); recordResult(id, correct);
+}
+function answerNum(id){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), inputs=body.querySelectorAll('.numrow input');
+  if(inputs[0].disabled) return;
+  var allOk=true;
+  q.fields.forEach(function(f,i){
+    var tol=(f.tol!=null)?f.tol:0.00051;
+    var v=parseFloat(inputs[i].value.trim());
+    var ok=!isNaN(v)&&Math.abs(v-f.answer)<=tol+1e-9;
+    inputs[i].classList.toggle('ok',ok); inputs[i].classList.toggle('no',!ok);
+    if(!ok) allOk=false;
+  });
+  inputs.forEach(function(i){i.disabled=true;}); body.querySelector('[data-check]').disabled=true;
+  var fb=body.querySelector('.feedback');
+  var showAns=q.fields.map(function(f){ return f.label+' '+f4(f.answer); }).join(',&nbsp; ');
+  if(q.mode==='numthenmc'){
+    cur.ok1=allOk;
+    fb.className='feedback show '+(allOk?'right':'wrong');
+    fb.innerHTML=allOk?'Part 1 correct.':('Not quite. <span class="mono">'+showAns+'</span>');
+    var s2=body.querySelector('.sub2'); s2.style.display='block';
+    var html='<div class="ask">'+q.sub2.ask+'</div><div class="choices" data-sub="1">';
+    q.sub2.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>'; s2.innerHTML=html;
+    s2.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap2(id, parseInt(c.dataset.i,10)); }); });
+    return;
+  }
+  fb.className='feedback show '+(allOk?'right':'wrong');
+  fb.innerHTML=(allOk?'Correct.':'Not quite. <span class="mono">'+showAns+'</span>')+nextBtn();
+  wireNext(id); recordResult(id, allOk);
+}
+function answerCap2(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c1=body.querySelectorAll('.choices[data-sub="1"] .choice'); if(c1[0].disabled) return;
+  c1.forEach(function(c){c.disabled=true;});
+  var ok2=(choice===q.sub2.answer); c1[q.sub2.answer].classList.add('correct'); if(!ok2) c1[choice].classList.add('wrong');
+  var both=cur.ok1&&ok2, fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(both?'right':'wrong');
+  fb.innerHTML=(both?'Both correct — claim read properly.':'Not both correct — the streak resets.')+nextBtn();
+  wireNext(id); recordResult(id, both);
+}
+function recordResult(id, correct){
+  var st=state.rungs[id],wasDone=st.done;
+  if(correct){ st.streak++; if(st.streak>=NEED) st.done=true; } else st.streak=0;
+  save(); renderBadge(id); updateStreakNote(id); updateProgress();
+  if(st.done&&!wasDone) celebrate(id);
+}
+function updateProgress(){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  document.getElementById('progLabel').textContent=done+' of '+RUNGS.length+' badges earned';
+  document.getElementById('progFill').style.width=(100*done/RUNGS.length)+'%';
+}
+function celebrate(id){ var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  showToast('🏅 '+(done===RUNGS.length?'All 12 badges — you can read the claims now.':'Badge earned · '+rungDef(id).title)); }
+var toastT; function showToast(t){ var el=document.getElementById('toast'); el.innerHTML=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2600); }
+
+document.addEventListener('keydown', function(e){
+  if(!openId) return; var cur=current[openId]; if(!cur) return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  var n=parseInt(e.key,10); if(isNaN(n)||n<1||n>4) return;
+  var body=rungEl(openId).querySelector('.rung-body');
+  var s2=body.querySelectorAll('.choices[data-sub="1"] .choice');
+  if(s2.length&&!s2[0].disabled){ if(s2[n-1]) answerCap2(openId,n-1); return; }
+  if(cur.q.mode==='mc'){ var cs=body.querySelectorAll('.choices .choice'); if(cs[n-1]&&!cs[0].disabled) answerMC(openId,n-1); }
+});
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!confirm('Reset all progress on the p-Value Ladder?')) return;
+  state={rungs:{}}; RUNGS.forEach(function(r){state.rungs[r.id]={streak:0,done:false};});
+  save(); RUNGS.forEach(function(r){renderBadge(r.id);updateStreakNote(r.id);});
+  if(openId) newQuestion(openId); updateProgress(); showToast('Progress reset');
+});
+updateProgress();
+</script>
+</body>
+</html>
