@@ -1,0 +1,896 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Sample Size Ladder — how much precision can you afford?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1F2E30;
+  --paper:#F4F8F8;
+  --surface:#FFFFFF;
+  --line:#DCE7E7;
+  --accent:#14666B;         /* brand */
+  --accent-soft:#D3E8E9;
+  --cost:#E07A5F;           /* the price of precision */
+  --cost-soft:#FBE3DB;
+  --wide:#C9902E;           /* wider */
+  --good:#2E9E51;
+  --good-soft:#E1F3E6;
+  --bad:#C6403D;
+  --bad-soft:#FBE4E3;
+  --muted:#5C6C6E;
+  --shadow:0 1px 2px rgba(31,46,48,.06),0 8px 24px rgba(31,46,48,.06);
+  --disp:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--disp);font-weight:600;line-height:1.15;letter-spacing:-.02em;margin:0}
+a{color:var(--accent);text-decoration:none}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--mono)}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(244,248,248,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:20px;height:58px}
+.brand{font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand .glyph{color:var(--accent)}
+.navlinks{margin-left:auto;display:flex;gap:22px;font-size:14px;font-weight:500}
+.navlinks a{color:var(--muted)}.navlinks a:hover{color:var(--ink)}
+@media(max-width:560px){.navlinks{display:none}}
+
+header{padding:66px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+header h1{font-size:clamp(28px,5vw,48px);font-weight:600}
+header h1 em{font-style:normal;color:var(--accent)}
+.lede{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:665px;margin:20px 0 0}
+.lede b{color:var(--ink);font-weight:600}
+
+.heroviz{margin:38px 0 6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:24px 22px 16px}
+.heroviz .cap{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:12px;text-align:center}
+.legend{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px}
+.legend .sw{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:3px}
+.legend .a .sw{background:var(--accent)}
+.legend .c .sw{background:var(--cost)}
+
+svg.curve,svg.lev{display:block;width:100%;max-width:480px;height:auto;margin:0 auto}
+.curve .ln{stroke:var(--accent);stroke-width:2.6;fill:none}
+.curve .axis{stroke:var(--muted);stroke-width:1;opacity:.5}
+.curve .drop{stroke:var(--cost);stroke-width:1.4;stroke-dasharray:4 3}
+.curve .dot{fill:var(--cost)}
+.curve .lab{font-family:var(--mono);font-size:9.5px;fill:var(--muted);text-anchor:middle}
+.curve .clab{font-family:var(--mono);font-size:9.5px;fill:var(--cost);text-anchor:middle;font-weight:700}
+.curve .ax{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.lev .bar{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.lev .bar.on{fill:var(--accent)}
+.lev .lname{font-family:var(--disp);font-size:12.5px;fill:var(--ink);font-weight:600}
+.lev .larr{font-family:var(--mono);font-size:12px;fill:var(--muted)}
+.lev .lup{fill:var(--wide);font-weight:700}
+.lev .ldn{fill:var(--accent);font-weight:700}
+
+section{padding:52px 0;border-top:1px solid var(--line)}
+.sec-eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+section h2{font-size:clamp(23px,3.4vw,31px);margin-bottom:8px}
+.sec-sub{color:var(--muted);max-width:665px;margin:0 0 30px}
+
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:680px){.trio{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.card .n{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700}
+.card h3{font-size:17px;margin:10px 0 6px}
+.card p{margin:0;font-size:14.5px;color:var(--muted)}
+.card kbd{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px;color:var(--ink)}
+
+.forms{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+@media(max-width:680px){.forms{grid-template-columns:1fr}}
+.fbox{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+.fbox.c{border-left-color:var(--cost)}
+.fbox .t{font-family:var(--disp);font-weight:600;font-size:15px;margin-bottom:5px}
+.fbox .d{font-size:13.5px;color:var(--muted)}
+.fbox code{font-family:var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12.5px;color:var(--accent)}
+
+.callout{display:flex;gap:16px;background:var(--accent-soft);border:1px solid #A5CFD1;border-radius:14px;padding:20px 22px;margin-top:26px}
+.callout .hand{font-size:22px;line-height:1.2}
+.callout p{margin:0;font-size:14.5px}
+.callout b{color:var(--ink)}
+.callout .mono{color:#0E4E52}
+
+.ladder-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+.progress-wrap{width:100%;margin:16px 0 26px}
+.progress-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-bottom:7px}
+.progress-track{height:9px;background:var(--accent-soft);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.reset{font-family:var(--mono);font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:5px 12px;cursor:pointer}
+.reset:hover{border-color:var(--bad);color:var(--bad)}
+
+.rungs{display:flex;flex-direction:column;gap:14px}
+.rung{background:var(--surface);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);overflow:hidden}
+.rung.cap{border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent-soft),var(--shadow)}
+.rung-top{display:flex;align-items:center;gap:16px;padding:18px 20px;cursor:pointer;user-select:none}
+.rung-num{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.rung.done .rung-num{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rung.cap .rung-num{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.rung-title{flex:1 1 auto}
+.rung-title .rt{font-family:var(--disp);font-weight:600;font-size:16px}
+.rung-title .rd{font-size:13px;color:var(--muted);margin-top:1px}
+.rung-badge{flex:0 0 auto;font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.dots{display:flex;gap:4px}
+.dot-b{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.dot-b.on{background:var(--accent)}
+.rung.done .dot-b.on{background:var(--good)}
+.chev{transition:transform .25s;color:var(--muted);font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.medal{display:none}.rung.done .medal{display:inline}
+.rung.done .rung-badge .txt{color:var(--good)}
+.rung-body{display:none;padding:0 20px 22px;border-top:1px solid var(--line)}
+.rung.open .rung-body{display:block}
+
+.strategy{background:var(--paper);border:1px solid var(--line);border-radius:11px;margin:18px 0;overflow:hidden}
+.strategy summary{cursor:pointer;padding:12px 16px;font-family:var(--mono);font-size:13px;color:var(--accent);list-style:none;display:flex;align-items:center;gap:8px}
+.strategy summary::-webkit-details-marker{display:none}
+.strategy summary::before{content:"▸";transition:transform .2s;display:inline-block}
+.strategy[open] summary::before{transform:rotate(90deg)}
+.strategy .inner{padding:2px 16px 16px;font-size:14px;color:var(--ink)}
+.strategy .inner p{margin:.5em 0}
+.strategy code{font-family:var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:13px;color:var(--accent)}
+
+.scenario{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:16px 18px;font-size:15px;margin-bottom:16px}
+.scenario .tag{font-family:var(--mono);font-size:12px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:8px}
+.scenario b{color:var(--ink)}
+.givens{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.gcard{flex:1 1 150px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:9px;padding:9px 12px;font-family:var(--mono);font-size:13px}
+.gcard .gn{font-family:var(--body);font-size:12.5px;color:var(--muted);display:block;margin-bottom:2px}
+.ask{font-weight:600;font-family:var(--disp);font-size:16px;margin:4px 0 14px}
+.ask .hl{color:var(--accent)}
+.vizbox{margin:8px 0 16px}
+
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:14.5px;font-family:var(--body);color:var(--ink);transition:.12s}
+.choice:hover{border-color:var(--accent)}
+.choice .key{flex:0 0 auto;width:24px;height:24px;border-radius:6px;background:var(--paper);border:1px solid var(--line);font-family:var(--mono);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.choice .mono{font-family:var(--mono)}
+.choice.correct{border-color:var(--good);background:var(--good-soft)}
+.choice.correct .key{background:var(--good);border-color:var(--good);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.choice:disabled{cursor:default}
+
+.numrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+.field input{font-family:var(--mono);font-size:16px;width:132px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);outline:none}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.field input.ok{border-color:var(--good);background:var(--good-soft)}
+.field input.no{border-color:var(--bad);background:var(--bad-soft)}
+.btn{font-family:var(--disp);font-weight:600;font-size:14.5px;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
+.btn:hover{background:#105458}
+.btn.ghost{background:var(--surface);color:var(--accent);border:1px solid var(--accent)}
+.feedback{margin-top:15px;font-size:14.5px;display:none;border-radius:10px;padding:12px 15px}
+.feedback.show{display:block}
+.feedback.right{background:var(--good-soft);border:1px solid var(--good);color:#1c6b37}
+.feedback.wrong{background:var(--bad-soft);border:1px solid var(--bad);color:#96302d}
+.feedback .mono{font-weight:700}
+.feedback .next{margin-top:9px}
+.streak-note{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:12px}
+
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+@media(max-width:680px){.why-grid{grid-template-columns:1fr}}
+.why-grid h3{font-size:16px;margin-bottom:6px;color:var(--accent)}
+.why-grid p{font-size:14px;color:var(--muted);margin:0}
+.why-close{font-size:15px;color:var(--ink);max-width:690px}
+.why-close .mono{color:var(--accent)}
+
+footer{padding:30px 0 50px;border-top:1px solid var(--line)}
+.foot{font-family:var(--mono);font-size:12.5px;color:var(--muted);text-align:center;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--ink);color:#fff;padding:13px 22px;border-radius:12px;font-family:var(--disp);font-weight:600;font-size:15px;box-shadow:0 10px 30px rgba(0,0,0,.25);pointer-events:none;transition:.35s;z-index:80;display:flex;gap:10px;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="glyph">±</span> The Sample Size Ladder</div>
+    <div class="navlinks"><a href="#how">How it works</a><a href="#ladder">The ladder</a><a href="#why">Why it matters</a></div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Margin of error · planning a study · solving for n</div>
+    <h1>Margin of error is a promise. <em>Sample size is the price.</em></h1>
+    <p class="lede">Every confidence interval is <b>estimate ± margin of error</b>, and that margin has just three ingredients: how confident you want to be, how variable the population is, and how many observations you collect. Only the last one is yours to choose. And because n sits under a square root, the price climbs steeply — <b>halving the margin of error costs four times the sample</b>. That single fact is why national polls stall at about ±3% and why "just survey more people" is an expensive sentence.</p>
+
+    <div class="heroviz">
+      <div class="cap">Margin of error falls like 1/√n — each halving costs four times as many</div>
+      <div id="heroCurve"></div>
+      <div class="legend"><span class="a"><span class="sw"></span>margin of error</span><span class="c"><span class="sw"></span>each halving: n × 4</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-eyebrow">How it works</div>
+    <h2>Work backwards from the precision you want</h2>
+    <p class="sec-sub">Twelve rungs run from reading a margin off an interval to designing a study that hits a stated precision target. This is the one topic in the course you use <em>before</em> collecting data, not after. Sample sizes always round up; margins of error are given to one decimal place.</p>
+    <div class="trio">
+      <div class="card"><div class="n">01</div><h3>Set the target, solve for n</h3><p>Decide the margin you need, then rearrange the formula. Everything else — confidence level, variability — is an input you supply.</p></div>
+      <div class="card"><div class="n">02</div><h3>Earn each badge</h3><p><b>Four in a row</b> earns a rung's badge. Click a choice or press <kbd>1</kbd>–<kbd>4</kbd>; type answers and press <kbd>Enter</kbd>.</p></div>
+      <div class="card"><div class="n">03</div><h3>Always round up</h3><p>A sample of 384.2 people doesn't exist. Round <b>up</b> to 385 — rounding down would miss the precision you promised.</p></div>
+    </div>
+
+    <div style="margin-top:34px">
+      <div class="sec-eyebrow">The two formulas</div>
+      <div class="forms">
+        <div class="fbox"><div class="t">Proportions</div><div class="d"><code>ME = z*·√(p̂(1−p̂)/n)</code><br>Solved for n: <code>n = p*(1−p*)·(z*/ME)²</code><br>With no pilot estimate, use the conservative <b>p* = 0.5</b>.</div></div>
+        <div class="fbox"><div class="t">Means</div><div class="d"><code>ME = z*·σ/√n</code><br>Solved for n: <code>n = (z*·σ/ME)²</code><br>Needs an estimate of σ, usually from a pilot study or past data.</div></div>
+        <div class="fbox c"><div class="t">The cost rule</div><div class="d">ME is proportional to <code>1/√n</code>. To cut the margin to <b>half</b>, multiply n by <b>4</b>; to cut it to a <b>third</b>, multiply n by <b>9</b>.</div></div>
+        <div class="fbox"><div class="t">Round up, always</div><div class="d">Whatever decimal the formula gives, take the <b>next whole number</b>. <code>n = 1067.1 → 1068</code>. This is the one place in statistics where you never round to nearest.</div></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="hand">💰</div>
+      <p><b>Why polls stop at ±3%.</b> With p* = 0.5 at 95% confidence, a ±3% margin needs about 1068 people. Want ±1.5%? That's about 4269 — four times the cost for one extra decimal of confidence in the headline. Beyond a point the curve flattens so much that <span class="mono">more data stops buying meaningful precision</span>, and the money is better spent reducing bias instead.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="ladder-head"><div><div class="sec-eyebrow">The ladder</div><h2>Pick a rung and practice</h2></div><button class="reset" id="resetBtn">Reset progress</button></div>
+    <div class="progress-wrap">
+      <div class="progress-meta"><span id="progLabel">0 of 12 badges earned</span><span>4 in a row = badge</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    </div>
+    <div class="rungs" id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sec-eyebrow">Why it matters</div>
+    <h2>This is the question you answer first</h2>
+    <div class="why-grid">
+      <div><h3>Studies are budgets</h3><p>Every survey has a cost per response. Sample-size calculation is how a precision goal becomes a number of dollars — and how you find out whether the study is possible at all.</p></div>
+      <div><h3>Diminishing returns are real</h3><p>Going from 100 to 400 responses halves your margin. Going from 10,000 to 40,000 halves it again, at a hundred times the cost. Knowing where the curve flattens is a practical skill.</p></div>
+      <div><h3>Precision isn't accuracy</h3><p>A huge sample gives a tiny margin of error around possibly the wrong number. Margin of error measures sampling variability only — it says nothing about bias.</p></div>
+    </div>
+    <p class="why-close">The whole topic is one formula read in two directions. Forwards, it tells you the precision a planned study will deliver; backwards, it tells you the sample a required precision demands. <span class="mono">Set the margin, choose the confidence, estimate the variability, solve, round up.</span> And when the answer comes back impossible, that's information too — better to learn it before the surveys go out than after.</p>
+  </div>
+</section>
+
+<footer><div class="wrap"><div class="foot">The Sample Size Ladder · ME = z*·√(p̂(1−p̂)/n) · ME = z*·σ/√n · n = p*(1−p*)(z*/ME)² · n = (z*σ/ME)² · always round up</div></div></footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================
+   ===== CORE LOGIC START  (pure; extracted for stress-testing) =====
+   ================================================================= */
+
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+function rN(x,d){ var f=Math.pow(10,d), s=x<0?-1:1, v=Math.abs(x)*f; return s*Math.round(v+1e-9)/f; }
+function f4(x){ return rN(x,4).toFixed(4); }
+function f1(x){ return rN(x,1).toFixed(1); }
+function pickOpts(correct, distractors){
+  var opts=[correct], i;
+  for(i=0;i<distractors.length && opts.length<4;i++){ if(opts.indexOf(distractors[i])===-1) opts.push(distractors[i]); }
+  var packed=opts.map(function(o,idx){return {o:o,c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+function numOptsStr(correct, distractors){
+  var seen={}, opts=[correct], i; seen[correct]=1;
+  for(i=0;i<distractors.length && opts.length<4;i++){ if(!seen[distractors[i]]){ seen[distractors[i]]=1; opts.push(distractors[i]); } }
+  var packed=opts.map(function(o,idx){return {o:o,c:idx===0};}); shuffle(packed);
+  var ans=0; for(i=0;i<packed.length;i++) if(packed[i].c){ans=i;break;}
+  return {options:packed.map(function(p){return p.o;}), answer:ans};
+}
+
+/* ---------- critical values ---------- */
+/* the values students read from a table or get from technology */
+var ZTABLE={ '0.90':1.645, '0.95':1.96, '0.99':2.576 };
+function zStar(conf){ return ZTABLE[conf.toFixed(2)]; }
+/* full-precision inverse normal, used only to prove the answer is not knife-edge */
+function invNorm(p){
+  var a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,
+         1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00];
+  var b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,
+         6.680131188771972e+01,-1.328068155288572e+01];
+  var c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,
+         -2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00];
+  var d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+  var pl=0.02425, q, r;
+  if(p<pl){ q=Math.sqrt(-2*Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if(p<=1-pl){ q=p-0.5; r=q*q;
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1); }
+  q=Math.sqrt(-2*Math.log(1-p));
+  return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+}
+function zStarExact(conf){ return invNorm(1-(1-conf)/2); }
+
+/* ---------- the formulas ---------- */
+function meProp(z,phat,n){ return z*Math.sqrt(phat*(1-phat)/n); }
+function meMean(z,sigma,n){ return z*sigma/Math.sqrt(n); }
+function nProp(z,pstar,me){ return pstar*(1-pstar)*Math.pow(z/me,2); }
+function nMean(z,sigma,me){ return Math.pow(z*sigma/me,2); }
+
+/* reject values that sit on a display-rounding tie */
+function tie(v,d){ var s=Math.abs(v)*Math.pow(10,d), f=s-Math.floor(s); return Math.abs(f-0.5)<0.03; }
+
+/* ---------- contexts ---------- */
+var PCTX=[
+  {ctx:'Election poll', who:'registered voters', what:'plan to vote for the incumbent'},
+  {ctx:'Campus survey', who:'students', what:'commute more than 30 minutes'},
+  {ctx:'Customer research', who:'customers', what:'would recommend the service'},
+  {ctx:'Health study', who:'adults', what:'exercise at least three times a week'},
+  {ctx:'Quality audit', who:'shipped units', what:'arrive with a defect'},
+  {ctx:'Readership survey', who:'subscribers', what:'read the newsletter weekly'}
+];
+var MCTX=[
+  {ctx:'Commute times', who:'commuters', what:'travel time', unit:'minutes', sigPool:[6,8,9,10,12,14], mePool:[1,1.5,2,2.5,3]},
+  {ctx:'Battery life', who:'batteries', what:'lifetime', unit:'hours', sigPool:[1.5,2,2.5,3,4], mePool:[0.3,0.4,0.5,0.6]},
+  {ctx:'Package weights', who:'packages', what:'weight', unit:'grams', sigPool:[15,20,24,30,36], mePool:[3,4,5,6]},
+  {ctx:'Test scores', who:'students', what:'score', unit:'points', sigPool:[8,10,12,15], mePool:[1.5,2,2.5,3]},
+  {ctx:'Seedling heights', who:'seedlings', what:'height', unit:'cm', sigPool:[3,4,5,6], mePool:[0.5,0.8,1,1.2]}
+];
+var CONFS=[0.90,0.95,0.95,0.95,0.99];
+
+/* ---------- margin-of-error cases ---------- */
+function genMEProp(){
+  for(var t=0;t<400;t++){
+    var c=pick(PCTX), conf=pick(CONFS), z=zStar(conf);
+    var phat=rN(0.2+Math.random()*0.6, 2);
+    var n=pick([200,250,300,400,500,600,750,800,1000,1200]);
+    var me=meProp(z,phat,n);
+    if(me<0.008 || me>0.14) continue;
+    if(tie(me,4)) continue;
+    return {kind:'prop', ctx:c.ctx, who:c.who, what:c.what, conf:conf, z:z, phat:phat, n:n, me:me};
+  }
+  return null;
+}
+function genMEMean(){
+  for(var t=0;t<400;t++){
+    var c=pick(MCTX), conf=pick(CONFS), z=zStar(conf);
+    var sigma=pick(c.sigPool);
+    var n=pick([25,36,49,64,80,100,120,150,200,250]);
+    var me=meMean(z,sigma,n);
+    if(me<0.15) continue;
+    if(tie(me,1)) continue;
+    return {kind:'mean', ctx:c.ctx, who:c.who, what:c.what, unit:c.unit, conf:conf, z:z, sigma:sigma, n:n, me:me};
+  }
+  return null;
+}
+
+/* ---------- interval -> margin of error ---------- */
+function genInterval(){
+  for(var t=0;t<400;t++){
+    var asProp=Math.random()<0.5;
+    if(asProp){
+      var c=pick(PCTX);
+      var est=rN(0.25+Math.random()*0.5, 3), me=rN(0.015+Math.random()*0.05, 3);
+      var lo=rN(est-me,3), hi=rN(est+me,3);
+      if(lo<=0.02 || hi>=0.98) continue;
+      var meBack=(hi-lo)/2, estBack=(hi+lo)/2;
+      if(tie(meBack,4) || tie(estBack,4)) continue;
+      return {kind:'prop', ctx:c.ctx, who:c.who, what:c.what, lo:lo, hi:hi, me:meBack, est:estBack, dp:4};
+    }
+    var m=pick(MCTX);
+    var estM=rN(10+Math.random()*60,1), meM=rN(0.6+Math.random()*4,1);
+    var loM=rN(estM-meM,1), hiM=rN(estM+meM,1);
+    if(loM<=0) continue;
+    var meB=(hiM-loM)/2, estB=(hiM+loM)/2;
+    if(tie(meB,1) || tie(estB,1)) continue;
+    return {kind:'mean', ctx:m.ctx, who:m.who, what:m.what, unit:m.unit, lo:loM, hi:hiM, me:meB, est:estB, dp:1};
+  }
+  return null;
+}
+
+/* ---------- sample-size cases (ceiling must be robust to the z* used) ---------- */
+function safeN(raw, rawExact){
+  var n1=Math.ceil(raw-1e-9), n2=Math.ceil(rawExact-1e-9);
+  if(n1!==n2) return null;                       /* table z* and exact z* must agree */
+  var fr=raw-Math.floor(raw);
+  if(fr<0.08 || fr>0.92) return null;            /* keep clear of the integer boundary */
+  var fr2=rawExact-Math.floor(rawExact);
+  if(fr2<0.05 || fr2>0.95) return null;
+  return n1;
+}
+function genNProp(opts){
+  opts=opts||{};
+  for(var t=0;t<600;t++){
+    var c=pick(PCTX), conf=pick(CONFS), z=zStar(conf), ze=zStarExact(conf);
+    var conservative = opts.conservative!=null ? opts.conservative : (Math.random()<0.4);
+    var pstar = conservative ? 0.5 : rN(0.15+Math.random()*0.7, 2);
+    var me=pick([0.01,0.015,0.02,0.025,0.03,0.035,0.04,0.05]);
+    var raw=nProp(z,pstar,me), rawE=nProp(ze,pstar,me);
+    if(raw<60 || raw>26000) continue;
+    var n=safeN(raw,rawE);
+    if(n===null) continue;
+    return {kind:'prop', ctx:c.ctx, who:c.who, what:c.what, conf:conf, z:z, pstar:pstar,
+      conservative:conservative, me:me, raw:raw, n:n};
+  }
+  return null;
+}
+function genNMean(){
+  for(var t=0;t<600;t++){
+    var c=pick(MCTX), conf=pick(CONFS), z=zStar(conf), ze=zStarExact(conf);
+    var sigma=pick(c.sigPool), me=pick(c.mePool);
+    var raw=nMean(z,sigma,me), rawE=nMean(ze,sigma,me);
+    if(raw<25 || raw>9000) continue;
+    var n=safeN(raw,rawE);
+    if(n===null) continue;
+    return {kind:'mean', ctx:c.ctx, who:c.who, what:c.what, unit:c.unit, conf:conf, z:z,
+      sigma:sigma, me:me, raw:raw, n:n};
+  }
+  return null;
+}
+
+/* ---------- the 1/sqrt(n) cost rule ---------- */
+function genCost(){
+  for(var t=0;t<300;t++){
+    var factor=pick([2,2,2,3,4]);              /* cut the margin by this factor */
+    var nOld=pick([200,300,400,500,600,800,1000,1200]);
+    var nNew=nOld*factor*factor;
+    if(nNew>60000) continue;
+    return {factor:factor, nOld:nOld, nNew:nNew, mult:factor*factor};
+  }
+  return null;
+}
+function costOpts(factor){
+  var mult=factor*factor;
+  var correct='Multiply the sample size by '+mult+'.';
+  return pickOpts(correct,
+    ['Multiply the sample size by '+factor+'.',
+     'Multiply the sample size by '+(mult*2)+'.',
+     'Divide the sample size by '+factor+'.']);
+}
+
+/* ---------- concept option builders ---------- */
+function anatomyOpts(mode){
+  if(mode==='parts') return pickOpts('The sample estimate, plus and minus the margin of error.',
+    ['The population parameter, plus and minus the standard deviation.',
+     'The margin of error, plus and minus the confidence level.',
+     'The sample size, plus and minus the standard error.']);
+  if(mode==='centre') return pickOpts('The sample estimate \u2014 it sits exactly at the midpoint.',
+    ['The population parameter.','The margin of error.','The critical value z*.']);
+  return pickOpts('Half the total width of the interval.',
+    ['The full width of the interval.','The standard deviation of the population.','The confidence level written as a decimal.']);
+}
+function leverOpts(lever){
+  if(lever==='conf') return pickOpts('The margin of error gets larger \u2014 more confidence needs a wider net.',
+    ['The margin of error gets smaller.','The margin of error is unchanged.','The sample size automatically increases.']);
+  if(lever==='n') return pickOpts('The margin of error gets smaller \u2014 but only in proportion to \u221an.',
+    ['The margin of error gets larger.','The margin of error is unchanged.','The confidence level drops.']);
+  return pickOpts('The margin of error gets larger \u2014 a more variable population is harder to pin down.',
+    ['The margin of error gets smaller.','The margin of error is unchanged.','The confidence level rises.']);
+}
+function formulaOpts(kind){
+  var propF='n = p*(1 \u2212 p*)\u00b7(z*/ME)\u00b2', meanF='n = (z*\u00b7\u03c3/ME)\u00b2';
+  return pickOpts(kind==='prop'?propF:meanF,
+    [kind==='prop'?meanF:propF, 'n = z*\u00b7\u03c3/ME', 'n = (ME/z*)\u00b2']);
+}
+function roundOpts(mode){
+  if(mode==='why') return pickOpts('Round up \u2014 rounding down would give a margin of error larger than promised.',
+    ['Round to the nearest whole number, as usual.',
+     'Round down, since you cannot exceed the budget.',
+     'Leave the decimal; sample sizes need not be whole numbers.']);
+  return pickOpts('Always up, to the next whole number.',
+    ['To the nearest whole number.','Always down.','To the nearest hundred.']);
+}
+function conservativeOpts(mode){
+  if(mode==='when') return pickOpts('Use p* = 0.5, which gives the largest sample size and so guarantees the precision.',
+    ['Use p* = 0, since that is the smallest possible value.',
+     'Use p* = 1, since that is the largest possible value.',
+     'The sample size cannot be found without a pilot estimate.']);
+  return pickOpts('It is the safe choice \u2014 no other value of p* would require a larger sample.',
+    ['It is the value most populations happen to have.',
+     'It makes the arithmetic easier.',
+     'It is required whenever the confidence level is 95%.']);
+}
+function limitsOpts(mode){
+  if(mode==='bias') return pickOpts('Nothing \u2014 a larger sample shrinks the margin of error but does not reduce bias.',
+    ['It removes the bias entirely.','It halves the bias.','It converts the bias into random error.']);
+  if(mode==='covers') return pickOpts('Only the variability that comes from random sampling.',
+    ['All sources of error, including bad question wording.',
+     'Nonresponse and undercoverage as well.',
+     'Any mistake made during data entry.']);
+  return pickOpts('Spend the extra budget on reducing nonresponse and improving the sampling frame.',
+    ['Double the sample size again.',
+     'Raise the confidence level to 99%.',
+     'Report the interval without a margin of error.']);
+}
+
+/* ---------- SVG: the 1/sqrt(n) decay curve ---------- */
+function svgCurve(pstar, conf, marks){
+  var z=zStar(conf||0.95); pstar=pstar||0.5;
+  var W=480,H=210,m=40, base=H-30, i;
+  var nMin=100, nMax=6400;
+  function ME(n){ return z*Math.sqrt(pstar*(1-pstar)/n); }
+  var meMax=ME(nMin), meMin=ME(nMax);
+  function PX(n){ return m+(n-nMin)/(nMax-nMin)*(W-2*m); }
+  function PY(v){ return base-(v-0)/(meMax*1.06)*(base-24); }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="curve" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="margin of error against sample size">';
+  s+='<line x1="'+m+'" y1="'+base+'" x2="'+(W-m)+'" y2="'+base+'" class="axis"/>';
+  s+='<line x1="'+m+'" y1="18" x2="'+m+'" y2="'+base+'" class="axis"/>';
+  var d='', n;
+  for(i=0;i<=140;i++){
+    n=nMin+(nMax-nMin)*i/140;
+    d+=(i?'L':'M')+PX(n).toFixed(1)+' '+PY(ME(n)).toFixed(1)+' ';
+  }
+  s+='<path d="'+d+'" class="ln"/>';
+  var pts=marks||[100,400,1600,6400];
+  for(i=0;i<pts.length;i++){
+    if(pts[i]<nMin||pts[i]>nMax) continue;
+    var x=PX(pts[i]), y=PY(ME(pts[i]));
+    s+='<line x1="'+x.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+x.toFixed(1)+'" y2="'+base+'" class="drop"/>';
+    s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.6" class="dot"/>';
+    s+='<text x="'+x.toFixed(1)+'" y="'+(base+13)+'" class="lab">'+pts[i]+'</text>';
+    s+='<text x="'+x.toFixed(1)+'" y="'+(y-8).toFixed(1)+'" class="clab">'+(ME(pts[i])*100).toFixed(1)+'%</text>';
+  }
+  s+='<text x="'+(W-m)+'" y="'+(base+26)+'" class="ax" text-anchor="end">sample size n</text>';
+  s+='<text x="'+(m-6)+'" y="20" class="ax" text-anchor="end">ME</text>';
+  s+='</svg>'; return s;
+}
+/* ---------- SVG: the three levers ---------- */
+function svgLevers(highlight){
+  var rows=[{k:'conf',name:'Confidence level',dir:'up'},
+            {k:'var', name:'Population variability',dir:'up'},
+            {k:'n',   name:'Sample size',dir:'down'}];
+  var W=480,H=150,i;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" class="lev" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="three levers">';
+  for(i=0;i<rows.length;i++){
+    var y=18+i*44, on=(highlight===rows[i].k);
+    s+='<rect x="16" y="'+y+'" width="200" height="30" rx="7" class="bar'+(on?' on':'')+'"/>';
+    s+='<text x="28" y="'+(y+20)+'" class="lname"'+(on?' fill="#fff"':'')+'>'+rows[i].name+' \u2191</text>';
+    s+='<text x="238" y="'+(y+20)+'" class="larr">\u27f6</text>';
+    s+='<text x="272" y="'+(y+20)+'" class="larr"><tspan class="'+(rows[i].dir==='up'?'lup':'ldn')+'">ME '+
+       (rows[i].dir==='up'?'\u2191 wider':'\u2193 narrower')+'</tspan></text>';
+  }
+  s+='</svg>'; return s;
+}
+
+if(typeof module!=='undefined' && module.exports){
+  module.exports={ rN:rN, f4:f4, f1:f1, ZTABLE:ZTABLE, zStar:zStar, zStarExact:zStarExact, invNorm:invNorm,
+    meProp:meProp, meMean:meMean, nProp:nProp, nMean:nMean, tie:tie, safeN:safeN,
+    PCTX:PCTX, MCTX:MCTX, CONFS:CONFS,
+    genMEProp:genMEProp, genMEMean:genMEMean, genInterval:genInterval,
+    genNProp:genNProp, genNMean:genNMean, genCost:genCost, costOpts:costOpts,
+    anatomyOpts:anatomyOpts, leverOpts:leverOpts, formulaOpts:formulaOpts, roundOpts:roundOpts,
+    conservativeOpts:conservativeOpts, limitsOpts:limitsOpts, numOptsStr:numOptsStr,
+    svgCurve:svgCurve, svgLevers:svgLevers };
+}
+/* =================================================================
+   ===== CORE LOGIC END =====
+   ================================================================= */
+
+
+/* ---------------- UI LAYER ---------------- */
+var KEY='sampleSizeLadder', NEED=4;
+var state=load();
+function load(){ try{ var s=JSON.parse(localStorage.getItem(KEY)); if(s&&s.rungs) return s; }catch(e){} return {rungs:{}}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+(function(){ document.getElementById('heroCurve').innerHTML=svgCurve(0.5,0.95,[100,400,1600,6400]); })();
+
+function pctStr(x){ return rN(x*100,1).toFixed(1)+'%'; }
+function confPct(c){ return Math.round(c*100)+'%'; }
+
+var RUNGS=[
+  {
+    id:'anatomy', title:'Anatomy of an interval', desc:'Estimate \u00b1 margin of error.',
+    strategy:'<p>Every confidence interval has the same shape: <code>estimate \u00b1 ME</code>. The estimate sits at the <b>centre</b>, and the margin of error is <b>half the total width</b> \u2014 the reach in each direction.</p>',
+    build:function(){ var mode=pick(['parts','centre','half']), o=anatomyOpts(mode);
+      var ask=mode==='parts'?'What are the two pieces of a confidence interval?':
+              mode==='centre'?'What sits at the centre of the interval?':
+              'What is the margin of error, geometrically?';
+      return {mode:'mc', ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'recover', title:'Recover ME from an interval', desc:'Half the width, and the midpoint.',
+    strategy:'<p>Given only the endpoints: <code>ME = (upper \u2212 lower)/2</code> and <code>estimate = (upper + lower)/2</code>. This works for any confidence interval, whatever it estimates.</p>',
+    build:function(){ var I=genInterval(), both=Math.random()<0.5;
+      var unitTxt=I.kind==='mean'?(' '+I.unit):'';
+      var scen='<span class="tag">'+I.ctx+'</span>A confidence interval for the '+
+        (I.kind==='prop'?('proportion of '+I.who+' who '+I.what):('mean '+I.what+' of '+I.who))+
+        ' is <b>('+(I.kind==='prop'?I.lo.toFixed(3)+', '+I.hi.toFixed(3):I.lo.toFixed(1)+', '+I.hi.toFixed(1))+')</b>'+unitTxt+'.';
+      if(both) return {mode:'num', scenario:scen,
+        ask:'Find the sample estimate and the margin of error.'+(I.kind==='prop'?' (4 decimals)':' (1 decimal)'),
+        fields:[{label:'estimate =', answer:I.est, tol:I.dp===4?0.00051:0.051},
+                {label:'ME =', answer:I.me, tol:I.dp===4?0.00051:0.051}]};
+      return {mode:'num', scenario:scen,
+        ask:'Find the margin of error.'+(I.kind==='prop'?' (4 decimals)':' (1 decimal)'),
+        fields:[{label:'ME =', answer:I.me, tol:I.dp===4?0.00051:0.051}]}; }
+  },
+  {
+    id:'compute', title:'Compute the margin of error', desc:'Critical value \u00d7 standard error.',
+    strategy:'<p>For a proportion, <code>ME = z*\u00b7\u221a(p\u0302(1\u2212p\u0302)/n)</code>. For a mean with \u03c3 known, <code>ME = z*\u00b7\u03c3/\u221an</code>. Get z* from technology or a table: 1.645 at 90%, 1.96 at 95%, 2.576 at 99%.</p>',
+    build:function(){ var isProp=Math.random()<0.5;
+      if(isProp){ var C=genMEProp();
+        return {mode:'num',
+          scenario:'<span class="tag">'+C.ctx+'</span>In a random sample of <b>'+C.n+'</b> '+C.who+', <b>'+C.phat.toFixed(2)+
+            '</b> is the sample proportion who '+C.what+'. You want a <b>'+confPct(C.conf)+'</b> confidence interval.',
+          ask:'Find the margin of error. (4 decimals)',
+          fields:[{label:'ME =', answer:C.me, tol:0.00051}]}; }
+      var M=genMEMean();
+      return {mode:'num',
+        scenario:'<span class="tag">'+M.ctx+'</span>A random sample of <b>'+M.n+'</b> '+M.who+' is taken. The population standard deviation is <b>\u03c3 = '+
+          M.sigma+'</b> '+M.unit+'. You want a <b>'+confPct(M.conf)+'</b> confidence interval for the mean '+M.what+'.',
+        ask:'Find the margin of error, in '+M.unit+'. (1 decimal)',
+        fields:[{label:'ME =', answer:M.me, tol:0.051}]}; }
+  },
+  {
+    id:'levers', title:'The three levers', desc:'What makes the margin move.',
+    strategy:'<p>Only three things change the margin. <b>Higher confidence</b> \u2192 wider. <b>More variable population</b> \u2192 wider. <b>Bigger sample</b> \u2192 narrower. Confidence and variability push one way; sample size is the only lever that pulls the other.</p>',
+    build:function(){ var lever=pick(['conf','n','var']), o=leverOpts(lever);
+      var ask=lever==='conf'?'You raise the confidence level from 90% to 99%, keeping n the same. What happens to the margin of error?':
+              lever==='n'?'You increase the sample size, keeping the confidence level the same. What happens to the margin of error?':
+              'The population turns out to be more variable than expected. What happens to the margin of error?';
+      return {mode:'mc', levers:lever, ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'cost', title:'The cost of precision', desc:'Halve the margin, quadruple the sample.',
+    strategy:'<p>Because n sits under a square root, cutting the margin by a factor of k means multiplying the sample by <b>k\u00b2</b>. Half the margin costs <b>4\u00d7</b> the sample; a third of the margin costs <b>9\u00d7</b>.</p>',
+    build:function(){ var C=genCost();
+      if(Math.random()<0.45){ var o=costOpts(C.factor);
+        return {mode:'mc', curve:true,
+          scenario:'<span class="tag">Planning</span>A study is being redesigned to make the margin of error <b>'+
+            (C.factor===2?'half':C.factor===3?'a third':'a quarter')+'</b> its current size, at the same confidence level.',
+          ask:'What must happen to the sample size?', options:o.options, answer:o.answer}; }
+      return {mode:'num', curve:true,
+        scenario:'<span class="tag">Planning</span>A survey of <b>'+C.nOld+'</b> people produced a certain margin of error. The team now wants a margin <b>'+
+          (C.factor===2?'half':C.factor===3?'a third':'a quarter')+'</b> that size, at the same confidence level.',
+        ask:'How many people are needed now?',
+        fields:[{label:'n =', answer:C.nNew, tol:0.001}]}; }
+  },
+  {
+    id:'formula', title:'Which formula?', desc:'Proportion or mean.',
+    strategy:'<p>Counting <b>what fraction</b> have a characteristic \u2192 proportion: <code>n = p*(1\u2212p*)(z*/ME)\u00b2</code>. Measuring <b>how much</b> on a numeric scale \u2192 mean: <code>n = (z*\u03c3/ME)\u00b2</code>. If the problem gives you a \u03c3, it is a mean problem.</p>',
+    build:function(){ var isProp=Math.random()<0.5, o=formulaOpts(isProp?'prop':'mean');
+      var scen = isProp
+        ? (function(){ var c=pick(PCTX); return '<span class="tag">'+c.ctx+'</span>Researchers want to estimate the <b>proportion</b> of '+c.who+' who '+c.what+', to within a stated margin of error.'; })()
+        : (function(){ var m=pick(MCTX); return '<span class="tag">'+m.ctx+'</span>Researchers want to estimate the <b>mean</b> '+m.what+' of '+m.who+' to within a stated margin of error, using a known \u03c3.'; })();
+      return {mode:'mc', scenario:scen, ask:'Which sample-size formula applies?', options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'nprop', title:'Solve for n \u2014 proportions', desc:'With a pilot estimate of p.',
+    strategy:'<p>Rearranged: <code>n = p*(1\u2212p*)\u00b7(z*/ME)\u00b2</code>. Use the pilot value for p*, compute, and <b>round up</b> to the next whole number.</p>',
+    build:function(){ var C=genNProp({conservative:false});
+      return {mode:'num',
+        scenario:'<span class="tag">'+C.ctx+'</span>A previous study suggests about <b>'+C.pstar.toFixed(2)+'</b> of '+C.who+' '+C.what+
+          '. Researchers want a <b>'+confPct(C.conf)+'</b> confidence interval with a margin of error of at most <b>'+pctStr(C.me)+'</b>.',
+        ask:'What sample size is required?',
+        fields:[{label:'n =', answer:C.n, tol:0.001}]}; }
+  },
+  {
+    id:'conservative', title:'No pilot estimate?', desc:'Use p* = 0.5.',
+    strategy:'<p>With no prior information, use <b>p* = 0.5</b>. It produces the largest possible sample size, so whatever the true proportion turns out to be, the margin of error will be <b>no worse</b> than promised.</p>',
+    build:function(){ if(Math.random()<0.35){ var mode=pick(['when','why']), o=conservativeOpts(mode);
+        return {mode:'mc',
+          scenario:'<span class="tag">Planning</span>A team must choose a sample size but has <b>no prior estimate</b> of the population proportion.',
+          ask:mode==='when'?'What should they do?':'Why is p* = 0.5 the standard choice here?',
+          options:o.options, answer:o.answer}; }
+      var C=genNProp({conservative:true});
+      return {mode:'num',
+        scenario:'<span class="tag">'+C.ctx+'</span>Researchers want to estimate the proportion of '+C.who+' who '+C.what+
+          ', with <b>'+confPct(C.conf)+'</b> confidence and a margin of error of at most <b>'+pctStr(C.me)+'</b>. They have <b>no pilot estimate</b>.',
+        ask:'Using the conservative value, what sample size is required?',
+        fields:[{label:'n =', answer:C.n, tol:0.001}]}; }
+  },
+  {
+    id:'nmean', title:'Solve for n \u2014 means', desc:'n = (z*\u03c3/ME)\u00b2.',
+    strategy:'<p>Rearranged: <code>n = (z*\u00b7\u03c3/ME)\u00b2</code>. You need an estimate of \u03c3 \u2014 usually from a pilot study or past data \u2014 then compute and <b>round up</b>.</p>',
+    build:function(){ var C=genNMean();
+      return {mode:'num',
+        scenario:'<span class="tag">'+C.ctx+'</span>From past data, the standard deviation of '+C.what+' is about <b>\u03c3 = '+C.sigma+'</b> '+C.unit+
+          '. Researchers want a <b>'+confPct(C.conf)+'</b> confidence interval for the mean, with a margin of error of at most <b>'+C.me+'</b> '+C.unit+'.',
+        ask:'What sample size is required?',
+        fields:[{label:'n =', answer:C.n, tol:0.001}]}; }
+  },
+  {
+    id:'round', title:'Always round up', desc:'385, never 384.',
+    strategy:'<p>The formula almost always returns a decimal. Take the <b>next whole number up</b>, every time. Rounding down would leave you just short of the precision you promised \u2014 this is the one place in statistics where "round to nearest" is wrong.</p>',
+    build:function(){ if(Math.random()<0.45){ var mode=pick(['why','how']), o=roundOpts(mode);
+        return {mode:'mc',
+          scenario:'<span class="tag">Rounding</span>A sample-size formula returns a value that is not a whole number.',
+          ask:mode==='why'?'What should you do, and why?':'How do you round a sample size?',
+          options:o.options, answer:o.answer}; }
+      var C=Math.random()<0.5?genNProp():genNMean();
+      return {mode:'num',
+        scenario:'<span class="tag">'+C.ctx+'</span>The sample-size formula gives <b>n = '+C.raw.toFixed(2)+'</b>.',
+        ask:'What sample size should the researchers actually use?',
+        fields:[{label:'n =', answer:C.n, tol:0.001}]}; }
+  },
+  {
+    id:'limits', title:'What a bigger sample can\u2019t fix', desc:'Precision is not accuracy.',
+    strategy:'<p>The margin of error accounts for <b>random sampling variability only</b>. It does not cover bias from a bad sampling frame, nonresponse, or leading questions. A huge sample gives a very precise estimate of possibly the wrong number.</p>',
+    build:function(){ var mode=pick(['bias','covers','spend']), o=limitsOpts(mode);
+      var ask=mode==='bias'?'A survey uses a sampling method that systematically misses part of the population. What does quadrupling the sample size do to that problem?':
+              mode==='covers'?'What sources of error does the margin of error actually account for?':
+              'A team already has a margin of error of \u00b11%. What is the better use of extra budget?';
+      return {mode:'mc', ask:ask, options:o.options, answer:o.answer}; }
+  },
+  {
+    id:'capstone', title:'Capstone \u2014 design the study', desc:'Find n, then judge the cost. One miss restarts.', cap:true,
+    strategy:'<p>The full routine: choose the right formula, supply z* and the variability estimate, solve for n, round up. Then reason about what a tighter margin would cost.</p>',
+    build:function(){ var isProp=Math.random()<0.5;
+      var C=isProp?genNProp():genNMean();
+      var factor=pick([2,3]);
+      var o=costOpts(factor);
+      var scen = isProp
+        ? '<span class="tag">'+C.ctx+'</span>Researchers want to estimate the proportion of '+C.who+' who '+C.what+', with <b>'+
+          confPct(C.conf)+'</b> confidence and a margin of error of at most <b>'+pctStr(C.me)+'</b>.'+
+          (C.conservative?' They have <b>no pilot estimate</b>, so use the conservative value.':' A pilot study suggests <b>p* = '+C.pstar.toFixed(2)+'</b>.')
+        : '<span class="tag">'+C.ctx+'</span>Researchers want to estimate the mean '+C.what+' of '+C.who+' with <b>'+
+          confPct(C.conf)+'</b> confidence and a margin of error of at most <b>'+C.me+'</b> '+C.unit+'. Past data give <b>\u03c3 = '+C.sigma+'</b> '+C.unit+'.';
+      return {mode:'numthenmc', scenario:scen,
+        ask:'1. What sample size is required?',
+        fields:[{label:'n =', answer:C.n, tol:0.001}],
+        sub2:{ask:'2. If they later decide they want the margin of error to be '+(factor===2?'half':'a third')+' that size, what must happen to n?',
+              options:o.options, answer:o.answer}}; }
+  }
+];
+
+/* ---------- render skeleton ---------- */
+var rungsEl=document.getElementById('rungs');
+RUNGS.forEach(function(def,idx){
+  if(!state.rungs[def.id]) state.rungs[def.id]={streak:0,done:false};
+  var el=document.createElement('div');
+  el.className='rung'+(def.cap?' cap':'')+(state.rungs[def.id].done?' done':'');
+  el.dataset.id=def.id;
+  el.innerHTML='<div class="rung-top"><div class="rung-num">'+(idx+1)+'</div>'+
+    '<div class="rung-title"><div class="rt">'+def.title+'</div><div class="rd">'+def.desc+'</div></div>'+
+    '<div class="rung-badge"><span class="medal">🏅</span><span class="dots"></span><span class="txt"></span></div>'+
+    '<div class="chev">▶</div></div><div class="rung-body"></div>';
+  rungsEl.appendChild(el);
+  el.querySelector('.rung-top').addEventListener('click', function(){ toggleRung(def.id); });
+  renderBadge(def.id);
+});
+function rungEl(id){ return rungsEl.querySelector('.rung[data-id="'+id+'"]'); }
+function rungDef(id){ return RUNGS.filter(function(r){return r.id===id;})[0]; }
+function renderBadge(id){
+  var el=rungEl(id),st=state.rungs[id],dots=el.querySelector('.dots'); dots.innerHTML='';
+  for(var i=0;i<NEED;i++){ var d=document.createElement('span'); d.className='dot-b'+(i<st.streak?' on':''); dots.appendChild(d); }
+  el.querySelector('.txt').textContent=st.done?'earned':(st.streak+'/'+NEED); el.classList.toggle('done',st.done);
+}
+var openId=null;
+function toggleRung(id){
+  var el=rungEl(id);
+  if(el.classList.contains('open')){ el.classList.remove('open'); openId=null; return; }
+  if(openId) rungEl(openId).classList.remove('open');
+  el.classList.add('open'); openId=id; newQuestion(id);
+}
+
+var current={};
+function newQuestion(id){
+  var def=rungDef(id), q=def.build(); current[id]={def:def,q:q};
+  var body=rungEl(id).querySelector('.rung-body');
+  var html='<details class="strategy"><summary>Strategy</summary><div class="inner">'+def.strategy+'</div></details><div class="qwrap">';
+  if(q.scenario) html+='<div class="scenario">'+q.scenario+'</div>';
+  if(q.levers) html+='<div class="vizbox">'+svgLevers(q.levers)+'</div>';
+  if(q.curve) html+='<div class="vizbox">'+svgCurve(0.5,0.95,[100,400,1600,6400])+'</div>';
+  if(q.mode==='mc'){
+    html+='<div class="ask">'+q.ask+'</div><div class="choices">';
+    q.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>';
+  } else {
+    html+='<div class="ask">'+q.ask+'</div><div class="numrow">';
+    q.fields.forEach(function(f,i){ html+='<div class="field"><label>'+f.label+'</label><input type="number" step="any" data-i="'+i+'" autocomplete="off"></div>'; });
+    html+='<button class="btn" data-check="1">Check</button></div>';
+    if(q.mode==='numthenmc') html+='<div class="sub2" style="display:none;margin-top:18px"></div>';
+  }
+  html+='<div class="feedback"></div><div class="streak-note"></div></div>';
+  body.innerHTML=html; updateStreakNote(id);
+  if(q.mode==='mc'){ body.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerMC(id, parseInt(c.dataset.i,10)); }); }); }
+  else {
+    var inputs=body.querySelectorAll('.numrow input');
+    body.querySelector('[data-check]').addEventListener('click', function(){ answerNum(id); });
+    inputs.forEach(function(inp,i){ inp.addEventListener('keydown', function(e){ if(e.key==='Enter'){ if(i<inputs.length-1) inputs[i+1].focus(); else answerNum(id); } }); });
+    if(inputs[0]) inputs[0].focus();
+  }
+}
+function updateStreakNote(id){ var st=state.rungs[id],note=rungEl(id).querySelector('.streak-note'); if(!note) return;
+  note.textContent=st.done?'✓ Badge earned — keep going for more practice.':(st.streak>0?('Streak: '+st.streak+' of '+NEED):''); }
+function nextBtn(){ return '<div class="next"><button class="btn ghost" data-next="1">Next question →</button></div>'; }
+function wireNext(id){ var b=rungEl(id).querySelector('[data-next]'); if(b) b.addEventListener('click', function(){ newQuestion(id); }); }
+
+function answerMC(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), choices=body.querySelectorAll('.choices .choice');
+  if(choices[0].disabled) return; choices.forEach(function(c){c.disabled=true;});
+  var correct=(choice===q.answer); choices[q.answer].classList.add('correct'); if(!correct) choices[choice].classList.add('wrong');
+  var fb=body.querySelector('.feedback'); fb.className='feedback show '+(correct?'right':'wrong');
+  fb.innerHTML=(correct?'Correct.':'Not quite — the right choice is highlighted.')+nextBtn();
+  wireNext(id); recordResult(id, correct);
+}
+function fmtAns(f){
+  if(f.tol<=0.002) return f4(f.answer);
+  if(f.tol<=0.06) return f1(f.answer);
+  return String(f.answer);
+}
+function answerNum(id){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body'), inputs=body.querySelectorAll('.numrow input');
+  if(inputs[0].disabled) return;
+  var allOk=true;
+  q.fields.forEach(function(f,i){
+    var tol=(f.tol!=null)?f.tol:0.00051;
+    var v=parseFloat(inputs[i].value.trim());
+    var ok=!isNaN(v)&&Math.abs(v-f.answer)<=tol+1e-9;
+    inputs[i].classList.toggle('ok',ok); inputs[i].classList.toggle('no',!ok);
+    if(!ok) allOk=false;
+  });
+  inputs.forEach(function(i){i.disabled=true;}); body.querySelector('[data-check]').disabled=true;
+  var fb=body.querySelector('.feedback');
+  var showAns=q.fields.map(function(f){ return f.label+' '+fmtAns(f); }).join(',&nbsp; ');
+  if(q.mode==='numthenmc'){
+    cur.ok1=allOk;
+    fb.className='feedback show '+(allOk?'right':'wrong');
+    fb.innerHTML=allOk?'Part 1 correct.':('Not quite. <span class="mono">'+showAns+'</span>');
+    var s2=body.querySelector('.sub2'); s2.style.display='block';
+    var html='<div class="ask">'+q.sub2.ask+'</div><div class="choices" data-sub="1">';
+    q.sub2.options.forEach(function(opt,i){ html+='<button class="choice" data-i="'+i+'"><span class="key">'+(i+1)+'</span><span>'+opt+'</span></button>'; });
+    html+='</div>'; s2.innerHTML=html;
+    s2.querySelectorAll('.choice').forEach(function(c){ c.addEventListener('click', function(){ answerCap2(id, parseInt(c.dataset.i,10)); }); });
+    return;
+  }
+  fb.className='feedback show '+(allOk?'right':'wrong');
+  fb.innerHTML=(allOk?'Correct.':'Not quite. <span class="mono">'+showAns+'</span>')+nextBtn();
+  wireNext(id); recordResult(id, allOk);
+}
+function answerCap2(id, choice){
+  var cur=current[id]; if(!cur) return;
+  var q=cur.q, body=rungEl(id).querySelector('.rung-body');
+  var c1=body.querySelectorAll('.choices[data-sub="1"] .choice'); if(c1[0].disabled) return;
+  c1.forEach(function(c){c.disabled=true;});
+  var ok2=(choice===q.sub2.answer); c1[q.sub2.answer].classList.add('correct'); if(!ok2) c1[choice].classList.add('wrong');
+  var both=cur.ok1&&ok2, fb=body.querySelector('.feedback');
+  fb.className='feedback show '+(both?'right':'wrong');
+  fb.innerHTML=(both?'Both correct — study designed.':'Not both correct — the streak resets.')+nextBtn();
+  wireNext(id); recordResult(id, both);
+}
+function recordResult(id, correct){
+  var st=state.rungs[id],wasDone=st.done;
+  if(correct){ st.streak++; if(st.streak>=NEED) st.done=true; } else st.streak=0;
+  save(); renderBadge(id); updateStreakNote(id); updateProgress();
+  if(st.done&&!wasDone) celebrate(id);
+}
+function updateProgress(){
+  var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  document.getElementById('progLabel').textContent=done+' of '+RUNGS.length+' badges earned';
+  document.getElementById('progFill').style.width=(100*done/RUNGS.length)+'%';
+}
+function celebrate(id){ var done=RUNGS.filter(function(r){return state.rungs[r.id].done;}).length;
+  showToast('🏅 '+(done===RUNGS.length?'All 12 badges — precision, priced.':'Badge earned · '+rungDef(id).title)); }
+var toastT; function showToast(t){ var el=document.getElementById('toast'); el.innerHTML=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2600); }
+
+document.addEventListener('keydown', function(e){
+  if(!openId) return; var cur=current[openId]; if(!cur) return;
+  if(document.activeElement && document.activeElement.tagName==='INPUT') return;
+  var n=parseInt(e.key,10); if(isNaN(n)||n<1||n>4) return;
+  var body=rungEl(openId).querySelector('.rung-body');
+  var s2=body.querySelectorAll('.choices[data-sub="1"] .choice');
+  if(s2.length&&!s2[0].disabled){ if(s2[n-1]) answerCap2(openId,n-1); return; }
+  if(cur.q.mode==='mc'){ var cs=body.querySelectorAll('.choices .choice'); if(cs[n-1]&&!cs[0].disabled) answerMC(openId,n-1); }
+});
+document.getElementById('resetBtn').addEventListener('click', function(){
+  if(!confirm('Reset all progress on the Sample Size Ladder?')) return;
+  state={rungs:{}}; RUNGS.forEach(function(r){state.rungs[r.id]={streak:0,done:false};});
+  save(); RUNGS.forEach(function(r){renderBadge(r.id);updateStreakNote(r.id);});
+  if(openId) newQuestion(openId); updateProgress(); showToast('Progress reset');
+});
+updateProgress();
+</script>
+</body>
+</html>
