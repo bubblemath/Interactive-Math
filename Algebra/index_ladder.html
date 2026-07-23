@@ -1,0 +1,951 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Index Ladder — the index is the group size</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F1F4F6; --surface:#FFFFFF; --ink:#12202B; --muted:#5C6E7C;
+  --hair:#D8E0E6; --hair-strong:#B9C6D0;
+  --a1:#4A3D9C; --a1-soft:#ECEAF9; --a1-line:#C9C2EC;
+  --a2:#0F6E56; --a2-soft:#E2F1EC; --a2-line:#BFDDD3;
+  --a3:#9E3357; --a3-soft:#F8E8EE; --a3-line:#EDC9D6;
+  --good:#0F6E56; --bad:#A8322C; --bad-soft:#FBEAE8;
+  --gold:#8A6410; --gold-soft:#F6EEDA;
+  --r:10px; --shadow:0 1px 0 rgba(18,32,43,.04), 0 8px 24px -18px rgba(18,32,43,.5);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:"Space Grotesk",system-ui,sans-serif;font-weight:500;letter-spacing:-.02em;line-height:1.15;margin:0}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-ligatures:none}
+a{color:inherit}
+
+/* ---------- math ---------- */
+.mx{font-family:"IBM Plex Mono",ui-monospace,monospace;white-space:nowrap}
+.mx sup{font-size:.62em;vertical-align:super;line-height:0;padding-left:.03em}
+.opx{padding:0 .26em}
+.rad{display:inline-flex;align-items:flex-start;white-space:nowrap;font-family:"IBM Plex Mono",ui-monospace,monospace}
+.rad .idx{font-size:.58em;line-height:1;position:relative;top:.02em;margin-right:-.18em}
+.rad .sr{line-height:1.05}
+.rad .bar{border-top:1.4px solid currentColor;padding:.1em .22em 0 .14em;margin-top:.06em}
+.fr{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;vertical-align:-0.4em;line-height:1.08;margin:0 .08em;font-size:.86em}
+.fr .fn{padding:0 .3em;border-bottom:1.4px solid currentColor}
+.fr .fd{padding:0 .3em}
+
+/* ---------- top bar ---------- */
+.bar-top{position:sticky;top:0;z-index:40;background:rgba(241,244,246,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--hair)}
+.bar-top .wrap{display:flex;align-items:center;gap:18px;height:58px}
+.glyph{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:20px;color:var(--a3)}
+.bar-top .nm{font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:17px;white-space:nowrap}
+.bar-top nav{margin-left:auto;display:flex;gap:22px;font-size:14px;color:var(--muted)}
+.bar-top nav a{text-decoration:none}
+.bar-top nav a:hover{color:var(--ink)}
+@media(max-width:700px){.bar-top nav{display:none}}
+
+/* ---------- hero ---------- */
+header.hero{padding:76px 0 48px;border-bottom:1px solid var(--hair)}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:22px}
+h1{font-size:clamp(34px,5.4vw,56px);max-width:18ch}
+h1 em{font-style:normal;color:var(--a3)}
+.lede{margin-top:22px;max-width:63ch;font-size:19px;color:#33475A}
+.lede b{font-weight:600;color:var(--ink)}
+
+/* ---------- radical progress track ---------- */
+.track{margin-top:44px}
+.track-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-bottom:16px}
+.track-head strong{font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:15px;color:var(--ink)}
+.trad{display:flex;align-items:flex-start;gap:2px;min-height:44px;flex-wrap:wrap}
+.trad .out{display:flex;gap:5px;align-items:center;padding-top:9px;margin-right:6px}
+.trad .sign{font-family:"IBM Plex Mono",monospace;font-size:33px;line-height:1;color:var(--hair-strong);position:relative;top:2px}
+.trad .under{display:flex;gap:5px;align-items:center;border-top:2px solid var(--hair-strong);padding-top:9px}
+.tile{width:30px;height:26px;border-radius:4px;background:var(--surface);border:1.5px solid var(--hair);
+      display:flex;align-items:center;justify-content:center;
+      font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--hair-strong);flex:none}
+.tile.t1{border-bottom-color:var(--a1-line);border-bottom-width:3px}
+.tile.t2{border-bottom-color:var(--a2-line);border-bottom-width:3px}
+.tile.t3{border-bottom-color:var(--a3-line);border-bottom-width:3px}
+.tile.on{background:var(--gold);border-color:var(--gold);color:#fff}
+.track-note{margin-top:12px;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+
+/* ---------- sections ---------- */
+section{padding:66px 0;border-bottom:1px solid var(--hair)}
+.kicker{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+h2{font-size:clamp(25px,3.4vw,33px);max-width:24ch;margin-bottom:8px}
+.sub{color:var(--muted);max-width:66ch;margin-top:14px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:34px}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.step{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:22px}
+.step .n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);letter-spacing:.1em}
+.step h3{font-size:18px;margin:10px 0 8px}
+.step p{margin:0;font-size:15px;color:#3D5162;line-height:1.6}
+kbd{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:var(--paper);border:1px solid var(--hair-strong);border-bottom-width:2px;border-radius:5px;padding:1px 6px}
+
+/* ---------- engine ---------- */
+.engine{margin-top:34px;background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:26px;overflow-x:auto}
+.grid{border-collapse:separate;border-spacing:10px;width:100%;min-width:600px}
+.grid th{font-weight:400;font-size:13px;color:var(--muted);font-family:"IBM Plex Mono",monospace;letter-spacing:.05em;text-align:center}
+.grid td.rowhead{text-align:left;vertical-align:middle;width:150px;padding-right:8px}
+.grid td.rowhead .t{font-family:"Space Grotesk",sans-serif;font-size:16px;display:block}
+.grid td.rowhead .s{font-size:13px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.cell{border-radius:8px;padding:16px 10px;text-align:center;border:1px solid}
+.cell .t{font-size:18px;display:block;margin-bottom:4px}
+.cell .s{font-size:12.5px}
+.ok-cell{background:var(--a2-soft);border-color:var(--a2-line)}
+.ok-cell .t{color:#0B4E3D} .ok-cell .s{color:#37705F}
+.no-cell{background:var(--a3-soft);border-color:var(--a3-line)}
+.no-cell .t{color:#7B2745} .no-cell .s{color:#94566C}
+.punch{margin-top:18px;font-size:16px;color:#3D5162;max-width:72ch}
+.punch b{color:var(--ink)}
+
+.hazard{margin-top:24px;background:var(--bad-soft);border:1px solid #EFC6C2;border-left:3px solid var(--bad);border-radius:0 8px 8px 0;padding:20px 22px}
+.hazard .h{display:flex;align-items:center;gap:9px;font-family:"Space Grotesk",sans-serif;font-size:16px;color:#7A241F;margin-bottom:6px}
+.hazard p{margin:0;font-size:15.5px;color:#6B2A26;line-height:1.7}
+.hazard p + p{margin-top:12px}
+
+/* ---------- ladder ---------- */
+.arc-head{display:flex;align-items:center;gap:14px;margin:38px 0 16px}
+.arc-head .tag{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+.arc1 .tag{background:var(--a1-soft);color:#372C7D}
+.arc2 .tag{background:var(--a2-soft);color:#0B4E3D}
+.arc3 .tag{background:var(--a3-soft);color:#7B2745}
+.arc-head .rule{flex:1;height:1px;background:var(--hair)}
+.arc-head .cnt{font-size:13px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.rung{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .18s ease,box-shadow .18s ease}
+.rung.open{border-color:var(--hair-strong);box-shadow:var(--shadow)}
+.rung.earned{border-left:3px solid var(--gold)}
+.rung > .top{display:flex;align-items:center;gap:16px;width:100%;background:none;border:0;padding:16px 20px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.rung > .top:hover{background:#FAFCFD}
+.rung > .top:focus-visible{outline:2px solid var(--a3);outline-offset:-3px}
+.rn{font-family:"IBM Plex Mono",monospace;font-size:13px;width:22px;flex:none}
+.arc1 .rn{color:var(--a1)} .arc2 .rn{color:var(--a2)} .arc3 .rn{color:var(--a3)}
+.rt{flex:1;min-width:0}
+.rt .t{font-family:"Space Grotesk",sans-serif;font-size:17.5px;display:block}
+.rt .s{font-size:14px;color:var(--muted)}
+.badge{flex:none;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--hair-strong);border:1px solid var(--hair);border-radius:999px;padding:3px 10px}
+.rung.earned .badge{color:var(--gold);border-color:#E2CE9C;background:var(--gold-soft)}
+.chev{flex:none;color:var(--hair-strong);transition:transform .2s ease;font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.panel{display:none;padding:4px 20px 22px;border-top:1px solid var(--hair)}
+.rung.open .panel{display:block}
+.strategy{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0 20px}
+@media(max-width:700px){.strategy{grid-template-columns:1fr}}
+.strategy div h4{margin:0 0 5px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400}
+.strategy div p{margin:0;font-size:15px;color:#3D5162;line-height:1.62}
+
+/* ---------- practice ---------- */
+.play{background:var(--paper);border:1px solid var(--hair);border-radius:8px;padding:20px}
+.play-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.streak{display:flex;gap:6px}
+.pip{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--hair-strong);transition:background .2s ease,border-color .2s ease}
+.pip.on{background:var(--gold);border-color:var(--gold)}
+.play-head .lab{font-size:13px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.play-head .spacer{flex:1}
+.q{font-size:clamp(26px,4.2vw,36px);font-weight:500;margin:12px 0 8px;line-height:1.45;overflow-x:auto;padding-bottom:4px}
+.qnote{font-size:14px;color:var(--muted);margin-bottom:18px;max-width:62ch}
+.opts{display:grid;gap:8px}
+.opts.two{grid-template-columns:1fr 1fr}
+.opts.grid3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:640px){.opts.two,.opts.grid3{grid-template-columns:1fr}}
+.opt{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--hair-strong);border-radius:8px;padding:11px 14px;font:inherit;font-size:16px;color:inherit;text-align:left;cursor:pointer;min-height:54px;transition:border-color .14s ease,background .14s ease,transform .06s ease}
+.opt:hover:not(:disabled){border-color:var(--ink);background:#FBFDFE}
+.opt:active:not(:disabled){transform:translateY(1px)}
+.opt:focus-visible{outline:2px solid var(--a3);outline-offset:2px}
+.opt .k{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);border:1px solid var(--hair);border-radius:4px;padding:1px 5px;flex:none}
+.opt .txt{flex:1;min-width:0;overflow-x:auto;font-size:1.05em}
+.opt:disabled{cursor:default;opacity:1}
+.opt.right{background:var(--a2-soft);border-color:var(--good)}
+.opt.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.opt.dim{opacity:.5}
+.fb{margin-top:16px;font-size:15.5px;line-height:1.7;display:none}
+.fb.show{display:block}
+.fb .verdict{font-family:"Space Grotesk",sans-serif;font-size:16px;display:block;margin-bottom:3px}
+.fb.ok .verdict{color:var(--good)}
+.fb.no .verdict{color:var(--bad)}
+.fb .why{color:#3D5162}
+.next{margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-size:15px;background:var(--ink);color:#fff;border:0;border-radius:7px;padding:9px 18px;cursor:pointer}
+.btn:hover{background:#22384A}
+.btn:focus-visible{outline:2px solid var(--a3);outline-offset:2px}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--hair-strong)}
+.btn.ghost:hover{background:var(--surface);color:var(--ink)}
+.hint{font-size:13px;color:var(--muted)}
+.won{margin-top:14px;background:var(--gold-soft);border:1px solid #E2CE9C;border-radius:8px;padding:12px 16px;font-size:15px;color:#6C4E0C;display:none}
+.won.show{display:block}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:32px}
+@media(max-width:760px){.cards{grid-template-columns:1fr}}
+.card h3{font-size:18px;margin-bottom:8px}
+.card p{margin:0;font-size:15px;color:#3D5162;line-height:1.62}
+.closing{margin-top:40px;max-width:70ch;font-size:18px;color:#33475A}
+footer{padding:34px 0 60px;font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--muted);letter-spacing:.03em}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<div class="bar-top">
+  <div class="wrap">
+    <span class="glyph">&#8731;</span>
+    <span class="nm">The Index Ladder</span>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#engine">The engine</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Math 0232 &middot; Unit A5 &middot; radicals</div>
+    <h1>The index is the <em>group size</em>.</h1>
+    <p class="lede">That little number is not decoration. It says how many identical factors have to gather before one of them is allowed out. <span class="mono">&radic;49 = 7</span> because there are two 7s &mdash; a complete group of two. <b>Everything else in this lesson is counting.</b> Why an even root refuses a negative, which factor to pull out of <span class="mono">&radic;150</span>, how many x's escape from under a radical &mdash; all the same question, asked about a different group size.</p>
+
+    <div class="track">
+      <div class="track-head">
+        <strong id="badge-count">0 of 11 badges earned</strong>
+        <span>Open practice &mdash; start on any rung</span>
+        <span style="flex:1"></span>
+        <button class="btn ghost" id="reset" style="font-size:13px;padding:5px 12px">Reset progress</button>
+      </div>
+      <div class="trad" aria-hidden="true">
+        <span class="out" id="t-out"></span>
+        <span class="sign">&radic;</span>
+        <span class="under" id="t-under"></span>
+      </div>
+      <div class="track-note" id="track-note">0 out, 11 still under</div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="kicker">How it works</div>
+    <h2>One decision per rung</h2>
+    <p class="sub">The A5 lab already has an anatomy view, an even-versus-odd explorer, a step-by-step simplification lab, an error spotter and three practice modes. It will compute anything you hand it. This asks for the call you make <em>before</em> computing, over and over, until it stops being a call.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="n">01</div>
+        <h3>Start anywhere</h3>
+        <p>Eleven rungs in three arcs &mdash; whether there is an answer at all, hunting for the group, then letters and one trap. Nothing is locked, and each rung opens with its strategy.</p>
+      </div>
+      <div class="step">
+        <div class="n">02</div>
+        <h3>Earn each badge</h3>
+        <p>Four in a row earns a rung's badge. Answer with the mouse or press <kbd>1</kbd>&ndash;<kbd>4</kbd>. A wrong answer resets the streak, because the target is not accuracy given time &mdash; it is accuracy without it.</p>
+      </div>
+      <div class="step">
+        <div class="n">03</div>
+        <h3>Five rungs refuse answers</h3>
+        <p>Rungs 1, 2, 5, 7 and 10 will not take a value. They ask whether a real answer exists, what sign it carries, whether the radicand is a perfect power, how to split it, and whether a split is even legal.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="engine">
+  <div class="wrap">
+    <div class="kicker">The engine of arcs one and two</div>
+    <h2>When does a radical have a real answer?</h2>
+    <p class="sub">This is the section on page 22 that your notes ask you to explain in your own words. Two switches: is the index even or odd, and is the radicand positive or negative.</p>
+
+    <div class="engine">
+      <table class="grid">
+        <tr>
+          <th style="width:150px"></th>
+          <th>positive radicand</th><th>negative radicand</th>
+        </tr>
+        <tr>
+          <td class="rowhead"><span class="t">Even index</span><span class="s">2, 4, 6 &hellip;</span></td>
+          <td class="cell ok-cell"><span class="t"><span class="rad"><span class="sr">&radic;</span><span class="bar">16</span></span> = 4</span><span class="s">two 4s, and 4&middot;4 is positive</span></td>
+          <td class="cell no-cell"><span class="t"><span class="rad"><span class="sr">&radic;</span><span class="bar">&minus;16</span></span> &mdash; no real answer</span><span class="s">two same signs never give a minus</span></td>
+        </tr>
+        <tr>
+          <td class="rowhead"><span class="t">Odd index</span><span class="s">3, 5, 7 &hellip;</span></td>
+          <td class="cell ok-cell"><span class="t"><span class="rad"><span class="idx">3</span><span class="sr">&radic;</span><span class="bar">8</span></span> = 2</span><span class="s">three 2s</span></td>
+          <td class="cell ok-cell"><span class="t"><span class="rad"><span class="idx">3</span><span class="sr">&radic;</span><span class="bar">&minus;8</span></span> = &minus;2</span><span class="s">three negatives stay negative</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <p class="punch"><b>Three of the four work.</b> The one that fails is the one where the group size is even &mdash; and that is not a new rule to memorize. It is the parity fact from the integers unit: an even number of negative factors multiplies to a positive, so no real number can fill an even-sized group and come out negative.</p>
+
+    <div class="hazard">
+      <div class="h"><span aria-hidden="true">&#9995;</span> Even index and a negative radicand: no real answer. Odd index: fine, and it keeps the sign.</div>
+      <p><span class="mono">&radic;&minus;49</span> has no real answer, but <span class="mono">&#8731;&minus;64 = &minus;4</span> and <span class="mono">&#8730;[5]{&minus;32} = &minus;2</span>. Read the index before you read anything else &mdash; it is the only thing that decides which of those two worlds you are in.</p>
+      <p><b>Second trap: &ldquo;largest&rdquo; is doing real work.</b> <span class="mono">&radic;72 = &radic;4 &middot; &radic;18 = 2&radic;18</span> is a completely true statement and a wrong answer, because there is still a perfect square hiding in the 18. Pull out the biggest group you can find the first time and you never have to notice this.</p>
+      <p><b>Third: you cannot split a sum.</b> <span class="mono">&radic;(9 + 16)</span> is <span class="mono">&radic;25 = 5</span>, not <span class="mono">3 + 4 = 7</span>. And notice the shape, because this is the fourth chapter running to ask it: a rule that is perfectly correct for multiplying, carried into addition where it does not belong.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <p class="sub">Four in a row earns the badge. Wrong answers explain themselves and reset the streak.</p>
+    <div id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="kicker">Why this matters</div>
+    <h2>Radicals are where the memorized facts start paying</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>Perfect powers are the vocabulary</h3>
+        <p>Simplifying is fast if you recognise 49, 64, 81, 121, 144 on sight and slow if you have to search for them. The table on page 21 is not busywork; it is the lookup that every later step depends on.</p>
+      </div>
+      <div class="card">
+        <h3>The quadratic formula is next</h3>
+        <p>Every quadratic you solve ends in a radical that needs simplifying, and half of them need you to notice there is no real answer. Both of those decisions are on this ladder.</p>
+      </div>
+      <div class="card">
+        <h3>Counting beats memorizing</h3>
+        <p>Four separate-looking rules &mdash; even roots, odd roots, what comes out, what stays in &mdash; are one rule about group size. Carrying one idea is lighter than carrying four, and it does not fall apart under pressure.</p>
+      </div>
+    </div>
+    <p class="closing">Every question in this unit is the same question with a different number on the radical: <em>how many identical factors have to gather before one gets out?</em> Two for a square root, three for a cube root, and whatever the index says otherwise. Once that is automatic, the perfect-power table is the only thing left to know &mdash; and that you can simply learn.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Index Ladder &middot; read the index &rarr; count the groups &rarr; send them out &middot; Math 0232 Unit A5</div>
+</footer>
+
+<div class="sr-only" aria-live="polite" id="live"></div>
+
+<script>
+"use strict";
+var TARGET = 4;
+var MIN = "\u2212", TIMES = "\u00B7", RADS = "\u221A";
+
+/* =========================================================
+   radical engine
+   ========================================================= */
+function iroot(n, k){
+  if(n < 0) return null;
+  if(n === 0) return 0;
+  var r = Math.round(Math.pow(n, 1/k));
+  for(var c = Math.max(0, r-2); c <= r+2; c++){ if(Math.pow(c,k) === n) return c; }
+  return null;
+}
+function isPerfect(n, k){ return iroot(n, k) !== null; }
+/* largest a >= 1 with a^k dividing n */
+function largestFactorRoot(n, k){
+  var best = 1;
+  for(var a = 2; Math.pow(a,k) <= n; a++){ if(n % Math.pow(a,k) === 0) best = a; }
+  return best;
+}
+/* all a >= 2 with a^k dividing n, ascending */
+function allFactorRoots(n, k){
+  var out = [];
+  for(var a = 2; Math.pow(a,k) <= n; a++){ if(n % Math.pow(a,k) === 0) out.push(a); }
+  return out;
+}
+function realExists(n, k){ return n >= 0 || k % 2 === 1; }
+function radValue(n, k){
+  if(!realExists(n,k)) return null;
+  if(n >= 0) return iroot(n,k);
+  var r = iroot(-n,k);
+  return r === null ? null : -r;
+}
+var POWNAME = {2:"perfect square", 3:"perfect cube", 4:"perfect fourth power", 5:"perfect fifth power"};
+var ROOTNAME = {2:"square root", 3:"cube root", 4:"fourth root", 5:"fifth root"};
+
+/* =========================================================
+   rendering
+   ========================================================= */
+function sgn(n){ return n < 0 ? MIN + Math.abs(n) : "" + n; }
+function RAD(k, inner){
+  return '<span class="rad">' + (k === 2 ? "" : '<span class="idx">' + k + "</span>") +
+         '<span class="sr">' + RADS + '</span><span class="bar">' + inner + "</span></span>";
+}
+function FR(a,b){ return '<span class="fr"><span class="fn">' + a + '</span><span class="fd">' + b + "</span></span>"; }
+function MX(s){ return '<span class="mx">' + s + "</span>"; }
+function NUM(n){ return MX(sgn(n)); }
+/* coefficient c times the k-th root of inner; c===1 hides the 1 */
+function COEF(c, k, inner){
+  var lead = (c === 1) ? "" : (c === -1 ? MIN : sgn(c));
+  return MX(lead + RAD(k, inner));
+}
+function NOREAL(){ return "No real solution"; }
+/* variable part: {x:3, y:2} -> x<sup>3</sup>y<sup>2</sup> ; exponent 1 bare, 0 omitted */
+function vstr(v){
+  var ks = [], k;
+  for(k in v){ if(v[k] > 0) ks.push(k); }
+  ks.sort();
+  return ks.map(function(n2){ return n2 + (v[n2] === 1 ? "" : "<sup>" + v[n2] + "</sup>"); }).join("");
+}
+function vEmpty(v){ for(var k in v){ if(v[k] > 0) return false; } return true; }
+
+/* =========================================================
+   shared plumbing
+   ========================================================= */
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function ri(lo,hi){ return lo + Math.floor(Math.random()*(hi-lo+1)); }
+function makePicker(pool){
+  var last = null;
+  return function(){ var c = pick(pool), g = 0; while(pool.length > 1 && c === last && g++ < 6) c = pick(pool); last = c; return c; };
+}
+function shuffleOpts(o){ var a = o.slice(); for(var i = a.length-1; i > 0; i--){ var j = Math.floor(Math.random()*(i+1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+/* build up to four options from rendered strings, first is correct, deduped */
+function mkOpts(correct, wrongs){
+  var out = [correct], seen = {};
+  seen[correct] = 1;
+  for(var i = 0; i < wrongs.length && out.length < 4; i++){
+    var w = wrongs[i];
+    if(w === null || w === undefined || seen[w]) continue;
+    seen[w] = 1; out.push(w);
+  }
+  return out.map(function(t,i){ return {t:t, ok:i === 0}; });
+}
+
+/* =========================================================
+   pools of radicands
+   ========================================================= */
+var PERFECT = {
+  2:[1,4,9,16,25,36,49,64,81,100,121,144,169,196,225,256,400,625],
+  3:[1,8,27,64,125,1000],
+  4:[1,16,81,256,625],
+  5:[1,32,243]
+};
+var NONPERFECT = {
+  2:[12,18,20,24,32,40,44,45,48,50,52,54,63,72,75,80,90,98,99,108,112,117,128,147,150,162,175,180,192,200,242,245,300],
+  3:[16,24,40,48,54,56,81,88,128,135,162,189,192,240,250,270,320,375,432,500],
+  4:[32,48,80,96,112,162,176,192,208,240,405,512,567,625*2],
+  5:[64,96,160,224,288,486,672]
+};
+
+/* =========================================================
+   rung 1 — real or not?
+   ========================================================= */
+function gen1(){
+  var k = pick([2,2,3,3,4,5]);
+  var mag = pick(PERFECT[k].concat(NONPERFECT[k]).filter(function(v){ return v > 1; }));
+  var neg = Math.random() < 0.55;
+  var n = neg ? -mag : mag;
+  var real = realExists(n, k);
+  var why;
+  if(!neg) why = "The radicand is positive, so there is always a real answer no matter what the index is.";
+  else if(k % 2 === 0) why = "An even index means a group of " + k + " identical factors, and " + k + " same-signed numbers multiplied together can never be negative. Nothing real fits, so there is no real answer.";
+  else why = "An odd index means a group of " + k + ", and an odd count of negatives stays negative. So a negative radicand is perfectly fine here.";
+  return {
+    q: MX(RAD(k, sgn(n))),
+    note: "Does this have a real answer?",
+    opts: [{t:"Yes, there is a real answer", ok:real},{t:"No real answer", ok:!real}],
+    cls:"two", why: why
+  };
+}
+
+/* =========================================================
+   rung 2 — what sign?
+   ========================================================= */
+function gen2(){
+  var k = pick([2,2,3,3,4,5]);
+  var mag = pick(PERFECT[k].concat(NONPERFECT[k]).filter(function(v){ return v > 1; }));
+  var neg = Math.random() < 0.5;
+  var n = neg ? -mag : mag;
+  var idx, why;
+  if(!neg){ idx = 0; why = "A positive radicand always gives a positive answer. The index changes how big the answer is, never its sign."; }
+  else if(k % 2 === 1){ idx = 1; why = "Odd index, negative radicand: the group of " + k + " holds an odd number of negatives, so the answer is negative."; }
+  else { idx = 2; why = "Even index, negative radicand. A group of " + k + " identical factors multiplies to a positive no matter what sign you start with, so nothing real works."; }
+  return {
+    q: MX(RAD(k, sgn(n))),
+    note: "What sign will the answer have?",
+    opts: [
+      {t:"Positive", ok:idx === 0},
+      {t:"Negative", ok:idx === 1},
+      {t:"No real answer", ok:idx === 2}
+    ],
+    cls:"grid3", why: why
+  };
+}
+
+/* =========================================================
+   rung 3 — evaluate the perfect powers
+   ========================================================= */
+function gen3(){
+  var k = pick([2,2,2,3,3,4,5]);
+  var mag = pick(PERFECT[k].filter(function(v){ return v > 1; }));
+  var neg = Math.random() < 0.4;
+  var n = neg ? -mag : mag;
+  var root = iroot(mag, k);
+  var val = radValue(n, k);
+  var correct, wrongs, why;
+  if(val === null){
+    correct = NOREAL();
+    wrongs = [NUM(root), NUM(-root), NUM(root + 1), NUM(mag), NUM(root - 1)];
+    why = "Even index with a negative radicand, so nothing real works. Note that " + MX(RAD(k, "" + mag)) + " would be " + root + " &mdash; the minus is what kills it.";
+  } else {
+    correct = NUM(val);
+    wrongs = [NUM(-val), NUM(root + 1), NUM(mag), NUM(root - 1), NUM(mag - root), NUM(root * k)];
+    if(Math.random() < 0.4) wrongs.unshift(NOREAL());
+    why = (n < 0)
+      ? "Odd index, so a negative is allowed and the sign carries through: (" + MIN + root + ")<sup>" + k + "</sup> = " + sgn(n) + "."
+      : root + "<sup>" + k + "</sup> = " + mag + ", so the " + ROOTNAME[k] + " of " + mag + " is " + root + ".";
+  }
+  return { q: MX(RAD(k, sgn(n))), note:"Evaluate.", opts:mkOpts(correct, wrongs), cls:"two", why:why };
+}
+
+/* =========================================================
+   rung 4 — fractions under the radical
+   ========================================================= */
+var FRACS = [
+  {k:2, a:1,  b:81},  {k:3, a:1,  b:64},  {k:2, a:4,  b:9},
+  {k:2, a:9,  b:25},  {k:3, a:8,  b:27},  {k:4, a:1,  b:16},
+  {k:2, a:1,  b:100}, {k:3, a:1,  b:125}, {k:4, a:16, b:81},
+  {k:5, a:1,  b:32},  {k:2, a:16, b:49},  {k:2, a:25, b:36},
+  {k:3, a:27, b:64},  {k:2, a:1,  b:144}
+];
+var P4 = makePicker(FRACS);
+function gen4(){
+  var it = P4();
+  var ra = iroot(it.a, it.k), rb = iroot(it.b, it.k);
+  var correct = MX(ra === 1 && rb === 1 ? "1" : FR(ra, rb));
+  var wrongs = [
+    MX(FR(rb, ra)),
+    MX(FR(it.a, rb)),
+    MX(FR(ra, it.b)),
+    MX(FR(ra + 1, rb))
+  ];
+  return {
+    q: MX(RAD(it.k, FR(it.a, it.b))),
+    note: "Evaluate.",
+    opts: mkOpts(correct, wrongs), cls:"two",
+    why: "Take the " + ROOTNAME[it.k] + " of the top and the bottom separately: " + ra + " over " + rb + ". The radical distributes over division, which is the only reason this works."
+  };
+}
+
+/* =========================================================
+   rung 5 — does it come out whole?
+   ========================================================= */
+var HAND5 = [
+  {k:3, n:16, w:"16 is a perfect fourth power, not a perfect cube. Nothing cubed gives 16 \u2014 2<sup>3</sup> is 8 and 3<sup>3</sup> is 27."},
+  {k:4, n:16, w:"2<sup>4</sup> = 16, so this comes out to exactly 2. Same radicand as the cube-root version, opposite answer \u2014 the index is doing all the work."},
+  {k:2, n:17, w:"17 sits between 16 and 25, so its square root is not a whole number."},
+  {k:2, n:20, w:"20 is between 16 and 25. It simplifies to 2" + RADS + "5, but it never becomes an integer."},
+  {k:5, n:32, w:"2<sup>5</sup> = 32, so this is exactly 2."},
+  {k:2, n:49, w:"7<sup>2</sup> = 49."},
+  {k:3, n:125,w:"5<sup>3</sup> = 125."}
+];
+var P5 = makePicker(HAND5);
+function gen5(){
+  var k, n, why;
+  if(Math.random() < 0.4){
+    var it = P5(); k = it.k; n = it.n; why = it.w;
+  } else {
+    k = pick([2,2,3,3,4,5]);
+    if(Math.random() < 0.5){
+      n = pick(PERFECT[k].filter(function(v){ return v > 1; }));
+      why = iroot(n,k) + "<sup>" + k + "</sup> = " + n + ", so this lands exactly on a whole number.";
+    } else {
+      n = pick(NONPERFECT[k]);
+      var lo = Math.floor(Math.pow(n, 1/k));
+      why = n + " is not a " + POWNAME[k] + ": " + lo + "<sup>" + k + "</sup> = " + Math.pow(lo,k) + " and " + (lo+1) + "<sup>" + k + "</sup> = " + Math.pow(lo+1,k) + ", so it falls between them. It may still simplify, but it will not become an integer.";
+    }
+  }
+  var perfect = isPerfect(n, k);
+  return {
+    q: MX(RAD(k, "" + n)),
+    note: "Does this come out to a whole number?",
+    opts: [{t:"Yes \u2014 it is a " + POWNAME[k], ok:perfect},{t:"No \u2014 it will not be an integer", ok:!perfect}],
+    cls:"two", why: why
+  };
+}
+
+/* =========================================================
+   rung 6 — find the biggest group
+   ========================================================= */
+function gen6(){
+  var k = pick([2,2,2,3,3,4]);
+  var n = pick(NONPERFECT[k].filter(function(v){ return largestFactorRoot(v,k) > 1; }));
+  var a = largestFactorRoot(n, k);
+  var correct = Math.pow(a, k);
+  var divisors = allFactorRoots(n, k).map(function(b){ return Math.pow(b,k); }).filter(function(v){ return v !== correct; });
+  var nondiv = [];
+  for(var b = 2; b <= a + 3; b++){
+    var v = Math.pow(b,k);
+    if(v !== correct && n % v !== 0) nondiv.push(v);
+  }
+  var wrongs = divisors.reverse().concat(nondiv);
+  return {
+    q: MX(RAD(k, "" + n)),
+    note: "What is the largest " + POWNAME[k] + " that divides " + n + "?",
+    opts: mkOpts(MX("" + correct), wrongs.map(function(v){ return MX("" + v); })), cls:"two",
+    why: n + " = " + correct + " " + TIMES + " " + (n / correct) + ", and " + correct + " = " + a + "<sup>" + k + "</sup>. " +
+         (divisors.length
+            ? "Smaller ones like " + divisors[divisors.length-1] + " divide it too, but stopping there leaves another group still buried inside."
+            : "Nothing bigger divides it, so this is as far as the radicand can be broken down.")
+  };
+}
+
+/* =========================================================
+   rung 7 — split it (rewrite only)
+   ========================================================= */
+function gen7(){
+  var k = pick([2,2,2,3,3,4]);
+  var n = pick(NONPERFECT[k].filter(function(v){ return largestFactorRoot(v,k) > 1; }));
+  var a = largestFactorRoot(n, k), big = Math.pow(a,k), rest = n / big;
+  var joinM = '<span class="opx">' + TIMES + "</span>";
+  var joinP = '<span class="opx">+</span>';
+  var correct = MX(RAD(k, "" + big) + joinM + RAD(k, "" + rest));
+  var wrongs = [];
+  var smaller = allFactorRoots(n,k).map(function(b){ return Math.pow(b,k); }).filter(function(v){ return v < big; });
+  if(smaller.length) wrongs.push(MX(RAD(k, "" + smaller[smaller.length-1]) + joinM + RAD(k, "" + (n/smaller[smaller.length-1]))));
+  wrongs.push(MX(RAD(k, "" + big) + joinP + RAD(k, "" + rest)));
+  wrongs.push(MX(RAD(k, "" + big) + joinM + RAD(k, "" + (rest + 1))));
+  wrongs.push(MX(RAD(k, "" + rest) + joinM + RAD(k, "" + (n - big))));
+  return {
+    q: MX(RAD(k, "" + n)),
+    note: "Split off the largest group. Do not work anything out.",
+    opts: mkOpts(correct, wrongs), cls:"two",
+    why: "A radical splits across multiplication, so " + n + " = " + big + " " + TIMES + " " + rest + " becomes two radicals. It does <em>not</em> split across addition &mdash; and the two pieces must still multiply back to " + n + "."
+  };
+}
+
+/* =========================================================
+   rung 8 — simplify
+   ========================================================= */
+function gen8(){
+  var k = pick([2,2,2,3,3,4]);
+  var n = pick(NONPERFECT[k].filter(function(v){ return largestFactorRoot(v,k) > 1; }));
+  var a = largestFactorRoot(n,k), big = Math.pow(a,k), rest = n / big;
+  var correct = COEF(a, k, "" + rest);
+  var wrongs = [];
+  var smaller = allFactorRoots(n,k).map(function(b){ return Math.pow(b,k); }).filter(function(v){ return v < big; });
+  if(smaller.length){
+    var s = smaller[smaller.length-1];
+    wrongs.push(COEF(iroot(s,k), k, "" + (n/s)));
+  }
+  wrongs.push(COEF(rest, k, "" + a));
+  wrongs.push(COEF(a, k, "" + n));
+  wrongs.push(COEF(a + 1, k, "" + rest));
+  wrongs.push(COEF(big, k, "" + rest));
+  return {
+    q: MX(RAD(k, "" + n)),
+    note: "Simplify.",
+    opts: mkOpts(correct, wrongs), cls:"two",
+    why: n + " = " + big + " " + TIMES + " " + rest + ", and " + big + " is " + a + "<sup>" + k + "</sup> &mdash; one complete group of " + k + ". That group sends a single " + a + " outside, and the " + rest + " has no group so it stays under the radical."
+  };
+}
+
+/* =========================================================
+   rung 9 — variables under the radical
+   ========================================================= */
+function gen9(){
+  var k = pick([2,2,2,3,3]);
+  var useY = Math.random() < 0.55;
+  var vars = useY ? ["x","y"] : ["x"];
+  var e = {};
+  e.x = ri(k === 2 ? 2 : 3, k + 4);
+  if(useY) e.y = ri(1, k + 3);
+
+  /* a candidate is {out:{v:exp}, in:{v:exp}}.  Two candidates are equal in value
+     exactly when out*k + in matches for every variable, so that is the guard. */
+  function sig(c){
+    return vars.map(function(v){ return (c.out[v] || 0) * k + (c["in"][v] || 0); }).join("/");
+  }
+  function build(fo, fi){
+    var o = {}, n2 = {};
+    vars.forEach(function(v){ o[v] = fo(e[v]); n2[v] = fi(e[v]); });
+    return {out:o, "in":n2};
+  }
+  function draw(c){
+    var os = vstr(c.out), is = vstr(c["in"]);
+    var body = (os === "" ? "" : os) + (is === "" ? "" : RAD(k, is));
+    return MX(body === "" ? "1" : body);
+  }
+
+  var correct = build(function(x){ return Math.floor(x/k); }, function(x){ return x % k; });
+  var pool = [
+    build(function(x){ return x % k; },            function(x){ return Math.floor(x/k); }),  /* swapped */
+    build(function(x){ return x; },                function(){ return 0; }),                 /* all of it came out */
+    build(function(x){ return Math.floor(x/k); },  function(x){ return x; }),                /* forgot to reduce inside */
+    build(function(x){ return Math.floor(x/k)+1; },function(x){ return x % k; }),            /* one too many out */
+    build(function(x){ return Math.max(0,x-k); },  function(x){ return Math.min(x,k); })     /* subtracted instead */
+  ];
+  var goodSig = sig(correct), seen = {};
+  seen[goodSig] = 1;
+  var wrongs = [];
+  pool.forEach(function(c){
+    var s2 = sig(c);
+    if(seen[s2]) return;
+    seen[s2] = 1; wrongs.push(draw(c));
+  });
+
+  var parts = vars.map(function(v){
+    return v + "<sup>" + e[v] + "</sup> holds " + Math.floor(e[v]/k) + " complete group" +
+           (Math.floor(e[v]/k) === 1 ? "" : "s") + " of " + k + " with " + (e[v] % k) + " left over";
+  });
+  return {
+    q: MX(RAD(k, vstr(e))),
+    note: "Simplify. Assume the variables are positive.",
+    opts: mkOpts(draw(correct), wrongs), cls:"two",
+    why: "Divide each exponent by the index: " + parts.join(", and ") +
+         ". The quotient is how many come out, the remainder is what stays under."
+  };
+}
+
+/* =========================================================
+   rung 10 — can I split that?
+   ========================================================= */
+var SPLIT10 = [
+  {k:2, a:9,  b:16, op:"*"}, {k:2, a:9,  b:16, op:"+"},
+  {k:2, a:36, b:64, op:"+"}, {k:2, a:4,  b:25, op:"*"},
+  {k:3, a:8,  b:27, op:"*"}, {k:2, a:25, b:9,  op:"-"},
+  {k:2, a:100,b:4,  op:"/"}, {k:2, a:144,b:25, op:"+"},
+  {k:3, a:64, b:8,  op:"/"}, {k:2, a:49, b:16, op:"*"},
+  {k:2, a:81, b:49, op:"-"}, {k:4, a:16, b:81, op:"*"}
+];
+var P10 = makePicker(SPLIT10);
+function gen10(){
+  var it = P10();
+  var legal = (it.op === "*" || it.op === "/");
+  var sym = it.op === "*" ? TIMES : it.op === "/" ? "\u00F7" : it.op === "+" ? "+" : MIN;
+  var inner = it.a + '<span class="opx">' + sym + "</span>" + it.b;
+  var why;
+  if(legal){
+    why = "Radicals split across multiplication and division, which is exactly what makes simplifying possible in the first place.";
+  } else {
+    var combined = it.op === "+" ? it.a + it.b : it.a - it.b;
+    var trueVal = radValue(combined, it.k);
+    var fake = radValue(it.a, it.k) + (it.op === "+" ? 1 : -1) * radValue(it.b, it.k);
+    why = "Work inside first: " + it.a + " " + sym + " " + it.b + " = " + combined + ", and its " + ROOTNAME[it.k] + " is " + trueVal +
+          ". Splitting it would have given " + fake + " instead. Two different numbers, so the split is simply not allowed.";
+  }
+  return {
+    q: MX(RAD(it.k, inner)),
+    note: "Can this be split into two separate radicals?",
+    opts: [{t:"Yes \u2014 split it", ok:legal},{t:"No \u2014 work inside first", ok:!legal}],
+    cls:"two", why: why
+  };
+}
+
+/* =========================================================
+   rung 11 — mixed capstone
+   ========================================================= */
+function gen11(){
+  var r = Math.random();
+  var d = (r < 0.34) ? gen3() : (r < 0.72) ? gen8() : gen9();
+  d.note = "Evaluate or simplify \u2014 whichever this one needs.";
+  return d;
+}
+
+/* =========================================================
+   the ladder
+   ========================================================= */
+var RUNGS = [
+  {arc:1, t:"Real or not?", s:"One yes/no call \u2014 no value needed",
+   how:"Look at the index and the sign of the radicand, and nothing else. A negative radicand under an even index has no real answer. Everything else does.",
+   why:"This is the first thing to check on any radical, and it costs a second. Starting to compute a root that cannot exist is time spent on an answer you will have to throw away.",
+   gen:gen1},
+  {arc:1, t:"What sign will it be?", s:"Sign only \u2014 the size is suppressed",
+   how:"Positive radicand gives a positive answer. Negative radicand with an odd index gives a negative answer. Negative radicand with an even index gives nothing real.",
+   why:"You can know the sign before you know the number, and deciding it first means you cannot lose it later. Every ladder in this course has this rung for the same reason.",
+   gen:gen2},
+  {arc:1, t:"Evaluate the perfect powers", s:"The page 21 table, live",
+   how:"Ask what number raised to the index gives the radicand. Watch the sign: an odd index carries a negative straight through, an even index refuses it.",
+   why:"These are the facts your notes ask you to memorize, and they are the lookup every later rung depends on. Slow here means slow everywhere.",
+   gen:gen3},
+  {arc:1, t:"Fractions under the radical", s:"Top and bottom, separately",
+   how:"Take the root of the numerator and the root of the denominator on their own, then write them as a fraction.",
+   why:"A radical distributes over division just as it does over multiplication. This is a small rung with a rule you will need again the moment denominators show up in answers.",
+   gen:gen4},
+  {arc:2, t:"Does it come out whole?", s:"The routing decision",
+   how:"Ask whether the radicand is a perfect power for <em>this</em> index. If it is, evaluate. If it is not, you are simplifying instead.",
+   why:"16 is a perfect fourth power and not a perfect cube. The same radicand can answer this question either way depending only on the index, which is the whole point of the rung.",
+   gen:gen5},
+  {arc:2, t:"Find the biggest group", s:"Largest, not merely any",
+   how:"Look for the largest perfect power of the right kind that divides the radicand. Start high and work down rather than starting at 4 and stopping.",
+   why:"Pulling out a group that is not the biggest leaves another one hidden inside, and the answer looks finished when it is not. This single decision is where simplification actually succeeds or fails.",
+   gen:gen6},
+  {arc:2, t:"Split it", s:"Rewrite only \u2014 no computing",
+   how:"Write the radicand as the largest group times whatever is left, then split that into two radicals. Change nothing else.",
+   why:"Separating the split from the arithmetic means you never do both in one motion, which is when factors get dropped. It also makes it obvious that the two pieces must multiply back to what you started with.",
+   gen:gen7},
+  {arc:2, t:"Simplify", s:"All four indices, shuffled",
+   how:"Find the largest group, send one copy of it outside, and leave everything without a group underneath. The index never changes.",
+   why:"The indices are deliberately mixed so the group size has to be re-read every time. Practising all square roots in a row teaches the number two, not the method.",
+   gen:gen8},
+  {arc:3, t:"Variables under the radical", s:"Division, with a remainder",
+   how:"Divide each exponent by the index. The quotient is how many of that letter come out; the remainder is what stays under. Do each letter on its own.",
+   why:"Nothing new is happening here \u2014 x<sup>5</sup> is five x's, and a square root gathers them in twos. Seeing it as the same counting problem stops it from becoming a separate rule.",
+   gen:gen9},
+  {arc:3, t:"Can I split that?", s:"The trap, as a yes/no",
+   how:"Radicals split across multiplication and division. They never split across addition or subtraction \u2014 there you have to work inside the radical first.",
+   why:"This is the fourth chapter in a row where a rule that is correct for multiplying gets carried into addition. Recognising the pattern once tends to fix all four at the same time.",
+   gen:gen10},
+  {arc:3, t:"Evaluate or simplify?", s:"Mixed on purpose",
+   how:"Read the index, check the sign, then decide whether the radicand is a perfect power. Only after those three does anything get computed.",
+   why:"The questions here arrive without warning you which kind they are, including ones with no real answer at all. That is the closest thing to a test this ladder has.",
+   gen:gen11}
+];
+
+/* =========================================================
+   state and rendering
+   ========================================================= */
+var state = RUNGS.map(function(){ return {streak:0, earned:false}; });
+var openIdx = -1, current = null;
+var tOut = document.getElementById("t-out");
+var tUnder = document.getElementById("t-under");
+var badgeCount = document.getElementById("badge-count");
+var trackNote = document.getElementById("track-note");
+var live = document.getElementById("live");
+
+function tileHTML(i){
+  return '<span class="tile t' + RUNGS[i].arc + (state[i].earned ? " on" : "") + '">' + (i+1) + "</span>";
+}
+function refreshProgress(){
+  var got = 0, outH = "", underH = "";
+  for(var i = 0; i < RUNGS.length; i++){
+    if(state[i].earned){ got++; outH += tileHTML(i); }
+    else underH += tileHTML(i);
+  }
+  tOut.innerHTML = outH;
+  tUnder.innerHTML = underH || '<span class="tile" style="opacity:.35">&nbsp;</span>';
+  badgeCount.textContent = got + " of " + RUNGS.length + " badges earned";
+  trackNote.textContent = got + " out, " + (RUNGS.length - got) + " still under";
+  var cards = document.querySelectorAll(".rung");
+  for(var j = 0; j < cards.length; j++){
+    cards[j].classList.toggle("earned", state[j].earned);
+    cards[j].querySelector(".badge").textContent = state[j].earned ? "Earned" : "Badge";
+  }
+}
+function buildRungs(){
+  var host = document.getElementById("rungs");
+  var arcs = [
+    {n:1, tag:"Arc one \u00B7 is there an answer", note:"rungs 1\u20134"},
+    {n:2, tag:"Arc two \u00B7 the group hunt", note:"rungs 5\u20138"},
+    {n:3, tag:"Arc three \u00B7 letters and one trap", note:"rungs 9\u201311"}
+  ];
+  var html = "";
+  arcs.forEach(function(arc){
+    html += '<div class="arc-head arc' + arc.n + '"><span class="tag">' + arc.tag + '</span><span class="rule"></span><span class="cnt">' + arc.note + "</span></div>";
+    RUNGS.forEach(function(r,i){
+      if(r.arc !== arc.n) return;
+      html +=
+        '<div class="rung arc' + r.arc + '" id="rung-' + i + '">' +
+          '<button class="top" data-i="' + i + '" aria-expanded="false" aria-controls="panel-' + i + '">' +
+            '<span class="rn">' + (i+1 < 10 ? "0" : "") + (i+1) + "</span>" +
+            '<span class="rt"><span class="t">' + r.t + '</span><span class="s">' + r.s + "</span></span>" +
+            '<span class="badge">Badge</span>' +
+            '<span class="chev" aria-hidden="true">\u203A</span>' +
+          "</button>" +
+          '<div class="panel" id="panel-' + i + '">' +
+            '<div class="strategy">' +
+              "<div><h4>Strategy</h4><p>" + r.how + "</p></div>" +
+              "<div><h4>Why this rung exists</h4><p>" + r.why + "</p></div>" +
+            "</div>" +
+            '<div class="play" data-play="' + i + '"></div>' +
+          "</div>" +
+        "</div>";
+    });
+  });
+  host.innerHTML = html;
+  host.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".top") : null;
+    if(b) toggleRung(parseInt(b.getAttribute("data-i"),10));
+  });
+}
+function toggleRung(i){
+  var was = openIdx;
+  if(was >= 0){
+    document.getElementById("rung-" + was).classList.remove("open");
+    document.querySelector("#rung-" + was + " .top").setAttribute("aria-expanded","false");
+  }
+  if(was === i){ openIdx = -1; current = null; return; }
+  openIdx = i;
+  document.getElementById("rung-" + i).classList.add("open");
+  document.querySelector("#rung-" + i + " .top").setAttribute("aria-expanded","true");
+  nextQuestion();
+}
+function nextQuestion(){
+  if(openIdx < 0) return;
+  var def = RUNGS[openIdx].gen();
+  def.opts = shuffleOpts(def.opts);
+  current = {def:def, answered:false};
+  drawPlay();
+}
+function drawPlay(){
+  var i = openIdx, d = current.def, st = state[i];
+  var host = document.querySelector('.play[data-play="' + i + '"]');
+  var pips = "";
+  for(var p = 0; p < TARGET; p++){ pips += '<span class="pip' + (p < st.streak ? " on" : "") + '"></span>'; }
+  var opts = "";
+  d.opts.forEach(function(o,k){
+    opts += '<button class="opt" data-k="' + k + '"><span class="k">' + (k+1) + '</span><span class="txt">' + o.t + "</span></button>";
+  });
+  host.innerHTML =
+    '<div class="play-head"><span class="streak">' + pips + "</span>" +
+      '<span class="lab">' + st.streak + " of " + TARGET + " in a row</span>" +
+      '<span class="spacer"></span><span class="lab">keys 1\u2013' + d.opts.length + "</span></div>" +
+    '<div class="q">' + d.q + "</div>" +
+    '<div class="qnote">' + d.note + "</div>" +
+    '<div class="opts ' + (d.cls || "two") + '">' + opts + "</div>" +
+    '<div class="fb"><span class="verdict"></span><span class="why"></span></div>' +
+    '<div class="won">Badge earned. Four in a row without stopping to think \u2014 that is the whole bar.</div>' +
+    '<div class="next" data-after style="display:none"><button class="btn" data-next>Next question</button><span class="hint">or press <kbd>Enter</kbd></span></div>';
+  host.querySelectorAll(".opt").forEach(function(b){
+    b.addEventListener("click", function(){ choose(parseInt(b.getAttribute("data-k"),10)); });
+  });
+  var nx = host.querySelector("[data-next]");
+  if(nx) nx.addEventListener("click", nextQuestion);
+}
+function choose(k){
+  if(!current || current.answered) return;
+  grade(current.def.opts[k].ok, k);
+}
+function grade(ok, k){
+  current.answered = true;
+  var i = openIdx, st = state[i], d = current.def;
+  var host = document.querySelector('.play[data-play="' + i + '"]');
+  host.querySelectorAll(".opt").forEach(function(b,idx){
+    b.disabled = true;
+    if(d.opts[idx].ok) b.classList.add("right");
+    else if(idx === k) b.classList.add("wrong");
+    else b.classList.add("dim");
+  });
+  if(ok) st.streak++; else st.streak = 0;
+  var fb = host.querySelector(".fb");
+  fb.classList.add("show", ok ? "ok" : "no");
+  fb.querySelector(".verdict").textContent = ok ? "Right." : "Not this time.";
+  fb.querySelector(".why").innerHTML = d.why;
+  var justEarned = false;
+  if(ok && st.streak >= TARGET && !st.earned){ st.earned = true; justEarned = true; }
+  if(justEarned) host.querySelector(".won").classList.add("show");
+  host.querySelectorAll(".pip").forEach(function(p,idx){ p.classList.toggle("on", idx < st.streak); });
+  host.querySelector(".play-head .lab").textContent = st.streak + " of " + TARGET + " in a row";
+  host.querySelector("[data-after]").style.display = "flex";
+  live.textContent = (ok ? "Correct. " : "Incorrect. ") + (justEarned ? "Badge earned. " : "") + st.streak + " in a row.";
+  refreshProgress();
+}
+document.addEventListener("keydown", function(e){
+  if(openIdx < 0 || !current) return;
+  var tag = (e.target.tagName || "").toLowerCase();
+  if(tag === "input" || tag === "textarea") return;
+  if(e.key === "Enter"){ if(current.answered){ e.preventDefault(); nextQuestion(); } return; }
+  if(e.key === "Escape"){ toggleRung(openIdx); return; }
+  var num = parseInt(e.key,10);
+  if(num >= 1 && num <= current.def.opts.length){ e.preventDefault(); choose(num-1); }
+});
+document.getElementById("reset").addEventListener("click", function(){
+  state = RUNGS.map(function(){ return {streak:0, earned:false}; });
+  if(openIdx >= 0) drawPlay();
+  refreshProgress();
+  live.textContent = "Progress reset.";
+});
+buildRungs();
+refreshProgress();
+</script>
+</body>
+</html>
