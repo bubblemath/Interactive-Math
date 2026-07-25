@@ -1,0 +1,841 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Ballpark Ladder — sign, size, possible</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F1F4F6; --surface:#FFFFFF; --ink:#12202B; --muted:#5C6E7C;
+  --hair:#D8E0E6; --hair-strong:#B9C6D0;
+  --a1:#4A3D9C; --a1-soft:#ECEAF9; --a1-line:#C9C2EC;
+  --a2:#0F6E56; --a2-soft:#E2F1EC; --a2-line:#BFDDD3;
+  --a3:#9E3357; --a3-soft:#F8E8EE; --a3-line:#EDC9D6;
+  --good:#0F6E56; --bad:#A8322C; --bad-soft:#FBEAE8;
+  --gold:#8A6410; --gold-soft:#F6EEDA;
+  --grid:#E4EAEE; --axis:#8C9AA5;
+  --r:10px; --shadow:0 1px 0 rgba(18,32,43,.04), 0 8px 24px -18px rgba(18,32,43,.5);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:"Space Grotesk",system-ui,sans-serif;font-weight:500;letter-spacing:-.02em;line-height:1.15;margin:0}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-ligatures:none}
+a{color:inherit}
+
+/* ---------- math ---------- */
+.mx{font-family:"IBM Plex Mono",ui-monospace,monospace;white-space:nowrap}
+.pos{color:var(--good);font-weight:600}
+.neg{color:var(--bad);font-weight:600}
+
+/* ---------- top bar ---------- */
+.bar-top{position:sticky;top:0;z-index:40;background:rgba(241,244,246,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--hair)}
+.bar-top .wrap{display:flex;align-items:center;gap:18px;height:58px}
+.glyph{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:15px;color:var(--a3)}
+.bar-top .nm{font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:17px;white-space:nowrap}
+.bar-top nav{margin-left:auto;display:flex;gap:22px;font-size:14px;color:var(--muted)}
+.bar-top nav a{text-decoration:none}
+.bar-top nav a:hover{color:var(--ink)}
+@media(max-width:700px){.bar-top nav{display:none}}
+
+/* ---------- hero ---------- */
+header.hero{padding:76px 0 48px;border-bottom:1px solid var(--hair)}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:22px}
+h1{font-size:clamp(34px,5.4vw,56px);max-width:19ch}
+h1 em{font-style:normal;color:var(--a3)}
+.lede{margin-top:22px;max-width:63ch;font-size:19px;color:#33475A}
+.lede b{font-weight:600;color:var(--ink)}
+
+/* ---------- prediction-bracket progress ---------- */
+.track{margin-top:44px}
+.track-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-bottom:12px}
+.track-head strong{font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:15px;color:var(--ink)}
+.track-bracket{max-width:560px}
+.track-note{margin-top:10px;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+
+/* ---------- sections ---------- */
+section{padding:66px 0;border-bottom:1px solid var(--hair)}
+.kicker{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+h2{font-size:clamp(25px,3.4vw,33px);max-width:24ch;margin-bottom:8px}
+.sub{color:var(--muted);max-width:66ch;margin-top:14px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:34px}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.step{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:22px}
+.step .n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);letter-spacing:.1em}
+.step h3{font-size:18px;margin:10px 0 8px}
+.step p{margin:0;font-size:15px;color:#3D5162;line-height:1.6}
+kbd{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:var(--paper);border:1px solid var(--hair-strong);border-bottom-width:2px;border-radius:5px;padding:1px 6px}
+
+/* ---------- engine ---------- */
+.engine{margin-top:34px;background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:26px}
+.gauntlet{display:flex;flex-direction:column;gap:10px}
+.grow{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:8px;border:1px solid var(--hair)}
+.grow.header{background:var(--a1-soft);border-color:var(--a1-line)}
+.grow.header .p{font-family:"IBM Plex Mono",monospace;font-size:18px;color:#372C7D}
+.grow.header .a{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:14px;color:#534AB7}
+.grow .nm{font-family:"Space Grotesk",sans-serif;font-size:16px;width:96px;flex:none}
+.grow .pred{font-size:15px;color:#3D5162;flex:1}
+.grow .status{flex:none;font-family:"IBM Plex Mono",monospace;font-size:12px;padding:3px 12px;border-radius:999px}
+.grow .status.pass{background:var(--a2-soft);color:#0B4E3D;border:1px solid var(--a2-line)}
+.grow .status.fail{background:var(--a3-soft);color:#7B2745;border:1px solid var(--a3-line)}
+.grow.verdict{background:var(--a3-soft);border-color:var(--a3-line);justify-content:center}
+.grow.verdict .v{font-family:"Space Grotesk",sans-serif;font-size:16px;color:#7B2745}
+.punch{margin-top:18px;font-size:16px;color:#3D5162;max-width:72ch}
+.punch b{color:var(--ink)}
+
+.hazard{margin-top:24px;background:var(--bad-soft);border:1px solid #EFC6C2;border-left:3px solid var(--bad);border-radius:0 8px 8px 0;padding:20px 22px}
+.hazard .h{display:flex;align-items:center;gap:9px;font-family:"Space Grotesk",sans-serif;font-size:16px;color:#7A241F;margin-bottom:6px}
+.hazard p{margin:0;font-size:15.5px;color:#6B2A26;line-height:1.7}
+.hazard p + p{margin-top:12px}
+
+/* ---------- ladder ---------- */
+.arc-head{display:flex;align-items:center;gap:14px;margin:38px 0 16px}
+.arc-head .tag{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+.arc1 .tag{background:var(--a1-soft);color:#372C7D}
+.arc2 .tag{background:var(--a2-soft);color:#0B4E3D}
+.arc3 .tag{background:var(--a3-soft);color:#7B2745}
+.arc-head .rule{flex:1;height:1px;background:var(--hair)}
+.arc-head .cnt{font-size:13px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.rung{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .18s ease,box-shadow .18s ease}
+.rung.open{border-color:var(--hair-strong);box-shadow:var(--shadow)}
+.rung.earned{border-left:3px solid var(--gold)}
+.rung > .top{display:flex;align-items:center;gap:16px;width:100%;background:none;border:0;padding:16px 20px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.rung > .top:hover{background:#FAFCFD}
+.rung > .top:focus-visible{outline:2px solid var(--a3);outline-offset:-3px}
+.rn{font-family:"IBM Plex Mono",monospace;font-size:13px;width:22px;flex:none}
+.arc1 .rn{color:var(--a1)} .arc2 .rn{color:var(--a2)} .arc3 .rn{color:var(--a3)}
+.rt{flex:1;min-width:0}
+.rt .t{font-family:"Space Grotesk",sans-serif;font-size:17.5px;display:block}
+.rt .s{font-size:14px;color:var(--muted)}
+.badge{flex:none;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--hair-strong);border:1px solid var(--hair);border-radius:999px;padding:3px 10px}
+.rung.earned .badge{color:var(--gold);border-color:#E2CE9C;background:var(--gold-soft)}
+.chev{flex:none;color:var(--hair-strong);transition:transform .2s ease;font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.panel{display:none;padding:4px 20px 22px;border-top:1px solid var(--hair)}
+.rung.open .panel{display:block}
+.strategy{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0 20px}
+@media(max-width:700px){.strategy{grid-template-columns:1fr}}
+.strategy div h4{margin:0 0 5px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400}
+.strategy div p{margin:0;font-size:15px;color:#3D5162;line-height:1.62}
+
+/* ---------- practice ---------- */
+.play{background:var(--paper);border:1px solid var(--hair);border-radius:8px;padding:20px}
+.play-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.streak{display:flex;gap:6px}
+.pip{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--hair-strong);transition:background .2s ease,border-color .2s ease}
+.pip.on{background:var(--gold);border-color:var(--gold)}
+.play-head .lab{font-size:13px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.play-head .spacer{flex:1}
+.q{font-size:clamp(19px,2.8vw,25px);font-weight:500;margin:14px 0 8px;line-height:1.6;overflow-x:auto;padding-bottom:6px}
+.q.word{font-size:clamp(17px,2.3vw,20px);line-height:1.55;max-width:56ch}
+.q .hl{color:var(--a3)}
+.qnote{font-size:14px;color:var(--muted);margin-bottom:18px;max-width:64ch}
+.opts{display:grid;gap:8px}
+.opts.two{grid-template-columns:1fr 1fr}
+@media(max-width:640px){.opts.two{grid-template-columns:1fr}}
+.opt{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--hair-strong);border-radius:8px;padding:13px 14px;font:inherit;font-size:16px;color:inherit;text-align:left;cursor:pointer;min-height:56px;line-height:1.55;transition:border-color .14s ease,background .14s ease,transform .06s ease}
+.opt:hover:not(:disabled){border-color:var(--ink);background:#FBFDFE}
+.opt:active:not(:disabled){transform:translateY(1px)}
+.opt:focus-visible{outline:2px solid var(--a3);outline-offset:2px}
+.opt .k{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);border:1px solid var(--hair);border-radius:4px;padding:1px 5px;flex:none;align-self:flex-start;margin-top:3px}
+.opt .txt{flex:1;min-width:0;overflow-x:auto}
+.opt .txt.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:17px}
+.opt:disabled{cursor:default;opacity:1}
+.opt.right{background:var(--a2-soft);border-color:var(--good)}
+.opt.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.opt.dim{opacity:.5}
+.fb{margin-top:16px;font-size:15.5px;line-height:1.9;display:none}
+.fb.show{display:block}
+.fb .verdict{font-family:"Space Grotesk",sans-serif;font-size:16px;display:block;margin-bottom:3px}
+.fb.ok .verdict{color:var(--good)}
+.fb.no .verdict{color:var(--bad)}
+.fb .why{color:#3D5162}
+.next{margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-size:15px;background:var(--ink);color:#fff;border:0;border-radius:7px;padding:9px 18px;cursor:pointer}
+.btn:hover{background:#22384A}
+.btn:focus-visible{outline:2px solid var(--a3);outline-offset:2px}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--hair-strong)}
+.btn.ghost:hover{background:var(--surface);color:var(--ink)}
+.hint{font-size:13px;color:var(--muted)}
+.won{margin-top:14px;background:var(--gold-soft);border:1px solid #E2CE9C;border-radius:8px;padding:12px 16px;font-size:15px;color:#6C4E0C;display:none}
+.won.show{display:block}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:32px}
+@media(max-width:760px){.cards{grid-template-columns:1fr}}
+.card h3{font-size:18px;margin-bottom:8px}
+.card p{margin:0;font-size:15px;color:#3D5162;line-height:1.62}
+.closing{margin-top:40px;max-width:70ch;font-size:18px;color:#33475A}
+footer{padding:34px 0 60px;font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--muted);letter-spacing:.03em}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<div class="bar-top">
+  <div class="wrap">
+    <span class="glyph">&asymp; ?</span>
+    <span class="nm">The Ballpark Ladder</span>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#engine">The engine</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Math 0232 &middot; reasonableness &amp; estimation &middot; checking your work</div>
+    <h1>Know the neighborhood before the <em>answer</em>.</h1>
+    <p class="lede">Before you compute, you already know three things about the answer: its sign, its rough size, and whether it's even possible. <b>Checking them isn't a feeling &mdash; each has a definite answer</b> &mdash; and it catches most wrong answers without redoing the arithmetic. Estimate first, then let the exact calculation confirm what you expected. When they disagree, you've found a mistake. This is the ladder that checks all the others.</p>
+
+    <div class="track">
+      <div class="track-head">
+        <strong id="badge-count">0 of 11 badges earned</strong>
+        <span>Open practice &mdash; start on any rung</span>
+        <span style="flex:1"></span>
+        <button class="btn ghost" id="reset" style="font-size:13px;padding:5px 12px">Reset progress</button>
+      </div>
+      <div class="track-bracket" id="track-bracket" aria-hidden="true"></div>
+      <div class="track-note" id="track-note">each badge tightens the estimate around the true answer</div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="kicker">How it works</div>
+    <h2>One check per rung, and none of them compute</h2>
+    <p class="sub">Every other ladder ends in an answer. This one ends one step earlier &mdash; at the estimate you check the answer against. Reasonableness is not a vibe: it is three specific checks, each with a definite answer, and running them is what turns a wrong answer from something you submit into something you catch.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="n">01</div>
+        <h3>Start anywhere</h3>
+        <p>Eleven rungs in three arcs &mdash; the sign check, the size check, and the possibility check that catches mistakes. Nothing is locked, and each rung opens with its strategy.</p>
+      </div>
+      <div class="step">
+        <div class="n">02</div>
+        <h3>Earn each badge</h3>
+        <p>Four in a row earns a rung's badge. Answer with the mouse or press <kbd>1</kbd>&ndash;<kbd>4</kbd>. A wrong answer resets the streak, because the target is the reflex to check, built until it is automatic.</p>
+      </div>
+      <div class="step">
+        <div class="n">03</div>
+        <h3>Only one rung computes</h3>
+        <p>Just the estimate rung produces a number &mdash; and only a ballpark. Every other rung asks for a sign, a size, a range, or a verdict. If you find yourself doing exact arithmetic, you've gone too far.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="engine">
+  <div class="wrap">
+    <div class="kicker">The engine of every check</div>
+    <h2>Three checks, run as a gauntlet</h2>
+    <p class="sub">Take a proposed answer and run it past all three. Each check has a definite verdict. A wrong answer usually fails at least one &mdash; and you know it is wrong before you ever recompute.</p>
+
+    <div class="engine">
+      <div class="gauntlet">
+        <div class="grow header"><span class="p">18% of 240 = ?</span><span class="a">proposed: 432</span></div>
+        <div class="grow"><span class="nm">Sign</span><span class="pred">should be positive &mdash; a part of a positive whole</span><span class="status pass">pass</span></div>
+        <div class="grow"><span class="nm">Size</span><span class="pred">about a fifth of 240, so roughly 48</span><span class="status fail">fail</span></div>
+        <div class="grow"><span class="nm">Possible</span><span class="pred">a part of 240 must stay under 240</span><span class="status fail">fail</span></div>
+        <div class="grow verdict"><span class="v">Two checks fail &mdash; wrong before you recompute. (It's about 43.)</span></div>
+      </div>
+    </div>
+
+    <p class="punch"><b>The estimate is the check.</b> None of this redoes the multiplication. It predicts the answer's neighborhood from what you already know, and when the proposed answer lands outside that neighborhood, the mismatch is the discovery. A good estimate does not hit the answer &mdash; it names the range the answer has to live in.</p>
+
+    <div class="hazard">
+      <div class="h"><span aria-hidden="true">&#9995;</span> The estimate is the check a calculator can't give you.</div>
+      <p>A calculator will confidently hand you a wrong answer from one slipped keystroke &mdash; it has no idea the result is absurd. Your ballpark is the only second opinion. So when the exact answer misses the estimate badly, the mismatch is not noise to wave away &mdash; it is the estimate doing its job. Trust the ballpark and recheck; never trust the calculator over your own prediction.</p>
+      <p><b>Second: &ldquo;multiplying makes it bigger&rdquo; is only true above 1.</b> Multiplying by a fraction or a decimal below 1 makes things <em>smaller</em>; dividing by one makes them <em>bigger</em>. Whole-number experience lies to you here &mdash; check the direction of size, don't assume it.</p>
+      <p><b>Third: possibility includes type and range, not just size.</b> An answer of 2.5 people fails on type. A percent over 100 of the whole, or a part bigger than its whole, fails on range. Ask not only &ldquo;is it about the right size?&rdquo; but &ldquo;is it even the right <em>kind</em> of thing, and is it allowed to be this big?&rdquo;</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <p class="sub">Four in a row earns the badge. Wrong answers explain themselves and reset the streak.</p>
+    <div id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="kicker">Why this matters</div>
+    <h2>The habit that checks every other unit</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>It catches the other errors</h3>
+        <p>A receding rate that came out positive, a fraction product that grew, a percent bigger than its whole &mdash; every one is caught by a check on this ladder. It is the safety net under everything else you have learned.</p>
+      </div>
+      <div class="card">
+        <h3>The answer is not the goal</h3>
+        <p>A right answer you can't trust is worth little. Knowing an answer is reasonable &mdash; that it has the right sign, size, and range &mdash; is what makes it usable. Confidence comes from the check, not the calculator.</p>
+      </div>
+      <div class="card">
+        <h3>It's the math you'll actually keep</h3>
+        <p>Long after the procedures fade, the instinct to ask &ldquo;is that about right?&rdquo; stays useful for a tip, a budget, a dose, a measurement. This is the most durable skill in the course.</p>
+      </div>
+    </div>
+    <p class="closing">A number is not an answer until you know its neighborhood. Predict the sign, the size, and what's possible; compute; then check the answer against the prediction. When they agree, you can trust the result. When they don't, you have caught a mistake nobody else would have. That habit &mdash; estimate first, verify after &mdash; is what separates getting an answer from knowing it's right.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Ballpark Ladder &middot; predict the sign, the size, the range &rarr; compute &rarr; check &middot; Math 0232 reasonableness</div>
+</footer>
+
+<div class="sr-only" aria-live="polite" id="live"></div>
+
+<script>
+"use strict";
+var TARGET = 4;
+var MIN = "\u2212";
+
+/* =========================================================
+   display helpers
+   ========================================================= */
+function MX(s){ return '<span class="mx">' + s + "</span>"; }
+function HL(s){ return '<span class="hl">' + s + "</span>"; }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function makePicker(pool){
+  var last=null;
+  return function(){ var c=pick(pool), g=0; while(pool.length>1 && c===last && g++<8) c=pick(pool); last=c; return c; };
+}
+function shuffleOpts(o){ var a=o.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function opts4(correct, wrongs, mono){
+  var out=[{t:correct, ok:true, mono:!!mono}], seen={}; seen[correct]=1;
+  for(var i=0;i<wrongs.length && out.length<4;i++){
+    var w=wrongs[i];
+    if(w===null||w===undefined||seen[w]) continue;
+    seen[w]=1; out.push({t:w, ok:false, mono:!!mono});
+  }
+  return out;
+}
+
+/* =========================================================
+   ARC 1 — the sign / direction check
+   ========================================================= */
+
+/* rung 1 — which way should it go? (direction from the situation) */
+var R1 = [
+  {text:"A $60 jacket is marked down. The new price, compared to $60, is", good:"lower", bad:["higher","exactly $60","impossible to tell"],
+   why:"A markdown lowers the price, so the new price must be below $60. The direction is down \u2014 you know that before any arithmetic."},
+  {text:"A river is receding. Its water level over the next few days will", good:"go down", bad:["go up","stay flat","double"],
+   why:"&ldquo;Receding&rdquo; means falling, so the level drops and the rate of change is negative. The direction is down."},
+  {text:"A savings account earns interest. Next year's balance, compared to today's, is", good:"higher", bad:["lower","the same","negative"],
+   why:"Interest adds money, so the balance grows. The direction is up."},
+  {text:"The temperature is dropping 3\u00B0 an hour. The change in temperature is", good:"negative", bad:["positive","zero","undefined"],
+   why:"A drop is a decrease, so the change is negative. Falling quantities have negative rates of change."},
+  {text:"A store adds 8% sales tax. The total you pay, compared to the sticker price, is", good:"higher", bad:["lower","the same","cut by 8%"],
+   why:"Tax is added on top, so the total is above the sticker price. The direction is up."},
+  {text:"A car is slowing down. Its change in speed is", good:"negative", bad:["positive","zero","increasing"],
+   why:"Slowing down means speed is decreasing, so the change in speed is negative."}
+];
+var P1 = makePicker(R1);
+function gen1(){
+  var e = P1();
+  return {
+    q: '<span class="word">' + e.text + " &hellip;</span>",
+    note: "Which direction, before any computing?",
+    opts: opts4(e.good, e.bad), cls:"two", why: e.why
+  };
+}
+
+/* rung 2 — what sign, before computing? */
+var R2 = [
+  {expr:"&minus;47 &times; 8.3", good:"Negative", why:"A negative times a positive is negative. One negative factor \u2192 negative, whatever the size."},
+  {expr:"&minus;120 &divide; &minus;4", good:"Positive", why:"A negative divided by a negative is positive. Two negatives \u2192 positive."},
+  {expr:"18.6 &minus; 42.1", good:"Negative", why:"You are subtracting a bigger number from a smaller one, so the result dips below zero \u2014 negative."},
+  {expr:"&minus;5.2 + 5.2", good:"Zero", why:"Opposite numbers cancel exactly, giving zero \u2014 which has no sign."},
+  {expr:"&minus;8 &times; &minus;3 &times; &minus;2", good:"Negative", why:"Three negative factors \u2192 odd count \u2192 negative. Count the negatives, ignore the size."},
+  {expr:"96.4 + 12.8", good:"Positive", why:"Adding two positives stays positive."}
+];
+var P2 = makePicker(R2);
+function gen2(){
+  var e = P2();
+  var all = ["Positive","Negative","Zero"];
+  return {
+    q: MX(e.expr),
+    note: "What sign will the answer have? Don't compute it.",
+    opts: all.map(function(t){ return {t:t, ok:t===e.good}; }), cls:"two", why: e.why
+  };
+}
+
+/* rung 3 — catch the sign error (problem + proposed answer) */
+var R3 = [
+  {text:"A $50 sweater is discounted. Someone gets a new price of $58.", verdict:"impossible", check:"sign",
+   why:"A discount must lower the price below $50. A higher price means the sign of the change is wrong \u2014 recompute."},
+  {text:"A thermometer falls from 40\u00B0. Someone reports the new reading as 46\u00B0.", verdict:"impossible", check:"sign",
+   why:"Falling means the reading goes down, below 40\u00B0. A higher number has the wrong direction \u2014 a mistake."},
+  {text:"You owe money and make a payment. Someone says your debt increased.", verdict:"impossible", check:"sign",
+   why:"A payment reduces debt. An increase points the wrong way \u2014 recompute."},
+  {text:"A recipe is scaled down. Someone needs more flour than the original.", verdict:"impossible", check:"sign",
+   why:"Scaling down needs less, not more. More flour is the wrong direction."},
+  {text:"A stock rises 3 days straight. Someone's total change comes out positive.", verdict:"fine", check:"sign",
+   why:"Three rises give an overall increase, so a positive change is exactly what you expect. This one is fine."},
+  {text:"Water drains from a tank. Someone's change in volume is negative.", verdict:"fine", check:"sign",
+   why:"Draining removes water, so the volume falls and the change is negative \u2014 the correct sign."}
+];
+var P3 = makePicker(R3);
+function gen3(){
+  var e = P3();
+  return {
+    q: '<span class="word">' + e.text + "</span>",
+    note: "Is that answer possible, or a sign mistake?",
+    opts: [
+      {t:"A mistake \u2014 wrong direction", ok:e.verdict==="impossible"},
+      {t:"Fine \u2014 the sign fits", ok:e.verdict==="fine"}
+    ], cls:"two", why: e.why
+  };
+}
+
+/* =========================================================
+   ARC 2 — the size / ballpark check
+   ========================================================= */
+
+/* rung 4 — bigger or smaller than you started? */
+var R4 = [
+  {expr:"200 &times; <span class='mx'>3/4</span>", good:"smaller than 200", why:"Multiplying by 3/4 (less than 1) shrinks it \u2014 the answer is below 200. Only factors above 1 make things bigger."},
+  {expr:"50 &divide; <span class='mx'>1/2</span>", good:"bigger than 50", why:"Dividing by 1/2 asks how many halves fit \u2014 that doubles it. Dividing by a number below 1 makes things bigger."},
+  {expr:"80 &times; 1.6", good:"bigger than 80", why:"Multiplying by 1.6 (above 1) grows it above 80."},
+  {expr:"90 + (&minus;30)", good:"smaller than 90", why:"Adding a negative pulls it down \u2014 below 90."},
+  {expr:"<span class='mx'>2/3</span> of 60", good:"smaller than 60", why:"&ldquo;Of&rdquo; a fraction below 1 takes only part of it \u2014 less than 60."},
+  {expr:"45 &divide; <span class='mx'>3/4</span>", good:"bigger than 45", why:"Dividing by 3/4 (below 1) makes it bigger than 45."},
+  {expr:"120 &times; 0.9", good:"smaller than 120", why:"Multiplying by 0.9 (just under 1) shrinks it slightly \u2014 below 120."}
+];
+var P4 = makePicker(R4);
+function gen4(){
+  var e = P4();
+  var m = e.good.match(/^(smaller|bigger) than (\d+)$/);
+  var other = (m[1]==="smaller"?"bigger":"smaller") + " than " + m[2];
+  return {
+    q: MX(e.expr),
+    note: "Bigger or smaller than the number you started with?",
+    opts: [
+      {t:e.good, ok:true},
+      {t:other, ok:false},
+      {t:"exactly " + m[2], ok:false},
+      {t:"can't tell without computing", ok:false}
+    ], cls:"two", why: e.why
+  };
+}
+
+/* rung 5 — round and estimate (the one computing rung, ballpark only) */
+var R5 = [
+  {expr:"47 &times; 21", r1:50, r2:20, est:1000},
+  {expr:"38 &times; 19", r1:40, r2:20, est:800},
+  {expr:"312 + 289", r1:300, r2:300, est:600, add:true},
+  {expr:"6.1 &times; 82", r1:6, r2:80, est:480},
+  {expr:"198 &divide; 4", r1:200, r2:4, est:50, div:true},
+  {expr:"53 &times; 28", r1:50, r2:30, est:1500}
+];
+var P5 = makePicker(R5);
+function gen5(){
+  var e = P5();
+  var wrongs = [ "" + (e.est*10), "" + Math.round(e.est/10), "" + (e.est + (e.add?300:e.est)) ];
+  var op = e.add ? "+" : e.div ? "\u00F7" : "\u00D7";
+  return {
+    q: MX(e.expr),
+    note: "Round each number, then estimate. Which ballpark is right?",
+    opts: opts4("about " + e.est, wrongs.map(function(w){ return "about " + w; })), cls:"two",
+    why: "Round to " + e.r1 + " " + op + " " + e.r2 + " \u2248 " + e.est + ". The estimate is a ballpark, not the exact answer \u2014 it just tells you the neighborhood."
+  };
+}
+
+/* rung 6 — order of magnitude */
+var R6 = [
+  {expr:"312 &times; 48", mag:"ten thousands", why:"Hundreds \u00D7 tens \u2248 thousands to ten-thousands: 300\u00D750 = 15,000. It lands in the ten-thousands."},
+  {expr:"27 &times; 31", mag:"hundreds", why:"Tens \u00D7 tens \u2248 hundreds: 30\u00D730 = 900. Hundreds."},
+  {expr:"6 &times; 84", mag:"hundreds", why:"Ones \u00D7 tens \u2248 hundreds: 6\u00D780 = 480. Hundreds."},
+  {expr:"512 &times; 390", mag:"hundred thousands", why:"Hundreds \u00D7 hundreds \u2248 hundred-thousands: 500\u00D7400 = 200,000."},
+  {expr:"44 &times; 6", mag:"hundreds", why:"Tens \u00D7 ones \u2248 hundreds: 40\u00D76 = 240. Hundreds."},
+  {expr:"820 &times; 15", mag:"ten thousands", why:"Hundreds \u00D7 tens \u2248 ten-thousands: 800\u00D715 = 12,000."}
+];
+var P6 = makePicker(R6);
+function gen6(){
+  var e = P6();
+  var all = ["tens","hundreds","thousands","ten thousands","hundred thousands","millions"];
+  var idx = all.indexOf(e.mag);
+  /* pick three distinct neighbours, clamping at the ends so we always get 3 */
+  var wrongs = [];
+  [idx-1, idx+1, idx-2, idx+2, idx-3].forEach(function(j){
+    if(j>=0 && j<all.length && all[j]!==e.mag && wrongs.indexOf(all[j])<0 && wrongs.length<3) wrongs.push(all[j]);
+  });
+  return {
+    q: MX(e.expr),
+    note: "Roughly how big \u2014 which order of magnitude?",
+    opts: opts4(e.mag, wrongs), cls:"two", why: e.why
+  };
+}
+
+/* rung 7 — which computed answer is in the ballpark? */
+var R7 = [
+  {expr:"52 &times; 19", real:988, est:"50\u00D720 = 1000", wrongs:[98,10000,494]},
+  {expr:"183 + 214", real:397, est:"180+210 = 390", wrongs:[97,3970,1000]},
+  {expr:"612 &divide; 3", real:204, est:"600\u00F73 = 200", wrongs:[20,2040,918]},
+  {expr:"29 &times; 41", real:1189, est:"30\u00D740 = 1200", wrongs:[119,11900,700]},
+  {expr:"78 + 45", real:123, est:"80+50 = 130", wrongs:[33,1230,350]}
+];
+var P7 = makePicker(R7);
+function gen7(){
+  var e = P7();
+  return {
+    q: MX(e.expr),
+    note: "Without computing exactly \u2014 which answer is even the right size?",
+    opts: opts4("" + e.real, e.wrongs.map(String), true), cls:"two",
+    why: "Estimate: " + e.est + ". Only " + e.real + " is anywhere near that ballpark \u2014 the others are off by a factor of ten or more, so you can rule them out without exact arithmetic."
+  };
+}
+
+/* =========================================================
+   ARC 3 — the possibility check, and the catch
+   ========================================================= */
+
+/* rung 8 — is this even possible? (type/range) */
+var R8 = [
+  {text:"A survey counts how many students ride the bus. The answer comes out 24.5.", verdict:"impossible",
+   why:"You can't have half a student \u2014 a count of people must be a whole number. 24.5 fails on type."},
+  {text:"A probability is computed as 1.4.", verdict:"impossible",
+   why:"A probability can never exceed 1 (or 100%). 1.4 is outside the legal range."},
+  {text:"A test score is reported as 92%.", verdict:"possible",
+   why:"A percent between 0 and 100 is perfectly legal \u2014 92% is fine."},
+  {text:"The number of cars in a lot comes out to \u22127.", verdict:"impossible",
+   why:"A count of objects can't be negative. \u22127 cars is impossible."},
+  {text:"A discount is calculated as 130% off the original price.", verdict:"impossible",
+   why:"You can't take more than 100% off \u2014 that would make the price negative. 130% off is out of range."},
+  {text:"A recipe needs 2.5 cups of flour.", verdict:"possible",
+   why:"Flour is a continuous quantity, so a fractional amount like 2.5 cups is perfectly fine."}
+];
+var P8 = makePicker(R8);
+function gen8(){
+  var e = P8();
+  return {
+    q: '<span class="word">' + e.text + "</span>",
+    note: "Is that answer even possible?",
+    opts: [
+      {t:"Impossible \u2014 out of range or wrong type", ok:e.verdict==="impossible"},
+      {t:"Possible \u2014 it's a legal value", ok:e.verdict==="possible"}
+    ], cls:"two", why: e.why
+  };
+}
+
+/* rung 9 — a part can't exceed its whole */
+var R9 = [
+  {text:"25% of a class of 40 students", limit:40, good:"under 40", why:"A part of 40 must be less than 40. 25% of 40 is 10 \u2014 well under the whole."},
+  {text:"A $30 shirt at 20% off, amount saved", limit:30, good:"under $30", why:"You can't save more than the price. The saving must be under $30 (it's $6)."},
+  {text:"<span class='mx'>3/4</span> of a 12-foot board", limit:12, good:"under 12 feet", why:"A fraction below 1 of the board is shorter than the board. 3/4 of 12 is 9 feet."},
+  {text:"60% of a 200-page book", limit:200, good:"under 200 pages", why:"A percent under 100 gives less than the whole. 60% of 200 is 120 pages."},
+  {text:"Half of a 3-hour movie", limit:3, good:"under 3 hours", why:"Half is less than the whole \u2014 under 3 hours (it's 1.5)."}
+];
+var P9 = makePicker(R9);
+function gen9(){
+  var e = P9();
+  var m = e.good.match(/^under (.+)$/);
+  return {
+    q: '<span class="word">' + e.text + " must be &hellip;</span>",
+    note: "What's the ceiling this answer can't cross?",
+    opts: [
+      {t:e.good, ok:true},
+      {t:"over " + m[1], ok:false},
+      {t:"exactly " + m[1], ok:false},
+      {t:"any amount", ok:false}
+    ], cls:"two", why: e.why
+  };
+}
+
+/* rung 10 — catch the impossible answer (problem + computed value) */
+var R10 = [
+  {text:"35% of a class came to a computed 60 students, but the class has 45.", verdict:"impossible",
+   why:"A part (35%) can't be bigger than the whole (45). 60 > 45 is impossible \u2014 recompute. (It's about 16.)"},
+  {text:"A $40 item at 15% off gives a computed saving of $6.", verdict:"fine",
+   why:"$6 is well under the $40 price and 15% of 40 is exactly 6 \u2014 the answer passes every check."},
+  {text:"A 12-foot board cut to 3/4 length comes out to 16 feet.", verdict:"impossible",
+   why:"3/4 of a board must be shorter than the board. 16 > 12 is impossible \u2014 the fraction should have shrunk it."},
+  {text:"A probability computed from a spinner comes out to 1.25.", verdict:"impossible",
+   why:"No probability exceeds 1. 1.25 is out of range \u2014 a mistake."},
+  {text:"18% of 240 comes out to about 43.", verdict:"fine",
+   why:"About a fifth of 240 is ~48, and 43 is in that neighborhood and safely under 240 \u2014 it passes."},
+  {text:"A recipe scaled to 2\u00D7 needs fewer cups than the original.", verdict:"impossible",
+   why:"Doubling needs more, not fewer. Fewer cups is the wrong direction \u2014 recompute."}
+];
+var P10 = makePicker(R10);
+function gen10(){
+  var e = P10();
+  return {
+    q: '<span class="word">' + e.text + "</span>",
+    note: "Does this computed answer pass the checks?",
+    opts: [
+      {t:"No \u2014 it's impossible, recompute", ok:e.verdict==="impossible"},
+      {t:"Yes \u2014 it's reasonable", ok:e.verdict==="fine"}
+    ], cls:"two", why: e.why
+  };
+}
+
+/* rung 11 — the full check: which check catches it? (capstone) */
+var R11 = [
+  {text:"A markdown on a $70 coat gives a new price of $84.", fail:"sign",
+   why:"A markdown must lower the price, but $84 > $70. The <b>sign</b> check catches it \u2014 wrong direction."},
+  {text:"18% of 300 is computed as 5400.", fail:"size",
+   why:"18% of 300 is about a fifth, roughly 60. 5400 is off by a factor of about 90. The <b>size</b> check catches it."},
+  {text:"A survey finds 32.5 people prefer tea.", fail:"possibility",
+   why:"A count of people must be whole. 32.5 fails the <b>possibility</b> check on type."},
+  {text:"40% of a 25-student class comes out to 30 students.", fail:"possibility",
+   why:"A part can't exceed its whole (25). 30 > 25 fails the <b>possibility</b> check on range."},
+  {text:"A temperature dropping from 50\u00B0 is reported as 58\u00B0.", fail:"sign",
+   why:"Dropping means going down, but 58\u00B0 > 50\u00B0. The <b>sign</b> check catches the wrong direction."},
+  {text:"612 \u00F7 3 is computed as 2040.", fail:"size",
+   why:"600 \u00F7 3 is about 200, but 2040 is ten times too big. The <b>size</b> check catches it."},
+  {text:"25% of 80 comes out to 20.", fail:"none",
+   why:"Positive sign, about a quarter of 80 is ~20, and 20 is under 80. All three checks pass \u2014 this one is reasonable."}
+];
+var P11 = makePicker(R11);
+function gen11(){
+  var e = P11();
+  var opts = [
+    {t:"Sign \u2014 wrong direction", ok:e.fail==="sign"},
+    {t:"Size \u2014 wrong ballpark", ok:e.fail==="size"},
+    {t:"Possibility \u2014 out of range or type", ok:e.fail==="possibility"},
+    {t:"None \u2014 it passes all three", ok:e.fail==="none"}
+  ];
+  return {
+    q: '<span class="word">' + e.text + "</span>",
+    note: "Run all three checks. Which one catches it \u2014 if any?",
+    opts: opts, cls:"two", why: e.why
+  };
+}
+
+/* =========================================================
+   the ladder
+   ========================================================= */
+var RUNGS = [
+  {arc:1, t:"Which way should it go?", s:"Direction from the situation",
+   how:"Read the situation and predict the direction: a discount lowers, interest raises, receding falls. Decide up or down before any numbers.",
+   why:"The sign of an answer is usually obvious from the story alone. Predicting it first gives you something to check the computation against.",
+   gen:gen1},
+  {arc:1, t:"What sign, before computing?", s:"Predict, don't calculate",
+   how:"Count the negatives for times and divide; for adding, see which way it leans. Call positive, negative, or zero without finding the value.",
+   why:"Sign is a separate, quicker decision than magnitude. Getting it instantly is the first line of defense against a wrong answer.",
+   gen:gen2},
+  {arc:1, t:"Catch the sign error", s:"Problem plus a proposed answer",
+   how:"Compare the proposed answer's direction to what the situation demands. If a discount raised the price, the sign is wrong \u2014 flag it.",
+   why:"This is the payoff of the sign check: a proposed answer pointing the wrong way is caught on sight, before any recomputing.",
+   gen:gen3},
+  {arc:2, t:"Bigger or smaller?", s:"The direction of size",
+   how:"Multiplying by less than 1 shrinks; dividing by less than 1 grows; adding a negative shrinks. Predict which side of the starting number you land on.",
+   why:"&ldquo;Multiplying makes bigger&rdquo; is a whole-number habit that fails for fractions. Predicting the direction of size catches that error \u2014 the one the Across ladder warned about.",
+   gen:gen4},
+  {arc:2, t:"Round and estimate", s:"The one rung that computes",
+   how:"Round each number to something friendly, then combine. The result is a ballpark, not the exact answer \u2014 the neighborhood, not the address.",
+   why:"Estimation is the engine of every other rung, so it earns one where you actually produce a number \u2014 but only ever a rough one.",
+   gen:gen5},
+  {arc:2, t:"Order of magnitude", s:"Tens, hundreds, thousands?",
+   how:"Round to a single leading digit and count the zeros. Hundreds times tens is thousands. Land on the right power of ten without the digits.",
+   why:"Most catastrophic errors are off by a factor of ten. Knowing the order of magnitude alone catches a decimal in the wrong place.",
+   gen:gen6},
+  {arc:2, t:"Which is the right size?", s:"Estimate to eliminate",
+   how:"Estimate the ballpark, then find the one candidate near it. The others are off by a factor of ten or more and can be ruled out on sight.",
+   why:"On a multiple-choice test or a quick check, the estimate alone often picks the answer \u2014 no exact arithmetic required.",
+   gen:gen7},
+  {arc:3, t:"Is it even possible?", s:"Type and range",
+   how:"Ask what values are legal. A count is whole and non-negative; a probability is at most 1; a percent of something stays in bounds. Rule out the impossible.",
+   why:"Some answers are wrong not by a little but categorically \u2014 half a person, a probability above 1. The possibility check catches those instantly.",
+   gen:gen8},
+  {arc:3, t:"A part vs its whole", s:"The ceiling it can't cross",
+   how:"A fraction below 1, or a percent below 100, of a quantity must come out less than that quantity. Name the ceiling before you compute.",
+   why:"&ldquo;A part bigger than its whole&rdquo; is a common and catchable impossibility \u2014 knowing the ceiling makes it obvious.",
+   gen:gen9},
+  {arc:3, t:"Catch the impossible answer", s:"Problem plus a computed value",
+   how:"Check the computed answer against the legal range: is a part bigger than its whole, a probability above 1, a direction reversed? If so, recompute.",
+   why:"The payoff of the possibility check. A part that exceeds its whole is wrong no matter how careful the arithmetic looked.",
+   gen:gen10},
+  {arc:3, t:"Which check catches it?", s:"All three \u2014 the capstone",
+   how:"Run sign, size, and possibility in turn. Name the first check that fails \u2014 or confirm all three pass and the answer is trustworthy.",
+   why:"The whole ladder in one rung: three quick checks that together catch nearly every wrong answer, and the judgment to say when none of them fire.",
+   gen:gen11}
+];
+
+/* =========================================================
+   state and rendering
+   ========================================================= */
+var state = RUNGS.map(function(){ return {streak:0, earned:false}; });
+var openIdx = -1, current = null;
+var badgeCount = document.getElementById("badge-count");
+var trackBracket = document.getElementById("track-bracket");
+var trackNote = document.getElementById("track-note");
+var live = document.getElementById("live");
+
+/* prediction bracket: a value axis with a shaded "reasonable range" that
+   tightens around the true answer as badges accumulate. */
+function refreshProgress(){
+  var got = state.filter(function(s){ return s.earned; }).length;
+  badgeCount.textContent = got + " of " + RUNGS.length + " badges earned";
+  var W = 560, H = 66, pad = 20, axisY = 42;
+  var trueX = pad + (W - 2*pad) * 0.62;          /* the true answer sits at 62% */
+  /* range half-width shrinks from wide to tight as got goes 0..11 */
+  var frac = got / 11;
+  var half = (W - 2*pad) * (0.42 * (1 - frac) + 0.015);
+  var loX = Math.max(pad, trueX - half), hiX = Math.min(W - pad, trueX + half);
+  var s = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:auto" role="img"><title>prediction bracket</title>';
+  /* axis */
+  s += '<line x1="' + pad + '" y1="' + axisY + '" x2="' + (W-pad) + '" y2="' + axisY + '" stroke="var(--hair-strong)" stroke-width="1.5"/>';
+  /* reasonable-range band */
+  s += '<rect x="' + loX.toFixed(1) + '" y="' + (axisY-13) + '" width="' + (hiX-loX).toFixed(1) + '" height="26" rx="5" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="1"/>';
+  /* bracket ticks */
+  s += '<line x1="' + loX.toFixed(1) + '" y1="' + (axisY-15) + '" x2="' + loX.toFixed(1) + '" y2="' + (axisY+15) + '" stroke="var(--gold)" stroke-width="2"/>';
+  s += '<line x1="' + hiX.toFixed(1) + '" y1="' + (axisY-15) + '" x2="' + hiX.toFixed(1) + '" y2="' + (axisY+15) + '" stroke="var(--gold)" stroke-width="2"/>';
+  /* the true answer dot */
+  s += '<circle cx="' + trueX.toFixed(1) + '" cy="' + axisY + '" r="5" fill="' + (got>=11?"var(--gold)":"var(--ink)") + '"/>';
+  /* label above */
+  s += '<text x="' + trueX.toFixed(1) + '" y="18" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--muted)">' +
+       (got===0 ? "true answer" : "answer") + '</text>';
+  s += "</svg>";
+  trackBracket.innerHTML = s;
+  trackNote.innerHTML = got === 0 ? "each badge tightens the estimate around the true answer"
+    : got >= 11 ? "the estimate brackets the answer tightly \u2014 a reliable check"
+    : got + " of 11 \u2014 the reasonable range keeps closing in on the truth";
+  var cards = document.querySelectorAll(".rung");
+  for(var j = 0; j < cards.length; j++){
+    cards[j].classList.toggle("earned", state[j].earned);
+    cards[j].querySelector(".badge").textContent = state[j].earned ? "Earned" : "Badge";
+  }
+}
+function buildRungs(){
+  var host = document.getElementById("rungs");
+  var arcs = [
+    {n:1, tag:"Arc one \u00B7 the sign check", note:"rungs 1\u20133"},
+    {n:2, tag:"Arc two \u00B7 the size check", note:"rungs 4\u20137"},
+    {n:3, tag:"Arc three \u00B7 possible, and the catch", note:"rungs 8\u201311"}
+  ];
+  var html = "";
+  arcs.forEach(function(arc){
+    html += '<div class="arc-head arc' + arc.n + '"><span class="tag">' + arc.tag + '</span><span class="rule"></span><span class="cnt">' + arc.note + "</span></div>";
+    RUNGS.forEach(function(r,i){
+      if(r.arc !== arc.n) return;
+      html +=
+        '<div class="rung arc' + r.arc + '" id="rung-' + i + '">' +
+          '<button class="top" data-i="' + i + '" aria-expanded="false" aria-controls="panel-' + i + '">' +
+            '<span class="rn">' + (i+1 < 10 ? "0" : "") + (i+1) + "</span>" +
+            '<span class="rt"><span class="t">' + r.t + '</span><span class="s">' + r.s + "</span></span>" +
+            '<span class="badge">Badge</span>' +
+            '<span class="chev" aria-hidden="true">\u203A</span>' +
+          "</button>" +
+          '<div class="panel" id="panel-' + i + '">' +
+            '<div class="strategy">' +
+              "<div><h4>Strategy</h4><p>" + r.how + "</p></div>" +
+              "<div><h4>Why this rung exists</h4><p>" + r.why + "</p></div>" +
+            "</div>" +
+            '<div class="play" data-play="' + i + '"></div>' +
+          "</div>" +
+        "</div>";
+    });
+  });
+  host.innerHTML = html;
+  host.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".top") : null;
+    if(b) toggleRung(parseInt(b.getAttribute("data-i"),10));
+  });
+}
+function toggleRung(i){
+  var was = openIdx;
+  if(was >= 0){
+    document.getElementById("rung-" + was).classList.remove("open");
+    document.querySelector("#rung-" + was + " .top").setAttribute("aria-expanded","false");
+  }
+  if(was === i){ openIdx = -1; current = null; return; }
+  openIdx = i;
+  document.getElementById("rung-" + i).classList.add("open");
+  document.querySelector("#rung-" + i + " .top").setAttribute("aria-expanded","true");
+  nextQuestion();
+}
+function nextQuestion(){
+  if(openIdx < 0) return;
+  var def = RUNGS[openIdx].gen();
+  def.opts = shuffleOpts(def.opts);
+  current = {def:def, answered:false};
+  drawPlay();
+}
+function drawPlay(){
+  var i = openIdx, d = current.def, st = state[i];
+  var host = document.querySelector('.play[data-play="' + i + '"]');
+  var pips = "";
+  for(var p = 0; p < TARGET; p++){ pips += '<span class="pip' + (p < st.streak ? " on" : "") + '"></span>'; }
+  var opts = "";
+  d.opts.forEach(function(o,k){
+    opts += '<button class="opt" data-k="' + k + '"><span class="k">' + (k+1) + '</span><span class="txt' + (o.mono ? " mono" : "") + '">' + o.t + "</span></button>";
+  });
+  var qcls = /class="word"/.test(d.q) ? "q word" : "q";
+  host.innerHTML =
+    '<div class="play-head"><span class="streak">' + pips + "</span>" +
+      '<span class="lab">' + st.streak + " of " + TARGET + " in a row</span>" +
+      '<span class="spacer"></span><span class="lab">keys 1\u2013' + d.opts.length + "</span></div>" +
+    '<div class="' + qcls + '">' + d.q + "</div>" +
+    '<div class="qnote">' + d.note + "</div>" +
+    '<div class="opts ' + (d.cls || "two") + '">' + opts + "</div>" +
+    '<div class="fb"><span class="verdict"></span><span class="why"></span></div>' +
+    '<div class="won">Badge earned. Four in a row without stopping to think \u2014 that is the whole bar.</div>' +
+    '<div class="next" data-after style="display:none"><button class="btn" data-next>Next question</button><span class="hint">or press <kbd>Enter</kbd></span></div>';
+  host.querySelectorAll(".opt").forEach(function(b){
+    b.addEventListener("click", function(){ choose(parseInt(b.getAttribute("data-k"),10)); });
+  });
+  var nx = host.querySelector("[data-next]");
+  if(nx) nx.addEventListener("click", nextQuestion);
+}
+function choose(k){
+  if(!current || current.answered) return;
+  grade(current.def.opts[k].ok, k);
+}
+function grade(ok, k){
+  current.answered = true;
+  var i = openIdx, st = state[i], d = current.def;
+  var host = document.querySelector('.play[data-play="' + i + '"]');
+  host.querySelectorAll(".opt").forEach(function(b,idx){
+    b.disabled = true;
+    if(d.opts[idx].ok) b.classList.add("right");
+    else if(idx === k) b.classList.add("wrong");
+    else b.classList.add("dim");
+  });
+  if(ok) st.streak++; else st.streak = 0;
+  var fb = host.querySelector(".fb");
+  fb.classList.add("show", ok ? "ok" : "no");
+  fb.querySelector(".verdict").textContent = ok ? "Right." : "Not this time.";
+  fb.querySelector(".why").innerHTML = d.why;
+  var justEarned = false;
+  if(ok && st.streak >= TARGET && !st.earned){ st.earned = true; justEarned = true; }
+  if(justEarned) host.querySelector(".won").classList.add("show");
+  host.querySelectorAll(".pip").forEach(function(p,idx){ p.classList.toggle("on", idx < st.streak); });
+  host.querySelector(".play-head .lab").textContent = st.streak + " of " + TARGET + " in a row";
+  host.querySelector("[data-after]").style.display = "flex";
+  live.textContent = (ok ? "Correct. " : "Incorrect. ") + (justEarned ? "Badge earned. " : "") + st.streak + " in a row.";
+  refreshProgress();
+}
+document.addEventListener("keydown", function(e){
+  if(openIdx < 0 || !current) return;
+  var tag = (e.target.tagName || "").toLowerCase();
+  if(tag === "input" || tag === "textarea") return;
+  if(e.key === "Enter"){ if(current.answered){ e.preventDefault(); nextQuestion(); } return; }
+  if(e.key === "Escape"){ toggleRung(openIdx); return; }
+  var num = parseInt(e.key,10);
+  if(num >= 1 && num <= current.def.opts.length){ e.preventDefault(); choose(num-1); }
+});
+document.getElementById("reset").addEventListener("click", function(){
+  state = RUNGS.map(function(){ return {streak:0, earned:false}; });
+  if(openIdx >= 0) drawPlay();
+  refreshProgress();
+  live.textContent = "Progress reset.";
+});
+buildRungs();
+refreshProgress();
+</script>
+</body>
+</html>
