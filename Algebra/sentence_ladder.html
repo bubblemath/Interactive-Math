@@ -1,0 +1,862 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Sentence Ladder — name it, build it, hinge it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F1F4F6; --surface:#FFFFFF; --ink:#12202B; --muted:#5C6E7C;
+  --hair:#D8E0E6; --hair-strong:#B9C6D0;
+  --a1:#4A3D9C; --a1-soft:#ECEAF9; --a1-line:#C9C2EC;
+  --a2:#0F6E56; --a2-soft:#E2F1EC; --a2-line:#BFDDD3;
+  --a3:#9E3357; --a3-soft:#F8E8EE; --a3-line:#EDC9D6;
+  --good:#0F6E56; --bad:#A8322C; --bad-soft:#FBEAE8;
+  --gold:#8A6410; --gold-soft:#F6EEDA;
+  --r:10px; --shadow:0 1px 0 rgba(18,32,43,.04), 0 8px 24px -18px rgba(18,32,43,.5);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:"Space Grotesk",system-ui,sans-serif;font-weight:500;letter-spacing:-.02em;line-height:1.15;margin:0}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-ligatures:none}
+a{color:inherit}
+
+/* ---------- math ---------- */
+.mx{font-family:"IBM Plex Mono",ui-monospace,monospace;white-space:nowrap}
+.opx{padding:0 .2em}
+.fr{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+    vertical-align:middle;line-height:1.04;font-size:.66em;margin:0 .16em;text-align:center}
+.fr .fn{padding:0 .34em .09em;border-bottom:1.6px solid currentColor}
+.fr .fd{padding:.09em .34em 0}
+
+/* ---------- top bar ---------- */
+.bar-top{position:sticky;top:0;z-index:40;background:rgba(241,244,246,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--hair)}
+.bar-top .wrap{display:flex;align-items:center;gap:18px;height:58px}
+.glyph{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:15px;color:var(--a3)}
+.bar-top .nm{font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:17px;white-space:nowrap}
+.bar-top nav{margin-left:auto;display:flex;gap:22px;font-size:14px;color:var(--muted)}
+.bar-top nav a{text-decoration:none}
+.bar-top nav a:hover{color:var(--ink)}
+@media(max-width:700px){.bar-top nav{display:none}}
+
+/* ---------- hero ---------- */
+header.hero{padding:76px 0 48px;border-bottom:1px solid var(--hair)}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:22px}
+h1{font-size:clamp(34px,5.4vw,56px);max-width:19ch}
+h1 em{font-style:normal;color:var(--a3)}
+.lede{margin-top:22px;max-width:63ch;font-size:19px;color:#33475A}
+.lede b{font-weight:600;color:var(--ink)}
+
+/* ---------- translating-sentence progress ---------- */
+.track{margin-top:44px}
+.track-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-bottom:12px}
+.track-head strong{font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:15px;color:var(--ink)}
+.track-sentence{max-width:640px;font-size:clamp(17px,2.6vw,22px);line-height:1.9}
+.tok{display:inline-block;padding:2px 2px;transition:color .3s ease}
+.tok.eng{color:var(--muted);font-family:"IBM Plex Sans",sans-serif}
+.tok.math{color:var(--gold);font-family:"IBM Plex Mono",monospace;font-weight:600}
+.track-note{margin-top:12px;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+
+/* ---------- sections ---------- */
+section{padding:66px 0;border-bottom:1px solid var(--hair)}
+.kicker{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+h2{font-size:clamp(25px,3.4vw,33px);max-width:24ch;margin-bottom:8px}
+.sub{color:var(--muted);max-width:66ch;margin-top:14px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:34px}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.step{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:22px}
+.step .n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);letter-spacing:.1em}
+.step h3{font-size:18px;margin:10px 0 8px}
+.step p{margin:0;font-size:15px;color:#3D5162;line-height:1.6}
+kbd{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:var(--paper);border:1px solid var(--hair-strong);border-bottom-width:2px;border-radius:5px;padding:1px 6px}
+
+/* ---------- engine ---------- */
+.engine{margin-top:34px;background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:26px;overflow-x:auto}
+.grid{border-collapse:separate;border-spacing:10px;width:100%;min-width:560px}
+.grid td.rowhead{text-align:left;vertical-align:middle;width:230px;padding-right:8px}
+.grid td.rowhead .t{font-family:"IBM Plex Sans",sans-serif;font-size:16px;display:block}
+.grid td.rowhead .s{font-size:12.5px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.cell{border-radius:8px;padding:15px 18px;text-align:center;border:1px solid;font-family:"IBM Plex Mono",monospace;font-size:19px}
+.r-name .cell{background:var(--a1-soft);border-color:var(--a1-line);color:#372C7D}
+.r-build .cell{background:var(--a2-soft);border-color:var(--a2-line);color:#0B4E3D}
+.r-flip .cell{background:var(--a3-soft);border-color:var(--a3-line);color:#7B2745}
+.r-hinge .cell{background:var(--a1-soft);border-color:var(--a1-line);color:#372C7D}
+.result{margin-top:14px;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:22px;color:var(--ink);padding:14px;background:var(--paper);border:1px solid var(--hair);border-radius:8px}
+.punch{margin-top:18px;font-size:16px;color:#3D5162;max-width:72ch}
+.punch b{color:var(--ink)}
+
+.hazard{margin-top:24px;background:var(--bad-soft);border:1px solid #EFC6C2;border-left:3px solid var(--bad);border-radius:0 8px 8px 0;padding:20px 22px}
+.hazard .h{display:flex;align-items:center;gap:9px;font-family:"Space Grotesk",sans-serif;font-size:16px;color:#7A241F;margin-bottom:6px}
+.hazard p{margin:0;font-size:15.5px;color:#6B2A26;line-height:1.7}
+.hazard p + p{margin-top:12px}
+
+/* ---------- ladder ---------- */
+.arc-head{display:flex;align-items:center;gap:14px;margin:38px 0 16px}
+.arc-head .tag{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+.arc1 .tag{background:var(--a1-soft);color:#372C7D}
+.arc2 .tag{background:var(--a2-soft);color:#0B4E3D}
+.arc3 .tag{background:var(--a3-soft);color:#7B2745}
+.arc-head .rule{flex:1;height:1px;background:var(--hair)}
+.arc-head .cnt{font-size:13px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.rung{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .18s ease,box-shadow .18s ease}
+.rung.open{border-color:var(--hair-strong);box-shadow:var(--shadow)}
+.rung.earned{border-left:3px solid var(--gold)}
+.rung > .top{display:flex;align-items:center;gap:16px;width:100%;background:none;border:0;padding:16px 20px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.rung > .top:hover{background:#FAFCFD}
+.rung > .top:focus-visible{outline:2px solid var(--a3);outline-offset:-3px}
+.rn{font-family:"IBM Plex Mono",monospace;font-size:13px;width:22px;flex:none}
+.arc1 .rn{color:var(--a1)} .arc2 .rn{color:var(--a2)} .arc3 .rn{color:var(--a3)}
+.rt{flex:1;min-width:0}
+.rt .t{font-family:"Space Grotesk",sans-serif;font-size:17.5px;display:block}
+.rt .s{font-size:14px;color:var(--muted)}
+.badge{flex:none;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--hair-strong);border:1px solid var(--hair);border-radius:999px;padding:3px 10px}
+.rung.earned .badge{color:var(--gold);border-color:#E2CE9C;background:var(--gold-soft)}
+.chev{flex:none;color:var(--hair-strong);transition:transform .2s ease;font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.panel{display:none;padding:4px 20px 22px;border-top:1px solid var(--hair)}
+.rung.open .panel{display:block}
+.strategy{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0 20px}
+@media(max-width:700px){.strategy{grid-template-columns:1fr}}
+.strategy div h4{margin:0 0 5px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400}
+.strategy div p{margin:0;font-size:15px;color:#3D5162;line-height:1.62}
+
+/* ---------- practice ---------- */
+.play{background:var(--paper);border:1px solid var(--hair);border-radius:8px;padding:20px}
+.play-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.streak{display:flex;gap:6px}
+.pip{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--hair-strong);transition:background .2s ease,border-color .2s ease}
+.pip.on{background:var(--gold);border-color:var(--gold)}
+.play-head .lab{font-size:13px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.play-head .spacer{flex:1}
+.q{font-size:clamp(20px,3vw,27px);font-weight:500;margin:14px 0 8px;line-height:1.6;overflow-x:auto;padding-bottom:6px}
+.q.word{font-size:clamp(17px,2.3vw,20px);line-height:1.55;max-width:56ch}
+.q .phrase{color:var(--a3);font-style:italic}
+.qnote{font-size:14px;color:var(--muted);margin-bottom:18px;max-width:64ch}
+.opts{display:grid;gap:8px}
+.opts.two{grid-template-columns:1fr 1fr}
+@media(max-width:640px){.opts.two{grid-template-columns:1fr}}
+.opt{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--hair-strong);border-radius:8px;padding:13px 14px;font:inherit;font-size:16px;color:inherit;text-align:left;cursor:pointer;min-height:56px;line-height:1.6;transition:border-color .14s ease,background .14s ease,transform .06s ease}
+.opt:hover:not(:disabled){border-color:var(--ink);background:#FBFDFE}
+.opt:active:not(:disabled){transform:translateY(1px)}
+.opt:focus-visible{outline:2px solid var(--a3);outline-offset:2px}
+.opt .k{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);border:1px solid var(--hair);border-radius:4px;padding:1px 5px;flex:none;align-self:flex-start;margin-top:3px}
+.opt .txt{flex:1;min-width:0;overflow-x:auto}
+.opt .txt.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.opt:disabled{cursor:default;opacity:1}
+.opt.right{background:var(--a2-soft);border-color:var(--good)}
+.opt.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.opt.dim{opacity:.5}
+.fb{margin-top:16px;font-size:15.5px;line-height:1.9;display:none}
+.fb.show{display:block}
+.fb .verdict{font-family:"Space Grotesk",sans-serif;font-size:16px;display:block;margin-bottom:3px}
+.fb.ok .verdict{color:var(--good)}
+.fb.no .verdict{color:var(--bad)}
+.fb .why{color:#3D5162}
+.next{margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-size:15px;background:var(--ink);color:#fff;border:0;border-radius:7px;padding:9px 18px;cursor:pointer}
+.btn:hover{background:#22384A}
+.btn:focus-visible{outline:2px solid var(--a3);outline-offset:2px}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--hair-strong)}
+.btn.ghost:hover{background:var(--surface);color:var(--ink)}
+.hint{font-size:13px;color:var(--muted)}
+.won{margin-top:14px;background:var(--gold-soft);border:1px solid #E2CE9C;border-radius:8px;padding:12px 16px;font-size:15px;color:#6C4E0C;display:none}
+.won.show{display:block}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:32px}
+@media(max-width:760px){.cards{grid-template-columns:1fr}}
+.card h3{font-size:18px;margin-bottom:8px}
+.card p{margin:0;font-size:15px;color:#3D5162;line-height:1.62}
+.closing{margin-top:40px;max-width:70ch;font-size:18px;color:#33475A}
+footer{padding:34px 0 60px;font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--muted);letter-spacing:.03em}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<div class="bar-top">
+  <div class="wrap">
+    <span class="glyph">"is" &rarr; =</span>
+    <span class="nm">The Sentence Ladder</span>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#engine">The engine</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Math 0232 &middot; word problems &middot; translating English into equations</div>
+    <h1>Every word is an <em>instruction</em>.</h1>
+    <p class="lede">An equation is a claim that two amounts are the same. Translating a word problem is three moves and no arithmetic: <b>name the unknown, build each side out of it, and find the word that means &ldquo;equals.&rdquo;</b> This is the one ladder where nothing ever computes &mdash; the answer is always an expression or an equation, and the moment you would start solving, the rung is already over. It is the step that comes before all the others.</p>
+
+    <div class="track">
+      <div class="track-head">
+        <strong id="badge-count">0 of 11 badges earned</strong>
+        <span>Open practice &mdash; start on any rung</span>
+        <span style="flex:1"></span>
+        <button class="btn ghost" id="reset" style="font-size:13px;padding:5px 12px">Reset progress</button>
+      </div>
+      <div class="track-sentence" id="track-sentence" aria-hidden="true"></div>
+      <div class="track-note" id="track-note">each badge translates one more word into math</div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="kicker">How it works</div>
+    <h2>One decision per rung, and none of them compute</h2>
+    <p class="sub">Every other skill in this course ends in a number. This one ends one step earlier &mdash; at the equation you would then solve. Getting that equation right is where most word-problem marks are actually won or lost, and it is a language skill, not an arithmetic one.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="n">01</div>
+        <h3>Start anywhere</h3>
+        <p>Eleven rungs in three arcs &mdash; name the unknown, build each side, set them equal. Nothing is locked, and each rung opens with its strategy.</p>
+      </div>
+      <div class="step">
+        <div class="n">02</div>
+        <h3>Earn each badge</h3>
+        <p>Four in a row earns a rung's badge. Answer with the mouse or press <kbd>1</kbd>&ndash;<kbd>4</kbd>. A wrong answer resets the streak, because the target is fluency, not eventual correctness.</p>
+      </div>
+      <div class="step">
+        <div class="n">03</div>
+        <h3>Every rung refuses to solve</h3>
+        <p>The answer is always an expression or an equation &mdash; never a solved value. If you catch yourself doing arithmetic, you have gone one step too far.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="engine">
+  <div class="wrap">
+    <div class="kicker">The engine of every word problem</div>
+    <h2>One sentence, taken apart</h2>
+    <p class="sub">Take &ldquo;five less than twice a number is thirteen.&rdquo; Name the unknown, build each piece, find the hinge &mdash; and the equation assembles itself. Watch the third row: the order flips.</p>
+
+    <div class="engine">
+      <table class="grid">
+        <tr class="r-name"><td class="rowhead"><span class="t">&ldquo;a number&rdquo;</span><span class="s">name it</span></td><td class="cell">x</td></tr>
+        <tr class="r-build"><td class="rowhead"><span class="t">&ldquo;twice a number&rdquo;</span><span class="s">build</span></td><td class="cell">2x</td></tr>
+        <tr class="r-flip"><td class="rowhead"><span class="t">&ldquo;five less than that&rdquo;</span><span class="s">order flips</span></td><td class="cell">2x &minus; 5</td></tr>
+        <tr class="r-hinge"><td class="rowhead"><span class="t">&ldquo;is&rdquo;</span><span class="s">the hinge</span></td><td class="cell">=</td></tr>
+        <tr class="r-build"><td class="rowhead"><span class="t">&ldquo;thirteen&rdquo;</span><span class="s">build</span></td><td class="cell">13</td></tr>
+      </table>
+      <div class="result">2x &minus; 5 = 13</div>
+    </div>
+
+    <p class="punch"><b>Three moves, no solving.</b> Naming the unknown gives you an x. Building turns each phrase into an expression. The hinge word &mdash; &ldquo;is&rdquo; &mdash; is where the two sides meet. Assemble those and you have the equation. Whether x turns out to be 9 is a separate skill for a different day; this ladder ends the moment the equation is written.</p>
+
+    <div class="hazard">
+      <div class="h"><span aria-hidden="true">&#9995;</span> &ldquo;Less than&rdquo; and &ldquo;subtracted from&rdquo; reverse the order.</div>
+      <p>&ldquo;Five less than a number&rdquo; is <span class="mono">x &minus; 5</span>, never <span class="mono">5 &minus; x</span> &mdash; the number you <em>hear</em> first is <em>written</em> second. &ldquo;A number subtracted from 10&rdquo; is <span class="mono">10 &minus; x</span>. Addition and multiplication forgive you because they commute; subtraction and division punish you every time, and this is where most translation errors actually live.</p>
+      <p><b>Second: you choose what x is &mdash; pick the quantity everything else is measured from.</b> In &ldquo;one number is 4 more than another,&rdquo; name the <em>other</em> one x, so the described one is <span class="mono">x + 4</span>. Name the wrong one and every later phrase fights you.</p>
+      <p><b>Third: &ldquo;is,&rdquo; &ldquo;are,&rdquo; &ldquo;gives,&rdquo; &ldquo;results in&rdquo; &mdash; that is the equals sign.</b> Find the verb and everything on each side is one expression. No verb means you have an expression, not an equation &mdash; and that is the whole line between arc two and arc three.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <p class="sub">Four in a row earns the badge. Wrong answers explain themselves and reset the streak.</p>
+    <div id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="kicker">Why this matters</div>
+    <h2>This is the rung every other unit leaned on</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>You already met it four times</h3>
+        <p>Writing the equation for the river, the babysitting fee, the oranges, the percent problem &mdash; the hardest step in each was this one. Here it gets drilled on its own, before any solving muddies it.</p>
+      </div>
+      <div class="card">
+        <h3>The solving is the easy part</h3>
+        <p>Once the equation is written, every course before this one taught you how to solve it. The marks are lost at translation, not at arithmetic &mdash; so translation is where the practice belongs.</p>
+      </div>
+      <div class="card">
+        <h3>It is a reading skill</h3>
+        <p>No calculator translates a sentence. Deciding what the unknown is, and which phrase means which operation, is a judgment about language &mdash; and judgment is what improves with reps.</p>
+      </div>
+    </div>
+    <p class="closing">A word problem is not a wall of arithmetic &mdash; it is a sentence with a spine. Name the unknown, build each side out of it, find the verb that joins them. Do that cleanly and the equation writes itself, and everything you already know takes over from there. This ladder stops exactly where your practice on all the others began.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Sentence Ladder &middot; name the unknown &rarr; build each side &rarr; find the &ldquo;is&rdquo; &middot; Math 0232 word problems</div>
+</footer>
+
+<div class="sr-only" aria-live="polite" id="live"></div>
+
+<script>
+"use strict";
+var TARGET = 4;
+var MIN = "\u2212";
+
+/* =========================================================
+   display helpers
+   ========================================================= */
+function MX(s){ return '<span class="mx">' + s + "</span>"; }
+function PHR(s){ return '<span class="phrase">' + s + "</span>"; }
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function makePicker(pool){
+  var last=null;
+  return function(){ var c=pick(pool), g=0; while(pool.length>1 && c===last && g++<8) c=pick(pool); last=c; return c; };
+}
+function shuffleOpts(o){ var a=o.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+/* build option objects from a correct string + an array of distinct wrong strings.
+   mono flag decides whether the option renders in the math font. */
+function opts4(correct, wrongs, mono){
+  var out=[{t:correct, ok:true, mono:!!mono}], seen={}; seen[correct]=1;
+  for(var i=0;i<wrongs.length && out.length<4;i++){
+    var w=wrongs[i];
+    if(w===null||w===undefined||seen[w]) continue;
+    seen[w]=1; out.push({t:w, ok:false, mono:!!mono});
+  }
+  return out;
+}
+
+/* =========================================================
+   ARC 1 — name the unknown
+   ========================================================= */
+
+/* rung 1 — what is x?  (the known-value trap) */
+var R1 = [
+  {text:"A shirt costs $12 after a $3 discount. Find the original price.",
+   good:"the original price", bad:["the discount, $3","the sale price, $12","the amount saved"],
+   why:"The sale price ($12) and the discount ($3) are both given \u2014 they are known. The one thing you do not know, and are asked for, is the original price. Name x for the unknown, never for a number already in the problem."},
+  {text:"A number increased by 7 gives 20. Find the number.",
+   good:"the number before adding 7", bad:["the result, 20","the amount added, 7","the sum"],
+   why:"20 and 7 are both stated. The unknown is the starting number, so that is what x stands for."},
+  {text:"Tickets cost $8 each. Maria spent $56. How many tickets did she buy?",
+   good:"the number of tickets", bad:["the price per ticket, $8","the total spent, $56","the change she got"],
+   why:"The price ($8) and the total ($56) are given. What you are solving for is how many tickets, so x is the number of tickets."},
+  {text:"A rectangle's length is 5 cm more than its width. Find the width.",
+   good:"the width", bad:["the length","the extra 5 cm","the perimeter"],
+   why:"The length is described in terms of the width, and the 5 is given. The width is the quantity everything else depends on, so name it x."},
+  {text:"After a 15% raise, Devon earns $23 an hour. Find the old wage.",
+   good:"the wage before the raise", bad:["the new wage, $23","the raise, 15%","the hourly increase"],
+   why:"The new wage ($23) and the percent (15%) are both known. The unknown is the old wage, so that is x."}
+];
+var P1 = makePicker(R1);
+function gen1(){
+  var e = P1();
+  return {
+    q: '<span class="word">' + e.text + "</span>",
+    note: "What should x represent?",
+    opts: opts4(e.good, e.bad), cls:"two", why: e.why
+  };
+}
+
+/* rung 2 — one unknown or two, and which is x? */
+var R2 = [
+  {text:"One number is 5 more than another. Their sum is 21.",
+   good:"Let x be the smaller number; the other is x + 5",
+   bad:["Let x be the larger number; the other is x + 5","Use two variables, x and y","Let x be the sum, 21"],
+   why:"You only need one variable. Name the number that the other is described <em>from</em> \u2014 the smaller one \u2014 as x, and the larger becomes x + 5. One well-chosen x, not two."},
+  {text:"A rope is cut into two pieces. One is 3 feet longer than the other.",
+   good:"Let x be the shorter piece; the other is x + 3",
+   bad:["Let x be the longer piece; the other is x + 3","Use x for one piece and y for the other","Let x be the total length"],
+   why:"Name the shorter piece x, so the longer one is x + 3. Everything is described from the shorter piece, so that is the natural x."},
+  {text:"Sara is twice as old as Ben.",
+   good:"Let x be Ben's age; Sara's is 2x",
+   bad:["Let x be Sara's age; Ben's is 2x","Use x for Sara and y for Ben","Let x be the difference in their ages"],
+   why:"Sara is described in terms of Ben, so name Ben's age x and Sara's becomes 2x. Naming the described person x makes the second expression backwards."},
+  {text:"Two numbers add to 30, and one is four times the other.",
+   good:"Let x be the smaller; the other is 4x",
+   bad:["Let x be the larger; the other is 4x","Use two variables for the two numbers","Let x be 30"],
+   why:"Name the smaller number x, so the larger is 4x. One variable covers both because the second is described from the first."}
+];
+var P2 = makePicker(R2);
+function gen2(){
+  var e = P2();
+  return {
+    q: '<span class="word">' + e.text + "</span>",
+    note: "How should you name the unknowns?",
+    opts: opts4(e.good, e.bad), cls:"two", why: e.why
+  };
+}
+
+/* rung 3 — write the other quantity in terms of x */
+var R3 = [
+  {let_:"x = the first number", phrase:"three less than twice the first", good:"2x " + MIN + " 3",
+   bad:["3 " + MIN + " 2x", "2x + 3", "2(x " + MIN + " 3)"],
+   why:"Twice the first is 2x; &ldquo;three less than&rdquo; that subtracts 3 from it, and the order flips: 2x " + MIN + " 3, not 3 " + MIN + " 2x."},
+  {let_:"x = the width", phrase:"the length, five more than the width", good:"x + 5",
+   bad:["5x", "5 " + MIN + " x", "x " + MIN + " 5"],
+   why:"&ldquo;Five more than the width&rdquo; adds 5 to x, giving x + 5. Addition can be written in either order, but x + 5 is the natural reading."},
+  {let_:"x = Ben's age", phrase:"Sara's age, twice Ben's", good:"2x",
+   bad:["x + 2", "x/2", "2 + x"],
+   why:"&ldquo;Twice Ben's age&rdquo; multiplies by 2: 2x. &ldquo;Twice&rdquo; is a multiply, not an add."},
+  {let_:"x = the smaller number", phrase:"the larger, four times the smaller", good:"4x",
+   bad:["x + 4", "4 + x", "x/4"],
+   why:"&ldquo;Four times the smaller&rdquo; is 4x. A &ldquo;times&rdquo; word means multiply, not add."},
+  {let_:"x = the number", phrase:"the number decreased by eight", good:"x " + MIN + " 8",
+   bad:["8 " + MIN + " x", "8x", "x + 8"],
+   why:"&ldquo;Decreased by eight&rdquo; subtracts 8 from the number: x " + MIN + " 8. The number comes first, then the subtraction."}
+];
+var P3 = makePicker(R3);
+function gen3(){
+  var e = P3();
+  return {
+    q: 'Let ' + MX(e.let_.replace("x =", '<span class="mx">x</span> =')) + '.<br><span style="font-size:.9em">Write: ' + PHR(e.phrase) + "</span>",
+    note: "Write this quantity in terms of x.",
+    opts: opts4(MX(e.good), e.bad.map(MX), true), cls:"two", why: e.why
+  };
+}
+
+/* =========================================================
+   ARC 2 — build each side
+   ========================================================= */
+
+/* rung 4 — phrase -> expression, single operation (friendly) */
+var R4 = [
+  {phrase:"seven more than a number", good:"x + 7", bad:["7x","7 " + MIN + " x","x " + MIN + " 7"],
+   why:"&ldquo;More than&rdquo; adds: x + 7."},
+  {phrase:"the product of 4 and a number", good:"4x", bad:["x + 4","4 + x","x/4"],
+   why:"&ldquo;Product&rdquo; means multiply: 4x."},
+  {phrase:"a number increased by 9", good:"x + 9", bad:["9x","9 " + MIN + " x","9/x"],
+   why:"&ldquo;Increased by&rdquo; adds: x + 9."},
+  {phrase:"twice a number", good:"2x", bad:["x + 2","x/2","x\u00B2"],
+   why:"&ldquo;Twice&rdquo; means two times: 2x."},
+  {phrase:"the sum of a number and 6", good:"x + 6", bad:["6x","6 " + MIN + " x","6/x"],
+   why:"&ldquo;Sum&rdquo; means add: x + 6."},
+  {phrase:"a number multiplied by 5", good:"5x", bad:["x + 5","5 + x","5 " + MIN + " x"],
+   why:"&ldquo;Multiplied by&rdquo; means multiply: 5x."}
+];
+var P4 = makePicker(R4);
+function gen4(){
+  var e = P4();
+  return {
+    q: PHR(e.phrase),
+    note: "Write this phrase as an expression.",
+    opts: opts4(MX(e.good), e.bad.map(MX), true), cls:"two", why: e.why
+  };
+}
+
+/* rung 5 — the order trap (keystone) */
+var R5 = [
+  {phrase:"five less than a number", good:"x " + MIN + " 5", bad:["5 " + MIN + " x","x + 5","5x"],
+   why:"&ldquo;Less than&rdquo; reverses the order. The number comes first, then you take 5 away: x " + MIN + " 5. Writing 5 " + MIN + " x subtracts the wrong way round."},
+  {phrase:"a number subtracted from 10", good:"10 " + MIN + " x", bad:["x " + MIN + " 10","10x","x/10"],
+   why:"&ldquo;Subtracted from 10&rdquo; means 10 is what you take away from: 10 " + MIN + " x. The number being subtracted goes second."},
+  {phrase:"the quotient of a number and 6", good:"x/6", bad:["6/x","6x","x " + MIN + " 6"],
+   why:"&ldquo;The quotient of a number and 6&rdquo; puts the number on top: x/6. The first thing named is the numerator."},
+  {phrase:"8 less than twice a number", good:"2x " + MIN + " 8", bad:["8 " + MIN + " 2x","2x + 8","2(x " + MIN + " 8)"],
+   why:"Twice the number is 2x, and &ldquo;8 less than&rdquo; that subtracts 8 from it: 2x " + MIN + " 8, order flipped."},
+  {phrase:"3 subtracted from a number", good:"x " + MIN + " 3", bad:["3 " + MIN + " x","3x","3/x"],
+   why:"&ldquo;3 subtracted from a number&rdquo; takes 3 away from x: x " + MIN + " 3. The thing being subtracted comes second."},
+  {phrase:"the difference of a number and 4", good:"x " + MIN + " 4", bad:["4 " + MIN + " x","4x","x/4"],
+   why:"&ldquo;The difference of a number and 4&rdquo; names the number first: x " + MIN + " 4."},
+  {phrase:"10 divided by a number", good:"10/x", bad:["x/10","10x","x " + MIN + " 10"],
+   why:"&ldquo;10 divided by a number&rdquo; puts 10 on top: 10/x. What comes before &ldquo;divided by&rdquo; is the numerator."}
+];
+var P5 = makePicker(R5);
+function gen5(){
+  var e = P5();
+  return {
+    q: PHR(e.phrase),
+    note: "Write this as an expression. Watch the order.",
+    opts: opts4(MX(e.good), e.bad.map(MX), true), cls:"two", why: e.why
+  };
+}
+
+/* rung 6 — parentheses / two operations */
+var R6 = [
+  {phrase:"twice the sum of a number and 3", good:"2(x + 3)", bad:["2x + 3","2x + 6","(2x) + 3"],
+   why:"&ldquo;The sum of a number and 3&rdquo; is (x + 3); &ldquo;twice&rdquo; that multiplies the whole sum: 2(x + 3). Without the parentheses, 2x + 3 doubles only the number, not the sum."},
+  {phrase:"three more than twice a number", good:"2x + 3", bad:["2(x + 3)","3(x + 2)","3 + 2 + x"],
+   why:"&ldquo;Twice a number&rdquo; is 2x, and &ldquo;three more than&rdquo; that adds 3: 2x + 3. Here the doubling happens first, so no parentheses are needed."},
+  {phrase:"five times the difference of a number and 2", good:"5(x " + MIN + " 2)", bad:["5x " + MIN + " 2","5x " + MIN + " 10","5(2 " + MIN + " x)"],
+   why:"&ldquo;The difference of a number and 2&rdquo; is (x " + MIN + " 2); &ldquo;five times&rdquo; multiplies all of it: 5(x " + MIN + " 2)."},
+  {phrase:"four less than three times a number", good:"3x " + MIN + " 4", bad:["4 " + MIN + " 3x","3(x " + MIN + " 4)","4 " + MIN + " 3 + x"],
+   why:"&ldquo;Three times a number&rdquo; is 3x; &ldquo;four less than&rdquo; that subtracts 4: 3x " + MIN + " 4. The tripling happens before the subtraction."},
+  {phrase:"half of the sum of a number and 8", good:"(x + 8)/2", bad:["x/2 + 8","x + 8/2","(x/2) + 8"],
+   why:"&ldquo;The sum of a number and 8&rdquo; is (x + 8); &ldquo;half of&rdquo; divides the whole sum by 2: (x + 8)/2."}
+];
+var P6 = makePicker(R6);
+function gen6(){
+  var e = P6();
+  return {
+    q: PHR(e.phrase),
+    note: "Write this as an expression. Where do the parentheses go?",
+    opts: opts4(MX(e.good), e.bad.map(MX), true), cls:"two", why: e.why
+  };
+}
+
+/* rung 7 — real quantities: money, percent, geometry */
+var R7 = [
+  {phrase:"the cost of n tickets at $8 each", good:"8n", bad:["8 + n","n/8","8 " + MIN + " n"],
+   why:"Each ticket is $8, so n tickets cost 8 times n: 8n. &ldquo;Each&rdquo; is a multiply."},
+  {phrase:"20% of the class of x students", good:"0.20x", bad:["20x","x/20","x + 0.20"],
+   why:"&ldquo;Of&rdquo; means multiply, and 20% is 0.20 as a decimal: 0.20x. Convert the percent before you multiply."},
+  {phrase:"the perimeter, length twice the width w", good:"2w + 2(2w)", bad:["w + 2w","2(w)(2w)","4w + 2"],
+   why:"Perimeter is 2\u00D7length + 2\u00D7width. The length is 2w, so it is 2w + 2(2w), which is 6w once combined."},
+  {phrase:"the total cost: $3 flat fee plus $5 per hour, h hours", good:"5h + 3", bad:["3h + 5","8h","5 + 3 + h"],
+   why:"$5 per hour is the rate (5h) and $3 is the flat fee added on: 5h + 3. Rate times the variable, plus the fixed amount."},
+  {phrase:"the water level: 34 ft, dropping 0.5 ft per day for d days", good:"34 " + MIN + " 0.5d", bad:["34 + 0.5d","0.5d " + MIN + " 34","0.5 " + MIN + " 34d"],
+   why:"It starts at 34 and &ldquo;dropping&rdquo; makes the rate negative: 34 " + MIN + " 0.5d. A plus sign would describe the level rising."},
+  {phrase:"the sale price: $p marked down 25%", good:"0.75p", bad:["0.25p","p " + MIN + " 25","p + 0.75"],
+   why:"Marked down 25% leaves 75% of the price: 0.75p. Taking away a quarter keeps three quarters."}
+];
+var P7 = makePicker(R7);
+function gen7(){
+  var e = P7();
+  return {
+    q: PHR(e.phrase),
+    note: "Write this quantity as an expression.",
+    opts: opts4(MX(e.good), e.bad.map(MX), true), cls:"two", why: e.why
+  };
+}
+
+/* =========================================================
+   ARC 3 — set the two sides equal
+   ========================================================= */
+
+/* rung 8 — find the "is" (locate the equals sign, no building) */
+var R8 = [
+  {sentence:["three more than twice a number", "is", "eleven"], good:"left: 2x + 3   |   right: 11",
+   bad:["left: 2x   |   right: 3 = 11","left: 3   |   right: 2x + 11","left: 11   |   right: 2x + 3"],
+   why:"The verb &ldquo;is&rdquo; splits the sentence. Everything before it (three more than twice a number) is the left side; everything after (eleven) is the right."},
+  {sentence:["a number decreased by four", "equals", "ten"], good:"left: x " + MIN + " 4   |   right: 10",
+   bad:["left: x   |   right: 4 = 10","left: 4   |   right: x " + MIN + " 10","left: 10   |   right: x " + MIN + " 4"],
+   why:"&ldquo;Equals&rdquo; is the hinge. The phrase before it is the left side, the number after it is the right."},
+  {sentence:["twice the sum of a number and 5", "gives", "18"], good:"left: 2(x + 5)   |   right: 18",
+   bad:["left: 2   |   right: (x + 5) = 18","left: x + 5   |   right: 18 " + MIN + " 2","left: 18   |   right: 2(x + 5)"],
+   why:"&ldquo;Gives&rdquo; means equals. Everything up to it is one expression; the number after is the other side."},
+  {sentence:["the sum of a number and its double", "is", "21"], good:"left: x + 2x   |   right: 21",
+   bad:["left: x   |   right: 2x = 21","left: 2x   |   right: x + 21","left: 21   |   right: x + 2x"],
+   why:"&ldquo;Is&rdquo; is the equals sign. The whole sum sits on the left; 21 on the right."}
+];
+var P8 = makePicker(R8);
+function gen8(){
+  var e = P8();
+  var s = e.sentence;
+  var q = PHR(s[0]) + ' <b style="color:var(--a2)">' + s[1] + "</b> " + PHR(s[2]);
+  return {
+    q: q,
+    note: "Which word is the equals sign, and what is on each side?",
+    opts: opts4(MX(e.good), e.bad.map(MX), true), cls:"two", why: e.why
+  };
+}
+
+/* rung 9 — sentence -> equation, one unknown */
+var R9 = [
+  {sentence:"Five less than a number is 12.", good:"x " + MIN + " 5 = 12",
+   bad:["5 " + MIN + " x = 12","x + 5 = 12","x " + MIN + " 12 = 5"],
+   why:"&ldquo;Five less than a number&rdquo; is x " + MIN + " 5, &ldquo;is&rdquo; is =, and 12 is the right side: x " + MIN + " 5 = 12."},
+  {sentence:"Twice the sum of a number and 3 is 16.", good:"2(x + 3) = 16",
+   bad:["2x + 3 = 16","2x + 6 = 16 (before simplifying)","2(x " + MIN + " 3) = 16"],
+   why:"&ldquo;Twice the sum of a number and 3&rdquo; is 2(x + 3), and &ldquo;is 16&rdquo; sets it equal to 16."},
+  {sentence:"Seven more than three times a number is 22.", good:"3x + 7 = 22",
+   bad:["3(x + 7) = 22","7 + 3 + x = 22","3x " + MIN + " 7 = 22"],
+   why:"&ldquo;Three times a number&rdquo; is 3x, &ldquo;seven more than&rdquo; that is 3x + 7, set equal to 22."},
+  {sentence:"A number divided by 4 is 9.", good:"x/4 = 9",
+   bad:["4/x = 9","4x = 9","x " + MIN + " 4 = 9"],
+   why:"&ldquo;A number divided by 4&rdquo; is x/4, and &ldquo;is 9&rdquo; makes it equal 9."},
+  {sentence:"Eight less than a number is 15.", good:"x " + MIN + " 8 = 15",
+   bad:["8 " + MIN + " x = 15","x + 8 = 15","15 " + MIN + " x = 8"],
+   why:"&ldquo;Eight less than a number&rdquo; flips to x " + MIN + " 8, set equal to 15."}
+];
+var P9 = makePicker(R9);
+function gen9(){
+  var e = P9();
+  return {
+    q: '<span class="word">' + e.sentence + "</span>",
+    note: "Write the equation. Do not solve it.",
+    opts: opts4(MX(e.good), e.bad.map(MX), true), cls:"two", why: e.why
+  };
+}
+
+/* rung 10 — two-quantity equation */
+var R10 = [
+  {sentence:"One number is 4 more than another, and their sum is 20.", good:"x + (x + 4) = 20",
+   bad:["x + 4 = 20","x + (x " + MIN + " 4) = 20","(x + 4) = 20 " + MIN + " x (unsimplified)"],
+   why:"Name the smaller x; the other is x + 4. Their sum sets x + (x + 4) = 20."},
+  {sentence:"Sara is twice Ben's age, and their ages add to 36.", good:"x + 2x = 36",
+   bad:["2x = 36","x + (x + 2) = 36","x " + MIN + " 2x = 36"],
+   why:"Ben is x, Sara is 2x, and their sum is x + 2x = 36."},
+  {sentence:"A rope is cut so one piece is 3 ft longer than the other; the rope is 15 ft.", good:"x + (x + 3) = 15",
+   bad:["x + 3 = 15","x + (x " + MIN + " 3) = 15","3x = 15"],
+   why:"The shorter piece is x, the longer is x + 3, and together they make 15: x + (x + 3) = 15."},
+  {sentence:"Two numbers add to 30, and one is four times the other.", good:"x + 4x = 30",
+   bad:["4x = 30","x + (x + 4) = 30","x " + MIN + " 4x = 30"],
+   why:"The smaller is x, the larger is 4x, and their sum is x + 4x = 30."}
+];
+var P10 = makePicker(R10);
+function gen10(){
+  var e = P10();
+  return {
+    q: '<span class="word">' + e.sentence + "</span>",
+    note: "Write the equation using one variable. Do not solve.",
+    opts: opts4(MX(e.good), e.bad.map(MX), true), cls:"two", why: e.why
+  };
+}
+
+/* rung 11 — word problem -> equation, unlabeled (capstone) */
+var R11 = [
+  {sentence:"For babysitting, Nicole charges $3 plus $5 per hour. She earned $28. How many hours?",
+   good:"5h + 3 = 28", bad:["3h + 5 = 28","5h " + MIN + " 3 = 28","8h = 28"],
+   why:"$5 per hour is 5h, plus the $3 fee, equals the $28 earned: 5h + 3 = 28. Rate times hours, plus the flat fee."},
+  {sentence:"A river starts at 34 ft and drops 0.5 ft per day. When does it reach 30 ft?",
+   good:"34 " + MIN + " 0.5d = 30", bad:["34 + 0.5d = 30","0.5d = 30","0.5d " + MIN + " 34 = 30"],
+   why:"Start at 34, &ldquo;drops&rdquo; makes the rate negative: 34 " + MIN + " 0.5d, set equal to the target 30."},
+  {sentence:"Two consecutive integers add to 27.", good:"x + (x + 1) = 27",
+   bad:["x + x = 27","x + (x + 2) = 27","2x + 2 = 27"],
+   why:"Consecutive integers differ by 1: x and x + 1. Their sum is x + (x + 1) = 27."},
+  {sentence:"5 is what percent of 20?  (write it as an equation)", good:"5 = x \u00B7 20",
+   bad:["x = 5 \u00B7 20","20 = x \u00B7 5","5 \u00B7 20 = x"],
+   why:"&ldquo;Is&rdquo; is =, &ldquo;what&rdquo; is x, &ldquo;of&rdquo; is multiply: 5 = x \u00B7 20. This is the percent problem as a plain equation."},
+  {sentence:"A shirt is 25% off and now costs $18. What was the original price?",
+   good:"0.75x = 18", bad:["0.25x = 18","x " + MIN + " 25 = 18","1.25x = 18"],
+   why:"25% off leaves 75% of the original: 0.75x, equal to the $18 sale price."},
+  {sentence:"The length of a rectangle is 3 more than twice the width. Its perimeter is 36.",
+   good:"2(2x + 3) + 2x = 36", bad:["(2x + 3) + x = 36","2x + 3 = 36","2(2x + 3) = 36"],
+   why:"Width is x, length is 2x + 3. Perimeter is 2\u00D7length + 2\u00D7width: 2(2x + 3) + 2x = 36."}
+];
+var P11 = makePicker(R11);
+function gen11(){
+  var e = P11();
+  return {
+    q: '<span class="word">' + e.sentence + "</span>",
+    note: "Write the equation. Do not solve it.",
+    opts: opts4(MX(e.good), e.bad.map(MX), true), cls:"two", why: e.why
+  };
+}
+
+/* =========================================================
+   the ladder
+   ========================================================= */
+var RUNGS = [
+  {arc:1, t:"What is x?", s:"Name the unknown, not a known",
+   how:"Find the one quantity the problem asks for and does not give you. Name that x. Numbers already stated in the problem are known \u2014 they are never what x stands for.",
+   why:"The most common first mistake is naming x for a value that is right there in the problem. Separating the unknown from the knowns is the whole first move.",
+   gen:gen1},
+  {arc:1, t:"One unknown or two?", s:"And which one is x",
+   how:"When two quantities are related, you still need only one variable. Name the quantity the other is described <em>from</em>, and write the second in terms of it.",
+   why:"Students reach for x and y and get tangled. Choosing a single x \u2014 the right one \u2014 makes every later expression fall out naturally.",
+   gen:gen2},
+  {arc:1, t:"In terms of x", s:"Write the other quantity",
+   how:"Once x is named, translate the phrase describing the other quantity into an expression built from x. This is a short version of the building you will do in arc two.",
+   why:"It is the bridge between naming and building \u2014 you are already turning a phrase into an expression, just a small one, and the order traps already start to bite here.",
+   gen:gen3},
+  {arc:2, t:"Phrase to expression", s:"The friendly operations",
+   how:"&ldquo;More than&rdquo; and &ldquo;sum&rdquo; add; &ldquo;product,&rdquo; &ldquo;times,&rdquo; and &ldquo;twice&rdquo; multiply. When the operation commutes, order does not matter yet.",
+   why:"Start where keywords behave. Addition and multiplication forgive a swapped order, so these are the cases that build confidence before the traps arrive.",
+   gen:gen4},
+  {arc:2, t:"The order trap", s:"Less than, subtracted from, divided by",
+   how:"&ldquo;Less than&rdquo; and &ldquo;subtracted from&rdquo; reverse the order: &ldquo;5 less than a number&rdquo; is x " + MIN + " 5. For &ldquo;the quotient of a and b,&rdquo; the first named goes on top.",
+   why:"This is the keystone. Subtraction and division are not commutative, and English states them backwards from how you write them. More marks are lost here than anywhere else in translation.",
+   gen:gen5},
+  {arc:2, t:"Where do the parentheses go?", s:"Two operations at once",
+   how:"&ldquo;Twice the sum of a number and 3&rdquo; groups first: 2(x + 3). &ldquo;Three more than twice a number&rdquo; does not: 2x + 3. Decide what the multiplier acts on.",
+   why:"Same words, different grouping, completely different expression. The parentheses are not decoration \u2014 they are the answer.",
+   gen:gen6},
+  {arc:2, t:"Real quantities", s:"Money, percent, geometry",
+   how:"&ldquo;Each&rdquo; and &ldquo;per&rdquo; multiply; &ldquo;of&rdquo; multiplies too, after converting a percent to a decimal. A flat fee is added on; a drop makes the rate negative.",
+   why:"This is where translation meets the actual units of your course \u2014 the dollars, percents, and dimensions the other units are built from. Same skill, real clothing.",
+   gen:gen7},
+  {arc:3, t:"Find the \u201Cis\u201D", s:"Locate the equals sign",
+   how:"The verb \u2014 is, are, equals, gives, results in \u2014 is the equals sign. Everything before it is one side; everything after is the other. Do not build yet, just split.",
+   why:"Before you can set two sides equal, you have to see that there <em>are</em> two sides. Finding the hinge is its own small skill, and naming it stops the halves from blurring.",
+   gen:gen8},
+  {arc:3, t:"Sentence to equation", s:"One unknown, full assembly",
+   how:"Build the left side, drop in the equals sign at the verb, build the right side. Put the arc-two skills together into a complete equation \u2014 and stop there.",
+   why:"This is the payoff of arcs one and two. Every earlier rung was preparing you to write this line cleanly, without pausing to think about order or grouping.",
+   gen:gen9},
+  {arc:3, t:"Two quantities, one equation", s:"Rungs 2 and 3, combined",
+   how:"Name one quantity x, write the other in terms of x, then use the relationship (usually a sum) to set up a single equation in one variable.",
+   why:"It brings the naming decision from arc one together with the building from arc two. One variable, two quantities, one equation \u2014 the shape of most real word problems.",
+   gen:gen10},
+  {arc:3, t:"Word problem to equation", s:"Unlabeled \u2014 the capstone",
+   how:"Read the problem, name the unknown, build each side, find the verb, write the equation. No hint about the type, and you stop at the equation \u2014 never the solution.",
+   why:"The river, the babysitting fee, consecutive integers, a percent problem \u2014 arriving without labels, the way a test gives them. This is the rung the whole ladder was built to reach.",
+   gen:gen11}
+];
+
+/* =========================================================
+   state and rendering
+   ========================================================= */
+var state = RUNGS.map(function(){ return {streak:0, earned:false}; });
+var openIdx = -1, current = null;
+var badgeCount = document.getElementById("badge-count");
+var trackSentence = document.getElementById("track-sentence");
+var trackNote = document.getElementById("track-note");
+var live = document.getElementById("live");
+
+/* the progress sentence: 11 tokens, each resolving from English to math */
+var TRACK_TOKENS = [
+  {eng:"twice", math:"2"},
+  {eng:"a", math:"\u00B7"},
+  {eng:"number", math:"x"},
+  {eng:"decreased", math:MIN},
+  {eng:"by", math:""},
+  {eng:"five", math:"5"},
+  {eng:"is", math:"="},
+  {eng:"thir-", math:"1"},
+  {eng:"teen", math:"3"},
+  {eng:".", math:""},
+  {eng:"\u2713", math:"\u2713"}
+];
+function refreshProgress(){
+  var got = state.filter(function(s){ return s.earned; }).length;
+  badgeCount.textContent = got + " of " + RUNGS.length + " badges earned";
+  var html = "";
+  for(var i=0;i<TRACK_TOKENS.length;i++){
+    var tk = TRACK_TOKENS[i];
+    if(i < got && tk.math !== "") html += '<span class="tok math">' + tk.math + "</span>";
+    else if(i < got) html += "";
+    else if(tk.eng !== "") html += '<span class="tok eng">' + tk.eng + "</span> ";
+  }
+  trackSentence.innerHTML = html || '<span class="tok eng">&nbsp;</span>';
+  trackNote.innerHTML = got === 0 ? "each badge translates one more word into math"
+    : got >= 11 ? "the sentence is fully an equation: 2\u00B7x " + MIN + " 5 = 13"
+    : got + " of 11 words translated";
+  var cards = document.querySelectorAll(".rung");
+  for(var j = 0; j < cards.length; j++){
+    cards[j].classList.toggle("earned", state[j].earned);
+    cards[j].querySelector(".badge").textContent = state[j].earned ? "Earned" : "Badge";
+  }
+}
+function buildRungs(){
+  var host = document.getElementById("rungs");
+  var arcs = [
+    {n:1, tag:"Arc one \u00B7 name the unknown", note:"rungs 1\u20133"},
+    {n:2, tag:"Arc two \u00B7 build each side", note:"rungs 4\u20137"},
+    {n:3, tag:"Arc three \u00B7 set them equal", note:"rungs 8\u201311"}
+  ];
+  var html = "";
+  arcs.forEach(function(arc){
+    html += '<div class="arc-head arc' + arc.n + '"><span class="tag">' + arc.tag + '</span><span class="rule"></span><span class="cnt">' + arc.note + "</span></div>";
+    RUNGS.forEach(function(r,i){
+      if(r.arc !== arc.n) return;
+      html +=
+        '<div class="rung arc' + r.arc + '" id="rung-' + i + '">' +
+          '<button class="top" data-i="' + i + '" aria-expanded="false" aria-controls="panel-' + i + '">' +
+            '<span class="rn">' + (i+1 < 10 ? "0" : "") + (i+1) + "</span>" +
+            '<span class="rt"><span class="t">' + r.t + '</span><span class="s">' + r.s + "</span></span>" +
+            '<span class="badge">Badge</span>' +
+            '<span class="chev" aria-hidden="true">\u203A</span>' +
+          "</button>" +
+          '<div class="panel" id="panel-' + i + '">' +
+            '<div class="strategy">' +
+              "<div><h4>Strategy</h4><p>" + r.how + "</p></div>" +
+              "<div><h4>Why this rung exists</h4><p>" + r.why + "</p></div>" +
+            "</div>" +
+            '<div class="play" data-play="' + i + '"></div>' +
+          "</div>" +
+        "</div>";
+    });
+  });
+  host.innerHTML = html;
+  host.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".top") : null;
+    if(b) toggleRung(parseInt(b.getAttribute("data-i"),10));
+  });
+}
+function toggleRung(i){
+  var was = openIdx;
+  if(was >= 0){
+    document.getElementById("rung-" + was).classList.remove("open");
+    document.querySelector("#rung-" + was + " .top").setAttribute("aria-expanded","false");
+  }
+  if(was === i){ openIdx = -1; current = null; return; }
+  openIdx = i;
+  document.getElementById("rung-" + i).classList.add("open");
+  document.querySelector("#rung-" + i + " .top").setAttribute("aria-expanded","true");
+  nextQuestion();
+}
+function nextQuestion(){
+  if(openIdx < 0) return;
+  var def = RUNGS[openIdx].gen();
+  def.opts = shuffleOpts(def.opts);
+  current = {def:def, answered:false};
+  drawPlay();
+}
+function drawPlay(){
+  var i = openIdx, d = current.def, st = state[i];
+  var host = document.querySelector('.play[data-play="' + i + '"]');
+  var pips = "";
+  for(var p = 0; p < TARGET; p++){ pips += '<span class="pip' + (p < st.streak ? " on" : "") + '"></span>'; }
+  var opts = "";
+  d.opts.forEach(function(o,k){
+    opts += '<button class="opt" data-k="' + k + '"><span class="k">' + (k+1) + '</span><span class="txt' + (o.mono ? " mono" : "") + '">' + o.t + "</span></button>";
+  });
+  var qcls = /class="word"/.test(d.q) ? "q word" : "q";
+  host.innerHTML =
+    '<div class="play-head"><span class="streak">' + pips + "</span>" +
+      '<span class="lab">' + st.streak + " of " + TARGET + " in a row</span>" +
+      '<span class="spacer"></span><span class="lab">keys 1\u2013' + d.opts.length + "</span></div>" +
+    '<div class="' + qcls + '">' + d.q + "</div>" +
+    '<div class="qnote">' + d.note + "</div>" +
+    '<div class="opts ' + (d.cls || "two") + '">' + opts + "</div>" +
+    '<div class="fb"><span class="verdict"></span><span class="why"></span></div>' +
+    '<div class="won">Badge earned. Four in a row without stopping to think \u2014 that is the whole bar.</div>' +
+    '<div class="next" data-after style="display:none"><button class="btn" data-next>Next question</button><span class="hint">or press <kbd>Enter</kbd></span></div>';
+  host.querySelectorAll(".opt").forEach(function(b){
+    b.addEventListener("click", function(){ choose(parseInt(b.getAttribute("data-k"),10)); });
+  });
+  var nx = host.querySelector("[data-next]");
+  if(nx) nx.addEventListener("click", nextQuestion);
+}
+function choose(k){
+  if(!current || current.answered) return;
+  grade(current.def.opts[k].ok, k);
+}
+function grade(ok, k){
+  current.answered = true;
+  var i = openIdx, st = state[i], d = current.def;
+  var host = document.querySelector('.play[data-play="' + i + '"]');
+  host.querySelectorAll(".opt").forEach(function(b,idx){
+    b.disabled = true;
+    if(d.opts[idx].ok) b.classList.add("right");
+    else if(idx === k) b.classList.add("wrong");
+    else b.classList.add("dim");
+  });
+  if(ok) st.streak++; else st.streak = 0;
+  var fb = host.querySelector(".fb");
+  fb.classList.add("show", ok ? "ok" : "no");
+  fb.querySelector(".verdict").textContent = ok ? "Right." : "Not this time.";
+  fb.querySelector(".why").innerHTML = d.why;
+  var justEarned = false;
+  if(ok && st.streak >= TARGET && !st.earned){ st.earned = true; justEarned = true; }
+  if(justEarned) host.querySelector(".won").classList.add("show");
+  host.querySelectorAll(".pip").forEach(function(p,idx){ p.classList.toggle("on", idx < st.streak); });
+  host.querySelector(".play-head .lab").textContent = st.streak + " of " + TARGET + " in a row";
+  host.querySelector("[data-after]").style.display = "flex";
+  live.textContent = (ok ? "Correct. " : "Incorrect. ") + (justEarned ? "Badge earned. " : "") + st.streak + " in a row.";
+  refreshProgress();
+}
+document.addEventListener("keydown", function(e){
+  if(openIdx < 0 || !current) return;
+  var tag = (e.target.tagName || "").toLowerCase();
+  if(tag === "input" || tag === "textarea") return;
+  if(e.key === "Enter"){ if(current.answered){ e.preventDefault(); nextQuestion(); } return; }
+  if(e.key === "Escape"){ toggleRung(openIdx); return; }
+  var num = parseInt(e.key,10);
+  if(num >= 1 && num <= current.def.opts.length){ e.preventDefault(); choose(num-1); }
+});
+document.getElementById("reset").addEventListener("click", function(){
+  state = RUNGS.map(function(){ return {streak:0, earned:false}; });
+  if(openIdx >= 0) drawPlay();
+  refreshProgress();
+  live.textContent = "Progress reset.";
+});
+buildRungs();
+refreshProgress();
+</script>
+</body>
+</html>
