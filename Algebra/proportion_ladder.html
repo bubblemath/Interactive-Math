@@ -1,0 +1,984 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Proportion Ladder — one machine, four disguises</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F1F4F6; --surface:#FFFFFF; --ink:#12202B; --muted:#5C6E7C;
+  --hair:#D8E0E6; --hair-strong:#B9C6D0;
+  --a1:#4A3D9C; --a1-soft:#ECEAF9; --a1-line:#C9C2EC;
+  --a2:#0F6E56; --a2-soft:#E2F1EC; --a2-line:#BFDDD3;
+  --a3:#9E3357; --a3-soft:#F8E8EE; --a3-line:#EDC9D6;
+  --good:#0F6E56; --bad:#A8322C; --bad-soft:#FBEAE8;
+  --gold:#8A6410; --gold-soft:#F6EEDA;
+  --grid:#E4EAEE; --axis:#8C9AA5;
+  --r:10px; --shadow:0 1px 0 rgba(18,32,43,.04), 0 8px 24px -18px rgba(18,32,43,.5);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:"Space Grotesk",system-ui,sans-serif;font-weight:500;letter-spacing:-.02em;line-height:1.15;margin:0}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-ligatures:none}
+a{color:inherit}
+
+/* ---------- math ---------- */
+.mx{font-family:"IBM Plex Mono",ui-monospace,monospace;white-space:nowrap}
+.opx{padding:0 .24em}
+.eqs{padding:0 .5em;color:var(--muted)}
+.fr{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+    vertical-align:middle;line-height:1.06;font-size:.66em;margin:0 .18em;text-align:center}
+.fr .fn{padding:0 .4em .1em;border-bottom:1.6px solid currentColor}
+.fr .fd{padding:.1em .4em 0}
+.fr.words{font-size:.5em}
+.fr.words .fn,.fr.words .fd{padding:0 .5em}
+
+/* ---------- top bar ---------- */
+.bar-top{position:sticky;top:0;z-index:40;background:rgba(241,244,246,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--hair)}
+.bar-top .wrap{display:flex;align-items:center;gap:18px;height:58px}
+.glyph{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:16px;color:var(--a3)}
+.bar-top .nm{font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:17px;white-space:nowrap}
+.bar-top nav{margin-left:auto;display:flex;gap:22px;font-size:14px;color:var(--muted)}
+.bar-top nav a{text-decoration:none}
+.bar-top nav a:hover{color:var(--ink)}
+@media(max-width:700px){.bar-top nav{display:none}}
+
+/* ---------- hero ---------- */
+header.hero{padding:76px 0 48px;border-bottom:1px solid var(--hair)}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:22px}
+h1{font-size:clamp(34px,5.4vw,56px);max-width:19ch}
+h1 em{font-style:normal;color:var(--a3)}
+.lede{margin-top:22px;max-width:63ch;font-size:19px;color:#33475A}
+.lede b{font-weight:600;color:var(--ink)}
+
+/* ---------- proportion progress ---------- */
+.track{margin-top:44px}
+.track-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-bottom:14px}
+.track-head strong{font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:15px;color:var(--ink)}
+.track-prop{display:flex;align-items:center;gap:6px;font-family:"IBM Plex Mono",monospace;font-size:34px;color:var(--ink)}
+.track-prop .pf{display:inline-flex;flex-direction:column;align-items:center;line-height:1.05}
+.track-prop .pf .pn{padding:0 .45em .06em;border-bottom:2.4px solid var(--hair-strong)}
+.track-prop .pf .pd{padding:.06em .45em 0}
+.track-prop .pf .fill{color:var(--gold)}
+.track-prop .eq{padding:0 .3em;color:var(--muted)}
+.track-note{margin-top:12px;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+
+/* ---------- sections ---------- */
+section{padding:66px 0;border-bottom:1px solid var(--hair)}
+.kicker{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+h2{font-size:clamp(25px,3.4vw,33px);max-width:24ch;margin-bottom:8px}
+.sub{color:var(--muted);max-width:66ch;margin-top:14px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:34px}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.step{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:22px}
+.step .n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);letter-spacing:.1em}
+.step h3{font-size:18px;margin:10px 0 8px}
+.step p{margin:0;font-size:15px;color:#3D5162;line-height:1.6}
+kbd{font-family:"IBM Plex Mono",monospace;font-size:12.5px;background:var(--paper);border:1px solid var(--hair-strong);border-bottom-width:2px;border-radius:5px;padding:1px 6px}
+
+/* ---------- engine ---------- */
+.engine{margin-top:34px;background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:26px;overflow-x:auto}
+.grid{border-collapse:separate;border-spacing:10px;width:100%;min-width:600px}
+.grid td.rowhead{text-align:left;vertical-align:middle;width:180px;padding-right:8px}
+.grid td.rowhead .t{font-family:"Space Grotesk",sans-serif;font-size:16px;display:block}
+.cell{border-radius:8px;padding:16px 14px;border:1px solid;display:flex;align-items:center;gap:14px}
+.cell .lab{font-family:"IBM Plex Mono",monospace;font-size:17px}
+.cell .arr{margin-left:auto;color:var(--muted);font-size:14px;font-family:"IBM Plex Mono",monospace}
+.r-a .cell{background:var(--a1-soft);border-color:var(--a1-line)} .r-a .cell .lab{color:#372C7D}
+.r-b .cell{background:var(--a2-soft);border-color:var(--a2-line)} .r-b .cell .lab{color:#0B4E3D}
+.r-c .cell{background:var(--a3-soft);border-color:var(--a3-line)} .r-c .cell .lab{color:#7B2745}
+.r-d .cell{background:var(--a1-soft);border-color:var(--a1-line)} .r-d .cell .lab{color:#372C7D}
+.punch{margin-top:18px;font-size:16px;color:#3D5162;max-width:72ch}
+.punch b{color:var(--ink)}
+
+.hazard{margin-top:24px;background:var(--bad-soft);border:1px solid #EFC6C2;border-left:3px solid var(--bad);border-radius:0 8px 8px 0;padding:20px 22px}
+.hazard .h{display:flex;align-items:center;gap:9px;font-family:"Space Grotesk",sans-serif;font-size:16px;color:#7A241F;margin-bottom:6px}
+.hazard p{margin:0;font-size:15.5px;color:#6B2A26;line-height:1.7}
+.hazard p + p{margin-top:12px}
+
+/* ---------- ladder ---------- */
+.arc-head{display:flex;align-items:center;gap:14px;margin:38px 0 16px}
+.arc-head .tag{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+.arc1 .tag{background:var(--a1-soft);color:#372C7D}
+.arc2 .tag{background:var(--a2-soft);color:#0B4E3D}
+.arc3 .tag{background:var(--a3-soft);color:#7B2745}
+.arc-head .rule{flex:1;height:1px;background:var(--hair)}
+.arc-head .cnt{font-size:13px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.rung{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .18s ease,box-shadow .18s ease}
+.rung.open{border-color:var(--hair-strong);box-shadow:var(--shadow)}
+.rung.earned{border-left:3px solid var(--gold)}
+.rung > .top{display:flex;align-items:center;gap:16px;width:100%;background:none;border:0;padding:16px 20px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.rung > .top:hover{background:#FAFCFD}
+.rung > .top:focus-visible{outline:2px solid var(--a3);outline-offset:-3px}
+.rn{font-family:"IBM Plex Mono",monospace;font-size:13px;width:22px;flex:none}
+.arc1 .rn{color:var(--a1)} .arc2 .rn{color:var(--a2)} .arc3 .rn{color:var(--a3)}
+.rt{flex:1;min-width:0}
+.rt .t{font-family:"Space Grotesk",sans-serif;font-size:17.5px;display:block}
+.rt .s{font-size:14px;color:var(--muted)}
+.badge{flex:none;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--hair-strong);border:1px solid var(--hair);border-radius:999px;padding:3px 10px}
+.rung.earned .badge{color:var(--gold);border-color:#E2CE9C;background:var(--gold-soft)}
+.chev{flex:none;color:var(--hair-strong);transition:transform .2s ease;font-size:13px}
+.rung.open .chev{transform:rotate(90deg)}
+.panel{display:none;padding:4px 20px 22px;border-top:1px solid var(--hair)}
+.rung.open .panel{display:block}
+.strategy{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0 20px}
+@media(max-width:700px){.strategy{grid-template-columns:1fr}}
+.strategy div h4{margin:0 0 5px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400}
+.strategy div p{margin:0;font-size:15px;color:#3D5162;line-height:1.62}
+
+/* ---------- practice ---------- */
+.play{background:var(--paper);border:1px solid var(--hair);border-radius:8px;padding:20px}
+.play-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.streak{display:flex;gap:6px}
+.pip{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--hair-strong);transition:background .2s ease,border-color .2s ease}
+.pip.on{background:var(--gold);border-color:var(--gold)}
+.play-head .lab{font-size:13px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.play-head .spacer{flex:1}
+.q{font-size:clamp(22px,3.5vw,30px);font-weight:500;margin:14px 0 8px;line-height:1.7;overflow-x:auto;padding-bottom:6px}
+.q.word{font-size:clamp(17px,2.4vw,20px);line-height:1.55;font-weight:500;max-width:52ch}
+.qnote{font-size:14px;color:var(--muted);margin-bottom:18px;max-width:64ch}
+.opts{display:grid;gap:8px}
+.opts.two{grid-template-columns:1fr 1fr}
+@media(max-width:640px){.opts.two{grid-template-columns:1fr}}
+.opt{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--hair-strong);border-radius:8px;padding:13px 14px;font:inherit;font-size:16px;color:inherit;text-align:left;cursor:pointer;min-height:56px;line-height:1.6;transition:border-color .14s ease,background .14s ease,transform .06s ease}
+.opt:hover:not(:disabled){border-color:var(--ink);background:#FBFDFE}
+.opt:active:not(:disabled){transform:translateY(1px)}
+.opt:focus-visible{outline:2px solid var(--a3);outline-offset:2px}
+.opt .k{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);border:1px solid var(--hair);border-radius:4px;padding:1px 5px;flex:none;align-self:flex-start;margin-top:3px}
+.opt .txt{flex:1;min-width:0;overflow-x:auto}
+.opt:disabled{cursor:default;opacity:1}
+.opt.right{background:var(--a2-soft);border-color:var(--good)}
+.opt.wrong{background:var(--bad-soft);border-color:var(--bad)}
+.opt.dim{opacity:.5}
+.fb{margin-top:16px;font-size:15.5px;line-height:1.9;display:none}
+.fb.show{display:block}
+.fb .verdict{font-family:"Space Grotesk",sans-serif;font-size:16px;display:block;margin-bottom:3px}
+.fb.ok .verdict{color:var(--good)}
+.fb.no .verdict{color:var(--bad)}
+.fb .why{color:#3D5162}
+.next{margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-size:15px;background:var(--ink);color:#fff;border:0;border-radius:7px;padding:9px 18px;cursor:pointer}
+.btn:hover{background:#22384A}
+.btn:focus-visible{outline:2px solid var(--a3);outline-offset:2px}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--hair-strong)}
+.btn.ghost:hover{background:var(--surface);color:var(--ink)}
+.hint{font-size:13px;color:var(--muted)}
+.won{margin-top:14px;background:var(--gold-soft);border:1px solid #E2CE9C;border-radius:8px;padding:12px 16px;font-size:15px;color:#6C4E0C;display:none}
+.won.show{display:block}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:32px}
+@media(max-width:760px){.cards{grid-template-columns:1fr}}
+.card h3{font-size:18px;margin-bottom:8px}
+.card p{margin:0;font-size:15px;color:#3D5162;line-height:1.62}
+.closing{margin-top:40px;max-width:70ch;font-size:18px;color:#33475A}
+footer{padding:34px 0 60px;font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--muted);letter-spacing:.03em}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<div class="bar-top">
+  <div class="wrap">
+    <span class="glyph">a/b=c/d</span>
+    <span class="nm">The Proportion Ladder</span>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#engine">The engine</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Math 0232 &middot; Unit B5 &middot; ratios, rates, proportions &amp; percents</div>
+    <h1>One machine, four <em>disguises</em>.</h1>
+    <p class="lede">This unit looks like four topics, and it is one. A rate is a ratio with units. A percent is a ratio out of 100. A percent problem is a proportion with 100 as a denominator. <b>Every single question here is two ratios set equal, cross-multiplied, and solved.</b> The only real skill is feeding the machine &mdash; getting the four numbers into the right four slots, with the units lined up, before you cross-multiply.</p>
+
+    <div class="track">
+      <div class="track-head">
+        <strong id="badge-count">0 of 11 badges earned</strong>
+        <span>Open practice &mdash; start on any rung</span>
+        <span style="flex:1"></span>
+        <button class="btn ghost" id="reset" style="font-size:13px;padding:5px 12px">Reset progress</button>
+      </div>
+      <div class="track-prop" aria-hidden="true">
+        <span class="pf"><span class="pn"><span class="fill" id="tk-num">0</span></span><span class="pd">11</span></span>
+        <span class="eq">=</span>
+        <span class="pf"><span class="pn"><span class="fill" id="tk-pct">0</span></span><span class="pd">100</span></span>
+      </div>
+      <div class="track-note" id="track-note">the proportion solves itself as you climb</div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="kicker">How it works</div>
+    <h2>One decision per rung</h2>
+    <p class="sub">The B5 lab has a ratio simplifier, a unit-rate calculator, a proportion solver, a percent converter, a problem translator and five practice modes. All of it does the arithmetic. This drills the part before the arithmetic: which numbers go where, and which of the four disguises you are actually looking at.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="n">01</div>
+        <h3>Start anywhere</h3>
+        <p>Eleven rungs in three arcs &mdash; ratios and rates, building the proportion, and percent as a proportion. Nothing is locked, and each rung opens with its strategy.</p>
+      </div>
+      <div class="step">
+        <div class="n">02</div>
+        <h3>Earn each badge</h3>
+        <p>Four in a row earns a rung's badge. Answer with the mouse or press <kbd>1</kbd>&ndash;<kbd>4</kbd>. A wrong answer resets the streak, because the target is not accuracy given time &mdash; it is accuracy without it.</p>
+      </div>
+      <div class="step">
+        <div class="n">03</div>
+        <h3>Four rungs refuse answers</h3>
+        <p>Rungs 1, 4, 5, 9 and 10 will not take a final number. They ask ratio or rate, which slots match, what the cross-multiplied equation is, which numbers are the percent, whole and part, and which type of problem it is.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="engine">
+  <div class="wrap">
+    <div class="kicker">The engine of the whole lesson</div>
+    <h2>Four topics, one structure</h2>
+    <p class="sub">Read down the column: each row looks like its own topic, and each is really the same proportion underneath. The lab's own progress report lists these as separate skills &mdash; they are separate names for one move.</p>
+
+    <div class="engine">
+      <table class="grid">
+        <tr class="r-a"><td class="rowhead"><span class="t">Rate</span></td>
+          <td class="cell"><span class="lab">120 miles / 4 hours</span><span class="arr">a ratio, with units</span></td></tr>
+        <tr class="r-b"><td class="rowhead"><span class="t">Percent</span></td>
+          <td class="cell"><span class="lab">17%</span><span class="arr">= 17 / 100</span></td></tr>
+        <tr class="r-c"><td class="rowhead"><span class="t">Proportion</span></td>
+          <td class="cell"><span class="lab">x / 4 = 12 / 16</span><span class="arr">two ratios set equal</span></td></tr>
+        <tr class="r-d"><td class="rowhead"><span class="t">Percent problem</span></td>
+          <td class="cell"><span class="lab">part / whole = % / 100</span><span class="arr">a proportion, with 100</span></td></tr>
+      </table>
+    </div>
+
+    <p class="punch"><b>Set two ratios equal, cross-multiply, solve.</b> That is the entire unit. &ldquo;OF means multiply, IS means equals, WHAT is the unknown&rdquo; is not a percent rule &mdash; it is a recipe for pouring a sentence into the proportion. Once the sentence is a proportion, there is nothing percent-specific left to do.</p>
+
+    <div class="hazard">
+      <div class="h"><span aria-hidden="true">&#9995;</span> The units decide the layout.</div>
+      <p>A proportion is only true if the <em>same</em> quantity sits on top on both sides. <span class="mono">5 oranges / $1.15 = 15 oranges / x</span> lines up oranges over oranges and dollars over dollars, so it works. <span class="mono">5 / 1.15 = x / 15</span> quietly swaps oranges and dollars and gives a wrong answer that looks perfectly reasonable. Line up the units <em>before</em> you cross-multiply.</p>
+      <p><b>Second: convert the percent before you multiply.</b> <span class="mono">25% of 80</span> is <span class="mono">0.25 &times; 80</span>, not <span class="mono">25 &times; 80</span>. The percent sign is an instruction &mdash; &ldquo;divide by 100&rdquo; &mdash; not a number you can multiply with directly. This is the same &ldquo;the symbol is a rule, not a value&rdquo; idea the earlier units kept circling.</p>
+      <p><b>Third: OF is &times;, IS is =, WHAT is x.</b> &ldquo;5 is what percent of 20&rdquo; becomes <span class="mono">5 = x &middot; 20</span>, which is <span class="mono">5 / 20 = x / 100</span>. The three key words are just the translation from English into the one proportion this whole unit runs on.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <p class="sub">Four in a row earns the badge. Wrong answers explain themselves and reset the streak.</p>
+    <div id="rungs"></div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <div class="kicker">Why this matters</div>
+    <h2>Proportional reasoning is most of applied math</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>Rates run daily life</h3>
+        <p>Miles per gallon, dollars per hour, price per ounce, dose per kilogram. Every &ldquo;per&rdquo; is a rate, and comparing two of them is a proportion. This is the math you actually use after the course ends.</p>
+      </div>
+      <div class="card">
+        <h3>Percent is everywhere and always the same</h3>
+        <p>Tax, tip, discount, interest, concentration, error. All of them are &ldquo;percent of the whole is the part&rdquo; with one slot empty. Learn the one proportion and you have learned all of them.</p>
+      </div>
+      <div class="card">
+        <h3>Setup is the whole skill</h3>
+        <p>Any calculator will cross-multiply for you. What it cannot do is decide which number is the whole and which is the part. That decision is the mathematics, and it is exactly what this ladder drills.</p>
+      </div>
+    </div>
+    <p class="closing">Four topics, four names, one machine. A ratio compares. A rate compares things measured in different units. A proportion sets two comparisons equal. A percent is a comparison against 100. Every problem in the unit is the same three moves &mdash; line up the ratios, cross-multiply, solve &mdash; and once you see that, the only question left on any problem is which four numbers go in the four slots.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Proportion Ladder &middot; line up the units &rarr; cross-multiply &rarr; solve &middot; Math 0232 Unit B5</div>
+</footer>
+
+<div class="sr-only" aria-live="polite" id="live"></div>
+
+<script>
+"use strict";
+var TARGET = 4;
+var MIN = "\u2212", TIMES = "\u00D7", DOT = "\u00B7";
+
+/* =========================================================
+   exact rationals
+   ========================================================= */
+function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ var t=b; b=a%b; a=t; } return a; }
+function R(n,d){ if(d===undefined) d=1; if(d<0){ n=-n; d=-d; } var g=gcd(n,d)||1; return [n/g,d/g]; }
+function rAdd(x,y){ return R(x[0]*y[1]+y[0]*x[1], x[1]*y[1]); }
+function rSub(x,y){ return R(x[0]*y[1]-y[0]*x[1], x[1]*y[1]); }
+function rMul(x,y){ return R(x[0]*y[0], x[1]*y[1]); }
+function rDiv(x,y){ return R(x[0]*y[1], x[1]*y[0]); }
+function rEq(x,y){ return x[0]===y[0] && x[1]===y[1]; }
+function rInt(x){ return x[1]===1; }
+function rNum(x){ return x[0]/x[1]; }
+function rKey(x){ return x[0]+"/"+x[1]; }
+
+function FRAC(a,b,cls){ return '<span class="fr'+(cls?" "+cls:"")+'"><span class="fn">'+a+'</span><span class="fd">'+b+"</span></span>"; }
+function rnum(r){
+  if(rInt(r)) return r[0]<0 ? MIN+Math.abs(r[0]) : ""+r[0];
+  return (r[0]<0 ? MIN : "") + FRAC(Math.abs(r[0]), r[1]);
+}
+/* decimal display, trimmed */
+function dec(x){
+  var s = (Math.round(x*1e6)/1e6).toString();
+  return s;
+}
+function fmtMoney(x){ return "$" + x.toFixed(2); }
+function MX(s){ return '<span class="mx">' + s + "</span>"; }
+
+/* =========================================================
+   plumbing
+   ========================================================= */
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+function ri(lo,hi){ return lo + Math.floor(Math.random()*(hi-lo+1)); }
+function makePicker(pool){
+  var last=null;
+  return function(){ var c=pick(pool), g=0; while(pool.length>1 && c===last && g++<6) c=pick(pool); last=c; return c; };
+}
+function shuffleOpts(o){ var a=o.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function mkOpts(correct, wrongs){
+  var out=[correct], seen={}; seen[correct]=1;
+  for(var i=0;i<wrongs.length && out.length<4;i++){
+    var w=wrongs[i];
+    if(w===null||w===undefined||seen[w]) continue;
+    seen[w]=1; out.push(w);
+  }
+  return out.map(function(t,i){ return {t:t, ok:i===0}; });
+}
+
+/* =========================================================
+   rung 1 — ratio or rate?
+   ========================================================= */
+var SAMEUNIT = [
+  {a:"6 cups flour", b:"24 cups", u:"cups"},
+  {a:"3 red marbles", b:"5 blue marbles", u:"marbles"},
+  {a:"12 boys", b:"18 girls", u:"students"},
+  {a:"8 wins", b:"3 losses", u:"games"},
+  {a:"20 apples", b:"15 apples", u:"apples"}
+];
+var DIFFUNIT = [
+  {a:"120 miles", b:"4 hours"},
+  {a:"$5.28", b:"2 gallons"},
+  {a:"$2160", b:"12 weeks"},
+  {a:"30 miles", b:"1 hour"},
+  {a:"$95", b:"8.5 hours"},
+  {a:"250 words", b:"5 minutes"}
+];
+function gen1(){
+  var isRate = Math.random() < 0.5, e, disp, why;
+  if(isRate){
+    e = pick(DIFFUNIT);
+    disp = MX(FRAC(e.a, e.b, "words"));
+    why = "The two quantities are measured in different units \u2014 " + e.a.replace(/[\d$.]/g,"").trim() + " against " + e.b.replace(/[\d$.]/g,"").trim() +
+          " \u2014 so this is a rate. Rates are the ones you can turn into a &ldquo;per&rdquo;.";
+  } else {
+    e = pick(SAMEUNIT);
+    disp = MX(FRAC(e.a, e.b, "words"));
+    why = "Both quantities are the same kind of thing, so this is a ratio. Ratios compare like to like; the unit words cancel and only the numbers matter.";
+  }
+  return {
+    q: disp,
+    note: "Is this a ratio or a rate?",
+    opts: [
+      {t:"Ratio \u2014 same units", ok:!isRate},
+      {t:"Rate \u2014 different units", ok:isRate}
+    ], cls:"two", why: why
+  };
+}
+
+/* =========================================================
+   rung 2 — simplify the ratio  (also true/false equal ratios)
+   ========================================================= */
+var TF2 = [
+  {a:2,b:3,c:7,d:12}, {a:4,b:9,c:12,d:27}, {a:3,b:4,c:9,d:12},
+  {a:2,b:5,c:6,d:15}, {a:5,b:6,c:10,d:11}, {a:3,b:8,c:9,d:24}
+];
+function gen2(){
+  if(Math.random() < 0.4){
+    var e = pick(TF2);
+    var equal = e.a*e.d === e.b*e.c;
+    return {
+      q: MX(FRAC(e.a,e.b) + '<span class="eqs">=?</span>' + FRAC(e.c,e.d)),
+      note: "Are these two ratios equal?",
+      opts: [{t:"True \u2014 they are equal", ok:equal},{t:"False \u2014 they are not", ok:!equal}],
+      cls:"two",
+      why: "Cross-multiply to check: " + e.a + " " + TIMES + " " + e.d + " = " + (e.a*e.d) + " and " + e.b + " " + TIMES + " " + e.c + " = " + (e.b*e.c) + ". " +
+            (equal ? "They match, so the ratios are equal." : "They differ, so the ratios are not equal.")
+    };
+  }
+  var g = ri(2,9), a = g*ri(1,6), b = g*ri(1,6);
+  while(gcd(a,b) === 1){ g = ri(2,9); a = g*ri(1,6); b = g*ri(1,6); }
+  var s = R(a,b);
+  var wrongs = [ s[0] + " : " + (s[1]+1), (s[0]+1) + " : " + s[1], s[1] + " : " + s[0] ];
+  return {
+    q: MX(a + " : " + b),
+    note: "Simplify this ratio.",
+    opts: mkOpts(s[0] + " : " + s[1], wrongs), cls:"two",
+    why: "The greatest common factor of " + a + " and " + b + " is " + gcd(a,b) + ". Divide both by it to get " + s[0] + " : " + s[1] + ". A ratio simplifies exactly like a fraction \u2014 same factor off the top and bottom."
+  };
+}
+
+/* =========================================================
+   rung 3 — unit rate
+   ========================================================= */
+var NOTES3 = [
+  {top:2160, bot:12, tu:"$", bu:"week", money:true},
+  {top:120, bot:4, tu:"miles", bu:"hour", money:false},
+  {top:95, bot:8.5, tu:"$", bu:"hour", money:true}
+];
+var P3 = makePicker(NOTES3);
+function gen3(){
+  var e;
+  if(Math.random() < 0.5) e = P3();
+  else {
+    var money = Math.random()<0.5;
+    var bot = pick([2,3,4,5,6,8,10]);
+    var per = money ? pick([1.25,2.5,3,4.5,5,12,15]) : pick([4,5,8,15,25,30,55]);
+    e = {top: Math.round(per*bot*100)/100, bot:bot, tu:money?"$":pick(["miles","words","pages"]), bu:money?pick(["hour","pound","item"]):"hour", money:money};
+  }
+  var val = e.top / e.bot;
+  var correct = e.money ? fmtMoney(val) + " per " + e.bu : dec(val) + " " + e.tu + " per " + e.bu;
+  var wrongVal1 = e.bot / e.top;
+  function u(v){ return e.money ? fmtMoney(v) + " per " + e.bu : dec(Math.round(v*1000)/1000) + " " + e.tu + " per " + e.bu; }
+  var wrongs = [
+    u(wrongVal1),          /* flipped: bottom over top */
+    u(val*e.bot),          /* forgot to divide */
+    u(val*2),              /* doubled */
+    u(val/2),              /* halved */
+    u(Math.round((e.top - e.bot)*100)/100)
+  ];
+  return {
+    q: MX(FRAC((e.money?"$":"")+e.top+(e.money?"":" "+e.tu), e.bot+" "+e.bu+(e.bot===1?"":"s"), "words")),
+    note: "What is the unit rate?",
+    opts: mkOpts(correct, wrongs), cls:"two",
+    why: "A unit rate has 1 on the bottom, so divide the top by the bottom: " + e.top + " \u00F7 " + e.bot + " = " + dec(val) +
+          ". The amount you are measuring goes on top; the thing you are measuring it <em>per</em> goes on the bottom."
+  };
+}
+
+/* =========================================================
+   rung 4 — which slots match?  (setup, no computing)
+   ========================================================= */
+var WORD4 = [
+  {n1:"5 oranges", d1:"$1.15", n2:"15 oranges", topU:"oranges", botU:"dollars",
+   good:"5 / 1.15 = 15 / x", bad:"5 / 1.15 = x / 15"},
+  {n1:"1.2 cm", d1:"2 miles", n2:"10.6 cm", topU:"centimeters", botU:"miles",
+   good:"1.2 / 2 = 10.6 / x", bad:"1.2 / 2 = x / 10.6"},
+  {n1:"3 cups", d1:"12 servings", n2:"30 servings", topU:"cups", botU:"servings",
+   good:"3 / 12 = x / 30", bad:"3 / 12 = 30 / x"},
+  {n1:"250 words", d1:"5 minutes", n2:"12 minutes", topU:"words", botU:"minutes",
+   good:"250 / 5 = x / 12", bad:"250 / 5 = 12 / x"}
+];
+var P4 = makePicker(WORD4);
+function propHTML(str){
+  var sides = str.split(" = ");
+  function frac(side){ var p = side.split(" / "); return FRAC(p[0], p[1]); }
+  return MX(frac(sides[0]) + '<span class="eqs">=</span>' + frac(sides[1]));
+}
+/* rung 4 problems, each with the correct unit-aligned setup and three
+   genuinely-different wrong setups (all non-equivalent proportions) */
+var WORD4B = [
+  {n1:"5 oranges", d1:"$1.15", n2:"15 oranges", topU:"oranges", botU:"dollars",
+   good:"5 / 1.15 = 15 / x",
+   bad:["5 / 1.15 = x / 15", "1.15 / 5 = 15 / x", "5 / 15 = 1.15 / x"]},
+  {n1:"1.2 cm", d1:"2 miles", n2:"10.6 cm", topU:"centimeters", botU:"miles",
+   good:"1.2 / 2 = 10.6 / x",
+   bad:["1.2 / 2 = x / 10.6", "2 / 1.2 = 10.6 / x", "1.2 / 10.6 = 2 / x"]},
+  {n1:"3 cups", d1:"12 servings", n2:"30 servings", topU:"cups", botU:"servings",
+   good:"3 / 12 = x / 30",
+   bad:["3 / 12 = 30 / x", "12 / 3 = x / 30", "3 / 30 = x / 12"]},
+  {n1:"250 words", d1:"5 minutes", n2:"12 minutes", topU:"words", botU:"minutes",
+   good:"250 / 5 = x / 12",
+   bad:["250 / 5 = 12 / x", "5 / 250 = x / 12", "250 / 12 = x / 5"]}
+];
+var P4B = makePicker(WORD4B);
+function gen4(){
+  var e = P4B();
+  /* dedupe the bad list against the good and against itself */
+  var seen = {}; seen[e.good] = 1;
+  var wrongs = [];
+  for(var i=0;i<e.bad.length;i++){ if(!seen[e.bad[i]]){ seen[e.bad[i]]=1; wrongs.push(e.bad[i]); } }
+  return {
+    q: '<span class="word">' + e.n1 + " goes with " + e.d1 + ". You want the match for " + e.n2 + ".</span>",
+    note: "Which setup keeps the units lined up across the equals sign?",
+    opts: mkOpts(propHTML(e.good), wrongs.map(propHTML)), cls:"two",
+    why: "Keep the same quantity on top on both sides: " + e.topU + " over " + e.botU + " equals " + e.topU + " over " + e.botU +
+         ". Every wrong option swaps " + e.topU + " and " + e.botU + " somewhere, which quietly breaks the proportion even though it still looks like one."
+  };
+}
+
+/* =========================================================
+   rung 5 — cross-multiply, what equation? (rewrite only)
+   ========================================================= */
+function gen5(){
+  /* four visually distinct slot values so no two diagonal products coincide */
+  var pool = shuffleOpts([2,3,4,5,6,7,8,9]);
+  var A=pool[0], B=pool[1], C=pool[2], D=pool[3];
+  var slot = pick([0,1,2,3]);
+  var vals = [A,B,C,D];
+  var shown = vals.slice(); shown[slot] = "x";
+  var q = MX(FRAC(shown[0],shown[1]) + '<span class="eqs">=</span>' + FRAC(shown[2],shown[3]));
+  /* correct cross-mult: a*d = b*c  (outer = inner) */
+  function term(i){ return shown[i]; }
+  var correct = MX(term(0) + " " + DOT + " " + term(3) + '<span class="eqs">=</span>' + term(1) + " " + DOT + " " + term(2));
+  var wrongs = [
+    MX(term(0) + " " + DOT + " " + term(2) + '<span class="eqs">=</span>' + term(1) + " " + DOT + " " + term(3)),
+    MX(term(0) + " " + DOT + " " + term(1) + '<span class="eqs">=</span>' + term(2) + " " + DOT + " " + term(3)),
+    MX(term(1) + " " + DOT + " " + term(3) + '<span class="eqs">=</span>' + term(0) + " " + DOT + " " + term(2))
+  ];
+  return {
+    q: q,
+    note: "Cross-multiply. What equation do you get? Do not solve it.",
+    opts: mkOpts(correct, wrongs), cls:"two",
+    why: "Cross-multiply means multiply along the two diagonals: top-left times bottom-right equals bottom-left times top-right. That is " +
+         term(0) + " " + DOT + " " + term(3) + " = " + term(1) + " " + DOT + " " + term(2) +
+         ". Multiplying straight across, top times top, is the classic wrong move."
+  };
+}
+
+/* =========================================================
+   rung 6 — solve the proportion
+   ========================================================= */
+var NOTES6 = [
+  {n1:3,d1:4,n2:"x",d2:12},     /* 3/4 = x/12 -> x=9 */
+  {n1:3,d1:2,n2:24,d2:"n"},     /* 3/2 = 24/n -> n=16 */
+  {n1:"2x+1",d1:15,n2:1,d2:3}   /* (2x+1)/15 = 1/3 -> x=2 */
+];
+var P6 = makePicker(NOTES6);
+function gen6(){
+  var e, ans, why, varname="x";
+  if(Math.random() < 0.5){
+    e = P6();
+    if(e.n1 === "2x+1"){
+      /* 3(2x+1) = 15 -> 2x+1 = 5 -> x = 2 */
+      ans = R(2);
+      why = "Cross-multiply: 3(2x + 1) = 15, so 2x + 1 = 5, then 2x = 4 and x = 2. The binomial on top just means the cross-multiplied equation needs one extra solving step \u2014 the same solving from the equations unit.";
+      return {
+        q: MX(FRAC("2x+1", e.d1) + '<span class="eqs">=</span>' + FRAC(e.n2, e.d2)),
+        note: "Solve for x.",
+        opts: mkOpts(MX("x = 2"), [MX("x = 5"), MX("x = 7"), MX("x = " + rnum(R(9,2)))]), cls:"two", why: why
+      };
+    }
+    var known, slot;
+    if(e.n2 === "x"){ ans = R(e.n1*e.d2, e.d1); varname="x"; slot="n2"; }
+    else { ans = R(e.d1*e.n2, e.n1); varname="n"; slot="d2"; }
+    var q = MX(FRAC(e.n1, e.d1) + '<span class="eqs">=</span>' + FRAC(e.n2==="x"?"x":e.n2, e.d2==="n"?"n":e.d2));
+    var wrongs = [ MX(varname+" = "+rnum(rAdd(ans,R(1)))), MX(varname+" = "+rnum(rDiv(R(rNum(ans)===0?1:1),R(1)))), MX(varname+" = "+rnum(rMul(ans,R(2)))) ];
+    return {
+      q: q, note:"Solve for " + varname + ".",
+      opts: mkOpts(MX(varname + " = " + rnum(ans)),
+        [MX(varname+" = "+rnum(rAdd(ans,R(1)))), MX(varname+" = "+rnum(rSub(ans,R(1)))),
+         MX(varname+" = "+rnum(rMul(ans,R(2)))), MX(varname+" = "+rnum(rAdd(ans,R(2)))),
+         MX(varname+" = "+rnum(rDiv(ans,R(2))))]), cls:"two",
+      why: "Cross-multiply and solve: " + varname + " = " + rnum(ans) + "."
+    };
+  }
+  /* generated a/b = x/d or a/b = c/x */
+  var a=ri(2,9), b=ri(2,9), k=ri(2,6);
+  if(Math.random()<0.5){
+    var d=b*k, x=a*k;
+    return {
+      q: MX(FRAC(a,b) + '<span class="eqs">=</span>' + FRAC("x",d)),
+      note:"Solve for x.",
+      opts: mkOpts(MX("x = "+x), [MX("x = "+(x+1)), MX("x = "+(a*d)), MX("x = "+(d-a)), MX("x = "+(x-1)), MX("x = "+(x+2))]), cls:"two",
+      why:"Cross-multiply: " + a + " " + DOT + " " + d + " = " + b + " " + DOT + " x, so " + (a*d) + " = " + b + "x and x = " + x + "."
+    };
+  } else {
+    var c=a*k, xx=b*k;
+    return {
+      q: MX(FRAC(a,b) + '<span class="eqs">=</span>' + FRAC(c,"x")),
+      note:"Solve for x.",
+      opts: mkOpts(MX("x = "+xx), [MX("x = "+(xx+1)), MX("x = "+(a*c)), MX("x = "+Math.abs(c-a)), MX("x = "+(xx-1)), MX("x = "+(xx+2))]), cls:"two",
+      why:"Cross-multiply: " + a + " " + DOT + " x = " + b + " " + DOT + " " + c + ", so " + a + "x = " + (b*c) + " and x = " + xx + "."
+    };
+  }
+}
+
+/* =========================================================
+   rung 7 — word problem -> answer
+   ========================================================= */
+var WORD7 = [
+  {text:"If 5 oranges cost $1.15, what will 15 oranges cost at the same rate?",
+   setup:"5 / 1.15 = 15 / x", ans:3.45, unit:"$", fmt:"money",
+   why:"5 oranges / $1.15 = 15 oranges / x. Cross-multiply: 5x = 17.25, so x = $3.45."},
+  {text:"A map legend shows 1.2 cm represents 2 miles. The route measures 10.6 cm. How long is the trip, to the nearest tenth of a mile?",
+   setup:"1.2 / 2 = 10.6 / x", ans:17.7, unit:"miles", fmt:"round1",
+   why:"1.2 cm / 2 mi = 10.6 cm / x mi. Cross-multiply: 1.2x = 21.2, so x = 17.666..., which rounds to 17.7 miles."},
+  {text:"A recipe for 2 dozen cookies needs 1\u00BE cups of flour. How much flour for twice as many cookies?",
+   setup:"1.75 / 24 = x / 48", ans:3.5, unit:"cups", fmt:"frac",
+   why:"Twice the cookies means twice the flour: 1\u00BE \u00D7 2 = 3\u00BD cups. As a proportion, 1.75/24 = x/48 gives x = 3.5."},
+  {text:"Miguel drives 120 miles in 4 hours. At that rate, how far in 7 hours?",
+   setup:"120 / 4 = x / 7", ans:210, unit:"miles", fmt:"int",
+   why:"120 mi / 4 hr = x mi / 7 hr. Cross-multiply: 4x = 840, so x = 210 miles."}
+];
+var P7 = makePicker(WORD7);
+function gen7(){
+  var e = P7();
+  var correct, wrongs;
+  if(e.fmt === "money"){ correct = fmtMoney(e.ans); wrongs = [fmtMoney(e.ans*3), fmtMoney(e.ans/3), fmtMoney(e.ans+1)]; }
+  else if(e.fmt === "round1"){ correct = e.ans + " miles"; wrongs = [(e.ans*2).toFixed(1)+" miles", (e.ans/2).toFixed(1)+" miles", (e.ans+2).toFixed(1)+" miles"]; }
+  else if(e.fmt === "frac"){ correct = "3\u00BD cups"; wrongs = ["1\u00BE cups", "7 cups", "2\u00BD cups"]; }
+  else { correct = e.ans + " miles"; wrongs = [(e.ans+30)+" miles", (e.ans-30)+" miles", Math.round(e.ans/1.5)+" miles"]; }
+  return {
+    q: '<span class="word">' + e.text + "</span>",
+    note: "Set up a proportion and solve.",
+    opts: mkOpts(correct, wrongs), cls:"two", why: e.why
+  };
+}
+
+/* =========================================================
+   rung 8 — percent <-> decimal
+   ========================================================= */
+var CONV8 = [
+  {pct:"87%", dec:"0.87"}, {pct:"57.8%", dec:"0.578"}, {pct:"1%", dec:"0.01"},
+  {pct:"0.04%", dec:"0.0004"}, {pct:"230%", dec:"2.3"}, {pct:"100%", dec:"1"},
+  {pct:"38%", dec:"0.38"}, {pct:"65%", dec:"0.65"}, {pct:"125%", dec:"1.25"},
+  {pct:"1.2%", dec:"0.012"}, {pct:"60%", dec:"0.6"}
+];
+var P8 = makePicker(CONV8);
+function gen8(){
+  var e = P8();
+  var toDec = Math.random() < 0.5;
+  if(toDec){
+    var wrongs = [ shiftWrong(e.pct.replace("%",""), 1), shiftWrong(e.pct.replace("%",""), 3), e.pct.replace("%","") ];
+    return {
+      q: MX(e.pct), note:"Write this percent as a decimal.",
+      opts: mkOpts(MX(e.dec), wrongs.map(MX)), cls:"two",
+      why: "Percent to decimal: move the decimal point two places to the <em>left</em> (dividing by 100). " + e.pct + " becomes " + e.dec + "."
+    };
+  }
+  var wrongs2 = [ shiftWrong2(e.dec, 1), shiftWrong2(e.dec, 3), e.dec ];
+  return {
+    q: MX(e.dec), note:"Write this decimal as a percent.",
+    opts: mkOpts(MX(e.pct), wrongs2.map(function(w){ return MX(w + (w.indexOf("%")<0?"%":"")); })), cls:"two",
+    why: "Decimal to percent: move the decimal point two places to the <em>right</em> (multiplying by 100). " + e.dec + " becomes " + e.pct + "."
+  };
+}
+function shiftWrong(numStr, places){
+  var n = parseFloat(numStr);
+  return dec(n / Math.pow(10, places));
+}
+function shiftWrong2(numStr, places){
+  var n = parseFloat(numStr);
+  return dec(n * Math.pow(10, places)) + "%";
+}
+
+/* =========================================================
+   rung 9 — name the three parts (no computing)
+   ========================================================= */
+var PCT9 = [
+  {text:"12 is 30% of what number?", percent:"30", part:"12", whole:"the unknown"},
+  {text:"5 is what percent of 20?", percent:"the unknown", part:"5", whole:"20"},
+  {text:"What number is 25% of 80?", percent:"25", part:"the unknown", whole:"80"},
+  {text:"38% of 200 is what number?", percent:"38", part:"the unknown", whole:"200"},
+  {text:"9 is 15% of what number?", percent:"15", part:"9", whole:"the unknown"},
+  {text:"What percent of 50 is 7?", percent:"the unknown", part:"7", whole:"50"}
+];
+var P9 = makePicker(PCT9);
+function gen9(){
+  var e = P9();
+  var askFor = pick(["percent","whole","part"]);
+  var correct = e[askFor];
+  var all = [e.percent, e.whole, e.part];
+  var wrongs = all.filter(function(v){ return v !== correct; });
+  /* ensure distinct display; add a decoy */
+  wrongs.push("100");
+  return {
+    q: '<span class="word">' + e.text + "</span>",
+    note: "In this problem, which number is the " + askFor + "?",
+    opts: mkOpts(labelVal(correct), wrongs.map(labelVal)), cls:"two",
+    why: "&ldquo;Percent of the whole is the part.&rdquo; Here the percent is " + e.percent + ", the whole is " + e.whole + ", and the part is " + e.part +
+         ". The word after &ldquo;of&rdquo; is the whole; the number by &ldquo;is&rdquo; is the part; &ldquo;what&rdquo; marks the unknown."
+  };
+}
+function labelVal(v){ return v === "the unknown" ? "The unknown (what)" : v; }
+
+/* =========================================================
+   rung 10 — which type is it?
+   ========================================================= */
+var TYPE10 = [
+  {text:"What is 25% of 80?", type:"part"},
+  {text:"5 is what percent of 20?", type:"percent"},
+  {text:"12 is 30% of what number?", type:"whole"},
+  {text:"38% of 200 is what number?", type:"part"},
+  {text:"7 is what percent of 50?", type:"percent"},
+  {text:"9 is 15% of what number?", type:"whole"},
+  {text:"What number is 25% of 0.008?", type:"part"}
+];
+var P10 = makePicker(TYPE10);
+var TYPENAMES = { part:"Find the part", percent:"Find the percent", whole:"Find the whole" };
+function gen10(){
+  var e = P10();
+  var opts = ["part","percent","whole"].map(function(t){ return {t:TYPENAMES[t], ok:t===e.type}; });
+  var why;
+  if(e.type === "part") why = "The percent and the whole are both given, and &ldquo;what&rdquo; sits on the part. You are finding the part: multiply the percent (as a decimal) by the whole.";
+  else if(e.type === "percent") why = "Two plain numbers are given and &ldquo;what percent&rdquo; is the unknown. You are finding the percent: divide the part by the whole.";
+  else why = "The percent and the part are given, and &ldquo;what&rdquo; sits after &ldquo;of&rdquo; on the whole. You are finding the whole: divide the part by the percent.";
+  return {
+    q: '<span class="word">' + e.text + "</span>",
+    note: "Which of the three types is this?",
+    opts: opts, cls:"two", why: why
+  };
+}
+
+/* =========================================================
+   rung 11 — solve the percent problem
+   ========================================================= */
+var SOLVE11 = [
+  {text:"5 is what percent of 20?", ans:"25%", type:"percent",
+   why:"5 / 20 = 0.25 = 25%. Part over whole gives the percent."},
+  {text:"12 is 30% of what number?", ans:"40", type:"whole",
+   why:"12 \u00F7 0.30 = 40. Part divided by the percent gives the whole."},
+  {text:"What number is 25% of 0.008?", ans:"0.002", type:"part",
+   why:"0.25 \u00D7 0.008 = 0.002. Percent (as a decimal) times the whole gives the part."},
+  {text:"38% of 200 is what number?", ans:"76", type:"part",
+   why:"0.38 \u00D7 200 = 76. Convert the percent first, then multiply."},
+  {text:"Julia's class has 45 students and 20% are absent. How many are absent?",
+   ans:"9 students", type:"part",
+   why:"Percent 20, whole 45, part unknown: 0.20 \u00D7 45 = 9 students."},
+  {text:"Pablo got 90% correct, which was 27 questions. How many questions were on the exam?",
+   ans:"30 questions", type:"whole",
+   why:"Percent 90, part 27, whole unknown: 27 \u00F7 0.90 = 30 questions."},
+  {text:"35 mL of a 60 mL solution is acid. What percent is acid?",
+   ans:"about 58.3%", type:"percent",
+   why:"Part 35, whole 60: 35 / 60 = 0.583..., about 58.3%."}
+];
+var P11 = makePicker(SOLVE11);
+function gen11(){
+  var e = P11();
+  var wrongs;
+  if(e.ans === "25%") wrongs = ["4%", "400%", "20%"];
+  else if(e.ans === "40") wrongs = ["3.6", "360", "36"];
+  else if(e.ans === "0.002") wrongs = ["0.2", "0.02", "32"];
+  else if(e.ans === "76") wrongs = ["7600", "5.26", "526"];
+  else if(e.ans === "9 students") wrongs = ["225 students", "36 students", "2.25 students"];
+  else if(e.ans === "30 questions") wrongs = ["24.3 questions", "300 questions", "3 questions"];
+  else wrongs = ["about 171%", "about 41.7%", "about 5.8%"];
+  return {
+    q: '<span class="word">' + e.text + "</span>",
+    note: "Solve.",
+    opts: mkOpts(e.ans, wrongs), cls:"two", why: e.why
+  };
+}
+
+/* =========================================================
+   the ladder
+   ========================================================= */
+var RUNGS = [
+  {arc:1, t:"Ratio or rate?", s:"From the units alone",
+   how:"Look at what the two quantities measure. Same kind of thing means a ratio. Different units \u2014 miles and hours, dollars and gallons \u2014 means a rate.",
+   why:"A rate is the kind you can turn into a &ldquo;per&rdquo;, and this distinction decides whether the unit words have to travel with the numbers or cancel away.",
+   gen:gen1},
+  {arc:1, t:"Simplify the ratio", s:"Same skill as fractions",
+   how:"Divide both sides by their greatest common factor. To check whether two ratios are equal, cross-multiply and compare the products.",
+   why:"A ratio reduces exactly like a fraction \u2014 the same factor off the top and bottom. Your notes' True/False pairs are just this question asked the other way round.",
+   gen:gen2},
+  {arc:1, t:"Find the unit rate", s:"Denominator to 1",
+   how:"Divide the top by the bottom. The amount you are measuring goes on top; the thing you are measuring it <em>per</em> goes on the bottom.",
+   why:"These are the three from page 26. The arithmetic is just division \u2014 the real decision is which number lands on the bottom, because that is what &ldquo;per&rdquo; you are reporting.",
+   gen:gen3},
+  {arc:2, t:"Which slots match?", s:"Setup only \u2014 no computing",
+   how:"Put the same quantity on top on both sides. Oranges over dollars equals oranges over dollars. If the units don't line up across the equals sign, the proportion is wrong before you start.",
+   why:"This is the mistake the lab flags first. A swapped setup gives a clean-looking wrong answer, and there is no way to catch it downstream \u2014 only here, at setup.",
+   gen:gen4},
+  {arc:2, t:"Cross-multiply", s:"Rewrite only \u2014 the diagonals",
+   how:"Multiply along the two diagonals: top-left times bottom-right equals bottom-left times top-right. Write that equation; don't solve it yet.",
+   why:"Multiplying straight across instead of diagonally is the classic slip. Separating the cross-multiply from the solving puts that error on its own line where you can see it.",
+   gen:gen5},
+  {arc:2, t:"Solve the proportion", s:"Cross-multiply, then solve",
+   how:"Cross-multiply to get an equation, then solve it the way you solved every equation in Unit B1.",
+   why:"Your three from page 26, including (2x+1)/15 = 1/3 \u2014 the binomial on top just adds one solving step after the cross-multiply. Nothing here is new except the setup.",
+   gen:gen6},
+  {arc:2, t:"Word problem \u2192 answer", s:"The full pipeline",
+   how:"Name the two quantities, write the proportion with units lined up, cross-multiply, solve. Round only at the very end if asked.",
+   why:"The oranges, the map scale, the recipe, the driving rate \u2014 every word problem on pages 26 and 27 is the same four steps once the proportion is set up correctly.",
+   gen:gen7},
+  {arc:3, t:"Percent \u2194 decimal", s:"Two places, and which way",
+   how:"Percent to decimal: move the point two places left. Decimal to percent: two places right. The direction is the whole decision.",
+   why:"Your entire conversion table lives here. A percent is just a number out of 100, so converting it is only ever a shift of the decimal point \u2014 the question is which way.",
+   gen:gen8},
+  {arc:3, t:"Name the three parts", s:"No computing",
+   how:"The word after &ldquo;of&rdquo; is the whole. The number tied to &ldquo;is&rdquo; is the part. &ldquo;What&rdquo; marks the unknown. Label all three before touching any arithmetic.",
+   why:"Your notes' Percent / Whole / Part boxes, made into a reflex. The lab's translator gestures at this, but naming the three in isolation is the step that actually prevents the mix-up.",
+   gen:gen9},
+  {arc:3, t:"Which type is it?", s:"From the sentence shape",
+   how:"Find the part, find the percent, or find the whole \u2014 decided by where &ldquo;what&rdquo; sits. Two numbers given plus &ldquo;what percent&rdquo; means find the percent, and so on.",
+   why:"Knowing which of the three types you are in tells you immediately whether to multiply or divide, and by what. It is the routing decision the whole percent section turns on.",
+   gen:gen10},
+  {arc:3, t:"Solve the percent problem", s:"Percent \u00D7 whole = part",
+   how:"Convert the percent to a decimal, then use &ldquo;percent of the whole is the part&rdquo; with the one empty slot. Multiply to find the part, divide to find a whole or a percent.",
+   why:"All of page 28 \u2014 the four bare problems and the three word problems. Every one is the same formula with a different slot missing, which is the same proportion this whole ladder is about.",
+   gen:gen11}
+];
+
+/* =========================================================
+   state and rendering
+   ========================================================= */
+var state = RUNGS.map(function(){ return {streak:0, earned:false}; });
+var openIdx = -1, current = null;
+var badgeCount = document.getElementById("badge-count");
+var tkNum = document.getElementById("tk-num");
+var tkPct = document.getElementById("tk-pct");
+var trackNote = document.getElementById("track-note");
+var live = document.getElementById("live");
+
+function refreshProgress(){
+  var got = state.filter(function(s){ return s.earned; }).length;
+  badgeCount.textContent = got + " of " + RUNGS.length + " badges earned";
+  tkNum.textContent = got;
+  tkPct.textContent = Math.round(got / 11 * 100);
+  trackNote.innerHTML = got === 0 ? "the proportion solves itself as you climb"
+    : got === 11 ? "11/11 = 100/100 \u2014 solved"
+    : got + "/11 cross-multiplies to " + Math.round(got/11*100) + "/100";
+  var cards = document.querySelectorAll(".rung");
+  for(var j = 0; j < cards.length; j++){
+    cards[j].classList.toggle("earned", state[j].earned);
+    cards[j].querySelector(".badge").textContent = state[j].earned ? "Earned" : "Badge";
+  }
+}
+function buildRungs(){
+  var host = document.getElementById("rungs");
+  var arcs = [
+    {n:1, tag:"Arc one \u00B7 ratios and rates", note:"rungs 1\u20133"},
+    {n:2, tag:"Arc two \u00B7 build the proportion", note:"rungs 4\u20137"},
+    {n:3, tag:"Arc three \u00B7 percent is a proportion", note:"rungs 8\u201311"}
+  ];
+  var html = "";
+  arcs.forEach(function(arc){
+    html += '<div class="arc-head arc' + arc.n + '"><span class="tag">' + arc.tag + '</span><span class="rule"></span><span class="cnt">' + arc.note + "</span></div>";
+    RUNGS.forEach(function(r,i){
+      if(r.arc !== arc.n) return;
+      html +=
+        '<div class="rung arc' + r.arc + '" id="rung-' + i + '">' +
+          '<button class="top" data-i="' + i + '" aria-expanded="false" aria-controls="panel-' + i + '">' +
+            '<span class="rn">' + (i+1 < 10 ? "0" : "") + (i+1) + "</span>" +
+            '<span class="rt"><span class="t">' + r.t + '</span><span class="s">' + r.s + "</span></span>" +
+            '<span class="badge">Badge</span>' +
+            '<span class="chev" aria-hidden="true">\u203A</span>' +
+          "</button>" +
+          '<div class="panel" id="panel-' + i + '">' +
+            '<div class="strategy">' +
+              "<div><h4>Strategy</h4><p>" + r.how + "</p></div>" +
+              "<div><h4>Why this rung exists</h4><p>" + r.why + "</p></div>" +
+            "</div>" +
+            '<div class="play" data-play="' + i + '"></div>' +
+          "</div>" +
+        "</div>";
+    });
+  });
+  host.innerHTML = html;
+  host.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".top") : null;
+    if(b) toggleRung(parseInt(b.getAttribute("data-i"),10));
+  });
+}
+function toggleRung(i){
+  var was = openIdx;
+  if(was >= 0){
+    document.getElementById("rung-" + was).classList.remove("open");
+    document.querySelector("#rung-" + was + " .top").setAttribute("aria-expanded","false");
+  }
+  if(was === i){ openIdx = -1; current = null; return; }
+  openIdx = i;
+  document.getElementById("rung-" + i).classList.add("open");
+  document.querySelector("#rung-" + i + " .top").setAttribute("aria-expanded","true");
+  nextQuestion();
+}
+function nextQuestion(){
+  if(openIdx < 0) return;
+  var def = RUNGS[openIdx].gen();
+  def.opts = shuffleOpts(def.opts);
+  current = {def:def, answered:false};
+  drawPlay();
+}
+function drawPlay(){
+  var i = openIdx, d = current.def, st = state[i];
+  var host = document.querySelector('.play[data-play="' + i + '"]');
+  var pips = "";
+  for(var p = 0; p < TARGET; p++){ pips += '<span class="pip' + (p < st.streak ? " on" : "") + '"></span>'; }
+  var opts = "";
+  d.opts.forEach(function(o,k){
+    opts += '<button class="opt" data-k="' + k + '"><span class="k">' + (k+1) + '</span><span class="txt">' + o.t + "</span></button>";
+  });
+  var qcls = /class="word"/.test(d.q) ? "q word" : "q";
+  host.innerHTML =
+    '<div class="play-head"><span class="streak">' + pips + "</span>" +
+      '<span class="lab">' + st.streak + " of " + TARGET + " in a row</span>" +
+      '<span class="spacer"></span><span class="lab">keys 1\u2013' + d.opts.length + "</span></div>" +
+    '<div class="' + qcls + '">' + d.q + "</div>" +
+    '<div class="qnote">' + d.note + "</div>" +
+    '<div class="opts ' + (d.cls || "two") + '">' + opts + "</div>" +
+    '<div class="fb"><span class="verdict"></span><span class="why"></span></div>' +
+    '<div class="won">Badge earned. Four in a row without stopping to think \u2014 that is the whole bar.</div>' +
+    '<div class="next" data-after style="display:none"><button class="btn" data-next>Next question</button><span class="hint">or press <kbd>Enter</kbd></span></div>';
+  host.querySelectorAll(".opt").forEach(function(b){
+    b.addEventListener("click", function(){ choose(parseInt(b.getAttribute("data-k"),10)); });
+  });
+  var nx = host.querySelector("[data-next]");
+  if(nx) nx.addEventListener("click", nextQuestion);
+}
+function choose(k){
+  if(!current || current.answered) return;
+  grade(current.def.opts[k].ok, k);
+}
+function grade(ok, k){
+  current.answered = true;
+  var i = openIdx, st = state[i], d = current.def;
+  var host = document.querySelector('.play[data-play="' + i + '"]');
+  host.querySelectorAll(".opt").forEach(function(b,idx){
+    b.disabled = true;
+    if(d.opts[idx].ok) b.classList.add("right");
+    else if(idx === k) b.classList.add("wrong");
+    else b.classList.add("dim");
+  });
+  if(ok) st.streak++; else st.streak = 0;
+  var fb = host.querySelector(".fb");
+  fb.classList.add("show", ok ? "ok" : "no");
+  fb.querySelector(".verdict").textContent = ok ? "Right." : "Not this time.";
+  fb.querySelector(".why").innerHTML = d.why;
+  var justEarned = false;
+  if(ok && st.streak >= TARGET && !st.earned){ st.earned = true; justEarned = true; }
+  if(justEarned) host.querySelector(".won").classList.add("show");
+  host.querySelectorAll(".pip").forEach(function(p,idx){ p.classList.toggle("on", idx < st.streak); });
+  host.querySelector(".play-head .lab").textContent = st.streak + " of " + TARGET + " in a row";
+  host.querySelector("[data-after]").style.display = "flex";
+  live.textContent = (ok ? "Correct. " : "Incorrect. ") + (justEarned ? "Badge earned. " : "") + st.streak + " in a row.";
+  refreshProgress();
+}
+document.addEventListener("keydown", function(e){
+  if(openIdx < 0 || !current) return;
+  var tag = (e.target.tagName || "").toLowerCase();
+  if(tag === "input" || tag === "textarea") return;
+  if(e.key === "Enter"){ if(current.answered){ e.preventDefault(); nextQuestion(); } return; }
+  if(e.key === "Escape"){ toggleRung(openIdx); return; }
+  var num = parseInt(e.key,10);
+  if(num >= 1 && num <= current.def.opts.length){ e.preventDefault(); choose(num-1); }
+});
+document.getElementById("reset").addEventListener("click", function(){
+  state = RUNGS.map(function(){ return {streak:0, earned:false}; });
+  if(openIdx >= 0) drawPlay();
+  refreshProgress();
+  live.textContent = "Progress reset.";
+});
+buildRungs();
+refreshProgress();
+</script>
+</body>
+</html>
