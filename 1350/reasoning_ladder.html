@@ -1,0 +1,631 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Reasoning Ladder — does this guarantee the conclusion, or only suggest it?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.2rem;box-shadow:var(--shadow)}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2.1rem,5.4vw,3.6rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+
+  .demo{margin:34px 0 8px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:26px 22px;box-shadow:var(--shadow)}
+  .demo-label{font-family:"Space Mono";font-size:.82rem;color:var(--muted);margin-bottom:16px}
+  .demo-label b{color:var(--paper)}
+  .conf{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-family:"Space Mono";justify-content:center}
+  .chip{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:3.4ch}
+  .chip .v{font-size:clamp(1.1rem,3vw,1.5rem);font-weight:700}
+  .chip .t{font-size:1rem}
+  .chip.ok .v{color:var(--green)} .chip.ok .t{color:var(--green)}
+  .chip .arrowc{color:var(--muted);font-size:1.1rem}
+  .chip.bad .v{color:var(--clay);text-decoration:line-through;text-decoration-thickness:2px}
+  .chip.real .v{color:var(--amber)} .chip.real .t{color:var(--amber)}
+  .demo-verdict{text-align:center;margin-top:20px;font-size:.98rem;color:#CFE2E0}
+  .demo-verdict b{color:var(--amber)}
+
+  .reveal{opacity:0;transform:translateY(6px)}
+  .reveal.in{opacity:1;transform:none;transition:opacity .5s ease,transform .5s ease}
+  @media (prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important;transition:none!important}}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:460px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.05rem;color:var(--ink);margin-bottom:8px;line-height:1.5}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:1px 6px;border-radius:5px;font-weight:700}
+  .qseq{margin:6px 0 22px}
+  .qseq:empty{margin:0}
+  .figrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:.98rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.4}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">∴</span> The Reasoning Ladder</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 1 · inductive vs deductive</div>
+    <h1>Does the reasoning <span class="hl">guarantee</span> the conclusion,<br>or only suggest it?</h1>
+    <p class="lede">That one question sorts everything on this ladder. <em>Deduction</em> applies a general rule to a specific case, so a true premise makes the conclusion certain. <em>Induction</em> guesses a general rule from specific cases, so it's only ever likely — however many times it holds. And the rule with teeth: <strong>a conjecture is never proven by examples, only disproven by one counterexample.</strong></p>
+
+    <div class="demo" id="demo">
+      <div class="demo-label reveal" data-delay="0"><b>Conjecture:</b> connect points on a circle with chords and the regions double — 2, 4, 8, 16…</div>
+      <div class="conf" id="confRow"></div>
+      <div class="demo-verdict reveal" data-delay="1700">Four confirmations, then <b>6 points gives 31, not 32.</b> The pattern was never proven — it was only ever a guess.</div>
+    </div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>Confirmation feels like proof, and it isn't.</b> A pattern that holds three, four, five times feels locked in — but no pile of confirming cases ever proves a general claim, while a single counterexample settles it for good. Every rung here is built to break the reflex that "it worked so far" means "it's true."</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–4 sort the two kinds of reasoning, 5–8 drill the machinery of conjecture and counterexample, and 9–10 spring the trap.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Nothing is locked</h3><p>Build the idea in order, or jump straight to the rung that trips you up.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>Every wrong option is a real mistake</h3><p>Distractors are the actual errors — mistaking a confirming case for proof, or a general rule for a single instance.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Spot the deductive one</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>The reasoning under the mathematics</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>Pattern-finding is inductive</h3><p>Every "find the next term" your students do is a guess from examples. Powerful, but a guess — and knowing that is the difference between a conjecture and a theorem.</p></div>
+      <div class="why-card"><h3>One counterexample is enough</h3><p>You don't need to check every case to show a rule is wrong. This is how mathematicians actually kill false claims, and it's teachable to a six-year-old.</p></div>
+      <div class="why-card"><h3>Certainty has a source</h3><p>Deductive proof is why math claims are certain in a way lab results aren't. Future teachers who feel that distinction teach it better.</p></div>
+    </div>
+    <p class="closing">The circle keeps its warning even after you know the answer: a rule can pass every test you throw at it and still be false. <b>Ask the one question — guaranteed, or only suggested? — and reach for a counterexample before you trust a pattern.</b></p>
+  </section>
+
+  <footer>The Reasoning Ladder · guaranteed or only likely? · one counterexample settles it · 2, 4, 8, 16, 31…</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const sampleN=(arr,n)=>shuffle(arr.slice()).slice(0,n);
+// build a 4-option question from a correct string + distractor strings (all assumed distinct)
+function buildText(correct,dis){const all=shuffle([correct,...dis].map(t=>({text:t})));return{options:all,answer:all.findIndex(o=>o.text===correct)};}
+
+/* ============ statement pools ============ */
+// deductive: a general rule applied to a specific case → conclusion guaranteed
+const DEDUCTIVE=[
+  "All squares have four sides. This is a square, so it has four sides.",
+  "Every multiple of 4 is even. 20 is a multiple of 4, so 20 is even.",
+  "A triangle's angles sum to 180°. This is a triangle, so its angles sum to 180°.",
+  "All primes above 2 are odd. 23 is a prime above 2, so 23 is odd.",
+  "Every mammal is warm-blooded. A dog is a mammal, so a dog is warm-blooded.",
+  "All squares are rectangles. This is a square, so it is a rectangle.",
+  "Any number ending in 0 is divisible by 5. 340 ends in 0, so it's divisible by 5.",
+  "All right angles measure 90°. This is a right angle, so it measures 90°.",
+  "All men are mortal. Socrates is a man, so Socrates is mortal.",
+  "Every even number is divisible by 2. 58 is even, so 58 is divisible by 2.",
+];
+// inductive: a general rule guessed from specific cases → only likely
+const INDUCTIVE=[
+  "Every winter so far has had snow, so next winter will too.",
+  "The last five buses were late, so the next bus will be late.",
+  "Every swan I've seen is white, so all swans are white.",
+  "The first terms are 2, 4, 6, 8, so the rule must be \u201Cadd 2.\u201D",
+  "Every cat I've met dislikes water, so all cats dislike water.",
+  "It has rained every Monday this month, so it will rain next Monday.",
+  "Each student I asked liked pizza, so everyone at school likes pizza.",
+  "The last three coin flips were heads, so the next will be heads.",
+  "These four multiples of 5 end in 0 or 5, so all multiples of 5 do.",
+  "1, 4, 9, 16 look like squares, so the tenth term should be 100.",
+];
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — spot the deductive one (1 deductive + 3 inductive)
+  1(){
+    const correct=pick(DEDUCTIVE);
+    const dis=sampleN(INDUCTIVE,3);
+    const q=buildText(correct,dis);
+    return {prompt:'Which of these is <b>deductive</b> reasoning?',stack:true,...q,
+      why:'It applies a general rule to a specific case, so a true premise makes the conclusion certain. The others all generalize from a few observations \u2014 that\u2019s inductive.'};
+  },
+
+  // 2 — spot the inductive one (1 inductive + 3 deductive)
+  2(){
+    const correct=pick(INDUCTIVE);
+    const dis=sampleN(DEDUCTIVE,3);
+    const q=buildText(correct,dis);
+    return {prompt:'Which of these is <b>inductive</b> reasoning?',stack:true,...q,
+      why:'It guesses a general rule from specific cases, so the conclusion is only likely \u2014 the next case could break it. The others apply a rule that guarantees the result.'};
+  },
+
+  // 3 — which way does the reasoning run?
+  3(){
+    const ded=[
+      "All mammals are warm-blooded. A whale is a mammal, so a whale is warm-blooded.",
+      "Every square has equal sides. This is a square, so its sides are equal.",
+      "All multiples of 10 end in 0. 90 is a multiple of 10, so 90 ends in 0.",
+    ];
+    const ind=[
+      "The terms start 2, 4, 6, 8, so the rule must be add 2.",
+      "Every apple from this tree has been sweet, so the next one will be sweet.",
+      "The pattern gave 1, 4, 9, 16, so the tenth term will be 100.",
+    ];
+    const isDed=rand(0,1)===1;
+    const stmt=isDed?pick(ded):pick(ind);
+    const correct=isDed?"from a general rule to a specific case":"from specific cases to a general rule";
+    const dis=[
+      isDed?"from specific cases to a general rule":"from a general rule to a specific case",
+      "from one specific case to another specific case",
+      "from a conclusion back to its premise",
+    ];
+    const q=buildText(correct,dis);
+    return {prompt:`\u201C${stmt}\u201D<br>This reasoning goes:`,stack:true,...q,
+      why:isDed?'A general rule is applied to a specific case \u2014 <b>general \u2192 specific</b>, the mark of deduction.'
+                :'A general rule is guessed from specific cases \u2014 <b>specific \u2192 general</b>, the mark of induction.'};
+  },
+
+  // 4 — guaranteed, or only likely?
+  4(){
+    const ind=[
+      "The sun has risen every day of recorded history, so it will rise tomorrow.",
+      "Every multiple of 5 checked so far ends in 0 or 5, so all of them do.",
+      "Adding the first few odd numbers has always given a square, so it always will.",
+    ];
+    const ded=[
+      "All right angles are 90°. This is a right angle, so it is 90°.",
+      "Every even number is divisible by 2. 48 is even, so 48 is divisible by 2.",
+      "All squares are rectangles. This is a square, so it is a rectangle.",
+    ];
+    const isDed=rand(0,1)===1;
+    if(isDed){
+      const stmt=pick(ded);
+      const q=buildText("Guaranteed \u2014 the reasoning is deductive",
+        ["Only likely, never certain","Guaranteed to be false","Unknowable either way"]);
+      return {prompt:`\u201C${stmt}\u201D<br>If the premises are true, the conclusion is:`,stack:true,...q,
+        why:'A general rule applied to a specific case \u2014 true premises <b>guarantee</b> the conclusion. That\u2019s deduction.'};
+    } else {
+      const stmt=pick(ind);
+      const q=buildText("Only likely \u2014 the reasoning is inductive",
+        ["Guaranteed to be true","Guaranteed to be false","Proven, since it always has"]);
+      return {prompt:`\u201C${stmt}\u201D<br>If the observations are true, the conclusion is:`,stack:true,...q,
+        why:'Overwhelmingly probable is still not certain. Reasoning from examples is inductive, so the conclusion is only <b>likely</b>.'};
+    }
+  },
+
+  // 5 — name the conjecture
+  5(){
+    const bank=[
+      {ex:"3 + 5 = 8,  9 + 7 = 16,  11 + 1 = 12",
+       correct:"The sum of two odd numbers is even",
+       dis:["3 + 5 = 8","Every even number is a sum of two odds","Odd numbers are never even"]},
+      {ex:"1 + 3 = 4,  1 + 3 + 5 = 9,  1 + 3 + 5 + 7 = 16",
+       correct:"The sum of the first n odd numbers is n\u00B2",
+       dis:["1 + 3 = 4","Every perfect square is a sum of odd numbers","Odd numbers add up to even totals"]},
+      {ex:"4 = 2 + 2,  6 = 3 + 3,  8 = 3 + 5,  10 = 5 + 5",
+       correct:"Every even number above 2 is a sum of two primes",
+       dis:["6 = 3 + 3","Every prime number is odd","All sums of two primes are even"]},
+      {ex:"2\u00B73 = 6,  3\u00B74 = 12,  4\u00B75 = 20",
+       correct:"The product of two consecutive integers is even",
+       dis:["3 \u00D7 4 = 12","Every even number is a product of consecutive integers","Consecutive integers are always even"]},
+    ];
+    const c=pick(bank);
+    const q=buildText(c.correct,c.dis);
+    return {prompt:`A student notices:<br><code>${c.ex}</code><br>The conjecture is:`,stack:true,...q,
+      why:'The conjecture is the <b>general</b> claim the examples point to \u2014 not a single instance, and not a definition.'};
+  },
+
+  // 6 — does this case confirm or refute?
+  6(){
+    const bank=[
+      {claim:"Every prime number is odd",cs:"2",verdict:1,note:"2 is prime and even"},
+      {claim:"Every prime number is odd",cs:"7",verdict:0,note:"7 is prime and odd"},
+      {claim:"All multiples of 3 are odd",cs:"6",verdict:1,note:"6 is a multiple of 3 and even"},
+      {claim:"All multiples of 3 are odd",cs:"9",verdict:0,note:"9 is a multiple of 3 and odd"},
+      {claim:"All birds can fly",cs:"a penguin",verdict:1,note:"a penguin is a bird that can\u2019t fly"},
+      {claim:"All birds can fly",cs:"a sparrow",verdict:0,note:"a sparrow is a bird that can fly"},
+      {claim:"Every whole number is positive",cs:"0",verdict:1,note:"0 is a whole number and not positive"},
+      {claim:"All multiples of 3 are odd",cs:"7",verdict:2,note:"7 isn\u2019t a multiple of 3, so it can\u2019t test the claim"},
+      {claim:"Every prime number is odd",cs:"4",verdict:2,note:"4 isn\u2019t prime, so it can\u2019t test the claim"},
+    ];
+    const c=pick(bank);
+    const opts=[
+      "It confirms the claim, but doesn't prove it",
+      "It refutes the claim",
+      "It's irrelevant \u2014 the case doesn't fit the claim",
+      "It proves the claim is always true",
+    ];
+    const correct=opts[c.verdict];
+    const q=buildText(correct,opts.filter(o=>o!==correct));
+    return {prompt:`Claim: <b>\u201C${c.claim}.\u201D</b><br>Consider <code>${c.cs}</code>. This case:`,stack:true,...q,
+      why:`${c.note[0].toUpperCase()+c.note.slice(1)}. `+(c.verdict===0?'A confirming case never <b>proves</b> a universal claim.':c.verdict===1?'One counterexample is enough to <b>refute</b> it.':'A case outside the \u201Cif\u201D neither confirms nor refutes.')};
+  },
+
+  // 7 — pick the counterexample
+  7(){
+    const bank=[
+      {claim:"All multiples of 3 are odd",counter:"6",conf:["9","15"],irr:"7"},
+      {claim:"All multiples of 5 are odd",counter:"10",conf:["5","15"],irr:"9"},
+      {claim:"Every prime number is odd",counter:"2",conf:["3","7"],irr:"9"},
+      {claim:"Every square number is even",counter:"9",conf:["4","16"],irr:"6"},
+      {claim:"Every number divisible by 2 is divisible by 4",counter:"6",conf:["8","12"],irr:"9"},
+      {claim:"All multiples of 6 are multiples of 4",counter:"6",conf:["12","24"],irr:"8"},
+    ];
+    const c=pick(bank);
+    const q=buildText(c.counter,[c.conf[0],c.conf[1],c.irr]);
+    return {prompt:`Which single value <b>disproves</b> the claim:<br><b>\u201C${c.claim}.\u201D</b>`,stack:false,...q,
+      why:`A counterexample must fit the \u201Cif\u201D and break the \u201Cthen.\u201D ${c.conf.join(" and ")} fit the claim (they confirm it), and ${c.irr} doesn\u2019t fit the claim at all \u2014 only <b>${c.counter}</b> disproves it.`};
+  },
+
+  // 8 — the asymmetry of proof
+  8(){
+    const variants=[
+      {p:"You test a conjecture on 500 cases and every one fits. You can correctly conclude:",
+       correct:"Nothing about the general claim is guaranteed \u2014 the 501st case could still fail",
+       dis:["The conjecture is now proven true","500 confirming cases outweigh any counterexample","The reasoning has become deductive"],
+       why:'No number of confirming cases proves a universal claim. Verification isn\u2019t proof.'},
+      {p:"A conjecture holds for every number checked up to a billion, with no exception. This means:",
+       correct:"It's strong evidence, but still not a proof",
+       dis:["It's proven true","It's been proven deductively","A counterexample is now impossible"],
+       why:'Some famous conjectures fail only at enormous numbers. \u201CNo exception yet\u201D is not \u201Cno exception ever.\u201D'},
+      {p:"Which single result would settle a conjecture for good?",
+       correct:"One counterexample \u2014 it disproves the claim outright",
+       dis:["One confirming case \u2014 it proves the claim","A thousand confirming cases","Enough confirming cases, eventually"],
+       why:'Proof and disproof aren\u2019t symmetric: examples can never prove a universal claim, but one counterexample refutes it instantly.'},
+    ];
+    const c=pick(variants);
+    const q=buildText(c.correct,c.dis);
+    return {prompt:c.p,stack:true,...q,why:c.why};
+  },
+
+  // 9 — the pattern that breaks
+  9(){
+    if(rand(0,1)===1){
+      // circle-regions showcase, with figure
+      const fig=`<div class="figrow">${circleFig(2,2,false)}${circleFig(3,4,false)}${circleFig(4,8,false)}${circleFig(5,16,false)}${circleFig(6,31,true)}</div>`;
+      const q=buildText(
+        "A pattern holding for several cases doesn't guarantee it continues \u2014 induction can fail",
+        ["The student made an arithmetic slip; it's really 32",
+         "The doubling rule is deductive, so 31 must be wrong",
+         "Six points is a lone exception, but the rule still holds"]);
+      return {prompt:'Points joined by chords give regions 2, 4, 8, 16 for 2\u20135 points, so a student predicts 6 points \u2192 32. It\u2019s actually <b>31</b>. The right lesson:',
+        seq:fig,stack:true,...q,
+        why:'The 6-point case <b>is</b> the counterexample to the \u201Cit doubles\u201D conjecture. Four confirmations never made it certain.'};
+    } else {
+      // polynomial primes variant, no figure
+      const q=buildText(
+        "A pattern holding for many cases doesn't guarantee it continues \u2014 induction can fail",
+        ["The formula is still basically always prime",
+         "It's a computing error; 1681 must be prime",
+         "n = 40 is a rare exception, but the rule holds otherwise"]);
+      return {prompt:'The expression <code>n\u00B2 + n + 41</code> is prime for n = 0, 1, 2, \u2026, 39, so someone concludes it\u2019s <b>always</b> prime. But n = 40 gives 1681 = 41\u00B2. The right lesson:',
+        seq:'',stack:true,...q,
+        why:'Forty straight confirmations, then it fails. Passing every test you tried is not a proof \u2014 one counterexample ends it.'};
+    }
+  },
+
+  // 10 — mixed boss: draw from rungs 1–9
+  10(){
+    const r=rand(1,9);
+    const q=GEN[r]();
+    return q;
+  },
+};
+
+/* ---- small SVG of n points on a circle with all chords ---- */
+function circleFig(n,count,hi){
+  const s=88,cx=44,cy=44,r=32;
+  const chord=hi?'#D9922A':'rgba(31,122,116,.55)';
+  const dot=hi?'#B8860B':'#1F7A74';
+  let pts=[];
+  for(let i=0;i<n;i++){const a=(-90+i*360/n)*Math.PI/180;pts.push([cx+r*Math.cos(a),cy+r*Math.sin(a)]);}
+  let lines='';
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){lines+=`<line x1="${pts[i][0].toFixed(1)}" y1="${pts[i][1].toFixed(1)}" x2="${pts[j][0].toFixed(1)}" y2="${pts[j][1].toFixed(1)}" stroke="${chord}" stroke-width="1"/>`;}
+  const dots=pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="${dot}"/>`).join('');
+  const lbl=hi?`<b>${n} pts</b> \u2192 <b>${count}</b> \u2717`:`<b>${n} pts</b> \u2192 ${count}`;
+  return `<div style="text-align:center">
+    <svg viewBox="0 0 ${s} ${s}" width="80" height="80" role="img" aria-label="${n} points on a circle joined by chords, ${count} regions"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(11,32,37,.22)" stroke-width="1"/>${lines}${dots}</svg>
+    <div style="font-family:'Space Mono';font-size:.78rem;margin-top:1px;color:${hi?'#B8860B':'#41514F'}">${lbl}</div>
+  </div>`;
+}
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Spot the deductive one',short:'general \u2192 specific'},
+  {id:2,title:'Spot the inductive one',short:'specific \u2192 general'},
+  {id:3,title:'Which way does it run?',short:'name the direction'},
+  {id:4,title:'Guaranteed or likely?',short:'the core question'},
+  {id:5,title:'Name the conjecture',short:'the general claim'},
+  {id:6,title:'Confirm or refute?',short:'one case at a time'},
+  {id:7,title:'Pick the counterexample',short:'fit the if, break the then'},
+  {id:8,title:'The asymmetry of proof',short:'examples never prove'},
+  {id:9,title:'The pattern that breaks',short:'2, 4, 8, 16, 31'},
+  {id:10,title:'Mixed boss',short:'all of the above'},
+];
+
+/* ============ state ============ */
+const STORE='reasoningLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'\uD83C\uDFC5':'\u25CB'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.textContent=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML=currentQ.seq||'';
+  optsEl.className='opts'+(currentQ.stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt';
+    btn.innerHTML=`<span class="key">${i+1}</span><span>${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">\u2713 Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">\u2717 Not quite.</span><span>${currentQ.why} <em>Streak reset \u2014 four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero demo ============ */
+function buildDemo(){
+  const row=document.getElementById('confRow');
+  const conf=[[2,'2 pts'],[3,'3 pts'],[4,'4 pts'],[5,'5 pts']];
+  let html='';
+  conf.forEach(c=>{html+=`<span class="chip ok"><span class="v">${c[0]}</span><span class="t">${c[1]}</span></span><span class="chip"><span class="arrowc">\u2192</span></span>`;});
+  html+=`<span class="chip bad"><span class="v">32</span><span class="t">6 pts?</span></span>`;
+  html+=`<span class="chip"><span class="arrowc">=</span></span>`;
+  html+=`<span class="chip real"><span class="v">31</span><span class="t">actually</span></span>`;
+  row.innerHTML=html;
+}
+function runReveal(){
+  const reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  document.querySelectorAll('.reveal').forEach(el=>{
+    const delay=parseInt(el.dataset.delay||'0');
+    if(reduce){el.classList.add('in');return;}
+    setTimeout(()=>el.classList.add('in'),200+delay);
+  });
+  // stagger the confirmation chips
+  const chips=[...document.querySelectorAll('#confRow .chip')];
+  if(reduce){chips.forEach(c=>c.style.opacity=1);return;}
+  chips.forEach((c,i)=>{c.style.opacity=0;c.style.transition='opacity .4s';setTimeout(()=>c.style.opacity=1,400+i*180);});
+}
+
+buildDemo();renderRail();renderProgress();newQuestion();runReveal();
+</script>
+</body>
+</html>
