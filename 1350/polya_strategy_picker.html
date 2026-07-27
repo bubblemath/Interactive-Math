@@ -1,0 +1,520 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Pólya Strategy-Picker — read the problem's shape before you compute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.15rem;box-shadow:var(--shadow)}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2.1rem,5.4vw,3.6rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+
+  .demo{margin:34px 0 8px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:24px 22px;box-shadow:var(--shadow)}
+  .demo-label{font-family:"Space Mono";font-size:.82rem;color:var(--muted);margin-bottom:18px;text-align:center}
+  .demo-label b{color:var(--paper)}
+  .keygrid{display:flex;flex-direction:column;gap:12px}
+  .keyrow{display:flex;align-items:center;gap:14px;justify-content:center;flex-wrap:wrap}
+  .keyrow .tell{font-family:"Space Mono";font-size:.9rem;color:#CFE2E0;text-align:right;flex:1 1 200px;min-width:0}
+  .keyrow .arr{color:var(--teal);font-size:1.15rem;flex:none}
+  .keyrow .tool{font-family:"Space Grotesk";font-weight:600;color:var(--teal-bright);text-align:left;flex:1 1 190px;min-width:0}
+  .demo-verdict{text-align:center;margin-top:20px;font-size:.95rem;color:#CFE2E0}
+  .demo-verdict b{color:var(--amber)}
+
+  .reveal{opacity:0;transform:translateY(6px)}
+  .reveal.in{opacity:1;transform:none;transition:opacity .5s ease,transform .5s ease}
+  @media (prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important;transition:none!important}}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:440px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.05rem;color:var(--ink);margin-bottom:8px;line-height:1.5}
+  .prompt .ask{display:block;margin-top:10px;font-weight:600;color:#33403F}
+  .qseq{margin:0}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:.98rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.4}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">②</span> The Pólya Strategy-Picker</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 1 · Pólya step 2 · devise a plan</div>
+    <h1>Read the problem's <span class="hl">shape</span><br>before you compute.</h1>
+    <p class="lede">This is the step most people skip: between understanding a problem and grinding through it, Pólya says <em>devise a plan</em>. Every strategy has a tell — a feature in the problem that points to the right tool. Learn to read the tell and you stop reaching blindly for a calculation that may not be the shortest road.</p>
+
+    <div class="demo" id="demo">
+      <div class="demo-label reveal" data-delay="0"><b>The tell points to the tool:</b></div>
+      <div class="keygrid" id="keyGrid"></div>
+      <div class="demo-verdict reveal" data-delay="1500">Same four steps every mathematician uses — and the plan you pick is <b>step 2</b>, not an afterthought.</div>
+    </div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>The reflex is to start calculating.</b> Add the whole column, list every case, plug in and grind — that instinct is exactly what Pólya's method interrupts. On several rungs the tempting wrong answer is "just start computing," and it's wrong not because it never works, but because the shape of the problem was pointing at something faster.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–4 teach the four sharpest tells one at a time — work backward, look for a pattern, draw a diagram, find a subgoal. Rung 5 mixes all seven strategies with no hint which fits.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Nothing is locked</h3><p>Build the tells in order, or jump straight to the one you want to sharpen.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>Sometimes more than one works</h3><p>Where a second strategy is also reasonable, the feedback says so — the goal is the <em>best first move</em>, not the only move.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 5 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Work backward</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>Planning is a teachable skill, not a talent</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>It's the step novices skip</h3><p>Struggling problem-solvers jump from reading to computing. Naming the plan out loud is the habit that separates them from strong ones — and you can teach it directly.</p></div>
+      <div class="why-card"><h3>The tell is transferable</h3><p>"End known, start unknown → work backward" fires on a K–6 word problem and a college proof alike. Students carry the cue, not a memorized answer.</p></div>
+      <div class="why-card"><h3>More than one road is fine</h3><p>Honoring a correct-but-different strategy, out loud, teaches flexibility. Future teachers who model that raise braver problem-solvers.</p></div>
+    </div>
+    <p class="closing">Strategy choice never has the single clean answer that a common ratio does, and that's the point — problem-solving is judgment. <b>Read the shape, name the tell, and pick your first move on purpose instead of reaching for the nearest calculation.</b></p>
+  </section>
+
+  <footer>The Pólya Strategy-Picker · devise a plan · the tell points to the tool · best first move, not the only move</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+function buildText(correct,dis){const all=shuffle([correct,...dis].map(t=>({text:t})));return{options:all,answer:all.findIndex(o=>o.text===correct)};}
+
+// wrap a problem + question into a prompt string
+function P(problem){return `${problem}<span class="ask">What is the best first move?</span>`;}
+
+/* ============ rung banks ============ */
+// Rungs 1–3: correct strategy is fixed for the rung; each item gives 3 non-fitting distractors.
+const BANK={
+  1:{ strat:"Work backward", items:[
+    {p:"A 10-mile tunnel took 5 weeks to dig. In week 4 the crew dug 2½ miles, and in week 5 they dug 1¼ miles to finish. How much was dug in the first 3 weeks?",
+     d:["Look for a pattern","Make a table","Make a diagram"],
+     why:"You know the finished total (10 miles) and the last two weeks' work — subtract them to recover the earlier total. A known end state with reversible steps is the signature of working backward."},
+    {p:"A number is divided by 4, then 13 is subtracted, and the result is 9. What was the number?",
+     d:["Guess and check","Make a diagram","Look for a pattern"],
+     why:"Reverse each step from the end: 9 → +13 → 22 → ×4 → 88. Guess-and-check would eventually work, but reversing is far faster with these numbers."},
+    {p:"A coat's price was raised 20%, then $15 was taken off at the register, and it sold for $105. What was the original price?",
+     d:["Make a table","Make a diagram","Examine a related problem"],
+     why:"Undo the steps: 105 → +15 → 120 → ÷1.2 → $100. Starting from the known final price and reversing is working backward."},
+    {p:"Ana gave half her stickers to Bo, then gave 6 more to Cy, and had 4 left. How many did she start with?",
+     d:["Make a diagram","Look for a pattern","Make a table"],
+     why:"Work back from 4: add the 6 she gave Cy → 10, which was half her stickers → 20. The end is known and each step reverses cleanly."},
+    {p:"Sam spent 1/3 of his money, then spent $8 more, and now has $12 left. How much did he start with?",
+     d:["Look for a pattern","Examine a related problem","Make a diagram"],
+     why:"Reverse it: 12 + 8 = 20 is the 2/3 he had left, so he started with $30. Known end, reversible steps → work backward."},
+    {p:"A jar of bacteria doubles every hour and is completely full at hour 12. At which hour was it half full?",
+     d:["Look for a pattern","Make a table","Make a diagram"],
+     why:"Undo the final doubling: half full is exactly one hour before full — hour 11. Reversing the last step beats building a 12-row table."},
+    {p:"A bank balance ended Friday at $50, after a $30 deposit Thursday and a $20 withdrawal Wednesday. What was the balance before Wednesday?",
+     d:["Look for a pattern","Make a diagram","Examine a related problem"],
+     why:"Step backward from $50: undo Thursday's deposit (−30 → 20), then Wednesday's withdrawal (+20 → 40). The end is given; reverse to the start."},
+  ]},
+  2:{ strat:"Look for a pattern", items:[
+    {p:"What is 1 + 2 + 3 + ⋯ + 100?",
+     d:["Just add them one by one","Make a diagram","Work backward"],
+     why:"Pair the ends — 1+100, 2+99, … — giving 50 pairs of 101, so 5050. Spotting that structure is the pattern move; adding straight through is the grind this method exists to avoid."},
+    {p:"What is the units (last) digit of 7⁵⁰?",
+     d:["Multiply 7 by itself 50 times","Make a diagram","Work backward"],
+     why:"The last digits cycle 7, 9, 3, 1, 7, 9, 3, 1, … in blocks of four. Find where 50 lands in the cycle — no need to compute the giant number."},
+    {p:"What is the last digit of 2¹⁰⁰?",
+     d:["Multiply it all out","Make a diagram","Work backward"],
+     why:"Last digits of powers of 2 cycle 2, 4, 8, 6 every four steps. Locate 100 in that cycle instead of evaluating 2¹⁰⁰."},
+    {p:"What is 1 + 3 + 5 + ⋯ + 99 (the first 50 odd numbers)?",
+     d:["Add them one at a time","Make a diagram","Work backward"],
+     why:"The running sums are 1, 4, 9, 16, … — perfect squares. The sum of the first 50 odds is 50² = 2500."},
+    {p:"If day 1 is a Monday, what day of the week is day 100?",
+     d:["Count 100 days on a calendar","Make a diagram","Work backward"],
+     why:"Days of the week repeat every 7. Use the remainder of 100 ÷ 7 to jump to the answer rather than counting one by one."},
+    {p:"What is the 20th term of 1, 4, 9, 16, 25, …?",
+     d:["Guess and check","Work backward","Make a diagram"],
+     why:"The terms are the perfect squares n², a pattern you can extend directly: the 20th term is 20² = 400."},
+    {p:"What is 2 + 4 + 6 + ⋯ + 100 (the even numbers up to 100)?",
+     d:["Add each one in turn","Make a diagram","Guess and check"],
+     why:"Each term is 2×(1, 2, 3, …), so the sum is 2×(1+2+⋯+50). Recognizing that structure is the pattern move. (It can also be set up by relating it to Gauss's sum.)"},
+  ]},
+  3:{ strat:"Make a diagram", items:[
+    {p:"Bill beats Jim in a 50 m race, finishing exactly when Jim reaches the 45 m mark. In a rematch, Jim starts 5 m ahead of Bill. Who wins?",
+     d:["Write an equation","Look for a pattern","Guess and check"],
+     why:"Sketch both runners' positions: Bill covers 50 m while Jim covers 45, so with a 5 m head start Jim reaches the line at the same moment — a tie. The picture shows it faster than algebra. (An equation also works, but is more error-prone here.)"},
+    {p:"Two trains 300 miles apart travel toward each other at 40 mph and 60 mph. How far from the first train do they meet?",
+     d:["Look for a pattern","Guess and check","Work backward"],
+     why:"Draw the track with both trains and speeds; the picture sets up the closing-speed relationship. (It can be finished with an equation, but the diagram is the clearest first move.)"},
+    {p:"A cube is painted on all six faces, then cut into 27 identical small cubes. How many small cubes have paint on exactly two faces?",
+     d:["Guess and check","Work backward","Make a table"],
+     why:"Sketch the cube: the two-face cubes are the edge cubes that aren't corners — 12 of them. Seeing the structure is far safer than guessing."},
+    {p:"A 10 m by 6 m garden is surrounded by a 1 m wide path. What is the area of the path alone?",
+     d:["Guess and check","Look for a pattern","Work backward"],
+     why:"Draw the garden inside the larger rectangle: outer area (12×8 = 96) minus the garden (10×6 = 60) = 36 m². The diagram prevents mis-counting the border."},
+    {p:"Tom is taller than Sue but shorter than Ray. Sue is taller than Ann. Who is the tallest?",
+     d:["Guess and check","Look for a pattern","Work backward"],
+     why:"Place them on a vertical line as you read: Ray > Tom > Sue > Ann. Ray is tallest — the diagram organizes the relationships at a glance."},
+    {p:"A 13 ft ladder leans against a wall with its base 5 ft from the wall. How high up the wall does it reach?",
+     d:["Guess and check","Look for a pattern","Work backward"],
+     why:"Draw the right triangle of wall, ground, and ladder; the picture shows a 5–12–13 triangle, so it reaches 12 ft. (The diagram sets up the Pythagorean step.)"},
+  ]},
+};
+
+// Rung 4: correct is a specific "find X first" subgoal phrase (varies per item)
+const BANK4=[
+  {p:"Arrange the numbers 1 through 9 in a 3×3 grid so that every row, column, and diagonal has the same sum.",
+   correct:"Figure out what that common sum must be",
+   d:["Guess and check every arrangement","Make a diagram","Look for a pattern"],
+   why:"The numbers 1–9 total 45, split across 3 rows, so each row must sum to 15. Nailing that subgoal turns a search of 362,880 arrangements into a solvable puzzle."},
+  {p:"The average of five numbers is 20. Four of them are 15, 22, 18, and 25. What is the fifth number?",
+   correct:"Find the total of all five numbers first",
+   d:["Guess and check","Make a diagram","Look for a pattern"],
+   why:"An average of 20 across 5 numbers means the total is 5×20 = 100 — the subgoal. Subtract the known four (80) to get the fifth: 20."},
+  {p:"A rectangle has perimeter 40 cm, and its length is three times its width. What is its area?",
+   correct:"Find the width first",
+   d:["Guess and check","Look for a pattern","Work backward"],
+   why:"You can't leap straight to area — pin the width first (2(w+3w)=40 gives w=5), then length 15, then area 75 cm². The width is the subgoal that unlocks the rest."},
+  {p:"How many seconds are there in one full day?",
+   correct:"Find the number of seconds in an hour first",
+   d:["Guess and check","Make a diagram","Work backward"],
+   why:"Reach it in stages: 60×60 = 3600 seconds per hour is the subgoal, then ×24 = 86,400. Building through an intermediate quantity is subgoaling."},
+  {p:"At 3:30, what is the smaller angle between a clock's hour and minute hands?",
+   correct:"Find where each hand points first",
+   d:["Guess and check","Look for a pattern","Work backward"],
+   why:"The subgoal is locating each hand: the minute hand at 180°, the hour hand halfway between 3 and 4 (105°). Their difference is 75°. Without pinning the hands first, there's nothing to compare."},
+];
+
+// Rung 5: mixed — each item carries its own correct strategy + distractors (covers all seven)
+const BANK5=[
+  {p:"Eight marbles look identical, but one is slightly heavier. Using a balance scale, how can you find it in exactly three weighings?",
+   correct:"Guess and check",
+   d:["Work backward","Look for a pattern","Make a diagram"],
+   why:"Systematically test groups on the scale, letting each result narrow the suspects — a structured guess-and-check. (Split 3-3-2 and the heavy one shows within three weighings.)"},
+  {p:"Find the sum of all the even numbers from 2 to 100.",
+   correct:"Examine a related problem",
+   d:["Work backward","Make a diagram","Guess and check"],
+   why:"Relate it to a sum you can already do: 2+4+⋯+100 = 2×(1+2+⋯+50). Leaning on a simpler related problem is the move here."},
+  {p:"Find two whole numbers whose sum is 10 and whose product is as large as possible.",
+   correct:"Make a table",
+   d:["Work backward","Make a diagram","Look for a pattern"],
+   why:"List the pairs (1,9), (2,8), … with their products in a table; the maximum, 25, appears at 5×5. A table organizes the search cleanly."},
+  {p:"A 10-mile tunnel is finished after the crew digs 2½ miles one week and 1¼ the next. How much was dug before those two weeks?",
+   correct:"Work backward",
+   d:["Look for a pattern","Make a table","Make a diagram"],
+   why:"Subtract the last two weeks from the known 10-mile total. A known end with reversible steps calls for working backward."},
+  {p:"What is 1 + 2 + 3 + ⋯ + 100?",
+   correct:"Look for a pattern",
+   d:["Just add them one by one","Make a diagram","Work backward"],
+   why:"Pair the ends into 50 sums of 101 → 5050. Spotting that structure is the pattern move."},
+  {p:"In a 50 m rematch, Jim starts 5 m ahead of Bill, who runs 50 m in the time Jim runs 45. Who reaches the line first?",
+   correct:"Make a diagram",
+   d:["Look for a pattern","Guess and check","Make a table"],
+   why:"A quick sketch of both runners' positions shows they reach the line together — clearer than setting up equations."},
+  {p:"Place 1 through 9 in a 3×3 grid with every row, column, and diagonal summing to the same value.",
+   correct:"Identify a subgoal",
+   d:["Guess and check","Look for a pattern","Work backward"],
+   why:"Find the target sum first: 1–9 total 45 over 3 rows → each row is 15. That subgoal makes the puzzle tractable."},
+  {p:"How many total games are played if 8 teams each play every other team exactly once?",
+   correct:"Examine a related problem",
+   d:["Work backward","Make a diagram","Just count them all one by one"],
+   why:"It's the handshake problem in disguise — relate it to counting pairs: 8×7/2 = 28. (Building up from smaller cases, a pattern approach, also works.)"},
+];
+
+/* ============ generators ============ */
+const GEN={
+  1(){const b=BANK[1],it=pick(b.items);const q=buildText(b.strat,it.d);return{prompt:P(it.p),...q,why:it.why};},
+  2(){const b=BANK[2],it=pick(b.items);const q=buildText(b.strat,it.d);return{prompt:P(it.p),...q,why:it.why};},
+  3(){const b=BANK[3],it=pick(b.items);const q=buildText(b.strat,it.d);return{prompt:P(it.p),...q,why:it.why};},
+  4(){const it=pick(BANK4);const q=buildText(it.correct,it.d);return{prompt:P(it.p),...q,why:it.why};},
+  5(){const it=pick(BANK5);const q=buildText(it.correct,it.d);return{prompt:P(it.p),...q,why:it.why};},
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:"Work backward",short:"end known, start unknown"},
+  {id:2,title:"Look for a pattern",short:"huge, but it repeats"},
+  {id:3,title:"Make a diagram",short:"positions and relations"},
+  {id:4,title:"Identify a subgoal",short:"find a middle value first"},
+  {id:5,title:"Mixed boss",short:"all seven strategies"},
+];
+
+/* ============ state ============ */
+const STORE='polyaPickerBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'\uD83C\uDFC5':'\u25CB'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.textContent=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML='';
+  const stack=currentQ.options.some(o=>o.text.length>34);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt';
+    btn.innerHTML=`<span class="key">${i+1}</span><span>${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">\u2713 Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">\u2717 Not the best first move.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero demo ============ */
+function buildDemo(){
+  const rows=[
+    ["end known, start unknown","Work backward"],
+    ["too big to compute, but it repeats","Look for a pattern"],
+    ["positions, races, meetings","Make a diagram"],
+    ["need a middle value first","Identify a subgoal"],
+  ];
+  const g=document.getElementById('keyGrid');
+  g.innerHTML=rows.map((r,i)=>`<div class="keyrow reveal" data-delay="${200+i*220}"><span class="tell">${r[0]}</span><span class="arr">\u2192</span><span class="tool">${r[1]}</span></div>`).join('');
+}
+function runReveal(){
+  const reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  document.querySelectorAll('.reveal').forEach(el=>{
+    const delay=parseInt(el.dataset.delay||'0');
+    if(reduce){el.classList.add('in');return;}
+    setTimeout(()=>el.classList.add('in'),200+delay);
+  });
+}
+
+buildDemo();renderRail();renderProgress();newQuestion();runReveal();
+</script>
+</body>
+</html>
