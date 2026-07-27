@@ -1,0 +1,585 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Membership & Subset Ladder — is the left side an element, or a set?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.2rem;box-shadow:var(--shadow)}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2.1rem,5.4vw,3.6rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .demo{margin:34px 0 8px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:26px 22px;box-shadow:var(--shadow)}
+  .demo-label{font-family:"Space Mono";font-size:.84rem;color:#CFE2E0;margin-bottom:16px;text-align:center}
+  .demo-label b{color:var(--paper)}
+  .stmt{font-family:"Space Mono";display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap;font-size:clamp(1.15rem,3.2vw,1.6rem);margin-top:4px}
+  .tok{padding:6px 12px;border-radius:9px;font-weight:700}
+  .tok.elem{background:rgba(47,163,155,.2);color:var(--teal-bright)}
+  .tok.set{background:rgba(239,181,63,.16);color:var(--amber)}
+  .tok.plain{color:var(--paper)}
+  .stmt .sym{color:var(--green);font-weight:700}
+  .stmt .ok{color:var(--green)}
+  .tag{font-family:"Space Mono";font-size:.76rem;color:var(--muted);text-align:center;margin:5px 0 2px}
+  .demo-verdict{text-align:center;margin-top:20px;font-size:.95rem;color:#CFE2E0}
+  .demo-verdict b{color:var(--paper)}
+  .demo-verdict .bad{font-family:"Space Mono";color:#F0A17B;text-decoration:line-through;text-decoration-thickness:2px;white-space:nowrap}
+
+  .reveal{opacity:0;transform:translateY(6px)}
+  .reveal.in{opacity:1;transform:none;transition:opacity .5s ease,transform .5s ease}
+  @media (prefers-reduced-motion:reduce){.reveal{opacity:1!important;transform:none!important;transition:none!important}}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:440px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.08rem;color:var(--ink);margin-bottom:8px;line-height:1.55}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700;font-size:.96em}
+  .qseq{margin:0}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.4}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none}
+  .opt .body{font-family:"Space Mono";font-weight:700}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">∈</span> The Membership &amp; Subset Ladder</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 2 · sets &amp; subsets</div>
+    <h1>Is the left side an <span class="hl">element</span>,<br>or a <span class="hl">set</span>?</h1>
+    <p class="lede">Almost every notation mistake in this lesson is the same mistake. Before you pick a symbol, pin down what the set holds, then look at the left side: a bare object is an <em>element</em> and takes <code>∈</code>; something in braces is a <em>set</em> and takes <code>⊆</code>. Get that one read right and <code>∈</code> vs <code>⊆</code> stops being a coin flip.</p>
+
+    <div class="demo" id="demo">
+      <div class="demo-label reveal" data-delay="0">The whole ladder turns on one look: <b>is the left side wearing braces?</b></div>
+      <div class="stmt reveal" data-delay="300">
+        <span class="tok elem">a</span><span class="sym">∈</span><span class="tok plain">{a, b, c}</span><span class="ok">✓</span>
+      </div>
+      <div class="tag reveal" data-delay="300">no braces → element → ∈</div>
+      <div class="stmt reveal" data-delay="800">
+        <span class="tok set">{a}</span><span class="sym">⊆</span><span class="tok plain">{a, b, c}</span><span class="ok">✓</span>
+      </div>
+      <div class="tag reveal" data-delay="800">braces → set → ⊆</div>
+      <div class="demo-verdict reveal" data-delay="1300"><b>The two traps:</b> <span class="bad">a ⊆ {…}</span> and <span class="bad">{a} ∈ {…}</span> — each mismatches the left side to the symbol.</div>
+    </div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>Braces mean "set," and a set is never bare.</b> Writing <code>a ⊆ {a, b}</code> treats the element <code>a</code> as if it were a set; writing <code>{a} ∈ {a, b}</code> treats the set <code>{a}</code> as if it were a loose element. Both read wrong the instant you check the left side. Every rung here trains that check until it's automatic — right through the nesting cases where an element <em>is</em> a set.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–3 make sure you can read and count a set at all. Rung 4 isolates the element-or-set decision, and 5–9 turn it against every notation gotcha the lesson throws — including the empty set and sets that contain other sets.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Nothing is locked</h3><p>Build the reading skills in order, or jump straight to the ∈-vs-⊆ rung that trips you up.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>Every wrong option is a real mistake</h3><p>Distractors are the actual errors — an element treated as a set, a repeat counted twice, equal sets called "proper."</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Pin down the set</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>Notation is where set theory is won or lost</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>One read fixes most errors</h3><p>"Braced or bare?" resolves ∈ vs ⊆, and it's a check you can teach a child to run out loud. The confusion your students will have is the one this ladder drills away.</p></div>
+      <div class="why-card"><h3>The empty set breaks intuition</h3><p>∅ is a subset of everything, {0} isn't empty, and {∅} has one element. These trip up nearly everyone once — better here than on the exam.</p></div>
+      <div class="why-card"><h3>Sets can hold sets</h3><p>When an element is itself a set, ∈ and ⊆ finally come apart cleanly. Master that and the rest of the lesson's operations sit on solid ground.</p></div>
+    </div>
+    <p class="closing">The symbols look interchangeable until you ask the one question they answer differently. <b>Check the left side first — braced is a set and takes ⊆, bare is an element and takes ∈ — and the notation stops fighting you.</b></p>
+  </section>
+
+  <footer>The Membership &amp; Subset Ladder · braced → set → ⊆ · bare → element → ∈ · ∅ ⊆ everything</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const sampleN=(arr,n)=>shuffle(arr.slice()).slice(0,n);
+const setStr=arr=>'{'+arr.join(', ')+'}';
+function buildText(correct,dis){const all=shuffle([correct,...dis].map(t=>({text:t})));return{options:all,answer:all.findIndex(o=>o.text===correct)};}
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — pin down the set (evaluate set-builder / roster from a description)
+  1(){
+    if(rand(0,1)===1){
+      const a=pick([2,3]), b=pick([1,-1,3]), ks=pick([[3,4,5],[2,3,4],[4,5,6],[1,2,3],[5,6,7]]);
+      const els=ks.map(k=>a*k+b);
+      const correct=setStr(els);
+      const dis=[setStr(ks.map(k=>a*k)), setStr(ks), setStr(els.concat([a*(ks[ks.length-1]+1)+b]))];
+      const q=buildText(correct,dis);
+      const bstr=(b<0?'\u2212 '+(-b):'+ '+b);
+      return {prompt:`List the elements of  <code>C = { ${a}k ${bstr} | k = ${ks.join(', ')} }</code>`,...q,
+        why:`Substitute each k: ${ks.map(k=>`${a}(${k}) ${b<0?'\u2212':'+'} ${Math.abs(b)} = ${a*k+b}`).join('; ')}. So C = <b>${correct}</b>.`};
+    } else {
+      const bank=[
+        {d:'positive even natural numbers less than 8', c:[2,4,6], w:[[2,4,6,8],[1,3,5,7],[2,4]]},
+        {d:'natural numbers greater than 6 and less than 11', c:[7,8,9,10], w:[[6,7,8,9,10],[7,8,9,10,11],[8,9,10]]},
+        {d:'odd natural numbers between 2 and 10', c:[3,5,7,9], w:[[1,3,5,7,9],[3,5,7,9,11],[4,6,8]]},
+        {d:'multiples of 3 that are less than 13', c:[3,6,9,12], w:[[0,3,6,9,12],[3,6,9,12,15],[3,6,9]]},
+        {d:'weekdays that start with the letter T', c:['Tuesday','Thursday'], w:[['Tuesday','Thursday','Saturday'],['Monday','Tuesday'],['Thursday']]},
+      ];
+      const it=pick(bank);
+      const q=buildText(setStr(it.c), it.w.map(setStr));
+      return {prompt:`Write by listing its elements:  <b>the set of ${it.d}</b>`,...q,
+        why:`Listing every element that fits: <b>${setStr(it.c)}</b>.`};
+    }
+  },
+
+  // 2 — cardinality (count DISTINCT elements)
+  2(){
+    if(rand(0,1)===1){
+      const words=["roof","proof","moon","banana","letter","balloon","success","committee","mississippi","bookkeeper","cheese","assess"];
+      const w=pick(words);
+      const dl=[...new Set(w.split(''))];
+      const distinct=dl.length, total=w.length;
+      const correct=String(distinct);
+      const cand=[total,distinct-1,distinct+1,distinct+2,total+1,distinct-2];
+      const dis=[]; const seen=new Set([distinct]);
+      for(const c of cand){ if(dis.length>=3) break; if(c>=0 && !seen.has(c)){ seen.add(c); dis.push(String(c)); } }
+      const q=buildText(correct,dis);
+      return {prompt:`What is  <code>n(A)</code>  if  A = { x | x is a letter in the word \u201C${w}\u201D }?`,...q,
+        why:`Count only <b>distinct</b> letters: {${dl.join(', ')}} \u2192 <b>${distinct}</b>. The word has ${total} letters, but repeats aren\u2019t counted twice.`};
+    } else {
+      const bank=[
+        {s:'{0}',n:1,why:'{0} contains one element \u2014 the number 0. It is <b>not</b> empty.'},
+        {s:'\u2205',n:0,why:'The empty set contains nothing, so n(\u2205) = 0.'},
+        {s:'{\u2205}',n:1,why:'{\u2205} contains one element \u2014 the empty set itself \u2014 so n = 1.'},
+        {s:'{a, b, c}',n:3,why:'Three distinct elements, so n = 3.'},
+        {s:'{ {a}, b }',n:2,why:'Two elements: the set {a}, and b. So n = 2.'},
+        {s:'{7, 7, 9}',n:2,why:'Only distinct elements count: {7, 9} \u2192 n = 2.'},
+        {s:'{1, 2, 3, 4, 5}',n:5,why:'Five distinct elements, so n = 5.'},
+      ];
+      const it=pick(bank);
+      const correct=String(it.n);
+      const dis=sampleN(['0','1','2','3','4','5','6'].filter(x=>x!==correct),3);
+      const q=buildText(correct,dis);
+      return {prompt:`What is  <code>n(S)</code>  if  S = <code>${it.s}</code>?`,...q,why:it.why};
+    }
+  },
+
+  // 3 — membership: spot the TRUE ∈ statement
+  3(){
+    const alpha="abcdefghjkmnpqrstuvwxyz".split("");
+    const letterSet=()=>shuffle(alpha.slice()).slice(0,4);
+    const days=["Monday","Tuesday","Wednesday","Thursday","Friday"];
+    const trueStmt=()=>{
+      const t=rand(0,2);
+      if(t===0){const N=rand(8,20),x=rand(1,N);return `${x} \u2208 {1, 2, \u2026, ${N}}`;}
+      if(t===1){const s=letterSet();return `${pick(s)} \u2208 ${setStr(s)}`;}
+      return `${pick(days)} \u2208 { x | x is a day of the week }`;
+    };
+    const falseStmt=()=>{
+      const t=rand(0,2);
+      if(t===0){const N=rand(8,20);return `${N+rand(1,5)} \u2208 {1, 2, \u2026, ${N}}`;}
+      if(t===1){const s=letterSet();return `${pick(alpha.filter(c=>!s.includes(c)))} \u2208 ${setStr(s)}`;}
+      return `${rand(2,9)} \u2208 { x | x is a day of the week }`;
+    };
+    const correct=trueStmt(); const seen=new Set([correct]); const dis=[];
+    let guard=0;
+    while(dis.length<3 && guard++<50){const f=falseStmt(); if(!seen.has(f)){seen.add(f);dis.push(f);}}
+    const q=buildText(correct,dis);
+    return {prompt:'Which statement is <b>true</b>?',stack:true,...q,
+      why:`Only  <b>${correct}</b>  is true \u2014 that element really is in that set. Each of the others names something outside the set.`};
+  },
+
+  // 4 — element or set? (the hinge)
+  4(){
+    const braced=rand(0,1)===1;
+    const R=setStr(pick([['a','b'],['a','b','c'],['x','y','z'],['1','2','3']]));
+    const LEFT=braced?pick(['{a}','{j}','{2, 4}','{p, q}']):pick(['a','7','j','q']);
+    const opts=['an element to a set (use \u2208)','a set to a set (use \u2286)','an element to an element','a set to an element'];
+    const correct=braced?opts[1]:opts[0];
+    const q=buildText(correct,opts.filter(o=>o!==correct));
+    return {prompt:`When you compare  <code>${LEFT}</code>  to  <code>${R}</code>, you are comparing:`,stack:true,wordy:true,...q,
+      why:braced?`<code>${LEFT}</code> has braces, so it\u2019s a <b>set</b> \u2014 a set compared to a set uses \u2286.`
+                :`<code>${LEFT}</code> has no braces, so it\u2019s an <b>element</b> \u2014 an element compared to a set uses \u2208.`};
+  },
+
+  // 5 — choose ∈ or ⊆
+  5(){
+    const elementCase=rand(0,1)===1;
+    let left,right,why;
+    if(elementCase){
+      if(rand(0,1)===0){left=String(rand(2,9));right='{1, 2, 3, \u2026}';}
+      else{const s=sampleN(['a','b','c','d','e'],4);left=pick(s);right=setStr(s);}
+      why=`<code>${left}</code> is a single <b>element</b> that belongs to the set, so the symbol is \u2208. Using \u2286 would wrongly treat ${left} as a set.`;
+    } else {
+      if(rand(0,1)===0){left='{j}';right='{j}';}
+      else{const s=['a','b','c','d'];left=setStr(s.slice(0,2));right=setStr(s);}
+      why=`<code>${left}</code> is a <b>set</b>, and every one of its elements is in the right set, so the symbol is \u2286. Using \u2208 would wrongly treat it as a single element.`;
+    }
+    const correct=elementCase?'\u2208':'\u2286';
+    const q=buildText(correct,['\u2208','\u2286','\u2209','\u2284'].filter(o=>o!==correct));
+    return {prompt:`Fill in the correct symbol:  <code>${left} ___ ${right}</code>`,...q,why};
+  },
+
+  // 6 — subset ⊆ / ⊄
+  6(){
+    const pool=[-3,-1,1,3,5,7,9];
+    const B=sampleN(pool,rand(4,5)).sort((x,y)=>x-y);
+    const insiders=sampleN(B,rand(2,3));
+    let A,correct,why;
+    if(rand(0,1)===1){
+      A=insiders.slice().sort((x,y)=>x-y); correct='\u2286';
+      why=`Every element of ${setStr(A)} is also in ${setStr(B)}, so ${setStr(A)} \u2286 ${setStr(B)}.`;
+    } else {
+      const outsider=pick(pool.filter(x=>!B.includes(x)));
+      A=insiders.concat([outsider]).sort((x,y)=>x-y); correct='\u2284';
+      why=`${outsider} is in ${setStr(A)} but not in ${setStr(B)}, so ${setStr(A)} \u2284 ${setStr(B)} \u2014 one stray element breaks the subset.`;
+    }
+    const q=buildText(correct,['\u2286','\u2284','\u2208','\u2209'].filter(o=>o!==correct));
+    return {prompt:`Fill in the correct symbol:  <code>${setStr(A)} ___ ${setStr(B)}</code>`,...q,why};
+  },
+
+  // 7 — proper subset ⊂ vs ⊆
+  7(){
+    const pool=[1,2,3,4,5,6,7,8];
+    const base=sampleN(pool,rand(3,4)).sort((x,y)=>x-y);
+    const cse=pick(['equal','proper','notsub','reverse']);
+    const opts=[
+      'True \u2014 A is a proper subset of B',
+      'False \u2014 A and B are equal, so not proper',
+      'False \u2014 A is not a subset of B at all',
+      'False \u2014 B is the proper subset of A',
+    ];
+    let A,B,correct,why;
+    if(cse==='equal'){A=base.slice();B=shuffle(base.slice());correct=opts[1];
+      why='A and B have the same elements (order doesn\u2019t matter), so A = B. Equal sets are <b>not</b> proper subsets.';}
+    else if(cse==='proper'){B=base.slice();A=sampleN(base,base.length-1).sort((x,y)=>x-y);correct=opts[0];
+      why='Every element of A is in B, and B has more, so A is a <b>proper</b> subset: A \u2282 B.';}
+    else if(cse==='notsub'){B=base.slice();const out=pick(pool.filter(x=>!base.includes(x)));
+      A=sampleN(base,Math.max(1,base.length-1)).concat([out]).sort((x,y)=>x-y);correct=opts[2];
+      why=`A contains ${out}, which isn\u2019t in B, so A isn\u2019t even a subset of B \u2014 let alone a proper one.`;}
+    else {A=base.slice();B=sampleN(base,base.length-1).sort((x,y)=>x-y);correct=opts[3];
+      why='Here it\u2019s the other way around: every element of B is in A and A has more, so B \u2282 A, not A \u2282 B.';}
+    const q=buildText(correct,opts.filter(o=>o!==correct));
+    return {prompt:`Is  <code>A \u2282 B</code>  (A a proper subset of B) true or false?<br>A = <code>${setStr(A)}</code>,  B = <code>${setStr(B)}</code>`,stack:true,wordy:true,...q,why};
+  },
+
+  // 8 — empty-set rules (curated)
+  8(){
+    const TRUE=[
+      {s:'\u2205 \u2286 {1, 2, 3}',why:'The empty set is a subset of <b>every</b> set, so \u2205 \u2286 {1, 2, 3} is true.'},
+      {s:'\u2205 \u2286 \u2205',why:'The empty set is a subset of every set, including itself.'},
+      {s:'n(\u2205) = 0',why:'The empty set has no elements, so its cardinality is 0.'},
+      {s:'{\u2205} has one element',why:'{\u2205} contains a single element \u2014 the empty set \u2014 so it is not itself empty.'},
+    ];
+    const FALSE=['\u2205 \u2208 {1, 2, 3}','{0} = \u2205','n(\u2205) = 1','\u2205 = 0','{\u2205} = \u2205','\u2205 \u2208 \u2205'];
+    const t=pick(TRUE);
+    const q=buildText(t.s,sampleN(FALSE,3));
+    return {prompt:'Which statement is <b>true</b>?',stack:true,...q,why:t.why};
+  },
+
+  // 9 — nesting gotchas (curated)
+  9(){
+    const bank=[
+      {S:'{ {3}, 4 }',t:'{3} \u2208 S',f:['3 \u2208 S','{3} \u2286 S','3 \u2286 S'],
+       why:'The element {3} is literally listed in S, so <b>{3} \u2208 S</b>. But 3 by itself is not an element of S.'},
+      {S:'{ 1, {2}, 3 }',t:'{2} \u2208 S',f:['2 \u2208 S','{2} \u2286 S','{1, 3} \u2208 S'],
+       why:'S lists {2} as an element, so <b>{2} \u2208 S</b>. The bare number 2 is not an element of S.'},
+      {S:'{ a, {b, c} }',t:'{b, c} \u2208 S',f:['b \u2208 S','{b, c} \u2286 S','{a} \u2208 S'],
+       why:'The set {b, c} is one of the two elements of S, so <b>{b, c} \u2208 S</b>. Note b alone is not in S.'},
+      {S:'{ 3, 4 }',t:'3 \u2208 S',f:['{3} \u2208 S','{4} \u2208 S','4 \u2286 S'],
+       why:'The elements are the numbers 3 and 4, so <b>3 \u2208 S</b>. The set {3} is not an element \u2014 that\u2019s the classic {3} \u2208 {3, 4} trap.'},
+    ];
+    const it=pick(bank);
+    const q=buildText(it.t,it.f);
+    return {prompt:`For  <code>S = ${it.S}</code>, which statement is <b>true</b>?`,stack:true,...q,why:it.why};
+  },
+
+  // 10 — mixed
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Pin down the set',short:'read / list the elements'},
+  {id:2,title:'Count distinct',short:'cardinality n(A)'},
+  {id:3,title:'Membership',short:'is it in the set? (\u2208)'},
+  {id:4,title:'Element or set?',short:'the hinge'},
+  {id:5,title:'Choose \u2208 or \u2286',short:'the flagship trap'},
+  {id:6,title:'Subset',short:'\u2286 or \u2284'},
+  {id:7,title:'Proper subset',short:'\u2282 vs \u2286'},
+  {id:8,title:'The empty set',short:'\u2205 \u2286 everything'},
+  {id:9,title:'Nesting gotchas',short:'when an element is a set'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='membershipLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'\uD83C\uDFC5':'\u25CB'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.textContent=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML='';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.length>30);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">\u2713 Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">\u2717 Not quite.</span><span>${currentQ.why} <em>Streak reset \u2014 four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ reveal ============ */
+function runReveal(){
+  const reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  document.querySelectorAll('.reveal').forEach(el=>{
+    const delay=parseInt(el.dataset.delay||'0');
+    if(reduce){el.classList.add('in');return;}
+    setTimeout(()=>el.classList.add('in'),200+delay);
+  });
+}
+
+renderRail();renderProgress();newQuestion();runReveal();
+</script>
+</body>
+</html>
