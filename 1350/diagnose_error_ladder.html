@@ -1,0 +1,673 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnose the Error — a wrong answer is the output of a rule</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.2rem;box-shadow:var(--shadow)}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .demo{margin:34px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:24px 20px;box-shadow:var(--shadow)}
+  .demo-label{font-family:"Space Mono";font-size:.82rem;color:#CFE2E0;text-align:center;margin-bottom:18px}
+  .demo-label b{color:var(--paper)}
+  .worksrow{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+  .wk{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:14px 18px;text-align:center;min-width:120px}
+  .wk .cw{font-family:"Space Mono";font-weight:700;font-size:1.25rem;white-space:pre;line-height:1.4;color:#CFE2E0;display:inline-block;text-align:right}
+  .wk .cw .rule{border-top:2px solid var(--muted);margin:3px 0}
+  .wk .cw .ans{color:#F0A17B}
+  .wk .tag{font-family:"Space Mono";font-size:.66rem;color:var(--amber);margin-top:9px;line-height:1.4}
+  .demo-verdict{text-align:center;margin-top:20px;font-size:.96rem;color:#CFE2E0}
+  .demo-verdict b{color:var(--amber)}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:470px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.04rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+
+  .work2{display:inline-flex;gap:34px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+  .colwork{display:inline-block;font-family:"Space Mono";font-weight:700;font-size:clamp(1.35rem,4vw,1.8rem);
+    text-align:right;line-height:1.35;color:var(--ink)}
+  .colwork .crow{white-space:pre}
+  .colwork .op{display:inline-block;width:1.4em;text-align:left;color:#5C6E6D}
+  .colwork .rule{border-top:2.5px solid var(--ink);margin:5px 0 4px}
+  .colwork .stu{color:var(--clay)}
+  .colwork .qm{color:#B7AF9C}
+  .colwork .cap{font-size:.56em;font-family:"Space Mono";color:#7A8887;font-weight:400;
+    text-align:center;margin-top:9px;letter-spacing:.06em}
+  .colwork .cap.stu{color:var(--clay)}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.45}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none}
+  .opt .body{font-family:"IBM Plex Sans";font-weight:500}
+  .opt.mono .body{font-family:"Space Mono";font-weight:700;font-size:1.1rem;letter-spacing:.04em}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+  sub{font-size:.62em;font-weight:400}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">⌕</span> Diagnose the Error</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 4 · error analysis</div>
+    <h1>A wrong answer is<br>the output of <span class="hl">a rule.</span></h1>
+    <p class="lede">Children rarely make random mistakes. They follow a procedure — reliably, patiently, and incorrectly. Every wrong answer below was produced by a rule the student is applying <em>consistently</em>, which means it can be found, named, and retaught. Your job isn't to mark it wrong. It's to work out what they think they're doing.</p>
+
+    <div class="demo">
+      <div class="demo-label">Three students, one problem, three <b>different consistent rules</b>:</div>
+      <div class="worksrow">
+        <div class="wk">
+          <div class="cw">  376
++ 459<div class="rule"></div><span class="ans">725</span></div>
+          <div class="tag">never carries</div>
+        </div>
+        <div class="wk">
+          <div class="cw">  376
++ 459<div class="rule"></div><span class="ans">71215</span></div>
+          <div class="tag">writes each column's<br>full two-digit sum</div>
+        </div>
+        <div class="wk">
+          <div class="cw">  376
++ 459<div class="rule"></div><span class="ans">34</span></div>
+          <div class="tag">adds all six digits,<br>ignoring place value</div>
+        </div>
+      </div>
+      <div class="demo-verdict">Three wrong answers, three different lessons to teach. <b>"Be more careful" helps none of them.</b></div>
+    </div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>The trap is calling it careless.</b> A student who writes <code>623 − 459 = 236</code> took the smaller digit from the larger in <em>every single column</em> — that is not carelessness, it's a rule, faithfully executed. Carelessness would be inconsistent. Consistency is the tell, and it's also the good news: a rule can be replaced, but "slow down" gives a child nothing to change.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–2 build the habit of checking and locating. Rungs 3–7 name the six classic error patterns, three in addition and three in subtraction. Rung 8 proves you've really got the rule by asking you to predict the next answer, and rung 9 asks what you'd actually do about it.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Nothing is locked</h3><p>Work through the patterns in order, or jump to the prediction rung if naming them is already easy.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>Every answer shown is really computed</h3><p>The student work is generated by running the wrong procedure — so the errors behave exactly as a real child's would.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Is it even wrong?</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>This is the skill the lesson was actually for</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>You already know how to add</h3><p>What you don't yet know is how to look at a wrong answer and see the thinking behind it. That's the part that has to be learned, and it's learnable.</p></div>
+      <div class="why-card"><h3>Diagnosis picks the remedy</h3><p>A carry problem needs blocks and trading. A place-value problem needs a place-value chart. You can't choose the right intervention until you know which error you're looking at.</p></div>
+      <div class="why-card"><h3>It respects the child</h3><p>Assuming a rule rather than carelessness treats the student as a thinker who reached a wrong conclusion — which is almost always what actually happened.</p></div>
+    </div>
+    <p class="closing">Every error pattern here has been documented in real classrooms for decades, and each one is a child being logical with a faulty premise. <b>Find the rule, say it out loud, and you'll know exactly what to teach next.</b></p>
+  </section>
+
+  <footer>Diagnose the Error · errors are rules, not slips · find it, name it, predict it, teach it</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const d=c=>'0123456789'.indexOf(c);
+const align=(x,y)=>{const w=Math.max(x.length,y.length);return [x.padStart(w,'0'),y.padStart(w,'0')];};
+const clean=s=>{const t=s.replace(/^0+/,'');return t===''?'0':t;};
+function four(correct,cands,padder){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<300){ const c=padder?padder(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+
+/* ============ ERROR PROCEDURES — each is a real, consistently-applied wrong rule ============ */
+const ERR={
+  // ---- addition ----
+  noCarry:{op:'+',label:'Adds each column but never carries into the next column',
+    run:(A,B)=>{const[a,b]=align(A,B);let o='';for(let i=0;i<a.length;i++)o+=String((d(a[i])+d(b[i]))%10);return clean(o);}},
+  fullSums:{op:'+',label:"Writes the full two-digit sum of each column, side by side",
+    run:(A,B)=>{const[a,b]=align(A,B);let o='';for(let i=0;i<a.length;i++)o+=String(d(a[i])+d(b[i]));return clean(o);}},
+  digitSum:{op:'+',label:'Adds all the digits together, ignoring place value',
+    run:(A,B)=>String([...A,...B].reduce((s,c)=>s+d(c),0))},
+  alwaysCarry:{op:'+',label:'Carries a 1 into every column, whether one is needed or not',
+    run:(A,B)=>{const[a,b]=align(A,B);const o=[];let c=0;
+      for(let i=a.length-1;i>=0;i--){const s=d(a[i])+d(b[i])+c;o.unshift(s%10);c=1;}
+      if(c)o.unshift(1);return clean(o.join(''));}},
+  // ---- subtraction ----
+  smallerFromLarger:{op:'\u2212',label:'In each column, subtracts the smaller digit from the larger',
+    run:(A,B)=>{const[a,b]=align(A,B);let o='';for(let i=0;i<a.length;i++)o+=String(Math.abs(d(a[i])-d(b[i])));return clean(o);}},
+  borrowNoDecrement:{op:'\u2212',label:'Adds ten to the top digit when needed, but never reduces the column it borrowed from',
+    run:(A,B)=>{const[a,b]=align(A,B);const o=[];
+      for(let i=a.length-1;i>=0;i--){let t=d(a[i]);const bo=d(b[i]);if(t<bo)t+=10;o.unshift(t-bo);}
+      return clean(o.join(''));}},
+  zeroMinusN:{op:'\u2212',label:'When the top digit is 0, writes the bottom digit',
+    run:(A,B)=>{const[a,b]=align(A,B);const o=[];let bw=0;
+      for(let i=a.length-1;i>=0;i--){let t=d(a[i]);const bo=d(b[i]);
+        if(t===0&&bo>0){o.unshift(bo);bw=0;continue;}
+        t-=bw; if(t<bo){t+=10;bw=1;}else bw=0; o.unshift(t-bo);}
+      return clean(o.join(''));}},
+  addsInstead:{op:'\u2212',label:'Adds instead of subtracting',
+    run:(A,B)=>String(Number(A)+Number(B))},
+};
+const ADD_KEYS=['noCarry','fullSums','digitSum','alwaysCarry'];
+const SUB_KEYS=['smallerFromLarger','borrowNoDecrement','zeroMinusN','addsInstead'];
+// A shown answer must be explainable by exactly ONE rule in its pool, or two
+// options would be equally defensible.
+function uniqueRule(key,A,B){
+  const pool=ERR[key].op==='+'?ADD_KEYS:SUB_KEYS;
+  const mine=ERR[key].run(A,B);
+  for(const k of pool){ if(k===key) continue; if(ERR[k].run(A,B)===mine) return false; }
+  return true;
+}
+
+/* ============ problem generators with the right structure ============ */
+function genAddProblem(){                 // an inner column overflows, but the leading one does not
+  for(let t=0;t<4000;t++){
+    const a=rand(120,889), b=rand(120,889);
+    const [x,y]=align(String(a),String(b));
+    if(d(x[0])+d(y[0])>=10) continue;     // keeps the wrong answers the same width as the problem
+    for(let i=1;i<x.length;i++) if(d(x[i])+d(y[i])>=10) return {a,b,A:String(a),B:String(b)};
+  }
+  return {a:376,b:459,A:'376',B:'459'};
+}
+function genSubProblem(){                 // at least one column needs a borrow
+  for(let t=0;t<3000;t++){
+    const a=rand(210,989), b=rand(120,a-40);
+    if(String(b).length!==3) continue;
+    const [x,y]=align(String(a),String(b));
+    for(let i=0;i<x.length;i++) if(d(x[i])<d(y[i])) return {a,b,A:String(a),B:String(b)};
+  }
+  return {a:623,b:459,A:'623',B:'459'};
+}
+function genZeroProblem(){                // top number has a 0 in the tens place
+  for(let t=0;t<6000;t++){
+    const h=rand(3,9), o=rand(1,7);
+    const a=h*100+o;                      // e.g. 405
+    const b=rand(120,a-40);
+    const B=String(b);
+    if(B.length!==3) continue;
+    if(d(B[1])===0) continue;             // need a non-zero digit under the 0
+    if(d(B[2])<=o) continue;              // the ones MUST borrow, or "zero minus n"
+    return {a,b,A:String(a),B};           // and "smaller from larger" give the same answer
+  }
+  return {a:405,b:137,A:'405',B:'137'};
+}
+// known-good, uniquely-identifiable instances, used only if sampling ever fails
+const FALLBACK={
+  noCarry:{a:376,b:459,A:'376',B:'459'}, fullSums:{a:376,b:459,A:'376',B:'459'},
+  digitSum:{a:376,b:459,A:'376',B:'459'}, alwaysCarry:{a:376,b:459,A:'376',B:'459'},
+  smallerFromLarger:{a:623,b:459,A:'623',B:'459'}, borrowNoDecrement:{a:623,b:459,A:'623',B:'459'},
+  zeroMinusN:{a:405,b:137,A:'405',B:'137'}, addsInstead:{a:623,b:459,A:'623',B:'459'},
+};
+const problemFor=key=>key==='zeroMinusN'?genZeroProblem()
+                    :ERR[key].op==='+'?genAddProblem():genSubProblem();
+const trueAnswer=(p,op)=>op==='+'?String(p.a+p.b):String(p.a-p.b);
+
+/* ---- display ---- */
+function colWork(A,B,op,ansHTML,cap){
+  const w=Math.max(A.length,B.length)+1;
+  const pad=s=>s.padStart(w,' ').replace(/ /g,'\u00A0');
+  return `<div class="colwork">
+    <div class="crow"><span class="op"></span>${pad(A)}</div>
+    <div class="crow"><span class="op">${op}</span>${pad(B)}</div>
+    <div class="rule"></div>
+    <div class="crow"><span class="op"></span>${ansHTML==='?'?`<span class="qm">${pad('?')}</span>`:`<span class="stu">${pad(ansHTML)}</span>`}</div>
+    ${cap?`<div class="cap${ansHTML==='?'?'':' stu'}">${cap}</div>`:''}
+  </div>`;
+}
+const PLACES=['the ones','the tens','the hundreds','the thousands'];
+function firstWrongPlace(stu,cor){
+  const w=Math.max(stu.length,cor.length);
+  const s=stu.padStart(w,'0'), c=cor.padStart(w,'0');
+  for(let i=w-1;i>=0;i--) if(s[i]!==c[i]) return w-1-i;
+  return -1;
+}
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — is it even wrong?
+  1(){
+    for(let t=0;t<80;t++){
+      const isAdd=rand(0,1)===1;
+      const p=isAdd?genAddProblem():genSubProblem();
+      const op=isAdd?'+':'\u2212';
+      const cor=trueAnswer(p,op), C=Number(cor);
+      const kind=rand(0,3);
+      let shown=null, correct=null;
+      if(kind===0){ shown=cor; correct='Correct'; }
+      else if(kind===1){ const v=rand(0,1)?C-10:C+10; if(v<=0)continue; shown=String(v); correct='Wrong \u2014 off by 10'; }
+      else if(kind===2){ const v=rand(0,1)?C-100:C+100; if(v<=0)continue; shown=String(v); correct='Wrong \u2014 off by 100'; }
+      else {
+        const key=pick(isAdd?['noCarry','fullSums','digitSum']:['smallerFromLarger','borrowNoDecrement']);
+        const s=ERR[key].run(p.A,p.B);
+        const diff=Math.abs(C-Number(s));
+        if(diff<=100) continue;                       // must be genuinely "more than 100"
+        shown=s; correct='Wrong \u2014 off by more than 100';
+      }
+      const opts=shuffle(['Correct','Wrong \u2014 off by 10','Wrong \u2014 off by 100','Wrong \u2014 off by more than 100']).map(t=>({text:t}));
+      return {prompt:'A student turned in this work. Is it correct?',
+        seq:colWork(p.A,p.B,op,shown,'student\u2019s answer'),wordy:true,
+        options:opts,answer:opts.findIndex(o=>o.text===correct),
+        _meta:{kind:'check',A:p.A,B:p.B,op,shown,cor,correct},
+        why:`${p.a} ${op} ${p.b} = <b>${cor}</b>. ${shown===cor
+          ?'This student\u2019s work is right \u2014 always check before you diagnose.'
+          :`The student wrote ${shown}, which is off by ${Math.abs(C-Number(shown))}.`}`};
+    }
+    return GEN[3]();
+  },
+
+  // 2 — where does it first go wrong?
+  2(){
+    const key=pick(['noCarry','smallerFromLarger','borrowNoDecrement','zeroMinusN']);
+    const op=ERR[key].op;
+    for(let t=0;t<60;t++){
+      const p=problemFor(key);
+      const cor=trueAnswer(p,op), stu=ERR[key].run(p.A,p.B);
+      if(stu===cor) continue;
+      const idx=firstWrongPlace(stu,cor);
+      if(idx<0||idx>3) continue;
+      const correct=PLACES[idx];
+      const opts=shuffle(PLACES.slice(0,4)).map(t=>({text:t}));
+      return {prompt:'Working from the right, which is the <b>first</b> column the student wrote incorrectly?',
+        seq:colWork(p.A,p.B,op,stu,'student\u2019s answer'),wordy:true,
+        options:opts,answer:opts.findIndex(o=>o.text===correct),
+        _meta:{kind:'place',A:p.A,B:p.B,op,stu,cor,idx},
+        why:`The correct answer is ${cor}. Reading right to left, the first digit that differs is in <b>${correct}</b> place. Locating the break before naming the rule keeps you from guessing from the last digit alone.`};
+    }
+    return GEN[2]();
+  },
+
+  // 3–7 — name the rule (one error type per rung)
+  ...(()=>{
+    const spec={3:'noCarry',4:'fullSums',5:'smallerFromLarger',6:'borrowNoDecrement',7:'zeroMinusN'};
+    const out={};
+    for(const [rung,key] of Object.entries(spec)){
+      out[rung]=function(){
+        const op=ERR[key].op;
+        for(let t=0;t<400;t++){
+          const p=problemFor(key);
+          const cor=trueAnswer(p,op), stu=ERR[key].run(p.A,p.B);
+          if(stu===cor) continue;
+          if(!uniqueRule(key,p.A,p.B)) continue;      // only one rule may explain it
+          const pool=(op==='+'?ADD_KEYS:SUB_KEYS);
+          const opts=shuffle(pool.map(k=>ERR[k].label)).map(t=>({text:t}));
+          return {prompt:'This student is following a consistent rule. What is it?',
+            seq:colWork(p.A,p.B,op,stu,'student\u2019s answer'),stack:true,wordy:true,
+            options:opts,answer:opts.findIndex(o=>o.text===ERR[key].label),
+            _meta:{kind:'name',key,A:p.A,B:p.B,op,stu,cor},
+            why:`The correct answer is ${cor}. This student <b>${ERR[key].label.charAt(0).toLowerCase()+ERR[key].label.slice(1)}</b> \u2014 run that rule on every column and you get exactly ${stu}.`};
+        }
+        const p=FALLBACK[key];
+        const cor=trueAnswer(p,op), stu=ERR[key].run(p.A,p.B);
+        const pool=(op==='+'?ADD_KEYS:SUB_KEYS);
+        const opts=shuffle(pool.map(k=>ERR[k].label)).map(t=>({text:t}));
+        return {prompt:'This student is following a consistent rule. What is it?',
+          seq:colWork(p.A,p.B,op,stu,'student\u2019s answer'),stack:true,wordy:true,
+          options:opts,answer:opts.findIndex(o=>o.text===ERR[key].label),
+          _meta:{kind:'name',key,A:p.A,B:p.B,op,stu,cor},
+          why:`The correct answer is ${cor}. This student <b>${ERR[key].label.charAt(0).toLowerCase()+ERR[key].label.slice(1)}</b> \u2014 run that rule on every column and you get exactly ${stu}.`};
+      };
+    }
+    return out;
+  })(),
+
+  // 8 — predict the next answer
+  8(){
+    const key=pick([...ADD_KEYS.slice(0,3),'smallerFromLarger','borrowNoDecrement']);
+    const op=ERR[key].op;
+    for(let t=0;t<400;t++){
+      const p1=problemFor(key), p2=problemFor(key);
+      const cor1=trueAnswer(p1,op), stu1=ERR[key].run(p1.A,p1.B);
+      const cor2=trueAnswer(p2,op), stu2=ERR[key].run(p2.A,p2.B);
+      if(stu1===cor1||stu2===cor2||p1.A===p2.A) continue;
+      if(!uniqueRule(key,p1.A,p1.B)) continue;     // the shown work must identify one rule
+      const others=(op==='+'?ADD_KEYS:SUB_KEYS).filter(k=>k!==key)
+        .map(k=>ERR[k].run(p2.A,p2.B));
+      const r=four(stu2,[cor2,...others],g=>String(Number(stu2)+g));
+      return {prompt:'This student solved the first problem their own way. Following <b>the same rule</b>, what will they write for the second?',
+        seq:`<div class="work2">${colWork(p1.A,p1.B,op,stu1,'their work')}${colWork(p2.A,p2.B,op,'?','next problem')}</div>`,
+        mono:true,...r,_meta:{kind:'predict',key,p2A:p2.A,p2B:p2.B,op,stu2,cor2},
+        why:`Their rule is: ${ERR[key].label.toLowerCase()}. Applied to ${p2.A} ${op} ${p2.B} that produces <b>${stu2}</b>. (The correct answer would be ${cor2}.) Predicting the next output is the real test of whether you\u2019ve found the rule.`};
+    }
+    return GEN[8]();
+  },
+
+  // 9 — what would you say?
+  9(){
+    const REMEDY={
+      noCarry:'Have them build each column with base-ten blocks and physically trade ten ones for one ten',
+      fullSums:'Return to a place-value chart, so each column\u2019s answer has to fit in a single place',
+      digitSum:'Rebuild both numbers with base-ten blocks so the columns mean something again',
+      smallerFromLarger:'Have them model it with blocks, so they see there aren\u2019t enough ones in the top number to take away from',
+      borrowNoDecrement:'Have them cross out and rewrite the reduced digit every time they borrow',
+      zeroMinusN:'Use blocks to show that 0 ones means a ten must be traded before anything can be taken',
+    };
+    const GENERIC=['Tell them to slow down and be more careful',
+                   'Assign twenty more problems of the same kind for practice',
+                   'Show them the correct steps and have them copy the work',
+                   'Mark it wrong and move on to the next topic'];
+    const key=pick(Object.keys(REMEDY));
+    const op=ERR[key].op;
+    for(let t=0;t<400;t++){
+      const p=problemFor(key);
+      const cor=trueAnswer(p,op), stu=ERR[key].run(p.A,p.B);
+      if(stu===cor) continue;
+      if(!uniqueRule(key,p.A,p.B)) continue;       // the remedy must target one identifiable rule
+      const r=four(REMEDY[key],shuffle(GENERIC.slice()),null);
+      return {prompt:'A student writes this <b>consistently</b>, on problem after problem. What is the best next move?',
+        seq:colWork(p.A,p.B,op,stu,'student\u2019s answer'),stack:true,wordy:true,...r,
+        _meta:{kind:'remedy',key,A:p.A,B:p.B,op,stu,cor},
+        why:`The rule is: ${ERR[key].label.toLowerCase()}. The response has to target <em>that</em> \u2014 <b>${REMEDY[key].toLowerCase()}</b>. Telling a consistent rule-follower to "be careful" gives them nothing to change, and extra practice just rehearses the wrong rule.`};
+    }
+    return GEN[9]();
+  },
+
+  // 10 — mixed, including a base-five carry error
+  10(){
+    if(rand(0,3)===0){
+      // student carries at ten while working in base five
+      const toB=(n,b)=>{if(n===0)return'0';let s='';while(n>0){s=String(n%b)+s;n=Math.floor(n/b);}return s;};
+      const fromB=(s,b)=>[...s].reduce((v,c)=>v*b+d(c),0);
+      let A,B;
+      do{ A=String(rand(1,4))+String(rand(0,4)); B=String(rand(1,4))+String(rand(0,4)); }
+      while(d(A[1])+d(B[1])<5 || d(A[1])+d(B[1])>=10);
+      const cor=toB(fromB(A,5)+fromB(B,5),5);
+      const stu=String(d(A[0])+d(B[0]))+String(d(A[1])+d(B[1]));   // base-ten columns
+      const correct='Adds each column correctly, but regroups at ten instead of at five';
+      const dis=['Adds each column but never carries at all',
+                 'Writes the digits of the answer in reverse order',
+                 'Subtracts instead of adding'];
+      const r=four(correct,dis,null);
+      return {prompt:'This student is working in <b>base five</b>. What rule are they following?',
+        seq:colWork(A,B,'+',stu,'student\u2019s answer \u00b7 base five'),stack:true,wordy:true,...r,
+        _meta:{kind:'base5',A,B,stu,cor},
+        why:`In base five the units column ${A[1]} + ${B[1]} = ${d(A[1])+d(B[1])} should regroup into <b>${cor.length>2?cor.slice(-2):cor}</b> \u2014 the correct answer is ${cor}<sub>five</sub>. Because the total is still under ten, this student\u2019s base-ten habit never triggered a carry, so they wrote ${stu}.`};
+    }
+    return GEN[rand(1,9)]();
+  },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Is it even wrong?',short:'check before you judge'},
+  {id:2,title:'Where does it break?',short:'locate the column'},
+  {id:3,title:'Never carries',short:'addition'},
+  {id:4,title:'Place value abandoned',short:'addition'},
+  {id:5,title:'Smaller from larger',short:'the classic'},
+  {id:6,title:'Borrow, no decrement',short:'subtraction'},
+  {id:7,title:'Zero minus n = n',short:'subtraction'},
+  {id:8,title:'Predict the next answer',short:'proves you found it'},
+  {id:9,title:'What would you say?',short:'target the rule'},
+  {id:10,title:'Mixed boss',short:'\u2026including base five'},
+];
+
+/* ============ state ============ */
+const STORE='diagnoseErrorLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'\uD83C\uDFC5':'\u25CB'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>26);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.mono?' mono':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">\u2713 Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">\u2717 Not quite.</span><span>${currentQ.why} <em>Streak reset \u2014 four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
