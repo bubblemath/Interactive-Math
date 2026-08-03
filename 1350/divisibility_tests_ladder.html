@@ -1,0 +1,610 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Divisibility Tests Ladder — don't divide, read the digits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.25rem;box-shadow:var(--shadow)}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .reader{margin:34px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:24px 20px;box-shadow:var(--shadow)}
+  .reader .rtitle{font-family:"Space Mono";font-size:.78rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-bright);text-align:center;margin-bottom:18px}
+  .rrow{display:flex;align-items:center;justify-content:center;gap:16px;padding:5px 0;flex-wrap:wrap}
+  .rdig{font-family:"Space Mono";font-weight:700;font-size:clamp(1.15rem,3.4vw,1.55rem);letter-spacing:.16em;white-space:nowrap}
+  .rdig .off{color:#42646A}
+  .rdig .on{color:var(--amber)}
+  .rdig .alt1{color:var(--amber)} .rdig .alt2{color:var(--teal-bright)}
+  .rlab{font-family:"Space Mono";font-size:.76rem;color:#CFE2E0;min-width:210px;text-align:left}
+  .rlab b{color:var(--paper)}
+  .rverdict{text-align:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);
+    font-family:"Space Mono";font-size:.92rem;color:#CFE2E0}
+  .rverdict b{color:var(--amber)}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:470px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.06rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  .bignum{font-family:"Space Mono";font-weight:700;font-size:clamp(1.9rem,6vw,2.7rem);color:var(--ink);letter-spacing:.06em}
+  .ruleref{display:inline-block;margin-top:12px;font-family:"Space Mono";font-size:.78rem;color:#5C6E6D;
+    background:#EFE9DA;border-radius:8px;padding:7px 13px;line-height:1.5}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1.05rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.45}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"Space Mono";font-weight:700;letter-spacing:.04em}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500;letter-spacing:0;font-size:.99rem}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">∣</span> The Divisibility Tests Ladder</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 6 · divisibility tests</div>
+    <h1>Don't divide.<br><span class="hl">Read the digits.</span></h1>
+    <p class="lede">Ten tests, and not one of them asks you to divide. Each rule reads a <em>different part</em> of the numeral — the last digit, the last two, the last three, the sum of them all, or an alternating sum. Learn which part each test looks at and a five-digit number can be screened against all ten in about ten seconds.</p>
+
+    <div class="reader" id="reader">
+      <div class="rtitle">each test reads a different part of 64,580</div>
+      <div id="readerRows"></div>
+      <div class="rverdict">So 64,580 is divisible by <b>2, 4, 5 and 10</b> — and by nothing else on the list.</div>
+    </div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>The composite tests are where people fall.</b> A number is divisible by <b>6</b> only if it passes <em>both</em> the 2 test and the 3 test — checking that it is even and stopping there is the single most common error. And 3 and 9 look like the same rule wearing different hats: both add the digits, but 9 is far stricter. <code>1,002</code> has digit sum 3, so it passes the 3 test and fails the 9 test. Anything divisible by 9 is automatically divisible by 3 — never the other way round.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">The rungs run in the order your worksheet teaches them — easiest first, not numerical order. Last-digit tests, then last-two and last-three, then the digit sums, then the composite and the awkward ones, and finally a full screen of one number against everything.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Exactly one option works</h3><p>Every question is built so that precisely one of the four numbers passes — and it is verified by actually dividing.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>The near-misses are deliberate</h3><p>Asked for 4, every option is even. Asked for 8, every option passes the 4 test. You cannot shortcut your way through.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">The last digit: 2, 5, 10</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>The gateway to factors, primes and fractions</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>Factoring starts here</h3><p>Finding the factors of a number, reducing a fraction, hunting a common denominator — all of it begins with "what divides this?" answered quickly.</p></div>
+      <div class="why-card"><h3>The rules have reasons</h3><p>The 3 test works because every power of ten is one more than a multiple of three. Children who meet the reason remember the rule; children who only memorise it forget by June.</p></div>
+      <div class="why-card"><h3>Screening is a real skill</h3><p>Deciding a number is <em>not</em> divisible without doing the division is exactly the kind of judgment that makes arithmetic feel fast rather than laborious.</p></div>
+    </div>
+    <p class="closing">Every one of these tests is a shortcut past long division, and each one is looking at a different slice of the numeral. <b>Ask which digits the rule reads — the last one, the last few, or all of them at once — and the answer is usually visible before you have finished writing the number down.</b></p>
+  </section>
+
+  <footer>The Divisibility Tests Ladder · 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 · 6 needs both 2 and 3 · 9 is stricter than 3</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const fmt=n=>n.toLocaleString('en-US');
+
+/* ---- the tests, each as a computation the feedback can narrate ---- */
+const digits=n=>String(n).split('').map(Number);
+const digitSum=n=>digits(n).reduce((s,d)=>s+d,0);
+const lastK=(n,k)=>n%Math.pow(10,k);
+function altSum(n){                                  // for 11: even places minus odd places, from the right
+  const d=digits(n).reverse();
+  let ev=0,od=0;
+  d.forEach((x,i)=>{ if(i%2===0) ev+=x; else od+=x; });
+  return {ev,od,diff:ev-od};
+}
+function rule7(n){                                   // double the ones digit, subtract from the rest
+  const steps=[]; let v=n, guard=0;
+  while(Math.abs(v)>70 && guard++<12){
+    const ones=v%10, rest=Math.floor(v/10), nv=rest-2*ones;
+    steps.push(`${fmt(rest)} − 2(${ones}) = ${fmt(nv)}`);
+    v=nv;
+  }
+  return {steps,final:v};
+}
+const RULE={
+  2:'the last digit is even',
+  3:'the digit sum is divisible by 3',
+  4:'the last two digits form a number divisible by 4',
+  5:'the last digit is 0 or 5',
+  6:'it is divisible by both 2 and 3',
+  7:'double the ones digit, subtract from the rest; repeat; the result is divisible by 7',
+  8:'the last three digits form a number divisible by 8',
+  9:'the digit sum is divisible by 9',
+  10:'the last digit is 0',
+  11:'the alternating sum of the digits is divisible by 11',
+};
+
+/* ---- build four distinct numbers: one passing, three failing ---- */
+function buildSet(makeGood,makeBad,badCount){
+  badCount=badCount||3;
+  const good=makeGood();
+  const seen=new Set([good]); const bad=[];
+  let guard=0;
+  while(bad.length<badCount && guard++<8000){
+    const v=makeBad(bad.length);
+    if(v===null||seen.has(v)) continue;
+    seen.add(v); bad.push(v);
+  }
+  if(bad.length<badCount) return null;
+  const all=shuffle([good,...bad]);
+  return {options:all.map(v=>({text:fmt(v)})), answer:all.indexOf(good), good, bad, all};
+}
+function ruleRef(d){ return `<div class="ruleref"><b>${d}</b> divides a number when ${RULE[d]}.</div>`; }
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — last digit: 2, 5, 10
+  1(){
+    const d=pick([2,5,10]);
+    let r=null, guard=0;
+    while(!r && guard++<80){
+      if(d===2){
+        r=buildSet(()=>rand(100,4999)*2,
+                   ()=>rand(100,4999)*2+1);
+      } else if(d===5){
+        r=buildSet(()=>rand(100,1999)*5,
+                   ()=>{const v=rand(1000,9999); return v%5===0?null:v;});
+      } else {
+        // the sharp version: one ends in 0, one ends in 5, two are even but not multiples of 10
+        r=buildSet(()=>rand(100,999)*10,
+                   i=>{ if(i===0){ const v=rand(100,999)*10+5; return v; }
+                        const v=rand(1000,9999); return (v%10===0||v%10===5)?null:(v%2===0?v:null); });
+      }
+    }
+    if(!r) return GEN[1]();
+    return {prompt:`Which of these is divisible by <b>${d}</b>?`,seq:ruleRef(d),mono:true,...r,
+      _meta:{rung:1,d,good:r.good,all:r.all},
+      why:`${fmt(r.good)} ends in ${r.good%10}, so it is divisible by <b>${d}</b>. ${d===10?'Watch the one ending in 5 — that is divisible by 5, but a multiple of 10 must end in 0.':d===5?'Only a last digit of 0 or 5 will do.':'Only an even last digit will do.'}`};
+  },
+
+  // 2 — last two digits: 4 (every option even, so the test must actually be run)
+  2(){
+    let r=null, guard=0;
+    while(!r && guard++<80){
+      r=buildSet(()=>rand(25,2499)*4,
+                 ()=>{const v=rand(1000,9999); return (v%2===0 && v%4!==0)?v:null;});
+    }
+    if(!r) return GEN[2]();
+    const l2=lastK(r.good,2);
+    return {prompt:'Which of these is divisible by <b>4</b>? <span style="font-size:.9em;color:#5C6E6D">(they are all even)</span>',
+      seq:ruleRef(4),mono:true,...r,_meta:{rung:2,d:4,good:r.good,all:r.all},
+      why:`Read only the last two digits of ${fmt(r.good)}: <b>${String(l2).padStart(2,'0')}</b>, and ${l2} ÷ 4 = ${l2/4}. Being even is not enough — every option here was even, and only this one passes the 4 test.`};
+  },
+
+  // 3 — last three digits: 8 (every option divisible by 4)
+  3(){
+    let r=null, guard=0;
+    while(!r && guard++<80){
+      r=buildSet(()=>rand(1250,12499)*8,
+                 ()=>{const v=rand(250,2499)*4; return v%8!==0?v:null;});
+    }
+    if(!r) return GEN[3]();
+    const l3=lastK(r.good,3);
+    return {prompt:'Which of these is divisible by <b>8</b>? <span style="font-size:.9em;color:#5C6E6D">(they all pass the 4 test)</span>',
+      seq:ruleRef(8),mono:true,...r,_meta:{rung:3,d:8,good:r.good,all:r.all},
+      why:`Read the last three digits of ${fmt(r.good)}: <b>${String(l3).padStart(3,'0')}</b>, and ${l3} ÷ 8 = ${l3/8}. Passing the 4 test does not get you the 8 test — every option here was divisible by 4.`};
+  },
+
+  // 4 — digit sum: 3
+  4(){
+    let r=null, guard=0;
+    while(!r && guard++<80){
+      r=buildSet(()=>rand(334,3333)*3,
+                 ()=>{const v=rand(1000,9999); return v%3!==0?v:null;});
+    }
+    if(!r) return GEN[4]();
+    const s=digitSum(r.good);
+    return {prompt:'Which of these is divisible by <b>3</b>?',seq:ruleRef(3),mono:true,...r,
+      _meta:{rung:4,d:3,good:r.good,all:r.all},
+      why:`Add the digits of ${fmt(r.good)}: ${digits(r.good).join(' + ')} = <b>${s}</b>, and ${s} is divisible by 3. None of the other digit sums are.`};
+  },
+
+  // 5 — 3 versus 9
+  5(){
+    const kind=pick(['both','three','neither']);
+    let n=null, guard=0;
+    while(n===null && guard++<4000){
+      const v=rand(1000,99999);
+      if(kind==='both' && v%9===0) n=v;
+      if(kind==='three' && v%3===0 && v%9!==0) n=v;
+      if(kind==='neither' && v%3!==0) n=v;
+    }
+    if(n===null) return GEN[5]();
+    const s=digitSum(n);
+    const A='Divisible by 3, but not by 9';
+    const B='Divisible by both 3 and 9';
+    const C='Divisible by 9, but not by 3';
+    const D='Divisible by neither 3 nor 9';
+    const correct = kind==='both'?B : kind==='three'?A : D;
+    const opts=shuffle([A,B,C,D]).map(t=>({text:t}));
+    return {prompt:'Which statement is true?',seq:`<div class="bignum">${fmt(n)}</div>`,stack:true,wordy:true,
+      options:opts,answer:opts.findIndex(o=>o.text===correct),
+      _meta:{rung:5,n,kind,correct},
+      why:`The digit sum is ${digits(n).join(' + ')} = <b>${s}</b>. ${s} ${s%3===0?'is':'is not'} divisible by 3 and ${s%9===0?'is':'is not'} divisible by 9, so ${fmt(n)} is <b>${correct.toLowerCase()}</b>. Note that “divisible by 9 but not 3” can never be true — 9 is a multiple of 3, so passing the 9 test always means passing the 3 test.`};
+  },
+
+  // 6 — 6 needs both 2 and 3
+  6(){
+    let r=null, guard=0;
+    while(!r && guard++<120){
+      r=buildSet(()=>rand(167,1666)*6,
+        i=>{
+          if(i===0){ const v=rand(500,4999)*2; return v%3!==0?v:null; }        // even, not a multiple of 3
+          if(i===1){ const v=rand(334,3333)*3; return v%2!==0?v:null; }        // multiple of 3, but odd
+          const v=rand(1000,9999); return (v%2!==0&&v%3!==0)?v:null;           // neither
+        });
+    }
+    if(!r) return GEN[6]();
+    const s=digitSum(r.good);
+    return {prompt:'Which of these is divisible by <b>6</b>?',seq:ruleRef(6),mono:true,...r,
+      _meta:{rung:6,d:6,good:r.good,all:r.all},
+      why:`${fmt(r.good)} is even <b>and</b> its digit sum ${digits(r.good).join(' + ')} = ${s} is divisible by 3, so it passes both tests. Among the others, one is even but fails the 3 test, one passes the 3 test but is odd, and one fails both — being even alone is never enough.`};
+  },
+
+  // 7 — the 11 test
+  7(){
+    let r=null, guard=0;
+    while(!r && guard++<80){
+      r=buildSet(()=>rand(100,899)*11,
+                 ()=>{const v=rand(1000,9999); return v%11!==0?v:null;});
+    }
+    if(!r) return GEN[7]();
+    const a=altSum(r.good);
+    return {prompt:'Which of these is divisible by <b>11</b>?',seq:ruleRef(11),mono:true,...r,
+      _meta:{rung:7,d:11,good:r.good,all:r.all},
+      why:`For ${fmt(r.good)}, add the digits in the even places (from the right): ${a.ev}. Add those in the odd places: ${a.od}. The difference is ${a.ev} − ${a.od} = <b>${a.diff}</b>, which is divisible by 11 — and indeed ${fmt(r.good)} ÷ 11 = ${fmt(r.good/11)}.`};
+  },
+
+  // 8 — the 7 test
+  8(){
+    let r=null, guard=0;
+    while(!r && guard++<80){
+      r=buildSet(()=>rand(100,1399)*7,
+                 ()=>{const v=rand(1000,9999); return v%7!==0?v:null;});
+    }
+    if(!r) return GEN[8]();
+    const st=rule7(r.good);
+    return {prompt:'Which of these is divisible by <b>7</b>?',seq:ruleRef(7),mono:true,...r,
+      _meta:{rung:8,d:7,good:r.good,all:r.all},
+      why:`Run the test on ${fmt(r.good)}: ${st.steps.join(', then ')}. The result <b>${fmt(st.final)}</b> is divisible by 7, so ${fmt(r.good)} is too — ${fmt(r.good)} ÷ 7 = ${fmt(r.good/7)}.`};
+  },
+
+  // 9 — the full screen: which divisor does (or doesn't) divide this number
+  9(){
+    const DIVS=[2,3,4,5,6,7,8,9,10,11];
+    const findOnly=rand(0,1)===1;
+    let n=null,divs=[],nons=[],guard=0;
+    while(n===null && guard++<6000){
+      const v=findOnly?rand(1000,99999):rand(2,900)*pick([60,120,180,360,420,840]);
+      if(v>999999) continue;
+      const dv=DIVS.filter(d=>v%d===0), nd=DIVS.filter(d=>v%d!==0);
+      if(findOnly ? (dv.length>=1&&nd.length>=3) : (nd.length>=1&&dv.length>=3)){ n=v;divs=dv;nons=nd; }
+    }
+    if(n===null) return GEN[9]();
+    if(findOnly){
+      const correct=String(pick(divs));
+      const dis=shuffle(nons.slice()).slice(0,3).map(String);
+      const all=shuffle([correct,...dis]);
+      return {prompt:'Which of these divides the number below?',
+        seq:`<div class="bignum">${fmt(n)}</div>`,mono:true,
+        options:all.map(t=>({text:t})),answer:all.indexOf(correct),
+        _meta:{rung:9,n,mode:'only',correct:Number(correct),all:all.map(Number)},
+        why:`${fmt(n)} ÷ ${correct} = ${fmt(n/Number(correct))}, so <b>${correct}</b> divides it — ${RULE[Number(correct)]}. None of the others do.`};
+    }
+    const correct=String(pick(nons));
+    const dis=shuffle(divs.slice()).slice(0,3).map(String);
+    const all=shuffle([correct,...dis]);
+    return {prompt:'Which of these does <b>not</b> divide the number below?',
+      seq:`<div class="bignum">${fmt(n)}</div>`,mono:true,
+      options:all.map(t=>({text:t})),answer:all.indexOf(correct),
+      _meta:{rung:9,n,mode:'not',correct:Number(correct),all:all.map(Number)},
+      why:`${fmt(n)} is divisible by the other three, but not by <b>${correct}</b> — the test fails because ${RULE[Number(correct)]} does not hold here.`};
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'The last digit',short:'2, 5 and 10'},
+  {id:2,title:'The last two digits',short:'4'},
+  {id:3,title:'The last three digits',short:'8'},
+  {id:4,title:'The digit sum',short:'3'},
+  {id:5,title:'3 versus 9',short:'9 is stricter'},
+  {id:6,title:'6 needs both',short:'2 and 3'},
+  {id:7,title:'The 11 test',short:'alternating sum'},
+  {id:8,title:'The 7 test',short:'double and subtract'},
+  {id:9,title:'The full screen',short:'one number, all ten'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='divisibilityLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>22);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero: the digit reader ============ */
+(function(){
+  const N='64580';
+  const rows=[
+    {on:[4],        lab:'<b>2, 5, 10</b> — the last digit'},
+    {on:[3,4],      lab:'<b>4</b> — the last two digits'},
+    {on:[2,3,4],    lab:'<b>8</b> — the last three digits'},
+    {on:[0,1,2,3,4],lab:'<b>3, 9</b> — the sum of every digit (23)'},
+    {alt:true,      lab:'<b>11</b> — an alternating sum (0−8+5−4+6 = −1)'},
+  ];
+  document.getElementById('readerRows').innerHTML=rows.map(r=>{
+    const d=N.split('').map((c,i)=>{
+      if(r.alt){ const fromRight=N.length-1-i; return `<span class="${fromRight%2===0?'alt1':'alt2'}">${c}</span>`; }
+      return `<span class="${r.on.includes(i)?'on':'off'}">${c}</span>`;
+    }).join('');
+    return `<div class="rrow"><span class="rdig">${d}</span><span class="rlab">${r.lab}</span></div>`;
+  }).join('');
+})();
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
