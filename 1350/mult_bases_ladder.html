@@ -1,0 +1,638 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multiplication in Other Bases — the facts change, the algorithm doesn't</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.1rem;box-shadow:var(--shadow);font-family:"Space Mono"}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .herowrap{margin:34px 0 0;display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
+  @media (max-width:720px){.herowrap{grid-template-columns:1fr}}
+  .panel{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:20px 18px;box-shadow:var(--shadow);text-align:center}
+  .ptitle{font-family:"Space Mono";font-size:.72rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:14px}
+  table.mt{border-collapse:collapse;font-family:"Space Mono";font-weight:700;margin:0 auto;font-size:.92rem}
+  table.mt th,table.mt td{border:1px solid var(--line-strong);width:2.5em;height:2.1em;text-align:center;color:#CFE2E0}
+  table.mt th{background:rgba(47,163,155,.16);color:var(--teal-bright)}
+  table.mt th.corner{background:transparent;border-color:transparent}
+  table.mt th.hi{background:var(--amber);color:var(--ground-2)}
+  table.mt td.spot{background:rgba(239,181,63,.3);color:var(--amber)}
+  .mtcap{font-family:"Space Mono";font-size:.7rem;color:var(--muted);margin-top:10px}
+  .compare{font-family:"Space Mono";font-size:clamp(1rem,2.8vw,1.25rem);line-height:2.1;color:#CFE2E0;text-align:center}
+  .compare .b10{color:var(--muted)}
+  .compare .b5{color:var(--amber)}
+  .compare .same{font-size:.8rem;color:var(--muted);display:block;margin-top:10px;line-height:1.6}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:490px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.04rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  table.qmt{border-collapse:collapse;font-family:"Space Mono";font-weight:700;margin:0 auto;font-size:1rem}
+  table.qmt th,table.qmt td{border:1.5px solid #C6BFAD;width:2.5em;height:2.1em;text-align:center;color:var(--ink)}
+  table.qmt th{background:#EFE9DA;color:#5C6E6D}
+  table.qmt th.corner{background:transparent;border-color:transparent}
+  table.qmt th.hi{background:var(--amber);color:var(--ground-2)}
+  table.qmt td.target{background:rgba(239,181,63,.35)}
+  .qmtcap{font-family:"Space Mono";font-size:.7rem;color:#7A8887;margin-top:9px;letter-spacing:.06em}
+  .colsum{display:inline-block;font-family:"Space Mono";font-weight:700;font-size:clamp(1.4rem,4vw,1.9rem);
+    text-align:right;line-height:1.35;color:var(--ink)}
+  .colsum .crow{white-space:pre}
+  .colsum .op{display:inline-block;width:1.4em;text-align:left;color:#5C6E6D}
+  .colsum .rule{border-top:2.5px solid var(--ink);margin:5px 0 4px}
+  .colsum .qm{color:#B7AF9C}
+  .colsum .blabel{font-size:.58em;font-family:"Space Mono";color:#7A8887;font-weight:400;
+    text-align:center;margin-top:9px;letter-spacing:.08em}
+  .expr{font-family:"Space Mono";font-weight:700;font-size:clamp(1.5rem,4.4vw,2.05rem);color:var(--ink);letter-spacing:.03em}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1.05rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.45}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"Space Mono";font-weight:700;letter-spacing:.04em}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500;letter-spacing:0;font-size:.98rem}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+  sub{font-size:.62em;font-weight:400;letter-spacing:.02em}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">×ᵦ</span> Multiplication in Other Bases</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 5 · bases two, five &amp; eight</div>
+    <h1>The facts change.<br>The <span class="hl">algorithm doesn't.</span></h1>
+    <p class="lede">Addition in another base only asked you to carry at a different point. Multiplication asks for more: <strong>the times table itself changes.</strong> Three fours is still twelve things — but written in base five, twelve things is <code>22₅</code>. The quantity is the same; only the numeral moved.</p>
+
+    <div class="herowrap">
+      <div class="panel">
+        <div class="ptitle">base-five times table</div>
+        <div id="heroTable"></div>
+        <div class="mtcap">every entry written in base five</div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">the same twelve things</div>
+        <div class="compare">
+          <span class="b10">3 · 4 = 12</span> &nbsp;<span style="color:#5C7B7E">in base ten</span><br>
+          <span class="b5">3 · 4 = 22₅</span> &nbsp;<span style="color:#5C7B7E">in base five</span>
+          <span class="same">two groups of five, and two left over<br>— the quantity never moved, only the writing</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>Your times table is a base-ten table.</b> Writing 12 in a base-five answer puts a 1 in the fives place and a 2 in the ones place — that is seven, not twelve. The carry is sharper still: <code>4 · 4 = 16</code>, and sixteen is <em>three</em> fives and one, so you write 1 and <b>carry 3</b>. Carrying 1 out of habit is wrong twice over — wrong digit, wrong carry.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–3 build the base-five and base-two tables. Rung 4 isolates the carry, and 5–7 work the algorithm up to two-digit factors and binary. Rungs 8–9 cover multiplying by the base itself, base eight, and identifying an unknown base.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>The table is always there</h3><p>Table rungs show the whole grid with the target cell lit, so you can see the pattern while working one entry.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>Wrong options are real slips</h3><p>The base-ten fact, the base-ten carry, and the dropped placeholder — each computed by running that mistake.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">The base-five table</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>The clearest look at what a times table really is</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>Facts are not the operation</h3><p>You know your tables so well they feel like multiplication itself. Building a new one separates the facts you memorised from the operation underneath.</p></div>
+      <div class="why-card"><h3>You become the learner again</h3><p>Working out 3 · 4 in base five is exactly the effort a seven-year-old spends on 3 · 4 in base ten. That memory makes you patient.</p></div>
+      <div class="why-card"><h3>Binary is four facts</h3><p>The entire base-two multiplication table is 0, 0, 0, 1 — which is why computers can multiply with nothing but shifts and adds.</p></div>
+    </div>
+    <p class="closing">Nothing about multiplying depends on ten: not the columns, not the carrying, not the partial products. <b>Only the facts change — so build the table first, and the algorithm you already know does the rest.</b></p>
+  </section>
+
+  <footer>Multiplication in Other Bases · 3 · 4 = 22₅ · carry groups of the base · 23₅ × 14₅ = 422₅</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const DIG='0123456789';
+const BASENAME={2:'two',5:'five',8:'eight',10:'ten'};
+const toBase=(n,b)=>{if(n===0)return '0';let s='';while(n>0){s=DIG[n%b]+s;n=Math.floor(n/b);}return s;};
+const fromBase=(s,b)=>{let v=0;for(const c of s)v=v*b+DIG.indexOf(c);return v;};
+const numer=(s,b)=>`${s}<sub>${BASENAME[b]}</sub>`;
+const ORD=['','first','second','third','fourth','fifth'];
+
+function fourStr(correct,cands,pad){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<80){ const c=pad?pad(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+/* four distinct numerals in base b, padding by perturbing the value */
+function fourNumerals(correct,cands,base){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<400){
+    const v=fromBase(correct,base)+(g%2?Math.ceil(g/2):-Math.ceil(g/2)); g++;
+    if(v>0){const c=toBase(v,base); if(!seen.has(c)){seen.add(c);out.push(c);}}
+  }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:numer(t,base)})), answer:sh.indexOf(correct)};
+}
+
+/* ---- multiplication table, entries written in the given base ---- */
+function tableHTML(base,hi,cls){
+  cls=cls||'qmt';
+  let h=`<table class="${cls}"><tr><th class="corner">×</th>`;
+  for(let j=0;j<base;j++) h+=`<th${hi&&j===hi[1]?' class="hi"':''}>${j}</th>`;
+  h+='</tr>';
+  for(let i=0;i<base;i++){
+    h+=`<tr><th${hi&&i===hi[0]?' class="hi"':''}>${i}</th>`;
+    for(let j=0;j<base;j++){
+      const isT=hi&&i===hi[0]&&j===hi[1];
+      h+=`<td${isT?(cls==='qmt'?' class="target"':' class="spot"'):''}>${isT?'?':toBase(i*j,base)}</td>`;
+    }
+    h+='</tr>';
+  }
+  return h+'</table>';
+}
+/* ---- vertical column layout ---- */
+function colFormat(top,bot,base,opt){
+  opt=opt||{};
+  const w=Math.max(top.length,bot.length,(opt.ansLen||0))+1;
+  const pad=s=>String(s).padStart(w,' ').replace(/ /g,'\u00A0');
+  return `<div class="colsum">
+    <div class="crow"><span class="op"></span>${pad(top)}</div>
+    <div class="crow"><span class="op">×</span>${pad(bot)}</div>
+    <div class="rule"></div>
+    <div class="crow"><span class="op"></span><span class="qm">${pad('?')}</span></div>
+    <div class="blabel">base ${BASENAME[base]}</div>
+  </div>`;
+}
+
+/* ---- wrong-procedure generators ---- */
+// the base-ten product written down as if it were the base-b numeral
+function baseTenRun(A,B,base){ return String(fromBase(A,base)*fromBase(B,base)); }
+// correct partial products, but the placeholder zero dropped on the second row
+function droppedZero(A,B,base){
+  const a=fromBase(A,base), bv=fromBase(B,base);
+  return toBase(a*(bv%base) + a*Math.floor(bv/base), base);
+}
+// legal-in-base perturbations, for padding option sets
+const near=(v,base,d)=>v+d>0?toBase(v+d,base):null;
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — base-five table cell
+  1(){
+    let i,j; do{ i=rand(2,4); j=rand(2,4); }while(i*j<5);
+    const base=5, p=i*j;
+    const correct=toBase(p,base);
+    const cands=[String(p), near(p,base,1), near(p,base,-1), near(p,base,base)];
+    const r=fourNumerals(correct,cands,base);
+    return {prompt:`Using the base-five table, what is <code>${i} × ${j}</code> in base five?`,
+      seq:tableHTML(base,[i,j])+`<div class="qmtcap">base-five multiplication table</div>`,...r,
+      _meta:{rung:1,i,j,base,correct},
+      why:`${i} × ${j} is ${p} things. In base five that is ${Math.floor(p/5)} five${Math.floor(p/5)>1?'s':''} and ${p%5} left over — <b>${numer(correct,base)}</b>. Writing “${p}” is the base-ten fact; as a base-five numeral it would mean ${fromBase(String(p).split('').every(c=>+c<5)?String(p):correct,base)}.`};
+  },
+
+  // 2 — base ten <-> base five conversion column
+  2(){
+    const base=5;
+    if(rand(0,1)===1){
+      const n=rand(6,24);
+      const correct=toBase(n,base);
+      const cands=[String(n), near(n,base,1), near(n,base,-1), near(n,base,base)];
+      const r=fourNumerals(correct,cands,base);
+      return {prompt:`What is <code>${n}</code> written in <b>base five</b>?`,...r,
+        _meta:{rung:2,n,base,correct,dir:'toFive'},
+        why:`${n} = ${Math.floor(n/25)?Math.floor(n/25)+' twenty-five'+(Math.floor(n/25)>1?'s, ':', '):''}${Math.floor(n%25/5)} five${Math.floor(n%25/5)===1?'':'s'} and ${n%5} — that is <b>${numer(correct,base)}</b>.`};
+    }
+    const n=rand(6,24), s=toBase(n,base);
+    const correct=String(n);
+    const cands=[s, String(fromBase(s,6)), String(n+1), String(n-1), String(n+5), String(n+2)];
+    const r=fourStr(correct,cands.filter(x=>x!==correct), g=>String(n+(g%2?g+2:-(g+2))));
+    return {prompt:`What is <code>${numer(s,base)}</code> written in <b>base ten</b>?`,mono:true,...r,
+      _meta:{rung:2,n,base,correct,dir:'toTen'},
+      why:`${numer(s,base)} means ${s.split('').map((d,k)=>`${d}×${Math.pow(base,s.length-1-k)}`).join(' + ')} = <b>${n}</b>.`};
+  },
+
+  // 3 — the base-two table
+  3(){
+    if(rand(0,1)===1){
+      const i=rand(0,1), j=rand(0,1);
+      const correct=String(i*j);
+      const r=fourStr(correct,['1','0','2','10'].filter(x=>x!==correct));
+      return {prompt:`In <b>base two</b>, what is <code>${i} × ${j}</code>?`,
+        seq:tableHTML(2,[i,j])+`<div class="qmtcap">base-two multiplication table</div>`,mono:true,...r,
+        _meta:{rung:3,i,j,correct},
+        why:`${i} × ${j} = <b>${i*j}</b>. The whole base-two table is 0, 0, 0, 1 — those four entries are every multiplication fact base two has.`};
+    }
+    const correct='Because base two has only two digits, so there are only four products';
+    const cands=['Because binary numbers are always small',
+                 'Because multiplication is not defined for 0 in base two',
+                 'Because the table only lists the products that are needed'];
+    const r=fourStr(correct,cands);
+    return {prompt:'Why is the <b>base-two</b> multiplication table so small?',stack:true,wordy:true,...r,
+      seq:tableHTML(2,null)+`<div class="qmtcap">the complete base-two multiplication table</div>`,
+      _meta:{rung:3,kind:'why',correct},
+      why:`A base-b table has b × b entries. Base two has just the digits 0 and 1, so there are only <b>four</b> facts to know — and computers exploit exactly that.`};
+  },
+
+  // 4 — one column: write what, carry what
+  4(){
+    const base=pick([5,5,8]);
+    let a,b; do{ a=rand(2,base-1); b=rand(2,base-1); }while(a*b<base);
+    const p=a*b, write=p%base, carry=Math.floor(p/base);
+    const correct=`write ${write}, carry ${carry}`;
+    const cands=[`write ${p}, carry 0`,
+                 `write ${carry}, carry ${write}`,
+                 `write ${write}, carry 1`,
+                 `write ${write}, carry ${carry+1}`,
+                 `write ${(write+1)%base}, carry ${carry}`,
+                 `write ${p%10}, carry ${Math.floor(p/10)}`];
+    const r=fourStr(correct,cands.filter(x=>x!==correct));
+    return {prompt:`Multiplying one column in <b>base ${BASENAME[base]}</b> gives <code>${a} × ${b} = ${p}</code>.<br>What do you write, and what do you carry?`,
+      wordy:true,stack:true,...r,_meta:{rung:4,base,a,b,p,write,carry,correct},
+      why:`In base ${BASENAME[base]} you regroup at ${base}. ${p} is ${carry} group${carry>1?'s':''} of ${base} plus ${write}, so you <b>write ${write} and carry ${carry}</b>. Carrying 1 out of base-ten habit would be wrong here — the carry is ${carry}.`};
+  },
+
+  // 5 — single digit × two digits, base five
+  5(){
+    const base=5;
+    let A,B; do{
+      A=toBase(rand(6,24),base); B=String(rand(2,4));
+    }while(fromBase(A,base)*fromBase(B,base)>124);
+    const prod=fromBase(A,base)*fromBase(B,base);
+    const correct=toBase(prod,base);
+    const cands=[baseTenRun(A,B,base), near(prod,base,base), near(prod,base,1), near(prod,base,-base)];
+    const r=fourNumerals(correct,cands,base);
+    return {prompt:'Multiply in <b>base five</b>.',
+      seq:colFormat(A,B,base,{ansLen:correct.length}),...r,
+      _meta:{rung:5,A,B,base,correct,prod},
+      why:`${numer(A,base)} is ${fromBase(A,base)} and ${B} is ${fromBase(B,base)}, so the product is ${prod} things — written in base five as <b>${numer(correct,base)}</b>. Writing the base-ten numeral ${prod} would mean something else entirely here.`};
+  },
+
+  // 6 — two digits × two digits, base five
+  6(){
+    const base=5;
+    let A,B;
+    do{
+      A=toBase(rand(6,19),base); B=toBase(rand(6,14),base);
+    }while(fromBase(A,base)*fromBase(B,base)>300);
+    const prod=fromBase(A,base)*fromBase(B,base);
+    const correct=toBase(prod,base);
+    const cands=[baseTenRun(A,B,base), droppedZero(A,B,base), near(prod,base,base), near(prod,base,1)];
+    const r=fourNumerals(correct,cands,base);
+    return {prompt:'Multiply in <b>base five</b>. Both factors have two digits.',
+      seq:colFormat(A,B,base,{ansLen:correct.length}),...r,
+      _meta:{rung:6,A,B,base,correct,prod},
+      why:`${numer(A,base)} = ${fromBase(A,base)} and ${numer(B,base)} = ${fromBase(B,base)}, so the product is ${prod} = <b>${numer(correct,base)}</b>. The second partial row still needs its placeholder zero — dropping it gives ${numer(droppedZero(A,B,base),base)}.`};
+  },
+
+  // 7 — binary multiplication (all distractors are legal binary)
+  7(){
+    const base=2;
+    let A,B; do{ A=toBase(rand(4,13),base); B=toBase(rand(2,7),base); }
+    while(fromBase(A,base)*fromBase(B,base)>120);
+    const a=fromBase(A,base), b=fromBase(B,base), prod=a*b;
+    const correct=toBase(prod,base);
+    const cands=[toBase(prod*2,base), toBase(a+b,base), near(prod,base,a), near(prod,base,-a)];
+    const r=fourNumerals(correct,cands,base);
+    return {prompt:'Multiply in <b>base two</b>.',
+      seq:colFormat(A,B,base,{ansLen:correct.length}),...r,
+      _meta:{rung:7,A,B,base,correct,prod},
+      why:`${a} × ${b} = ${prod}, which in base two is <b>${numer(correct,base)}</b>. Binary is the gentlest multiplication of all: every partial row is either the top number shifted along, or nothing at all.`};
+  },
+
+  // 8 — multiplying by the base itself
+  8(){
+    const base=pick([2,5,8]);
+    const A=toBase(rand(3,20),base);
+    const v=fromBase(A,base);
+    const correct=A+'0';
+    const cands=[A, toBase(v*10,base), near(v*base,base,base), near(v*base,base,-base)];
+    const r=fourNumerals(correct,cands,base);
+    return {prompt:`In <b>base ${BASENAME[base]}</b>, what is <code>${numer(A,base)} × ${numer('10',base)}</code>?`,...r,
+      _meta:{rung:8,A,base,correct,v},
+      why:`In any base, “10” <em>is</em> the base — here ${numer('10',base)} means ${base}. Multiplying by the base shifts every digit one place up, so you append a zero: <b>${numer(correct,base)}</b>. It is the same reason ×10 appends a zero in base ten.`};
+  },
+
+  // 9 — base eight, and "what base am I?"
+  9(){
+    if(rand(0,1)===1){
+      const base=8;
+      let A,B; do{ A=toBase(rand(9,45),base); B=String(rand(2,7)); }
+      while(fromBase(A,base)*fromBase(B,base)>500);
+      const prod=fromBase(A,base)*fromBase(B,base);
+      const correct=toBase(prod,base);
+      const cands=[baseTenRun(A,B,base), near(prod,base,base), near(prod,base,1), near(prod,base,-base)];
+      const r=fourNumerals(correct,cands,base);
+      return {prompt:'Multiply in <b>base eight</b>.',
+        seq:colFormat(A,B,base,{ansLen:correct.length}),...r,
+        _meta:{rung:9,A,B,base,correct,prod},
+        why:`${fromBase(A,base)} × ${fromBase(B,base)} = ${prod}, and ${prod} in base eight is <b>${numer(correct,base)}</b>.`};
+    }
+    let base,a,b,res;
+    do{
+      base=pick([4,5,6,7,8,9]);
+      a=rand(2,base-1); b=rand(2,base-1);
+      res=a*b;
+    }while(res<base||res>=base*base||Math.floor(res/base)>=base);
+    const shown=toBase(res,base);
+    const correct=String(base);
+    const cands=[String(base-1),String(base+1),String(base+2),String(base-2),String(res)]
+                  .filter(x=>x!==correct&&Number(x)>1);
+    const r=fourStr(correct,cands,g=>{const v=base+(g%2?g+2:-(g+2));return v>1?String(v):null;});
+    return {prompt:`In some base, <code>${a} × ${b} = ${shown}</code>. What is the base?`,mono:true,...r,
+      _meta:{rung:9,kind:'whatbase',base,a,b,res,shown},
+      why:`“${shown}” in base b means ${Math.floor(res/base)}b + ${res%base}. Since ${a} × ${b} = ${res}, we need ${Math.floor(res/base)}b + ${res%base} = ${res}, giving b = <b>${base}</b>.`};
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'The base-five table',short:'3 × 4 = 22₅'},
+  {id:2,title:'Ten ↔ five',short:'convert both ways'},
+  {id:3,title:'The base-two table',short:'four facts total'},
+  {id:4,title:'Write what, carry what',short:'carry groups of b'},
+  {id:5,title:'One digit × two',short:'base five'},
+  {id:6,title:'Two digits × two',short:'23₅ × 14₅'},
+  {id:7,title:'Binary',short:'shift and add'},
+  {id:8,title:'Multiply by the base',short:'append a zero'},
+  {id:9,title:'Base eight & unknown base',short:'…what base am I?'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='multBasesLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>18);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero ============ */
+document.getElementById('heroTable').innerHTML=tableHTML(5,null,'mt');
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
