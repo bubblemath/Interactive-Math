@@ -1,0 +1,623 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Division Models — how many groups, or how many in each?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.3rem;box-shadow:var(--shadow)}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .duo{margin:34px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:720px){.duo{grid-template-columns:1fr}}
+  .panel{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:20px 18px;box-shadow:var(--shadow);text-align:center}
+  .ptitle{font-family:"Space Mono";font-size:.72rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:6px}
+  .pstory{font-size:.9rem;color:#CFE2E0;min-height:3.4em;margin-bottom:12px;line-height:1.5}
+  .pcanvas{background:var(--paper);border-radius:10px;padding:12px 8px;display:flex;justify-content:center;align-items:center;min-height:120px}
+  .pcanvas svg{max-width:100%;height:auto}
+  .pknown{font-family:"Space Mono";font-size:.74rem;margin-top:12px;line-height:1.7;color:var(--muted)}
+  .pknown .kn{color:var(--teal-bright)} .pknown .un{color:var(--amber)}
+  .samecalc{text-align:center;margin-top:18px;font-family:"Space Mono";font-size:.95rem;color:#CFE2E0}
+  .samecalc b{color:var(--amber)}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:490px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.04rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .story{background:#EFE9DA;border-left:3px solid var(--teal);border-radius:0 10px 10px 0;
+    padding:14px 16px;margin:12px 0 4px;font-size:1.04rem;color:var(--ink);line-height:1.6}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  .qseq svg{max-width:330px;height:auto}
+  .expr{font-family:"Space Mono";font-weight:700;font-size:clamp(1.5rem,4.6vw,2.1rem);color:var(--ink);letter-spacing:.04em}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.5}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"IBM Plex Sans";font-weight:500}
+  .opt.mono .body{font-family:"Space Mono";font-weight:700;font-size:1.08rem;letter-spacing:.03em}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .feedback .alt{display:block;margin-top:6px;color:#5C6E6D;font-style:italic}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">÷</span> Division Models</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 6 · models of division</div>
+    <h1>How many groups —<br>or how many <span class="hl">in each?</span></h1>
+    <p class="lede">Every division question is one of exactly two questions, and they are not the same one. <em>Measurement</em> tells you the size of a group and asks how many groups there are. <em>Partitive</em> tells you the number of groups and asks how big each one is. Both are answered by the same arithmetic, and a child stuck on one may be perfectly fluent at the other.</p>
+
+    <div class="duo">
+      <div class="panel">
+        <div class="ptitle">measurement</div>
+        <div class="pstory">Ms. Sallay puts 18 students into groups of 3. <b>How many groups?</b></div>
+        <div class="pcanvas" id="heroMeas"></div>
+        <div class="pknown"><span class="kn">known:</span> 3 in each group<br><span class="un">unknown:</span> the number of groups</div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">partitive</div>
+        <div class="pstory">18 cookies are shared equally among 3 friends. <b>How many each?</b></div>
+        <div class="pcanvas" id="heroPart"></div>
+        <div class="pknown"><span class="kn">known:</span> 3 groups<br><span class="un">unknown:</span> how many in each</div>
+      </div>
+    </div>
+    <div class="samecalc">Both are <b>18 ÷ 3 = 6</b>. In one the 6 counts <b>groups</b>; in the other it counts <b>cookies</b>.</div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>The same numbers, the same answer, opposite unknowns.</b> That is why a child who can share cookies fairly may stare blankly at “how many groups of 3?” — dealing objects out one at a time models the sharing question beautifully and does not model the grouping question at all. If you only ever teach one interpretation, half your class is stranded and you will not be able to see why.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–5 install the five models, each with its own picture. Rungs 6–8 drill the interpretation itself — naming it, spotting it among look-alikes, and saying what the quotient actually counts. Rung 9 asks which model fits a teaching goal.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Which model it <em>is</em></h3><p>Every question asks what structure the situation has, not which method you would use — a child may well solve a grouping problem by sharing.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>The tell is never ambiguous</h3><p>Each problem names either a group <em>size</em> or a group <em>count</em> — never leaves it open to reading.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Repeated subtraction</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>One operation, two questions</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>It explains a specific stuck child</h3><p>“She can share but cannot group” is a real and common diagnosis — and it is invisible unless you know the two interpretations are different.</p></div>
+      <div class="why-card"><h3>Repeated subtraction is long division</h3><p>Every step of the standard algorithm asks “how many of these fit?” — which makes long division a measurement procedure, whatever the word problem said.</p></div>
+      <div class="why-card"><h3>Missing factor is the inverse</h3><p>Writing <code>42 ÷ 6 = □</code> as <code>6 · □ = 42</code> turns an unfamiliar division into a multiplication fact the child already knows.</p></div>
+    </div>
+    <p class="closing">Division is the only one of the four operations that routinely means two different things, and the arithmetic will never tell you which. <b>Ask what the situation hands you — the size of a group or the number of them — and the model, the materials and the words all follow.</b></p>
+  </section>
+
+  <footer>Division Models · measurement: how many groups? · partitive: how many in each? · both are 18 ÷ 3 = 6</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const fmt=n=>n.toLocaleString('en-US');
+const INK='#12333A', FILL='#8FCFC9', FILL2='#B9A7D6', ACC='#D77149', AMB='#C98F16', TL='#2FA39B';
+const NAMES=['Maya','Devon','Rosa','Juan','Ana','Malik','Priya','Chloe','Omar','Leah','Kai','Nina'];
+function twoNames(){const a=pick(NAMES);let b;do{b=pick(NAMES);}while(b===a);return [a,b];}
+function four(correct,cands,pad){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c!==null&&c!==undefined&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<80){ const c=pad?pad(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+
+/* ---- the five models ---- */
+const M={sub:'Repeated subtraction',part:'Partition (sharing)',miss:'Missing factor',
+         line:'Number line',arr:'Array / area'};
+const MKEYS=['sub','part','miss','line','arr'];
+function modelOptions(k){
+  const others=shuffle(MKEYS.filter(x=>x!==k)).slice(0,3);
+  const opts=shuffle([k,...others].map(x=>({t:M[x],k:x})));
+  return {options:opts.map(o=>({text:o.t})), answer:opts.findIndex(o=>o.k===k)};
+}
+
+/* ---- the two interpretations, spelled out ---- */
+const INT={
+  meas:'Measurement — you know the size of each group and are counting groups',
+  part:'Partitive — you know the number of groups and are finding the size of each',
+};
+function interpOptions(k){
+  const opts=shuffle([
+    {t:INT.meas,k:'meas'},{t:INT.part,k:'part'},
+    {t:'Both readings fit this problem equally well',k:'both'},
+    {t:'Neither — this is not a division situation',k:'none'},
+  ]);
+  return {options:opts.map(o=>({text:o.t})), answer:opts.findIndex(o=>o.k===k)};
+}
+
+/* ============ SVG ============ */
+function clustersSVG(groups,per,opt){
+  opt=opt||{};
+  const perRow=Math.min(groups,groups>4?3:groups);
+  const rows=Math.ceil(groups/perRow);
+  const dr=Math.min(4.6, 26/Math.max(per,3));
+  const cols=Math.min(per,3), drows=Math.ceil(per/cols);
+  const cw=cols*15+14, ch=drows*15+14, gap=10;
+  const W=perRow*(cw+gap)-gap+4, H=rows*(ch+gap)-gap+4;
+  let g='';
+  for(let k=0;k<groups;k++){
+    const gx=2+(k%perRow)*(cw+gap), gy=2+Math.floor(k/perRow)*(ch+gap);
+    g+=`<rect x="${gx}" y="${gy}" width="${cw}" height="${ch}" rx="9" fill="${opt.fill||FILL}" fill-opacity=".28" stroke="${opt.stroke||INK}" stroke-width="1.5"${opt.dash?' stroke-dasharray="4 3"':''}/>`;
+    for(let d=0;d<per;d++){
+      const dx=gx+7+ (d%cols)*15 +7, dy=gy+7+ Math.floor(d/cols)*15 +7;
+      g+=`<circle cx="${dx}" cy="${dy}" r="5" fill="${opt.dot||INK}"/>`;
+    }
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+}
+function barSVG(total,chunk){
+  const q=total/chunk, u=Math.min(13, 300/total), H=34;
+  const W=total*u+4;
+  let g=`<rect x="2" y="6" width="${total*u}" height="${H-12}" fill="${FILL}" fill-opacity=".3" stroke="${INK}" stroke-width="1.5"/>`;
+  for(let k=1;k<q;k++) g+=`<line x1="${2+k*chunk*u}" y1="2" x2="${2+k*chunk*u}" y2="${H-2}" stroke="${ACC}" stroke-width="2.4"/>`;
+  for(let k=0;k<q;k++) g+=`<text x="${2+(k+0.5)*chunk*u}" y="${H/2+4}" font-family="Space Mono" font-size="11" font-weight="700" fill="${INK}" text-anchor="middle">${chunk}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H+16}" width="100%" xmlns="http://www.w3.org/2000/svg">${g}
+    <text x="${W/2}" y="${H+12}" font-family="Space Mono" font-size="11" fill="#5C6E6D" text-anchor="middle">${total} in total</text></svg>`;
+}
+function lineSVG(a,b){
+  const q=a/b, W=330, x0=22, x1=W-16;
+  const px=v=>x0+(v/a)*(x1-x0);
+  let g=`<line x1="${x0-8}" y1="76" x2="${x1+8}" y2="76" stroke="${INK}" stroke-width="2"/>`;
+  for(let k=0;k<=q;k++){
+    const v=k*b;
+    g+=`<line x1="${px(v)}" y1="72" x2="${px(v)}" y2="82" stroke="${INK}" stroke-width="1.6"/>`;
+    g+=`<text x="${px(v)}" y="96" font-family="Space Mono" font-size="10.5" fill="#41514F" text-anchor="middle">${v}</text>`;
+  }
+  for(let k=q;k>0;k--){
+    const from=px(k*b), to=px((k-1)*b);
+    g+=`<path d="M${from},62 Q${(from+to)/2},34 ${to},62" fill="none" stroke="${ACC}" stroke-width="2.2"/>`;
+    g+=`<polygon points="${to},64 ${to+7},56 ${to-1},55" fill="${ACC}"/>`;
+    g+=`<text x="${(from+to)/2}" y="30" font-family="Space Mono" font-size="10.5" font-weight="700" fill="${ACC}" text-anchor="middle">−${b}</text>`;
+  }
+  return `<svg viewBox="0 0 ${W} 104" width="100%" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+}
+function arraySVG(rows,cols){
+  const s=Math.min(22, 250/cols), r=Math.max(3.6,s*0.2), pad=26;
+  const W=cols*s, H=rows*s;
+  let g='';
+  for(let i=0;i<rows;i++)for(let j=0;j<cols;j++)
+    g+=`<circle cx="${pad+j*s+s/2}" cy="${14+i*s+s/2}" r="${r}" fill="${INK}"/>`;
+  g+=`<text x="${pad-9}" y="${14+H/2+4}" font-family="Space Mono" font-size="12" font-weight="700" fill="${INK}" text-anchor="end">${rows}</text>`;
+  g+=`<text x="${pad+W/2}" y="${14+H+16}" font-family="Space Mono" font-size="12" font-weight="700" fill="${INK}" text-anchor="middle">${cols}</text>`;
+  return `<svg viewBox="0 0 ${pad+W+10} ${14+H+22}" width="100%" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+}
+
+/* ---- context banks: the tell is always explicit ---- */
+const CTX={
+  meas:[
+    ()=>{const b=pick([3,4,5,6]),q=rand(3,8);return{t:`A ribbon ${b*q} inches long is cut into ${b}-inch pieces. How many pieces are there?`,a:b*q,b,q,unit:'pieces'};},
+    ()=>{const b=pick([3,4,5,6]),q=rand(3,8);return{t:`${b*q} students are put into groups of ${b}. How many groups are there?`,a:b*q,b,q,unit:'groups'};},
+    ()=>{const b=pick([4,5,6,8]),q=rand(3,9);return{t:`${b*q} cookies are packed ${b} to a bag. How many bags are needed?`,a:b*q,b,q,unit:'bags'};},
+    ()=>{const b=pick([4,5,6,9]),q=rand(3,8);return{t:`${b*q} chairs are set out in rows of ${b}. How many rows are there?`,a:b*q,b,q,unit:'rows'};},
+    ()=>{const b=pick([3,4,6,8]),q=rand(3,9);return{t:`${b*q} ounces of juice fill cups holding ${b} ounces each. How many cups can be filled?`,a:b*q,b,q,unit:'cups'};},
+  ],
+  part:[
+    ()=>{const b=pick([3,4,5,6]),q=rand(3,9);const[n]=twoNames();return{t:`${b*q} cookies are shared equally among ${b} friends. How many cookies does each friend get?`,a:b*q,b,q,unit:'cookies each'};},
+    ()=>{const b=pick([3,4,5,6]),q=rand(3,9);return{t:`${b*q} pencils are divided equally into ${b} boxes. How many pencils go in each box?`,a:b*q,b,q,unit:'pencils each'};},
+    ()=>{const b=pick([3,4,5,6]),q=rand(3,8);return{t:`${b*q} students are split into ${b} equal teams. How many students are on each team?`,a:b*q,b,q,unit:'students each'};},
+    ()=>{const b=pick([3,4,5,6]),q=rand(3,9);return{t:`$${b*q} is shared equally by ${b} people. How much money does each person receive?`,a:b*q,b,q,unit:'dollars each'};},
+    ()=>{const b=pick([3,4,5,6]),q=rand(3,8);return{t:`${b*q} chairs are arranged in ${b} equal rows. How many chairs are in each row?`,a:b*q,b,q,unit:'chairs each'};},
+  ],
+};
+const ctx=k=>pick(CTX[k])();
+
+/* ---- quartets: one pair of numbers, four different situations ---- */
+function quartet(){
+  const b=pick([3,4,5,6]), q=rand(4,9), a=b*q;
+  const [n,m]=twoNames();
+  return {a,b,q,
+    part:`${a} cookies are shared equally among ${b} children. How many cookies does each child get?`,
+    meas:`${a} cookies are packed ${b} to a bag. How many bags are needed?`,
+    mult:`${n} buys ${b} boxes with ${a} cookies in each box. How many cookies is that altogether?`,
+    subt:`${n} had ${a} cookies and gave ${b} of them away. How many cookies are left?`};
+}
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — repeated subtraction
+  1(){
+    const b=pick([3,4,5,6]), q=rand(3,8), a=b*q;
+    const correct=String(q);
+    const rr=four(correct,[String(a-b),String(b),String(a),String(q+1)],g=>String(q+g+1));
+    return {prompt:`Starting at ${a}, how many times can you subtract <b>${b}</b> before reaching 0?`,
+      seq:barSVG(a,b),mono:true,...rr,_meta:{rung:1,a,b,q,key:'sub'},
+      why:`Taking ${b} away ${q} times uses up all ${a}, so <b>${q}</b> — which is exactly ${a} ÷ ${b}. Repeated subtraction always answers <em>how many groups</em>, which makes it a measurement model.`};
+  },
+
+  // 2 — partition (sharing)
+  2(){
+    const b=pick([3,4,5]), q=rand(3,6), a=b*q;
+    const correct=String(q);
+    const rr=four(correct,[String(b),String(a),String(a-b),String(q+1)],g=>String(q+g+1));
+    return {prompt:`These ${a} counters have been shared equally into <b>${b}</b> groups. How many are in each group?`,
+      seq:clustersSVG(b,q),mono:true,...rr,_meta:{rung:2,a,b,q,key:'part'},
+      why:`${a} shared into ${b} equal groups puts <b>${q}</b> in each — that is ${a} ÷ ${b} = ${q}. Dealing objects out one at a time is the partition model, and it answers <em>how many in each</em>.`};
+  },
+
+  // 3 — missing factor
+  3(){
+    const b=pick([4,6,7,8,9]), q=rand(4,9), a=b*q;
+    const correct=`${b} · □ = ${a}`;
+    const rr=four(correct,[`${a} · □ = ${b}`,`□ · ${a} = ${b}`,`${b} · ${a} = □`]);
+    return {prompt:`Rewrite <code>${a} ÷ ${b} = □</code> as a multiplication with a missing factor:`,
+      mono:true,...rr,_meta:{rung:3,a,b,q,key:'miss'},
+      why:`Division asks what must multiply ${b} to give ${a}, so <b>${b} · □ = ${a}</b> — and □ = ${q}. This is the inverse-operations relationship: every division fact is a multiplication fact with one number hidden.`};
+  },
+
+  // 4 — number line
+  4(){
+    let b,q; do{ b=pick([3,4,5,6]); q=rand(3,6); }while(b===q);   // else the swapped option duplicates
+    const a=b*q;
+    const correct=`${a} ÷ ${b} = ${q}`;
+    const rr=four(correct,[`${a} ÷ ${q} = ${b}`,`${a} − ${b} = ${a-b}`,`${b} × ${q} = ${a}`],
+                  g=>`${a} ÷ ${b} = ${q+g}`);
+    return {prompt:'Which division does this number line show?',
+      seq:lineSVG(a,b),mono:true,...rr,_meta:{rung:4,a,b,q,key:'line'},
+      why:`The line starts at ${a} and takes <b>${q} jumps of ${b}</b> to reach 0, so it shows <b>${a} ÷ ${b} = ${q}</b>. Counting equal jumps back to zero is repeated subtraction, drawn.`};
+  },
+
+  // 5 — array
+  5(){
+    let rows,cols; do{ rows=rand(3,6); cols=rand(4,8); }while(rows===cols);
+    const a=rows*cols;
+    const correct=`${a} ÷ ${cols} = ${rows}`;
+    const rr=four(correct,[`${a} ÷ ${rows} = ${cols}`,`${a} ÷ ${cols} = ${cols}`,`${rows} ÷ ${cols} = ${a}`]);
+    return {prompt:`This array has ${a} dots in all. Which division does it show for the number of <b>rows</b>?`,
+      seq:arraySVG(rows,cols),mono:true,...rr,_meta:{rung:5,a,rows,cols,key:'arr'},
+      why:`There are ${a} dots in rows of ${cols}, so the number of rows is <b>${a} ÷ ${cols} = ${rows}</b>. The very same array read the other way gives ${a} ÷ ${rows} = ${cols} — one picture, two divisions.`};
+  },
+
+  // 6 — measurement or partitive? (the flagship)
+  6(){
+    const k=pick(['meas','part']);
+    const it=ctx(k);
+    return {prompt:'Which interpretation of division does this problem use?',story:it.t,stack:true,
+      ...interpOptions(k),_meta:{rung:6,kind:k,...it},
+      why:k==='meas'
+        ? `The problem tells you <b>${it.b} in each</b> and asks how many such groups there are, so it is <b>measurement</b>. The answer ${it.q} counts ${it.unit}.`
+        : `The problem tells you there are <b>${it.b} groups</b> and asks how big each one is, so it is <b>partitive</b>. The answer ${it.q} counts ${it.unit}.`};
+  },
+
+  // 7 — same numbers, four situations
+  7(){
+    const Q=quartet();
+    const want=pick(['part','meas']);
+    const opts=shuffle([Q.part,Q.meas,Q.mult,Q.subt]).map(t=>({text:t}));
+    return {prompt:`Which of these is a <b>${want==='part'?'partitive (sharing)':'measurement (grouping)'}</b> division problem?`,
+      stack:true,options:opts,answer:opts.findIndex(o=>o.text===Q[want]),
+      _meta:{rung:7,want,Q},
+      why:want==='part'
+        ? `Sharing among <b>${Q.b} children</b> names the <em>number of groups</em> and asks for the size of each — partitive. The bagging problem uses the same numbers but names the <em>size</em> of each group, which makes it measurement; the other two are not division at all.`
+        : `Packing <b>${Q.b} to a bag</b> names the <em>size</em> of each group and asks how many groups — measurement. The sharing problem uses the same numbers but names the <em>number</em> of groups, which makes it partitive; the other two are not division at all.`};
+  },
+
+  // 8 — what does the quotient count?
+  8(){
+    const k=pick(['meas','part']);
+    const it=ctx(k);
+    const noun=it.unit.replace(/ each$/,'');
+    const correct = k==='meas' ? `the number of ${it.unit}` : `how many ${noun} are in each group`;
+    const other   = k==='meas' ? `how many are in each of the ${it.unit}` : `the number of groups`;
+    const rr=four(correct,[other,`the total number of items`,`the size of the original amount`]);
+    return {prompt:`The answer to this problem is <b>${it.q}</b>. What does that ${it.q} count?`,story:it.t,
+      stack:true,...rr,_meta:{rung:8,kind:k,...it,correct},
+      why:k==='meas'
+        ? `In a measurement problem the quotient counts <b>groups</b>, so the ${it.q} is the number of ${it.unit}. The divisor ${it.b} was the size of each one.`
+        : `In a partitive problem the quotient counts <b>how many are in each group</b>, so the ${it.q} tells you the size of a share. The divisor ${it.b} was the number of groups.`};
+  },
+
+  // 9 — fit the model to the goal
+  9(){
+    const bank=[
+      {q:'You want children to see <b>why the long division algorithm works</b>. Which model shows it most directly?',k:'sub',
+       w:'Every step of long division asks “how many of these fit?” and takes that many away — it is <b>repeated subtraction</b>, organised into columns.'},
+      {q:'A child can share sweets fairly between friends but is stuck on “how many groups of 3 can you make from 18?” What is the second problem?',k:'sub',
+       w:'That is a grouping — a measurement question, best modelled by <b>repeated subtraction</b>. Dealing objects out one at a time, which is what the child can already do, models sharing and not grouping.'},
+      {q:'You want to connect division to the multiplication facts a child already knows. Which model does that?',k:'miss',
+       w:'The <b>missing factor</b> model rewrites 42 ÷ 6 as 6 · □ = 42, turning an unfamiliar division into a familiar multiplication.'},
+      {q:'You want to show that one picture can be read as both a multiplication and a division. Which model?',k:'arr',
+       w:'An <b>array</b> read across gives rows × columns; read the other way it gives total ÷ columns = rows. One picture, both operations.'},
+      {q:'You want division shown as distance and movement rather than as objects. Which model?',k:'line',
+       w:'The <b>number line</b> shows equal jumps back to zero, so the quotient becomes a count of steps along a path.'},
+      {q:'You are giving children counters and asking them to deal them out one at a time. Which model is that?',k:'part',
+       w:'Dealing out one at a time is the <b>partition</b> model — it answers how many end up in each group.'},
+    ];
+    const it=pick(bank);
+    return {prompt:it.q,stack:true,...modelOptions(it.k),_meta:{rung:9,key:it.k},why:it.w};
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Repeated subtraction',short:'how many fit?'},
+  {id:2,title:'Partition (sharing)',short:'deal them out'},
+  {id:3,title:'Missing factor',short:'6 · □ = 42'},
+  {id:4,title:'Number line',short:'jumps back to 0'},
+  {id:5,title:'Array / area',short:'rows and columns'},
+  {id:6,title:'Measurement or partitive?',short:'the flagship trap'},
+  {id:7,title:'Same numbers, four stories',short:'only structure differs'},
+  {id:8,title:'What does the answer count?',short:'groups or size'},
+  {id:9,title:'Fit the model to the goal',short:'applied'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='divisionModelsLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt+(currentQ.story?`<div class="story">${currentQ.story}</div>`:'');
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>24);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.mono?' mono':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero ============ */
+document.getElementById('heroMeas').innerHTML=clustersSVG(6,3,{});          // 6 groups of 3 — count the groups
+document.getElementById('heroPart').innerHTML=clustersSVG(3,6,{fill:FILL2,dot:'#4A3A6B'}); // 3 groups of 6 — count each
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
