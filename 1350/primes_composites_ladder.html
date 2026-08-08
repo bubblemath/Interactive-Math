@@ -1,0 +1,652 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Primes &amp; Composites — count the divisors</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.2rem;box-shadow:var(--shadow)}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .trio{margin:34px 0 0;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media (max-width:800px){.trio{grid-template-columns:1fr}}
+  .panel{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:20px 16px;box-shadow:var(--shadow);text-align:center}
+  .pnum{font-family:"Space Mono";font-weight:700;font-size:2rem;color:var(--paper);margin-bottom:4px}
+  .pcap{font-family:"Space Mono";font-size:.68rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+  .pcanvas{background:var(--paper);border-radius:9px;padding:12px 8px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:7px;min-height:112px}
+  .pcanvas svg{max-width:100%;height:auto}
+  .pdiv{font-family:"Space Mono";font-size:.76rem;color:#CFE2E0;margin-top:12px;line-height:1.6}
+  .pdiv b{color:var(--paper)}
+  .pverdict{font-family:"Space Grotesk";font-weight:600;font-size:1.02rem;margin-top:9px}
+  .pverdict.n{color:var(--clay)} .pverdict.p{color:var(--teal-bright)} .pverdict.c{color:var(--amber)}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:480px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.04rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  .bignum{font-family:"Space Mono";font-weight:700;font-size:clamp(2rem,6vw,2.8rem);color:var(--ink);letter-spacing:.06em}
+  .hint{display:inline-block;margin-top:10px;font-family:"Space Mono";font-size:.78rem;color:#5C6E6D;
+    background:#EFE9DA;border-radius:8px;padding:7px 13px;line-height:1.55}
+
+  /* the sieve grid */
+  table.sieve{border-collapse:collapse;margin:0 auto;font-family:"Space Mono";font-size:.72rem;font-weight:700}
+  table.sieve td{width:2.05em;height:1.85em;text-align:center;border:1px solid #DED7C6;color:var(--ink)}
+  table.sieve td.out{color:#C3BCAB;background:#EFE9DA;text-decoration:line-through}
+  table.sieve td.one{color:#C3BCAB;background:#EFE9DA}
+  table.sieve td.mark{background:var(--amber);color:var(--ground-2)}
+  table.sieve td.keep{background:#D8EFE6;color:#12333A}
+  .sievecap{font-family:"Space Mono";font-size:.7rem;color:#7A8887;margin-top:9px;letter-spacing:.05em}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1.05rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.5}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"Space Mono";font-weight:700;letter-spacing:.04em}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500;letter-spacing:0;font-size:.99rem}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">℘</span> Primes &amp; Composites</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 7 · primes &amp; composites</div>
+    <h1>Count the divisors.<br><span class="hl">Exactly two is the whole test.</span></h1>
+    <p class="lede">A number is prime when it has <em>exactly two</em> distinct divisors — 1 and itself. More than two and it is composite. And a number can have <strong>fewer</strong> than two, which is where the definition earns its keep.</p>
+
+    <div class="trio" id="trio"></div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>1 is neither prime nor composite.</b> Students call it prime because “only 1 and itself divide it” — but for 1 those are the <em>same number</em>, so it has one divisor, not two distinct ones. That is not a technicality invented to be annoying: if 1 counted as prime, every number would have endlessly many prime factorisations (12 = 2·2·3 = 1·2·2·3 = 1·1·2·2·3…) and the Fundamental Theorem of Arithmetic would simply be false. <b>The second trap is how far to test:</b> to check 397 you need only try primes up to <b>19</b>, because any composite has a prime factor no bigger than its square root.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–3 fix the definition and its two special cases, 1 and 2. Rungs 4–6 build the square-root test and put it to work. Rungs 7–8 run the Sieve of Eratosthenes, and rung 9 connects the divisor count straight back to the definition.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Everything is checked by division</h3><p>Every question is verified against a real primality test, so exactly one option is ever true.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>1 appears as a decoy</h3><p>It turns up among the options in the classification rungs, because that is exactly where it catches people.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Spot the prime</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>The atoms of arithmetic</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>Everything downstream needs them</h3><p>Prime factorisation, GCF, LCM, reducing fractions, common denominators — all of it starts by breaking numbers into primes.</p></div>
+      <div class="why-card"><h3>The square-root test is real economy</h3><p>Testing 397 means trying eight primes, not 395 numbers. Children find that genuinely surprising, and the reason is worth showing.</p></div>
+      <div class="why-card"><h3>The sieve is an algorithm</h3><p>Eratosthenes found every prime under 100 without dividing once — by crossing out multiples. It is one of the oldest algorithms anyone still teaches.</p></div>
+    </div>
+    <p class="closing">Primes are defined by a count, not by a feeling for which numbers look indivisible. <b>Ask how many distinct divisors a number has — one, two, or more than two — and each of the three answers has exactly one name.</b></p>
+  </section>
+
+  <footer>Primes &amp; Composites · exactly two divisors · 1 is neither · test only primes up to √n · 25 primes below 100</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const fmt=n=>n.toLocaleString('en-US');
+
+/* ---- number theory, all by actual division ---- */
+function isPrime(n){
+  if(n<2) return false;
+  if(n<4) return true;
+  if(n%2===0) return false;
+  for(let i=3;i*i<=n;i+=2) if(n%i===0) return false;
+  return true;
+}
+function smallestFactor(n){
+  if(n<2) return null;
+  if(n%2===0) return 2;
+  for(let i=3;i*i<=n;i+=2) if(n%i===0) return i;
+  return n;
+}
+function divisors(n){ const d=[]; for(let i=1;i<=n;i++) if(n%i===0) d.push(i); return d; }
+function primesUpTo(m){ const p=[]; for(let i=2;i<=m;i++) if(isPrime(i)) p.push(i); return p; }
+const PRIMES_100=primesUpTo(100);
+function largestPrimeAtMostSqrt(n){
+  const lim=Math.floor(Math.sqrt(n));
+  for(let i=lim;i>=2;i--) if(isPrime(i)) return i;
+  return null;
+}
+function randPrime(lo,hi){ for(let t=0;t<3000;t++){ const n=rand(lo,hi); if(isPrime(n)) return n; } return 97; }
+function randComposite(lo,hi){ for(let t=0;t<3000;t++){ const n=rand(lo,hi); if(n>1&&!isPrime(n)) return n; } return 100; }
+
+function four(correct,cands,pad){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c!==null&&c!==undefined&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<200){ const c=pad?pad(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+
+/* ---- rectangle arrays, as in the worksheet's opening figure ---- */
+function rectSVG(rows,cols){
+  const u=Math.min(15, 250/cols, 40/Math.max(rows,1));
+  const W=cols*u, H=rows*u;
+  let g=`<rect x="1" y="1" width="${W}" height="${H}" fill="#CDE6E3" stroke="#12333A" stroke-width="1.4"/>`;
+  for(let j=1;j<cols;j++) g+=`<line x1="${1+j*u}" y1="1" x2="${1+j*u}" y2="${1+H}" stroke="#12333A" stroke-opacity=".4" stroke-width="1"/>`;
+  for(let i=1;i<rows;i++) g+=`<line x1="1" y1="${1+i*u}" x2="${1+W}" y2="${1+i*u}" stroke="#12333A" stroke-opacity=".4" stroke-width="1"/>`;
+  return `<svg viewBox="0 0 ${W+2} ${H+2}" width="${Math.min(W+2,240)}" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+}
+
+/* ---- the sieve grid ---- */
+function sieveHTML(opt){
+  opt=opt||{};
+  const crossed=new Set();
+  (opt.crossPrimes||[]).forEach(p=>{ for(let m=2*p;m<=100;m+=p) crossed.add(m); });
+  let h='<table class="sieve">';
+  for(let r=0;r<10;r++){
+    h+='<tr>';
+    for(let c=1;c<=10;c++){
+      const n=r*10+c;
+      let cls='';
+      if(n===1) cls='one';
+      else if(opt.mark&&opt.mark.includes(n)) cls='mark';
+      else if(crossed.has(n)&&!(opt.crossPrimes||[]).includes(n)) cls='out';
+      else if(opt.keep&&opt.keep.includes(n)) cls='keep';
+      h+=`<td class="${cls}">${n}</td>`;
+    }
+    h+='</tr>';
+  }
+  return h+'</table>';
+}
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — spot the prime (with 1 as a live decoy)
+  1(){
+    const want=pick(['prime','composite']);
+    const showOne=rand(0,1)===1;
+    if(want==='prime'){
+      const good=randPrime(11,97);
+      const bad=[];
+      if(showOne) bad.push(1);
+      while(bad.length<3){ const c=randComposite(4,99); if(!bad.includes(c)&&c!==good) bad.push(c); }
+      const all=shuffle([good,...bad.slice(0,3)]);
+      return {prompt:'Which of these numbers is <b>prime</b>?',mono:true,
+        options:all.map(v=>({text:String(v)})),answer:all.indexOf(good),
+        _meta:{rung:1,want,good,all},
+        why:`<b>${good}</b> has exactly two divisors, 1 and ${good}. ${all.includes(1)?'Watch the 1 — it has only <em>one</em> divisor, so it is neither prime nor composite. ':''}The others each have a factor besides 1 and themselves.`};
+    }
+    const good=randComposite(4,99);
+    const bad=[];
+    if(showOne) bad.push(1);
+    while(bad.length<3){ const c=randPrime(2,97); if(!bad.includes(c)) bad.push(c); }
+    const all=shuffle([good,...bad.slice(0,3)]);
+    return {prompt:'Which of these numbers is <b>composite</b>?',mono:true,
+      options:all.map(v=>({text:String(v)})),answer:all.indexOf(good),
+      _meta:{rung:1,want,good,all},
+      why:`<b>${good}</b> = ${smallestFactor(good)} × ${good/smallestFactor(good)}, so it has a factor besides 1 and itself. ${all.includes(1)?'And 1 is <em>not</em> composite — it has no factor other than itself at all. ':''}The rest are prime.`};
+  },
+
+  // 2 — why 1 is neither
+  2(){
+    if(rand(0,1)===1){
+      const correct='It has only one divisor, so it cannot have exactly two';
+      const cands=['It is too small to count as prime',
+                   'It is divisible by itself, which makes it composite',
+                   'It is prime, but treated as a special case'];
+      const r=four(correct,cands);
+      return {prompt:'Why is <b>1</b> neither prime nor composite?',stack:true,wordy:true,...r,
+        _meta:{rung:2,kind:'why',correct},
+        why:`A prime needs <b>two distinct</b> divisors. The only divisor of 1 is 1 itself, so the count is one — too few for prime, and it has no factor beyond itself, so it is not composite either. It sits outside both categories.`};
+    }
+    const correct='1';
+    const r=four(correct,['2','0','Infinitely many']);
+    return {prompt:'How many distinct divisors does <b>1</b> have?',mono:true,...r,
+      _meta:{rung:2,kind:'count',correct},
+      why:`Just <b>one</b> — the number 1 itself. A prime must have two <em>different</em> divisors, and 1 cannot supply a second one.`};
+  },
+
+  // 3 — 2, the only even prime
+  3(){
+    if(rand(0,1)===1){
+      const correct='2';
+      const r=four(correct,['4','1','There is no even prime']);
+      return {prompt:'Which is the only <b>even</b> prime number?',mono:true,...r,
+        _meta:{rung:3,kind:'which',correct},
+        why:`<b>2</b>. Its divisors are exactly 1 and 2. Every other even number is divisible by 2 as well as by 1 and itself, which gives it at least three divisors.`};
+    }
+    const correct='Every other even number has 2 as a divisor besides 1 and itself';
+    const cands=['Because 2 is the smallest prime number',
+                 'Because even numbers cannot be divided at all',
+                 'Because 2 is the only number that divides itself'];
+    const r=four(correct,cands);
+    return {prompt:'Why is <b>2</b> the only even prime?',stack:true,wordy:true,...r,
+      _meta:{rung:3,kind:'why',correct},
+      why:`Any even number bigger than 2 has 1, 2 and itself among its divisors — that is already three, so it is composite. Only 2 escapes, because for 2 the divisor “2” <em>is</em> the number itself.`};
+  },
+
+  // 4 — how far must you test?
+  4(){
+    const n=pick([randPrime(120,900),randComposite(120,900)]);
+    const p=largestPrimeAtMostSqrt(n);
+    const primes=primesUpTo(Math.floor(Math.sqrt(n)));
+    const nextP=PRIMES_100.find(x=>x>p);
+    const prevP=[...primes].reverse()[1];
+    const correct=String(p);
+    const cands=[String(nextP), prevP?String(prevP):null, String(n), String(Math.floor(n/2))];
+    const r=four(correct,cands.filter(Boolean));
+    return {prompt:`To decide whether <code>${fmt(n)}</code> is prime, what is the <b>largest prime</b> you need to test as a possible factor?`,
+      seq:`<div class="bignum">${fmt(n)}</div><div class="hint">√${fmt(n)} ≈ ${Math.sqrt(n).toFixed(1)} — and any composite has a prime factor no larger than its square root</div>`,
+      mono:true,...r,_meta:{rung:4,n,p,primes,correct},
+      why:`√${fmt(n)} ≈ ${Math.sqrt(n).toFixed(1)}, so you only test primes up to ${Math.floor(Math.sqrt(n))} — the largest of which is <b>${p}</b>. That means checking ${primes.length} prime${primes.length===1?'':'s'} (${primes.join(', ')}), not hundreds of numbers. Stopping at ${prevP||'anything smaller'} would leave a factor untested; going beyond ${p} is wasted effort.`};
+  },
+
+  // 5 — is it prime? apply the test
+  5(){
+    const n=pick([randPrime(150,900),randComposite(150,900),randComposite(150,900)]);
+    const p=largestPrimeAtMostSqrt(n);
+    const primes=primesUpTo(Math.floor(Math.sqrt(n)));
+    if(isPrime(n)){
+      const nonFactors=shuffle(primes.filter(x=>n%x!==0)).slice(0,3);
+      const correct='Prime';
+      const cands=nonFactors.map(x=>`Composite — divisible by ${x}`);
+      const r=four(correct,cands);
+      return {prompt:`Is <code>${fmt(n)}</code> prime or composite?`,
+        seq:`<div class="bignum">${fmt(n)}</div><div class="hint">test only the primes up to ${p}: ${primes.join(', ')}</div>`,
+        wordy:true,stack:true,...r,_meta:{rung:5,n,isP:true,primes,correct},
+        why:`None of the primes up to ${p} divides ${fmt(n)}, so it is <b>prime</b>. Once you have passed ${p} you can stop — a composite number must have had a prime factor by then.`};
+    }
+    const sf=smallestFactor(n);
+    const nonFactors=shuffle(primes.filter(x=>n%x!==0)).slice(0,2);
+    const correct=`Composite — divisible by ${sf}`;
+    const cands=['Prime',...nonFactors.map(x=>`Composite — divisible by ${x}`)];
+    const r=four(correct,cands);
+    return {prompt:`Is <code>${fmt(n)}</code> prime or composite?`,
+      seq:`<div class="bignum">${fmt(n)}</div><div class="hint">test only the primes up to ${p}: ${primes.join(', ')}</div>`,
+      wordy:true,stack:true,...r,_meta:{rung:5,n,isP:false,sf,primes,correct},
+      why:`${fmt(n)} ÷ ${sf} = ${fmt(n/sf)}, so ${fmt(n)} is <b>composite</b> — and ${sf} is its smallest prime factor. You never had to test beyond ${p}.`};
+  },
+
+  // 6 — show it is composite: find the factor
+  6(){
+    const BANK=[1564,2781,1001,1547,2431,1729,1105,1387,2059,943,1591,2117];
+    const n=pick(BANK.concat([randComposite(500,2500)]));
+    if(isPrime(n)) return GEN[6]();
+    const sf=smallestFactor(n);
+    const nonFactors=shuffle(PRIMES_100.filter(x=>x<60&&n%x!==0)).slice(0,3);
+    const correct=String(sf);
+    const r=four(correct,nonFactors.map(String));
+    return {prompt:`Show that <code>${fmt(n)}</code> is composite: which of these is a <b>factor</b> of it?`,
+      seq:`<div class="bignum">${fmt(n)}</div>`,mono:true,...r,
+      _meta:{rung:6,n,sf,correct},
+      why:`${fmt(n)} ÷ ${sf} = ${fmt(n/sf)}, so <b>${sf}</b> divides it and ${fmt(n)} is composite. Finding one factor other than 1 and itself is all it takes — you never need the full factorisation to prove a number is composite.`};
+  },
+
+  // 7 — the sieve: what gets crossed
+  7(){
+    const V=rand(0,2);
+    if(V===0){
+      const p=pick([3,5,7]);
+      const correct=String(p*p);
+      // 3p would BE p² when p = 3, so use multiples that can never collide
+      const cands=[String(2*p),String(p*p+p),String(p*(p+2)),String(10*p)].filter(x=>x!==correct);
+      const r=four(correct,cands,g=>String(p*p+g*p));
+      return {prompt:`In the Sieve of Eratosthenes, you have already crossed off the multiples of every prime below <b>${p}</b>. When you reach <b>${p}</b>, what is the first multiple of ${p} still left to cross off?`,
+        seq:sieveHTML({crossPrimes:PRIMES_100.filter(x=>x<p),mark:[p]})+`<div class="sievecap">multiples of ${PRIMES_100.filter(x=>x<p).join(' and ')} already removed</div>`,
+        mono:true,...r,_meta:{rung:7,V,p,correct},
+        why:`Every smaller multiple of ${p} — ${Array.from({length:p-2},(_,i)=>(i+2)*p).join(', ')} — already has a smaller prime factor and was crossed off earlier. The first one left is <b>${p} × ${p} = ${p*p}</b>. That is why the sieve always starts crossing at p².`};
+    }
+    if(V===1){
+      const correct='10';
+      const r=four(correct,['50','100','25']);
+      return {prompt:'When sieving the numbers up to <b>100</b>, you can stop crossing off once you pass which number?',
+        mono:true,...r,_meta:{rung:7,V,correct},
+        why:`√100 = <b>10</b>. Any composite number up to 100 must have a prime factor of 10 or less, so once the multiples of 2, 3, 5 and 7 are gone, everything still standing is prime.`};
+    }
+    const correct='2, 3, 5 and 7';
+    const cands=['2, 3, 5, 7 and 11','every prime up to 50','2 and 3 only'];
+    const r=four(correct,cands);
+    return {prompt:'To sieve all the primes below 100, whose multiples must you cross off?',
+      seq:sieveHTML({crossPrimes:[2,3,5,7],mark:[2,3,5,7]}),wordy:true,stack:true,...r,
+      _meta:{rung:7,V,correct},
+      why:`Only <b>2, 3, 5 and 7</b> — the primes up to √100 = 10. Crossing their multiples removes every composite below 100, and what remains is exactly the list of primes.`};
+  },
+
+  // 8 — the sieve: what survives
+  8(){
+    if(rand(0,1)===1){
+      const correct='25';
+      const r=four(correct,['24','26','50']);
+      return {prompt:'How many prime numbers are there below <b>100</b>?',
+        seq:sieveHTML({crossPrimes:[2,3,5,7],keep:PRIMES_100}),mono:true,...r,
+        _meta:{rung:8,kind:'count',correct},
+        why:`There are <b>25</b>: ${PRIMES_100.join(', ')}. Everything else below 100 was removed as a multiple of 2, 3, 5 or 7 — and 1 was never in the running.`};
+    }
+    const good=pick(PRIMES_100.filter(p=>p>10));
+    const bad=[];
+    while(bad.length<3){ const c=randComposite(11,99); if(!bad.includes(c)) bad.push(c); }
+    const all=shuffle([good,...bad]);
+    return {prompt:'Which of these numbers <b>survives</b> the sieve — that is, is never crossed off?',mono:true,
+      options:all.map(v=>({text:String(v)})),answer:all.indexOf(good),
+      _meta:{rung:8,kind:'survive',good,all},
+      why:`<b>${good}</b> is not a multiple of 2, 3, 5 or 7, so nothing removes it — it is prime. ${bad.map(b=>`${b} goes when you cross the multiples of ${smallestFactor(b)}`).join('; ')}.`};
+  },
+
+  // 9 — the divisor count decides
+  9(){
+    const kind=pick(['prime','composite','one']);
+    const n = kind==='one'?1 : kind==='prime'?randPrime(11,97) : randComposite(4,99);
+    const d=divisors(n);
+    const correct = kind==='one'?'Neither prime nor composite' : kind==='prime'?'Prime':'Composite';
+    const opts=shuffle(['Prime','Composite','Neither prime nor composite','Both prime and composite']).map(t=>({text:t}));
+    return {prompt:`This number has <b>${d.length}</b> distinct divisor${d.length===1?'':'s'}: ${d.join(', ')}. What is it?`,
+      seq:`<div class="bignum">${n}</div>`,wordy:true,stack:true,
+      options:opts,answer:opts.findIndex(o=>o.text===correct),
+      _meta:{rung:9,n,kind,dcount:d.length,correct},
+      why:`${d.length} divisor${d.length===1?'':'s'} means <b>${correct.toLowerCase()}</b>. The rule is only ever about the count: one divisor → neither, exactly two → prime, more than two → composite.`};
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Spot the prime',short:'watch for the 1'},
+  {id:2,title:'The number 1',short:'why it is neither'},
+  {id:3,title:'The number 2',short:'the only even prime'},
+  {id:4,title:'How far to test?',short:'primes up to √n'},
+  {id:5,title:'Is it prime?',short:'apply the test'},
+  {id:6,title:'Find a factor',short:'1,001 = 7 · 11 · 13'},
+  {id:7,title:'The Sieve',short:'crossing starts at p²'},
+  {id:8,title:'What survives',short:'25 primes below 100'},
+  {id:9,title:'Count the divisors',short:'one, two, or more'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='primesCompositesLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>22);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero ============ */
+(function(){
+  const cards=[
+    {n:1,  rects:[[1,1]],                 cap:'one rectangle',   verdict:'Neither', cls:'n',
+     note:'only <b>one</b> divisor — too few for prime'},
+    {n:7,  rects:[[1,7]],                 cap:'one rectangle',   verdict:'Prime',   cls:'p',
+     note:'exactly <b>two</b> divisors'},
+    {n:18, rects:[[1,18],[2,9],[3,6]],    cap:'three rectangles',verdict:'Composite',cls:'c',
+     note:'<b>six</b> divisors — far more than two'},
+  ];
+  document.getElementById('trio').innerHTML=cards.map(c=>{
+    const d=divisors(c.n);
+    return `<div class="panel">
+      <div class="pnum">${c.n}</div>
+      <div class="pcap">${c.cap}</div>
+      <div class="pcanvas">${c.rects.map(([r,k])=>rectSVG(r,k)).join('')}</div>
+      <div class="pdiv">divisors: ${d.join(', ')}<br>${c.note}</div>
+      <div class="pverdict ${c.cls}">${c.verdict}</div></div>`;
+  }).join('');
+})();
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
