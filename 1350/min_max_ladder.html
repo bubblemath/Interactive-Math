@@ -1,0 +1,611 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIN or MAX — and why GCF · LCM = ab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:.82rem;box-shadow:var(--shadow);font-family:"Space Mono"}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  h1 .hl2{color:var(--teal-bright)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .book{margin:34px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:24px 18px;box-shadow:var(--shadow)}
+  .btitle{font-family:"Space Mono";font-size:.78rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-bright);text-align:center;margin-bottom:4px}
+  .bsub{font-family:"Space Mono";font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:18px}
+  table.book{border-collapse:collapse;margin:0 auto;font-family:"Space Mono";font-size:.86rem}
+  table.book th,table.book td{padding:7px 12px;text-align:center;border-bottom:1px solid var(--line)}
+  table.book th{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+  table.book td{color:#CFE2E0;font-weight:700}
+  table.book .cmin{background:rgba(47,163,155,.18);color:var(--teal-bright)}
+  table.book .cmax{background:rgba(239,181,63,.16);color:var(--amber)}
+  table.book th.cmin{color:var(--teal-bright)} table.book th.cmax{color:var(--amber)}
+  table.book .csum{color:#CFE2E0}
+  table.book tr:last-child td{border-bottom:none}
+  .bres{text-align:center;margin-top:18px;padding-top:16px;border-top:1px solid var(--line);
+    font-family:"Space Mono";font-size:.94rem;color:#CFE2E0;line-height:2}
+  .bres .g{color:var(--teal-bright)} .bres .l{color:var(--amber)}
+  .bres b{color:var(--paper)}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:490px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.02rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .prompt sup{font-size:.66em;vertical-align:super}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  .facts{display:inline-block;background:#EFE9DA;border-radius:10px;padding:12px 18px;
+    font-family:"Space Mono";font-weight:700;font-size:clamp(.9rem,2.7vw,1.1rem);color:var(--ink);line-height:1.9;text-align:left}
+  .facts sup{font-size:.62em;vertical-align:super}
+  .facts .lbl{font-family:"IBM Plex Sans";font-weight:500;font-size:.7rem;color:#7A8887;letter-spacing:.09em;text-transform:uppercase;display:block;margin-bottom:5px}
+  .bignum{font-family:"Space Mono";font-weight:700;font-size:clamp(1.3rem,4.2vw,1.9rem);color:var(--ink);letter-spacing:.04em}
+  .bignum sup{font-size:.58em;vertical-align:super}
+  /* the in-card exponent table */
+  table.qbook{border-collapse:collapse;margin:0 auto;font-family:"Space Mono";font-size:.85rem}
+  table.qbook th,table.qbook td{padding:6px 11px;text-align:center;border-bottom:1px solid #DED7C6;color:var(--ink)}
+  table.qbook th{font-size:.64rem;letter-spacing:.07em;text-transform:uppercase;color:#7A8887;font-weight:500}
+  table.qbook td{font-weight:700}
+  table.qbook .cmin{background:rgba(47,163,155,.18)}
+  table.qbook .cmax{background:rgba(239,181,63,.22)}
+  table.qbook tr:last-child td{border-bottom:none}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1.02rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.5}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"Space Mono";font-weight:700;letter-spacing:.04em}
+  .opt .body sup{font-size:.62em;vertical-align:super}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500;letter-spacing:0;font-size:.98rem}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback sup{font-size:.72em;vertical-align:super}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .feedback .caution{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed #C6BFAD;color:#5C6E6D;font-style:italic}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">min·max</span> MIN or MAX</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 7 · the relationship between GCF and LCM</div>
+    <h1><span class="hl2">Smaller</span> for the GCF.<br><span class="hl">Larger</span> for the LCM.</h1>
+    <p class="lede">Line up the exponents of the two numbers, prime by prime. The GCF takes the smaller of each pair; the LCM takes the larger. Between them they use <strong>every exponent exactly once</strong> — and that single observation is the entire reason <code>GCF · LCM = ab</code>.</p>
+
+    <div class="book">
+      <div class="btitle">the exponents of 24 and 30, prime by prime</div>
+      <div class="bsub">24 = 2³ · 3 &nbsp;&nbsp;and&nbsp;&nbsp; 30 = 2 · 3 · 5</div>
+      <div id="heroTable"></div>
+      <div class="bres">
+        <span class="g">GCF = 2<sup>1</sup> · 3<sup>1</sup> · 5<sup>0</sup> = 6</span> &nbsp;&nbsp;·&nbsp;&nbsp;
+        <span class="l">LCM = 2<sup>3</sup> · 3<sup>1</sup> · 5<sup>1</sup> = 120</span><br>
+        6 × 120 = <b>720</b> &nbsp;&nbsp;and&nbsp;&nbsp; 24 × 30 = <b>720</b>
+      </div>
+    </div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>Swapping min and max is the whole failure mode</b> — and it swaps <em>both</em> answers at once, so a student who has it backwards produces the LCM when asked for the GCF and vice versa. The fix is not to memorise which is which but to notice why they must be opposites: the GCF has to <em>divide</em> both numbers, so it cannot take more of a prime than the poorer number has; the LCM has to be <em>divisible by</em> both, so it must take at least as much as the richer one. Look at the last two columns of the table above — <code>min + max</code> equals <code>the sum</code> on every single row. That is the identity, and it needs no memorising at all.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–2 fix which operation takes which exponent. Rungs 3–4 make you produce both answers from one pair, so having it backwards cannot score. Rungs 5–7 build and use the product identity, and 8–9 run it backwards.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Rung 3 asks for both at once</h3><p>The options are pairs, so getting the GCF right and the LCM backwards earns nothing — which is the honest test of whether min and max are straight.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>The identity is verified, not asserted</h3><p>Every claim of GCF · LCM = ab in this ladder is checked by real arithmetic before it appears.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Which takes which?</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>Two ideas that only make sense together</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>The identity is a shortcut</h3><p>Euclid finds a GCF in a handful of divisions. Multiply, divide by it, and you have the LCM without ever factorising either number.</p></div>
+      <div class="why-card"><h3>It explains relatively prime</h3><p>If the GCF is 1 the identity forces the LCM to be the whole product — which is why coprime denominators give the worst common denominator.</p></div>
+      <div class="why-card"><h3>Opposites, not arbitrary rules</h3><p>The GCF must divide both, so it cannot be greedy. The LCM must be divisible by both, so it cannot be stingy. Min and max follow from that alone.</p></div>
+    </div>
+    <p class="closing">Set the exponents side by side and the two operations become one picture: the GCF takes what both can spare, the LCM takes what either demands. <b>Between them they account for every prime factor exactly once, and that is why their product is always the product of the two numbers.</b></p>
+  </section>
+
+  <footer>MIN or MAX · GCF takes the smaller exponent · LCM the larger · min + max = sum · GCF · LCM = ab</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const fmt=n=>n.toLocaleString('en-US');
+
+/* ---- number theory ---- */
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a;};
+const lcm=(a,b)=>a/gcd(a,b)*b;
+function factorMap(n){ const m=new Map(); let v=n;
+  for(let p=2;p*p<=v;p++) while(v%p===0){ m.set(p,(m.get(p)||0)+1); v/=p; }
+  if(v>1) m.set(v,(m.get(v)||0)+1); return m; }
+function mapToHTML(m){ return [...m].sort((a,b)=>a[0]-b[0]).filter(([,e])=>e>0)
+  .map(([p,e])=>e===1?`${p}`:`${p}<sup>${e}</sup>`).join(' · ')||'1'; }
+function mapToValue(m){ let v=1; for(const [p,e] of m) v*=Math.pow(p,e); return v; }
+function allPrimes(a,b){ return [...new Set([...factorMap(a).keys(),...factorMap(b).keys()])].sort((x,y)=>x-y); }
+function minMap(a,b){ const m=new Map(), ma=factorMap(a), mb=factorMap(b);
+  for(const p of allPrimes(a,b)){ const e=Math.min(ma.get(p)||0,mb.get(p)||0); if(e>0) m.set(p,e); } return m; }
+function maxMap(a,b){ const m=new Map(), ma=factorMap(a), mb=factorMap(b);
+  for(const p of allPrimes(a,b)) m.set(p,Math.max(ma.get(p)||0,mb.get(p)||0)); return m; }
+
+function four(correct,cands,pad){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c!==null&&c!==undefined&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<200){ const c=pad?pad(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+
+/* ---- the exponent bookkeeping table ---- */
+function bookTable(a,b,cls){
+  cls=cls||'qbook';
+  const ma=factorMap(a), mb=factorMap(b);
+  let h=`<table class="${cls}"><tr><th>prime</th><th>in ${fmt(a)}</th><th>in ${fmt(b)}</th>
+    <th class="cmin">min → GCF</th><th class="cmax">max → LCM</th><th>min + max</th><th>sum</th></tr>`;
+  for(const p of allPrimes(a,b)){
+    const i=ma.get(p)||0, j=mb.get(p)||0;
+    h+=`<tr><td>${p}</td><td>${i}</td><td>${j}</td>
+        <td class="cmin">${Math.min(i,j)}</td><td class="cmax">${Math.max(i,j)}</td>
+        <td>${Math.min(i,j)+Math.max(i,j)}</td><td>${i+j}</td></tr>`;
+  }
+  return h+'</table>';
+}
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — which operation takes which exponent?
+  1(){
+    const askGCF=rand(0,1)===1;
+    const correct=askGCF?'The smaller exponent of each shared prime':'The larger exponent of each prime that appears in either number';
+    const other =askGCF?'The larger exponent of each prime that appears in either number':'The smaller exponent of each shared prime';
+    const cands=[other,'The sum of the two exponents','The product of the two exponents'];
+    const r=four(correct,cands);
+    return {prompt:`When you build it from prime factorizations, the <b>${askGCF?'GCF':'LCM'}</b> takes:`,
+      stack:true,wordy:true,...r,_meta:{rung:1,askGCF,correct},
+      why:askGCF
+        ? `The <b>GCF must divide both</b> numbers, so it cannot take more of a prime than the poorer of the two has — hence the <b>smaller</b> exponent. The LCM takes the larger.`
+        : `The <b>LCM must be divisible by both</b>, so it must carry at least as much of each prime as the richer of the two — hence the <b>larger</b> exponent. The GCF takes the smaller.`};
+  },
+
+  // 2 — one prime at a time
+  2(){
+    const p=pick([2,3,5,7]);
+    let i,j; do{ i=rand(0,5); j=rand(0,5); }while(i===j);
+    const askGCF=rand(0,1)===1;
+    const e=askGCF?Math.min(i,j):Math.max(i,j);
+    const oth=askGCF?Math.max(i,j):Math.min(i,j);
+    const disp=k=>k===0?`${p}<sup>0</sup> = 1`:k===1?`${p}`:`${p}<sup>${k}</sup>`;
+    const correct=disp(e);
+    const cands=[disp(oth),disp(i+j),disp(Math.abs(i-j))].filter(x=>x!==correct);
+    const r=four(correct,cands,g=>{const k=e+g;return k<=9&&disp(k)!==correct?disp(k):null;});
+    return {prompt:`The prime <b>${p}</b> appears to the power <b>${i}</b> in a and to the power <b>${j}</b> in b. What power of ${p} appears in the <b>${askGCF?'GCF':'LCM'}</b>?`,
+      seq:`<div class="bignum">a: ${p}<sup>${i}</sup> &nbsp;&nbsp; b: ${p}<sup>${j}</sup></div>`,mono:true,...r,
+      _meta:{rung:2,p,i,j,askGCF,e,correct},
+      why:`${askGCF?'GCF takes the <b>minimum</b>':'LCM takes the <b>maximum</b>'}: ${askGCF?'min':'max'}(${i}, ${j}) = <b>${e}</b>, so ${p} appears as ${disp(e)}. ${e===0?'An exponent of 0 means the prime does not appear in the answer at all.':''}`};
+  },
+
+  // 3 — produce BOTH, so backwards scores nothing
+  3(){
+    const BANK=[[24,30],[12,18],[20,32],[36,48],[45,60],[28,42],[16,24],[50,75],[54,72],[40,60]];
+    let a,b; do{ [a,b]=pick(BANK.concat([[rand(10,90),rand(10,90)]])); }while(a===b||gcd(a,b)<2);
+    const G=gcd(a,b), L=lcm(a,b);
+    const correct=`GCF = ${fmt(G)} and LCM = ${fmt(L)}`;
+    const cands=[`GCF = ${fmt(L)} and LCM = ${fmt(G)}`,
+                 `GCF = ${fmt(G)} and LCM = ${fmt(a*b)}`,
+                 `GCF = 1 and LCM = ${fmt(a*b)}`].filter(x=>x!==correct);
+    const r=four(correct,cands,g=>`GCF = ${fmt(G)} and LCM = ${fmt(L*(g+1))}`);
+    return {prompt:'Give <b>both</b> the GCF and the LCM.',
+      seq:`<div class="facts"><span class="lbl">prime factorizations</span>${fmt(a)} = ${mapToHTML(factorMap(a))}<br>${fmt(b)} = ${mapToHTML(factorMap(b))}</div>`,
+      mono:true,stack:true,...r,_meta:{rung:3,a,b,G,L,correct},
+      why:`Take the smaller exponent of every shared prime for the GCF — <b>${mapToHTML(minMap(a,b))} = ${fmt(G)}</b> — and the larger exponent of every prime in either for the LCM — <b>${mapToHTML(maxMap(a,b))} = ${fmt(L)}</b>. Swapping them gives the pair the other way round, which is the commonest error here.`};
+  },
+
+  // 4 — the unshared prime, both ways
+  4(){
+    const BANK=[[24,30],[12,35],[20,21],[18,50],[27,40],[8,45],[16,35],[9,20]];
+    let a,b,extra;
+    for(let t=0;t<200;t++){
+      [a,b]=pick(BANK.concat([[rand(8,60),rand(8,60)]]));
+      const ma=factorMap(a), mb=factorMap(b);
+      const only=[...mb.keys()].filter(p=>!ma.has(p));
+      if(only.length){ extra=pick(only); break; }
+    }
+    if(!extra) return GEN[3]();
+    const mb=factorMap(b), e=mb.get(extra);
+    const askGCF=rand(0,1)===1;
+    const correct=askGCF?`${extra}<sup>0</sup> = 1 — it drops out`:`${extra}<sup>${e}</sup> = ${fmt(Math.pow(extra,e))} — it stays in full`;
+    const cands=[askGCF?`${extra}<sup>${e}</sup> = ${fmt(Math.pow(extra,e))} — it stays in full`:`${extra}<sup>0</sup> = 1 — it drops out`,
+                 `${extra}<sup>${e+1}</sup> = ${fmt(Math.pow(extra,e+1))}`,
+                 `it makes the answer undefined`];
+    const r=four(correct,cands);
+    return {prompt:`The prime <b>${extra}</b> appears in ${fmt(b)} but not in ${fmt(a)}. What does it contribute to the <b>${askGCF?'GCF':'LCM'}</b>?`,
+      seq:`<div class="facts"><span class="lbl">given</span>${fmt(a)} = ${mapToHTML(factorMap(a))}<br>${fmt(b)} = ${mapToHTML(mb)}</div>`,
+      wordy:true,stack:true,...r,_meta:{rung:4,a,b,extra,e,askGCF,correct},
+      why:`Its exponent in ${fmt(a)} is <b>0</b>. ${askGCF
+        ? `min(0, ${e}) = <b>0</b>, so ${extra}<sup>0</sup> = 1 and the prime disappears from the GCF entirely.`
+        : `max(0, ${e}) = <b>${e}</b>, so ${extra}<sup>${e}</sup> stays in the LCM at full strength.`} Same prime, same pair, opposite treatment — that is min and max doing their jobs.`};
+  },
+
+  // 5 — verify the identity
+  5(){
+    const BANK=[[24,30],[12,18],[20,32],[36,48],[45,60],[28,42],[16,40],[50,75]];
+    let a,b; do{ [a,b]=pick(BANK.concat([[rand(10,80),rand(10,80)]])); }while(a===b);
+    const G=gcd(a,b), L=lcm(a,b);
+    const correct=fmt(a*b);
+    const cands=[fmt(G+L),fmt(L-G),fmt(L/G)].filter(x=>x!==correct);
+    const r=four(correct,cands,g=>fmt(a*b+g*10));
+    return {prompt:`For these two numbers, <code>GCF = ${fmt(G)}</code> and <code>LCM = ${fmt(L)}</code>. What is <code>${fmt(a)} × ${fmt(b)}</code>?`,
+      seq:`<div class="bignum">${fmt(G)} × ${fmt(L)} = ?</div>`,mono:true,...r,
+      _meta:{rung:5,a,b,G,L,correct},
+      why:`<b>GCF · LCM = ab</b>, so ${fmt(G)} × ${fmt(L)} = <b>${fmt(a*b)}</b> — and indeed ${fmt(a)} × ${fmt(b)} = ${fmt(a*b)}. You never had to multiply the original numbers at all.`};
+  },
+
+  // 6 — why it works (with the three-number caution)
+  6(){
+    const correct='For each prime, the smaller exponent plus the larger one equals the sum of the two';
+    const cands=['Because the GCF and the LCM are always factors of ab',
+                 'Because it works for 24 and 30, so it works in general',
+                 'Because every number has a unique prime factorization'];
+    const r=four(correct,cands);
+    return {prompt:'Why is <code>GCF(a, b) · LCM(a, b) = ab</code> true for <b>every</b> pair of numbers?',
+      seq:bookTable(24,30),stack:true,wordy:true,...r,
+      _meta:{rung:6,correct},
+      why:`Look at the last two columns: for every prime, <b>min + max = the sum of the two exponents</b>. The GCF collects all the minimums and the LCM collects all the maximums, so multiplying them collects every exponent exactly once — which is what <code>ab</code> is. Unique factorization is what lets us talk about “the” exponents at all, but it is not by itself the reason; and checking one example never proves a general claim.
+        <span class="caution">A caution worth carrying: this identity is for <b>two</b> numbers only. With three it fails — GCF(4, 6, 15) = 1 and LCM(4, 6, 15) = 60, but 1 × 60 = 60, while 4 × 6 × 15 = 360.</span>`};
+  },
+
+  // 7 — find the LCM from the GCF
+  7(){
+    const BANK=[[731,952],[10764,2300],[1071,462],[2160,1512],[84,462],[1224,1080],[2145,1287]];
+    let a,b;
+    do{
+      if(rand(0,3)===0){ a=rand(200,2000); b=rand(200,2000); }
+      else { [a,b]=pick(BANK); }
+    }while(a===b||gcd(a,b)<2);
+    const G=gcd(a,b), L=a/G*b;
+    const correct=fmt(L);
+    const cands=[fmt(a*b),fmt(G),fmt(Math.round(a*b/(G*G)))].filter(x=>x!==correct);
+    const r=four(correct,cands,g=>fmt(L+g*G));
+    return {prompt:`Euclid gives <code>GCD(${fmt(a)}, ${fmt(b)}) = ${fmt(G)}</code>. Use the identity to find the <b>LCM</b>.`,
+      seq:`<div class="facts"><span class="lbl">using GCF · LCM = ab</span>${fmt(a)} × ${fmt(b)} = ${fmt(a*b)}<br>÷ ${fmt(G)} = ?</div>`,
+      mono:true,...r,_meta:{rung:7,a,b,G,L,correct},
+      why:`LCM = ab ÷ GCF = ${fmt(a*b)} ÷ ${fmt(G)} = <b>${fmt(L)}</b>. Finding the GCF by Euclid takes a few divisions; factorising ${fmt(a)} and ${fmt(b)} would take far longer, and the identity means you never have to.`};
+  },
+
+  // 8 — relatively prime ⇒ LCM = ab
+  8(){
+    let a,b; do{ a=rand(4,40); b=rand(4,40); }while(a===b||gcd(a,b)!==1);
+    if(rand(0,1)===1){
+      const correct=fmt(a*b);
+      const r=four(correct,[fmt(a+b),'1',fmt(Math.max(a,b))],g=>fmt(a*b+g));
+      return {prompt:`<code>GCD(${a}, ${b}) = 1</code>. What is <code>LCM(${a}, ${b})</code>?`,
+        seq:`<div class="bignum">LCM(${a}, ${b}) = ?</div>`,mono:true,...r,
+        _meta:{rung:8,a,b,correct},
+        why:`The identity gives LCM = ab ÷ GCF = ${a} × ${b} ÷ 1 = <b>${fmt(a*b)}</b>. When two numbers are relatively prime their LCM is the whole product — there is no shared factor to save you anything.`};
+    }
+    const correct='It is always smaller than the product ab';
+    const cands=['It is always equal to the product ab',
+                 'It is always larger than the product ab',
+                 'It could be either larger or smaller'];
+    const r=four(correct,cands);
+    return {prompt:'If two numbers share a common factor greater than 1, what is true of their LCM?',
+      stack:true,wordy:true,...r,_meta:{rung:8,kind:'concept',correct},
+      why:`LCM = ab ÷ GCF, and dividing by a GCF bigger than 1 makes the result <b>smaller than ab</b>. Only when the GCF is exactly 1 does the LCM reach the full product.`};
+  },
+
+  // 9 — work backwards
+  9(){
+    if(rand(0,1)===1){
+      let a,b; do{ a=rand(6,60); b=rand(6,60); }while(a===b||gcd(a,b)<2);
+      const G=gcd(a,b), L=lcm(a,b);
+      const correct=fmt(G*L);
+      const r=four(correct,[fmt(G+L),fmt(L),fmt(L/G)],g=>fmt(G*L+g*G));
+      return {prompt:`Two numbers have <code>GCF = ${fmt(G)}</code> and <code>LCM = ${fmt(L)}</code>. What is their <b>product</b>?`,
+        seq:`<div class="bignum">${fmt(G)} × ${fmt(L)} = ?</div>`,mono:true,...r,
+        _meta:{rung:9,kind:'product',a,b,G,L,correct},
+        why:`The identity runs both ways: ab = GCF · LCM = ${fmt(G)} × ${fmt(L)} = <b>${fmt(G*L)}</b>. You can recover the product without ever knowing which two numbers they were.`};
+    }
+    for(let t=0;t<300;t++){
+      const G=pick([4,6,8,9,12,15]);
+      const m=pick([2,3,4,5,6,7]);
+      const a=G*m;
+      const good=[], bad=[];
+      for(let k=2;k<=12;k++){ const cand=G*k; (gcd(a,cand)===G?good:bad).push(cand); }
+      if(!good.length||bad.length<3) continue;
+      const g=pick(good), b3=shuffle(bad).slice(0,3);
+      const all=shuffle([g,...b3]);
+      return {prompt:`If <code>GCF(${fmt(a)}, b) = ${G}</code>, which of these could <b>b</b> be?`,mono:true,
+        options:all.map(v=>({text:fmt(v)})),answer:all.indexOf(g),
+        _meta:{rung:9,kind:'findb',a,G,good:g,all},
+        why:`<b>${fmt(g)}</b> works: GCF(${fmt(a)}, ${fmt(g)}) = ${G}. Every option is a multiple of ${G}, so every one shares at least ${G} — but the others share <em>more</em> than ${G} with ${fmt(a)}, which makes their GCF too big. ${b3.map(x=>`GCF(${fmt(a)}, ${fmt(x)}) = ${gcd(a,x)}`).join('; ')}.`};
+    }
+    return GEN[5]();
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Which takes which?',short:'smaller or larger'},
+  {id:2,title:'One prime at a time',short:'min or max'},
+  {id:3,title:'Both at once',short:'backwards scores nothing'},
+  {id:4,title:'The unshared prime',short:'0 for GCF, full for LCM'},
+  {id:5,title:'Check the identity',short:'GCF · LCM = ab'},
+  {id:6,title:'Why it works',short:'min + max = sum'},
+  {id:7,title:'LCM from the GCF',short:'731 · 952 ÷ 17'},
+  {id:8,title:'Relatively prime',short:'LCM = ab'},
+  {id:9,title:'Work backwards',short:'recover the product'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='minMaxLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>20);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero ============ */
+document.getElementById('heroTable').innerHTML=bookTable(24,30,'book');
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
