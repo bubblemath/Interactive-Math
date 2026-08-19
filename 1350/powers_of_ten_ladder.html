@@ -1,0 +1,657 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Powers of Ten — the digits never move</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:.88rem;box-shadow:var(--shadow);font-family:"Space Mono"}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .mixnum{display:inline-flex;align-items:center;gap:.18em;line-height:1}
+  .frac{display:inline-flex;flex-direction:column;align-items:center;text-align:center;
+        line-height:1.08;font-size:.68em;font-weight:700}
+  .frac .fn{border-bottom:1.7px solid currentColor;padding:0 .26em .1em}
+  .frac .fd{padding:.1em .26em 0}
+
+  .shiftpanel{margin:34px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:22px 16px;box-shadow:var(--shadow)}
+  .sptitle{font-family:"Space Mono";font-size:.74rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-bright);text-align:center;margin-bottom:4px}
+  .spsub{font-family:"Space Mono";font-size:.76rem;color:var(--muted);text-align:center;margin-bottom:18px}
+  .exprow{font-family:"Space Mono";font-size:clamp(.78rem,2.3vw,.95rem);color:#CFE2E0;
+    display:flex;align-items:center;justify-content:center;gap:.45em;flex-wrap:wrap;line-height:2.4}
+  .exprow .lbl{color:var(--muted);font-size:.86em;min-width:6.2em;text-align:right}
+  .exprow .up{color:var(--amber);font-weight:700}
+  .exprow .dn{color:var(--teal-bright);font-weight:700}
+  .spdiv{border-top:1px dashed var(--line-strong);margin:14px auto;max-width:600px}
+  .spverdict{text-align:center;margin-top:14px;font-family:"Space Mono";font-size:.92rem;color:#CFE2E0;line-height:1.95}
+  .spverdict b{color:var(--amber)}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+  .trap sup{font-size:.72em}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:490px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.02rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .prompt sup{font-size:.7em}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  .bignum{font-family:"Space Mono";font-weight:700;font-size:clamp(1.4rem,4.6vw,2.1rem);color:var(--ink);letter-spacing:.04em}
+  .bignum sup{font-size:.56em;vertical-align:super}
+  .workbox{display:inline-block;background:#EFE9DA;border-radius:10px;padding:13px 20px;
+    font-family:"Space Mono";font-weight:700;font-size:clamp(.82rem,2.5vw,1.02rem);color:var(--ink);line-height:2.2;text-align:left}
+  .workbox .lbl{font-family:"IBM Plex Sans";font-weight:500;font-size:.7rem;color:#7A8887;letter-spacing:.09em;text-transform:uppercase;display:block;margin-bottom:7px}
+  .workbox .row{display:flex;align-items:center;gap:.28em;flex-wrap:wrap}
+  .workbox sup{font-size:.62em;vertical-align:super}
+  .workbox .dim{color:#8A9897}
+  .workbox .up{color:#B07800}
+  .workbox .q{color:var(--clay)}
+  .workbox .rule{border-top:1px dashed #C6BFAD;margin:8px 0}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1.04rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.5}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"Space Mono";font-weight:700;letter-spacing:.03em;display:inline-flex;align-items:center;gap:.15em;flex-wrap:wrap}
+  .opt .body sup{font-size:.62em;vertical-align:super}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500;letter-spacing:0;font-size:.95rem;display:inline;line-height:1.45}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .feedback sup{font-size:.72em;vertical-align:super}
+  .feedback .note{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed #C6BFAD;color:#5C6E6D;font-style:italic}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">10ⁿ</span> Powers of Ten</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 10 · powers of ten &amp; moving the point</div>
+    <h1>The digits<br><span class="hl">never move.</span></h1>
+    <p class="lede">Multiplying by <code>10ʳ</code> raises <em>every</em> term's exponent by r. The digits keep their order and their spacing — what changes is <strong>which place each one sits in</strong>. “Move the decimal point” describes the result accurately and explains nothing, and this ladder is about the difference.</p>
+
+    <div class="shiftpanel">
+      <div class="sptitle">10² · 34.762 — watch the exponents, not the point</div>
+      <div class="spsub">every term goes up by 2, and the digits 3 4 7 6 2 stay exactly as they were</div>
+      <div id="heroRows"></div>
+      <div class="spverdict">
+        <b>3476.2</b> — the same five digits, two places further left<br>
+        <span style="font-size:.86em;color:#8FB0B2">and dividing by 10² is the very same thing with r = −2</span>
+      </div>
+    </div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>Two signs point in opposite directions, and students cross them.</b> Multiplying by <code>10²</code> makes a number <em>bigger</em>, so the point appears to move <b>right</b>; dividing makes it smaller and the point appears to move <b>left</b>. The reversal happens because “negative exponent” feels like it ought to mean “go rightwards into the decimals” — but <code>10⁻²</code> is <code>1/100</code>, and multiplying by a hundredth <em>shrinks</em> things. Your notes give the fix by writing division as multiplication: <code>34.762 ÷ 10² = 34.762 · 10⁻²</code>. Once every shift is a multiplication, the <b>sign of the exponent alone</b> tells you the direction.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–4 are your exponent review, ending with the identity that decides the whole lesson. Rungs 5–6 shift decimals in both directions, rung 7 works backwards from the shift, rung 8 handles the placeholder zeros, and rung 9 asks what is really happening.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Digit strings, not floating point</h3><p>Every shift is done by moving the point through a string of characters — a computer evaluates <code>0.07 × 100</code> as 7.000000000000001, which will not do in a lesson about decimals.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>Division is always rewritten</h3><p>Rung 6 shows <code>÷ 10ʳ</code> re-expressed as <code>· 10⁻ʳ</code> every time, so the two directions stay one idea.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Negative exponents</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>The machinery the rest of the lesson runs on</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>2ⁿ · 5ⁿ = 10ⁿ decides everything</h3><p>Why only denominators of 2s and 5s terminate is not a separate fact — it is this identity, met here as exponent arithmetic before it is needed as a rule.</p></div>
+      <div class="why-card"><h3>Shifting is how fractions convert</h3><p>Turning <code>7/250</code> into <code>28/1000</code> is a deliberate shift into a power of ten, and it needs this rung's fluency.</p></div>
+      <div class="why-card"><h3>A rule you can rebuild</h3><p>Students who only know “move the point” cannot say which way when they are tired. Students who know the exponents changed can work it out every time.</p></div>
+    </div>
+    <p class="closing">Every decimal shift is a multiplication by a power of ten, and every power of ten changes the exponent of every term by the same amount. <b>Write division as multiplication by a negative power, and the sign of the exponent tells you the direction without any need to remember a rule.</b></p>
+  </section>
+
+  <footer>Powers of Ten · 10⁻³ = 1/1000 · 10⁴·10³ = 10⁷ · 2⁷·5⁷ = 10⁷ · ÷10ʳ is ·10⁻ʳ</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const MIN='\u2212';
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||1;};
+const F=(n,d)=>`<span class="mixnum"><span class="frac"><span class="fn">${n}</span><span class="fd">${d}</span></span></span>`;
+const fmt=n=>n.toLocaleString('en-US');
+const P10=k=>`10<sup>${k<0?MIN+(-k):k}</sup>`;
+
+/* ---- EXACT decimal shifting, on the characters ----
+   Binary floating point cannot hold most decimal fractions: 0.07 * 100 evaluates to
+   7.000000000000001 and 4.35 * 100 to 434.99999999999994. Rather than guess which
+   values are safe, every shift here is done by moving the point through a digit string. */
+function shift(str,r){
+  let neg=false; let s=String(str);
+  if(s[0]==='-'||s[0]===MIN){ neg=true; s=s.slice(1); }
+  let [i,f]=s.split('.'); f=f||'';
+  let digits=i+f;
+  let point=i.length+r;
+  while(point<=0){ digits='0'+digits; point++; }
+  while(point>digits.length){ digits=digits+'0'; }
+  let I=digits.slice(0,point).replace(/^0+(?=\d)/,'');
+  let Fr=digits.slice(point).replace(/0+$/,'');
+  if(I==='') I='0';
+  return (neg?MIN:'')+I+(Fr?'.'+Fr:'');
+}
+/* the expanded form as a list of {digit, power} */
+function expandTerms(str){
+  let s=String(str); let neg=false;
+  if(s[0]==='-'||s[0]===MIN){ neg=true; s=s.slice(1); }
+  const [i,f0]=s.split('.'); const f=f0||'';
+  const out=[];
+  for(let k=0;k<i.length;k++){
+    const d=Number(i[k]); if(d) out.push({d,p:i.length-1-k});
+  }
+  for(let k=0;k<f.length;k++){
+    const d=Number(f[k]); if(d) out.push({d,p:-(k+1)});
+  }
+  return {neg,terms:out};
+}
+const termsHTML=(terms,bump)=>terms.map(t=>`${t.d}·${P10(t.p+(bump||0))}`).join(' + ');
+
+function four(correct,cands,pad){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c!==null&&c!==undefined&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<200){ const c=pad?pad(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+function fourKeyed(items,correctKey,pad){
+  const seen=new Set(); const uniq=[];
+  for(const it of items){ if(uniq.length>=4)break; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  let g=1;
+  while(uniq.length<4&&g<80){ const it=pad?pad(g):null; g++; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  const sh=shuffle(uniq.slice(0,4));
+  return {options:sh.map(o=>({text:o.html})), answer:sh.findIndex(o=>o.key===correctKey)};
+}
+/* a decimal string suitable for shifting: 1–3 integer digits, 1–3 fractional */
+function randDecimal(){
+  const iL=rand(1,3), fL=rand(1,3);
+  let i=''; for(let k=0;k<iL;k++) i+=rand(k===0?1:0,9);
+  let f=''; for(let k=0;k<fL;k++) f+=rand(0,9);
+  if(f[f.length-1]==='0') f=f.slice(0,-1)+rand(1,9);
+  return `${i}.${f}`;
+}
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — negative exponents
+  1(){
+    const k=rand(1,5);
+    const den=Math.pow(10,k);
+    const items=[
+      {key:'ok',   html:F(1,fmt(den))},
+      {key:'neg',  html:`<span class="mixnum">${MIN}${fmt(den)}</span>`},
+      {key:'negd', html:`<span class="mixnum">${MIN}${F(1,fmt(den))}</span>`},
+      {key:'off',  html:F(1,fmt(den*10))},
+      {key:'whole',html:`<span class="mixnum">${fmt(den)}</span>`},
+    ];
+    const r=fourKeyed(items,'ok',g=>({key:'p'+g,html:F(1,fmt(Math.pow(10,k+g+1)))}));
+    return {prompt:'Write this as a fraction.',
+      seq:`<div class="bignum">${P10(-k)}</div>`,...r,
+      _meta:{rung:1,k,den,correct:`1/${den}`},
+      why:`The rule from your review is <code>a<sup>${MIN}1</sup> = ${F(1,'a')}</code>, so ${P10(-k)} = <b>${F(1,fmt(den))}</b> — a small <em>positive</em> number.
+        <span class="note">A negative exponent is an instruction to <b>invert</b>, never to negate. ${MIN}${fmt(den)} and ${MIN}${F(1,fmt(den))} are both wrong for the same reason: nothing here makes the value negative.</span>`};
+  },
+
+  // 2 — multiply: add the exponents
+  2(){
+    let m,n; do{ m=rand(1,7); n=rand(1,7); }while(m+n>12);
+    const correct=P10(m+n);
+    const cands=[P10(m*n),P10(m-n),P10(Math.max(m,n))].filter(x=>x!==correct);
+    const r=four(correct,cands,g=>{const c=P10(m+n+g);return c!==correct?c:null;});
+    return {prompt:'Simplify.',
+      seq:`<div class="bignum">${P10(m)} · ${P10(n)}</div>`,mono:true,...r,
+      _meta:{rung:2,m,n,correct:`10^${m+n}`},
+      why:`<code>a<sup>m</sup> · a<sup>n</sup> = a<sup>m+n</sup></code>, so ${P10(m)} · ${P10(n)} = <b>${P10(m+n)}</b> = ${fmt(Math.pow(10,m+n))}.
+        <span class="note">It is not a rule to memorise so much as a count: ${P10(m)} is ${m} ten${m>1?'s':''} multiplied together and ${P10(n)} is ${n} more, so there are ${m+n} altogether.</span>`};
+  },
+
+  // 3 — divide: subtract the exponents, including a negative result
+  3(){
+    const wantNeg=rand(0,1)===1;
+    let m,n;
+    if(wantNeg){ n=rand(4,10); m=rand(1,n-1); } else { m=rand(3,10); n=rand(1,m-1); }
+    const e=m-n;
+    const correct=P10(e);
+    const cands=[P10(n-m),P10(m+n),P10(Math.floor(m/Math.max(1,n)))].filter(x=>x!==correct);
+    const r=four(correct,cands,g=>{const c=P10(e+g);return c!==correct?c:null;});
+    return {prompt:'Simplify.',
+      seq:`<div class="bignum">${F(P10(m),P10(n))}</div>`,mono:true,...r,
+      _meta:{rung:3,m,n,e,correct:`10^${e}`},
+      why:`<code>a<sup>m</sup>/a<sup>n</sup> = a<sup>m−n</sup></code>, so this is ${P10(m)} ÷ ${P10(n)} = 10<sup>${m}${MIN}${n}</sup> = <b>${P10(e)}</b>.
+        ${e<0?`<span class="note">A negative exponent is where the rule stops feeling obvious — but it is still just subtraction: ${m} ${MIN} ${n} = ${MIN}${-e}. And ${P10(e)} = ${F(1,fmt(Math.pow(10,-e)))}, which is exactly what dividing by a larger power should give.</span>`
+             :`<span class="note">Here ${m} > ${n}, so the answer is a whole power of ten: ${fmt(Math.pow(10,e))}.</span>`}`};
+  },
+
+  // 4 — 2ⁿ · 5ⁿ = 10ⁿ  (the identity that decides the lesson)
+  4(){
+    const n=rand(2,8);
+    if(rand(0,1)===1){
+      const correct=P10(n);
+      const cands=[`10<sup>${2*n}</sup>`,`7<sup>${n}</sup>`,`10<sup>${n+1}</sup>`].filter(x=>x!==correct);
+      const r=four(correct,cands,g=>`10<sup>${n+g+1}</sup>`);
+      return {prompt:'Simplify.',
+        seq:`<div class="bignum">2<sup>${n}</sup> · 5<sup>${n}</sup></div>`,mono:true,...r,
+        _meta:{rung:4,n,kind:'pair',correct:`10^${n}`},
+        why:`Run <code>(ab)<sup>n</sup> = a<sup>n</sup>b<sup>n</sup></code> <em>backwards</em>: 2<sup>${n}</sup> · 5<sup>${n}</sup> = (2 · 5)<sup>${n}</sup> = <b>${P10(n)}</b> = ${fmt(Math.pow(10,n))}.
+          <span class="note">Keep this one. Every 2 can be paired with a 5 to make a ten, which is exactly why a denominator built only from 2s and 5s can be turned into a power of ten — and why those are the fractions whose decimals stop. The termination rule you will meet two ladders from now <em>is</em> this identity.</span>`};
+    }
+    const a=rand(2,6), k=rand(2,4);
+    const correct=`${a}<sup>${k}</sup> · ${a+1}<sup>${k}</sup>`;
+    const val=Math.pow(a*(a+1),k);
+    const cands=[`(${a} · ${a+1})<sup>${2*k}</sup>`,`${a*(a+1)}<sup>${k+1}</sup>`,`${a+a+1}<sup>${k}</sup>`];
+    const r=four(correct,cands);
+    return {prompt:`Which of these equals <code>(${a} · ${a+1})<sup>${k}</sup></code>?`,mono:true,...r,
+      _meta:{rung:4,a,k,kind:'expand',correct},
+      why:`<code>(ab)<sup>n</sup> = a<sup>n</sup> · b<sup>n</sup></code> — the exponent distributes over the <em>product</em>, so (${a} · ${a+1})<sup>${k}</sup> = <b>${a}<sup>${k}</sup> · ${a+1}<sup>${k}</sup></b> = ${fmt(val)}.
+        <span class="note">Read right to left, this is the rule that turns 2<sup>n</sup> · 5<sup>n</sup> into 10<sup>n</sup>.</span>`};
+  },
+
+  // 5 — multiply a decimal by a power of ten
+  5(){
+    const BANK=['34.762','5.3','0.407','12.05','2.0103','0.05','4.7'];
+    const num=pick(BANK.concat([null]))||randDecimal();
+    const r0=rand(1,4);
+    const ans=shift(num,r0);
+    const wrongDir=shift(num,-r0);
+    const wrongAmt=shift(num,r0+1);
+    const {terms}=expandTerms(num);
+    const cands=[wrongDir,wrongAmt,shift(num,r0-1)].filter(v=>v!==ans);
+    const r=four(ans,cands,g=>shift(num,r0+g+1));
+    return {prompt:'Multiply.',
+      seq:`<div class="bignum">${P10(r0)} · ${num}</div>
+           <div class="workbox" style="margin-top:14px"><span class="lbl">every exponent rises by ${r0}</span>
+             <div class="row dim">${num} = ${termsHTML(terms,0)}</div>
+             <div class="row">${P10(r0)} · that = <span class="up">${termsHTML(terms,r0)}</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:5,num,r:r0,ans,correct:ans},
+      why:`Each term's exponent goes up by ${r0}, so the whole number becomes ${r0} place${r0>1?'s':''} larger: <b>${ans}</b>.
+        <span class="note">The digits ${num.replace('.','')} are unchanged and in the same order — only the places they occupy have changed. Multiplying makes a number <em>bigger</em>, so the point appears to move <b>right</b>. Going the other way would have given ${wrongDir}.</span>`};
+  },
+
+  // 6 — divide, ALWAYS rewritten as a multiplication
+  6(){
+    const BANK=['34.762','5.3','407.1','12.05','2.0103','250','4.7'];
+    const num=pick(BANK.concat([null]))||randDecimal();
+    const r0=rand(1,4);
+    const ans=shift(num,-r0);
+    const wrongDir=shift(num,r0);
+    const {terms}=expandTerms(num);
+    const cands=[wrongDir,shift(num,-r0-1),shift(num,-r0+1)].filter(v=>v!==ans);
+    const r=four(ans,cands,g=>shift(num,-r0-g-1));
+    return {prompt:'Divide.',
+      seq:`<div class="bignum">${num} ÷ ${P10(r0)}</div>
+           <div class="workbox" style="margin-top:14px"><span class="lbl">first rewrite it as a multiplication</span>
+             <div class="row">${num} ÷ ${P10(r0)} &nbsp;=&nbsp; ${num} · ${P10(-r0)}</div>
+             <div class="rule"></div>
+             <div class="row dim">${num} = ${termsHTML(terms,0)}</div>
+             <div class="row">so each exponent <span class="up">falls by ${r0}</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:6,num,r:r0,ans,correct:ans},
+      why:`Dividing by ${P10(r0)} <b>is</b> multiplying by ${P10(-r0)}, so every exponent drops by ${r0}: ${termsHTML(terms,-r0)} = <b>${ans}</b>.
+        <span class="note">Written this way there is only ever one operation and one rule. The exponent is ${MIN}${r0} — negative — so the number gets <em>smaller</em> and the point appears to move <b>left</b>. The sign of the exponent is the direction; nothing else needs remembering.</span>`};
+  },
+
+  // 7 — work backwards from the shift
+  7(){
+    const num=randDecimal();
+    const r0=pick([-4,-3,-2,-1,1,2,3,4]);
+    const target=shift(num,r0);
+    const correct=r0>0?P10(r0):P10(r0);
+    const cands=[P10(-r0),P10(r0>0?r0+1:r0-1),P10(0)].filter(x=>x!==correct);
+    const r=four(correct,cands,g=>{const c=P10(r0>0?r0+g+1:r0-g-1);return c!==correct?c:null;});
+    return {prompt:`What must you <b>multiply by</b> to turn the first number into the second?`,
+      seq:`<div class="workbox"><span class="lbl">from → to</span>
+            <div class="row">${num} &nbsp;<span class="dim">→</span>&nbsp; ${target}</div></div>`,
+      mono:true,...r,
+      _meta:{rung:7,num,r:r0,target,correct:`10^${r0}`},
+      why:`The number got <b>${r0>0?'larger':'smaller'}</b> by ${Math.abs(r0)} place${Math.abs(r0)>1?'s':''}, so multiply by <b>${P10(r0)}</b>${r0<0?` — which is the same as dividing by ${P10(-r0)}`:''}.
+        <span class="note">Working backwards like this is exactly what you do when converting a fraction: to turn ${F(7,250)} into a power-of-ten denominator you ask what 250 must be multiplied by to reach 1000, and the answer comes from counting places.</span>`};
+  },
+
+  // 8 — placeholder zeros
+  8(){
+    const V=rand(0,1);
+    if(V===0){
+      const iL=rand(1,2);
+      let i=''; for(let k=0;k<iL;k++) i+=rand(k===0?1:0,9);
+      const f=String(rand(1,9));
+      const num=`${i}.${f}`;
+      const r0=rand(3,5);
+      const ans=shift(num,r0);
+      const noZeros=(i+f);
+      const cands=[noZeros,shift(num,r0-1),shift(num,r0+1)].filter(v=>v!==ans);
+      const r=four(ans,cands,g=>shift(num,r0+g+1));
+      return {prompt:'Multiply.',seq:`<div class="bignum">${num} · ${P10(r0)}</div>`,mono:true,...r,
+        _meta:{rung:8,V,num,r:r0,ans,correct:ans},
+        why:`<b>${ans}</b>. The digits ${noZeros} shift ${r0} places left, and the empty places behind them must be filled with <b>zeros</b> — they are not decoration, they hold the tens, hundreds and so on that now have no digit of their own.
+          <span class="note">Writing just ${noZeros} would leave those places unrepresented and give a number ${Math.pow(10,r0-noZeros.length+i.length)>1?'far':''} too small.</span>`};
+    }
+    const lead=rand(1,3);
+    let f='0'.repeat(lead)+rand(1,9);
+    if(rand(0,1)) f+=rand(0,9);
+    const num=`0.${f}`;
+    const r0=rand(lead+1,lead+3);
+    const ans=shift(num,r0);
+    const cands=[shift(num,r0-1),shift(num,r0+1),`0.${f}`.replace('0.','')].filter(v=>v!==ans);
+    const r=four(ans,cands,g=>shift(num,r0+g+1));
+    return {prompt:'Multiply.',seq:`<div class="bignum">${num} · ${P10(r0)}</div>`,mono:true,...r,
+      _meta:{rung:8,V,num,r:r0,ans,correct:ans},
+      why:`<b>${ans}</b>. The leading zeros in ${num} were holding places, and shifting ${r0} places left uses them all up — so they simply disappear from the written number.
+        <span class="note">Zeros between the point and the first significant digit hold places; zeros written after the last significant digit of a whole number do too. Neither kind is optional, and neither kind is a digit you get to choose.</span>`};
+  },
+
+  // 9 — what is actually happening?
+  9(){
+    const correct='Every term\u2019s exponent changes by r — the digits keep their order, and the places they sit in are renamed';
+    const cands=['The decimal point physically slides r places along the number',
+                 'You add r zeros to the end of the number',
+                 'The digits themselves move r places to the right'];
+    const r=four(correct,cands);
+    const num='34.762';
+    const {terms}=expandTerms(num);
+    return {prompt:`When you multiply a decimal by <code>10ʳ</code>, what is <b>actually</b> happening?`,
+      seq:`<div class="workbox"><span class="lbl">10² · 34.762</span>
+            <div class="row dim">${termsHTML(terms,0)}</div>
+            <div class="row"><span class="up">${termsHTML(terms,2)}</span></div></div>`,
+      wordy:true,stack:true,...r,
+      _meta:{rung:9,correct},
+      why:`Only the first is an explanation. Each term's exponent rose by 2 — <code>3·10<sup>1</sup></code> became <code>3·10<sup>3</sup></code>, and so on down the line — while the digits 3, 4, 7, 6, 2 stayed in exactly that order.
+        <span class="note">“The point slides” is a true <em>description</em> of what you see and says nothing about why. “Add r zeros” works for whole numbers and fails immediately on 34.762. “The digits move right” is closest, but it is the <b>places</b> that are renamed — which is why the same rule works in both directions without a second rule for division.</span>`};
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Negative exponents',short:'invert, never negate'},
+  {id:2,title:'Multiply: add',short:'10⁴·10³ = 10⁷'},
+  {id:3,title:'Divide: subtract',short:'10⁴/10⁹ = 10⁻⁵'},
+  {id:4,title:'2ⁿ · 5ⁿ = 10ⁿ',short:'the key identity'},
+  {id:5,title:'Multiply a decimal',short:'exponents rise'},
+  {id:6,title:'Divide a decimal',short:'÷10ʳ is ·10⁻ʳ'},
+  {id:7,title:'Work backwards',short:'which power?'},
+  {id:8,title:'Placeholder zeros',short:'not decoration'},
+  {id:9,title:'What really happens?',short:'reason vs description'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='powersOfTenLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>22);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero ============ */
+(function(){
+  const num='34.762';
+  const {terms}=expandTerms(num);
+  document.getElementById('heroRows').innerHTML=
+    `<div class="exprow"><span class="lbl">start</span><span>${num} = ${termsHTML(terms,0)}</span></div>
+     <div class="exprow"><span class="lbl">× 10²</span><span class="up">${termsHTML(terms,2)}</span></div>
+     <div class="spdiv"></div>
+     <div class="exprow"><span class="lbl">÷ 10² is</span><span>${num} · ${P10(-2)}</span></div>
+     <div class="exprow"><span class="lbl">so</span><span class="dn">${termsHTML(terms,-2)} = ${shift(num,-2)}</span></div>`;
+})();
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
