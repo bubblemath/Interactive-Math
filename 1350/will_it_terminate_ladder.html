@@ -1,0 +1,747 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Will It Terminate? — reduce, then factor, then decide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  /* Superscripts: a <sup> that is a DIRECT child of a flex container becomes a flex
+     item, and vertical-align stops applying — it drops flat onto the baseline. Every
+     exponent here is emitted inside .ex, an inline-block whose contents are normal
+     inline flow, so vertical-align works wherever the exponent ends up. */
+  sup{font-size:.62em;vertical-align:super;line-height:0}
+  sub{font-size:.62em;vertical-align:sub;line-height:0}
+  .ex{display:inline-block;white-space:nowrap}
+
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1rem;box-shadow:var(--shadow);font-family:"Space Mono"}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .mixnum{display:inline-flex;align-items:center;gap:.18em;line-height:1}
+  .frac{display:inline-flex;flex-direction:column;align-items:center;text-align:center;
+        line-height:1.08;font-size:.68em;font-weight:700}
+  .frac .fn{border-bottom:1.7px solid currentColor;padding:0 .26em .1em}
+  .frac .fd{padding:.1em .26em 0}
+
+  .steps3{margin:34px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:22px 16px;box-shadow:var(--shadow)}
+  .s3title{font-family:"Space Mono";font-size:.74rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-bright);text-align:center;margin-bottom:4px}
+  .s3sub{font-family:"Space Mono";font-size:.76rem;color:var(--muted);text-align:center;margin-bottom:18px}
+  .s3grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media (max-width:760px){.s3grid{grid-template-columns:1fr}}
+  .s3c{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:15px 12px;text-align:center}
+  .s3c .n{font-family:"Space Mono";font-size:.64rem;letter-spacing:.11em;text-transform:uppercase;color:var(--amber);margin-bottom:10px}
+  .s3c .b{font-family:"Space Mono";font-weight:700;font-size:1.05rem;color:#CFE2E0;line-height:2;
+    display:flex;align-items:center;justify-content:center;gap:.3em;flex-wrap:wrap}
+  .s3c .d{font-family:"Space Mono";font-size:.66rem;color:var(--muted);margin-top:9px;line-height:1.6}
+  .s3c .bad{color:#F0A17B} .s3c .good{color:var(--teal-bright)}
+  .s3rule{text-align:center;margin-top:17px;padding-top:15px;border-top:1px solid var(--line);
+    font-family:"Space Mono";font-size:.95rem;color:#CFE2E0;line-height:1.95}
+  .s3rule b{color:var(--amber)}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:490px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.02rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  .bigfrac{font-family:"Space Mono";font-weight:700;font-size:clamp(1.4rem,4.6vw,2.05rem);color:var(--ink);
+    display:inline-flex;align-items:center;gap:.3em;flex-wrap:wrap;justify-content:center}
+  .workbox{display:inline-block;background:#EFE9DA;border-radius:10px;padding:13px 20px;
+    font-family:"Space Mono";font-weight:700;font-size:clamp(.86rem,2.6vw,1.04rem);color:var(--ink);line-height:2.2;text-align:left}
+  .workbox .lbl{font-family:"IBM Plex Sans";font-weight:500;font-size:.7rem;color:#7A8887;letter-spacing:.09em;text-transform:uppercase;display:block;margin-bottom:7px}
+  .workbox .row{display:flex;align-items:center;gap:.28em;flex-wrap:wrap}
+  .workbox .dim{color:#8A9897}
+  .workbox .up{color:#B07800}
+  .workbox .rule{border-top:1px dashed #C6BFAD;margin:8px 0}
+  .quad{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-family:"Space Mono";font-weight:700;
+        font-size:clamp(1.05rem,3.4vw,1.4rem);color:var(--ink)}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1.04rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.5}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"Space Mono";font-weight:700;letter-spacing:.03em;display:inline-flex;align-items:center;gap:.15em;flex-wrap:wrap}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500;letter-spacing:0;font-size:.95rem;display:inline;line-height:1.45}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .feedback .note{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed #C6BFAD;color:#5C6E6D;font-style:italic}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">2·5</span> Will It Terminate?</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 10 · terminating &amp; non-terminating decimals</div>
+    <h1>Reduce. Factor.<br><span class="hl">Then decide.</span></h1>
+    <p class="lede">A fraction terminates exactly when its denominator — <strong>in lowest terms</strong> — is built from nothing but <em>2s and 5s</em>. That is not a new fact; it is <code>10 = 2 · 5</code> from the exponent ladder, saying that a denominator can only be scaled into a power of ten if it was already made of the right pieces.</p>
+
+    <div class="steps3">
+      <div class="s3title">three steps, and the first one is the one that gets skipped</div>
+      <div class="s3sub">21/28 — the denominator looks fatal until you reduce</div>
+      <div class="s3grid" id="heroSteps"></div>
+      <div class="s3rule">a fraction <b>in lowest terms</b> terminates ⟺ its denominator is <b>2<sup>m</sup> · 5<sup>n</sup></b></div>
+    </div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>“In lowest terms” is the whole rule, not a footnote.</b> Your notes plant the trap deliberately with <code>21/28</code>: the denominator factors as <code>2² · 7</code>, that 7 says <em>repeats</em>, and the answer is <b>wrong</b> — because 21 and 28 share the 7, and the fraction is really <code>3/4</code>. It terminates at 0.75. Applying the test to the fraction as handed to you fails every time it has not been reduced, and as-handed-to-you is how fractions arrive. <b>The second trap is counting places.</b> For <code>2<sup>m</sup> · 5<sup>n</sup></code> the answer has <b>max(m, n)</b> decimal places, never <code>m + n</code> — the shorter side is topped up to match the longer, and the longer one sets the length.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rung 1 fixes the four definitions. Rungs 2–3 apply the test, the second with the reduce-first trap live. Rungs 4–5 explain the rule and predict the length, rungs 6–7 sort and construct, and rungs 8–9 place irrationals and diagnose a student's reasoning.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Proven, not assumed</h3><p>Every verdict is checked against actually running the long division — the prime-factor shortcut is tested against the thing it is a shortcut for.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>Balanced on purpose</h3><p>Random denominators repeat about six times out of seven, so rung 2 is forced to a even split — guessing “repeats” must not earn a badge.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">The four definitions</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>A rule with a reason attached</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>Prediction beats computation</h3><p>Knowing a decimal will never stop, before starting to divide, saves the pupil who would otherwise fill a page looking for the end of <code>5/24</code>.</p></div>
+      <div class="why-card"><h3>Lesson 7 finally cashes out</h3><p>Prime factorization looked like an exercise in its own right. Here it answers a question about decimals that nothing else can.</p></div>
+      <div class="why-card"><h3>Reducing is a habit, not a step</h3><p>The reduce-first trap is not really about decimals — it is about checking the form of a fraction before applying any test at all.</p></div>
+    </div>
+    <p class="closing">Whether a decimal stops was settled the moment the fraction was written, by the primes hiding in its denominator. <b>Reduce it, factor the denominator, and look for anything that is not a 2 or a 5 — if there is nothing else there the division will end, and if there is, it never will.</b></p>
+  </section>
+
+  <footer>Will It Terminate? · 7/8 stops · 21/28 = 3/4 stops · 5/24 repeats · max(m, n) places</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const MIN='\u2212';
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||1;};
+const fmt=n=>n.toLocaleString('en-US');
+const F=(n,d)=>`<span class="mixnum"><span class="frac"><span class="fn">${n}</span><span class="fd">${d}</span></span></span>`;
+const EX=(base,exp)=>`<span class="ex">${base}<sup>${exp}</sup></span>`;
+const P10=k=>EX(10,k<0?MIN+(-k):k);
+function simp(n,d){const g=gcd(n,d);return [n/g,d/g];}
+
+/* ---- the machinery ---- */
+function twoFive(d){ let v=d,m=0,n=0;
+  while(v%2===0){v/=2;m++;} while(v%5===0){v/=5;n++;} return {m,n,rest:v}; }
+function terminates(n,d){ const [,dd]=simp(n,d); return twoFive(dd).rest===1; }
+function factorHTML(d){
+  const {m,n,rest}=twoFive(d); const parts=[];
+  if(m) parts.push(m===1?'2':EX(2,m));
+  if(n) parts.push(n===1?'5':EX(5,n));
+  if(rest!==1){
+    /* factor the leftover too, so the offending prime is named */
+    let v=rest;
+    for(let p=3;p*p<=v;p+=2){ let e=0; while(v%p===0){v/=p;e++;} if(e) parts.push(e===1?String(p):EX(p,e)); }
+    if(v>1) parts.push(String(v));
+  }
+  return parts.join(' · ')||'1';
+}
+function badPrime(d){ const {rest}=twoFive(d); if(rest===1) return null;
+  let v=rest; for(let p=3;p*p<=v;p+=2) if(v%p===0) return p; return v; }
+/* long division, so the shortcut can be checked against the real thing */
+function divide(n,d,maxDigits){
+  maxDigits=maxDigits||60;
+  let r=n%d; const digits=[]; const seen=new Map(); let repStart=-1;
+  while(r!==0&&digits.length<maxDigits){
+    if(seen.has(r)){ repStart=seen.get(r); break; }
+    seen.set(r,digits.length);
+    const v=r*10; digits.push(Math.floor(v/d)); r=v%d;
+  }
+  return {intPart:Math.floor(n/d),digits,repStart,terminates:r===0};
+}
+function decString(n,d){
+  const res=divide(n,d,24);
+  if(res.terminates) return `${res.intPart}.${res.digits.join('')||'0'}`.replace(/\.$/,'');
+  const pre=res.digits.slice(0,res.repStart).join('');
+  const rep=res.digits.slice(res.repStart).join('');
+  return `${res.intPart}.${pre}<span style="border-top:2px solid currentColor">${rep}</span>…`;
+}
+
+function four(correct,cands,pad){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c!==null&&c!==undefined&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<200){ const c=pad?pad(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+function fourKeyed(items,correctKey,pad){
+  const seen=new Set(); const uniq=[];
+  for(const it of items){ if(uniq.length>=4)break; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  let g=1;
+  while(uniq.length<4&&g<80){ const it=pad?pad(g):null; g++; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  const sh=shuffle(uniq.slice(0,4));
+  return {options:sh.map(o=>({text:o.html})), answer:sh.findIndex(o=>o.key===correctKey)};
+}
+/* a reduced fraction whose decimal terminates / repeats, as asked */
+function fracWith(term){
+  for(let t=0;t<400;t++){
+    let d;
+    if(term) d=pick([2,4,5,8,10,16,20,25,32,40,50,64,80,100,125,160,200,250,500]);
+    else     d=pick([3,6,7,9,11,12,13,14,15,18,21,22,24,26,28,30,33,35,36,44,45,48,55,60,66]);
+    const n=rand(1,d-1);
+    if(gcd(n,d)!==1) continue;
+    if(terminates(n,d)!==term) continue;
+    return {n,d};
+  }
+  return term?{n:1,d:8}:{n:5,d:24};
+}
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — the four definitions
+  1(){
+    const V=rand(0,3);
+    if(V===0){
+      const correct='A decimal with a finite number of digits';
+      const cands=['A decimal whose digits repeat forever',
+                   'A decimal that goes on forever without repeating',
+                   'Any decimal that can be written as a fraction'];
+      const r=four(correct,cands);
+      return {prompt:'What is a <b>terminating</b> decimal?',wordy:true,stack:true,...r,
+        _meta:{rung:1,V,correct},
+        why:`<b>A decimal with finitely many digits</b> — it stops. 0.75 and 0.0012 terminate; 0.333… does not.`};
+    }
+    if(V===1){
+      const correct='A non-terminating decimal in which a block of digits repeats forever';
+      const cands=['Any decimal that never stops',
+                   'A decimal with the same digit all the way through',
+                   'A decimal that cannot be written as a fraction'];
+      const r=four(correct,cands);
+      return {prompt:'What is a <b>repeating</b> decimal?',wordy:true,stack:true,...r,
+        _meta:{rung:1,V,correct},
+        why:`<b>A non-terminating decimal with a recurring block.</b> Repeating decimals are a <em>subset</em> of the non-terminating ones — “never stops” alone is not enough, because some decimals never stop and never repeat either.`};
+    }
+    if(V===2){
+      const correct='Non-terminating and non-repeating';
+      const cands=['Non-terminating but repeating','Terminating but very long',
+                   'Any decimal with more than ten digits'];
+      const r=four(correct,cands);
+      return {prompt:'An <b>irrational</b> number has a decimal that is:',wordy:true,stack:true,...r,
+        _meta:{rung:1,V,correct},
+        why:`<b>Non-terminating and non-repeating</b> — it never stops <em>and</em> never falls into a pattern. Those are exactly the numbers that cannot be written as a fraction, which is what “irrational” means.`};
+    }
+    const correct='Every repeating decimal is non-terminating, but not every non-terminating decimal repeats';
+    const cands=['Every non-terminating decimal repeats',
+                 'Every repeating decimal terminates eventually',
+                 'The two words mean the same thing'];
+    const r=four(correct,cands);
+    return {prompt:'How do <b>repeating</b> and <b>non-terminating</b> relate?',wordy:true,stack:true,...r,
+      _meta:{rung:1,V,correct},
+      why:`Repeating is a <b>special kind</b> of non-terminating. Every fraction gives one or the other — terminating, or repeating. A decimal that goes on forever <em>without</em> repeating is not a fraction at all: it is irrational.`};
+  },
+
+  // 2 — factor and decide (forced to an even split)
+  2(){
+    const wantTerm=rand(0,1)===1;
+    const {n,d}=fracWith(wantTerm);
+    const term=terminates(n,d);
+    const correct=term?'Terminates':'Repeats forever';
+    const cands=[term?'Repeats forever':'Terminates',
+                 'It depends on the numerator','You cannot tell without dividing'];
+    const r=four(correct,cands);
+    const bp=badPrime(d);
+    return {prompt:'<b>Without dividing</b> — does this decimal terminate or repeat?',
+      seq:`<div class="bigfrac">${F(n,fmt(d))}</div>
+           <div class="workbox" style="margin-top:14px"><span class="lbl">the denominator, factored</span>
+             <div class="row">${fmt(d)} = ${factorHTML(d)}</div></div>`,
+      wordy:true,stack:true,...r,
+      _meta:{rung:2,n,d,term,bp,correct},
+      why: term
+        ? `${fmt(d)} = ${factorHTML(d)} — <b>only 2s and 5s</b>, so it terminates: ${F(n,fmt(d))} = ${decString(n,d)}. Anything built from 2s and 5s can be scaled up into a power of ten.`
+        : `${fmt(d)} = ${factorHTML(d)}, and that <b>${bp}</b> is fatal — no power of ten has ${bp} as a factor, so the division can never come out exactly. It <b>repeats</b>: ${F(n,fmt(d))} = ${decString(n,d)}.`};
+  },
+
+  // 3 — reduce first (the flagship)
+  3(){
+    let n,d,rn,rd,bp;
+    for(let t=0;t<500;t++){
+      const base=pick([2,4,8,16,5,10,20,25,32,40,50,64]);
+      const k=pick([3,7,9,11,13,21,27,33]);
+      rd=base; rn=rand(1,base-1);
+      if(gcd(rn,rd)!==1) continue;
+      d=rd*k; n=rn*k;
+      if(d>1200) continue;
+      bp=badPrime(d);
+      if(bp===null) continue;                 /* the WRITTEN form must look like it repeats */
+      if(!terminates(n,d)) continue;          /* but the REDUCED form must terminate */
+      break;
+    }
+    const items=[
+      {key:'ok', html:`Yes — it reduces to ${F(rn,fmt(rd))}, whose denominator is ${factorHTML(rd)}`},
+      {key:'no', html:`No — ${fmt(d)} = ${factorHTML(d)}, and that ${bp} means it repeats`},
+      {key:'nd', html:`No — the numerator ${fmt(n)} is not a factor of ${fmt(d)}`},
+      {key:'idk',html:`You cannot tell without carrying out the division`},
+    ];
+    const r=fourKeyed(items,'ok');
+    return {prompt:'Does this decimal <b>terminate</b>?',
+      seq:`<div class="bigfrac">${F(fmt(n),fmt(d))}</div>
+           <div class="workbox" style="margin-top:14px"><span class="lbl">as written, factored</span>
+             <div class="row">${fmt(d)} = ${factorHTML(d)}</div></div>`,
+      wordy:true,stack:true,...r,
+      _meta:{rung:3,n,d,rn,rd,bp,correct:'ok'},
+      why:`<b>Yes.</b> The written denominator does carry a ${bp} — but GCF(${fmt(n)}, ${fmt(d)}) = ${gcd(n,d)}, so ${F(fmt(n),fmt(d))} = ${F(rn,fmt(rd))}, and ${fmt(rd)} = ${factorHTML(rd)}. It terminates at <b>${decString(n,d)}</b>.
+        <span class="note">The ${bp} cancelled. This is your notes' ${F(21,28)} in another costume: the test applies to the fraction in <em>lowest terms</em>, and a fraction handed to you is rarely in lowest terms already.</span>`};
+  },
+
+  // 4 — why 2s and 5s
+  4(){
+    if(rand(0,1)===1){
+      const correct='Because 10 = 2 · 5, so every power of ten is made only of 2s and 5s';
+      const cands=['Because 2 and 5 are the smallest primes',
+                   'Because 2 and 5 are the factors of the numerator',
+                   'Because every even denominator terminates'];
+      const r=four(correct,cands);
+      return {prompt:'Why is it <b>2s and 5s</b> in particular?',
+        seq:`<div class="workbox"><span class="lbl">powers of ten, factored</span>
+              <div class="row">10 = 2 · 5</div>
+              <div class="row">100 = ${EX(2,2)} · ${EX(5,2)}</div>
+              <div class="row">1000 = ${EX(2,3)} · ${EX(5,3)}</div></div>`,
+        wordy:true,stack:true,...r,_meta:{rung:4,kind:'why',correct},
+        why:`A terminating decimal <em>is</em> a fraction over a power of ten, and 10 = 2 · 5 — so ${P10('k')} = ${EX(2,'k')} · ${EX(5,'k')} and nothing else. A denominator can be scaled into a power of ten only if it was already built from those two primes.
+          <span class="note">This is ${EX(2,7)} · ${EX(5,7)} = ${EX(10,7)} from the exponent ladder, now doing the work it was planted for.</span>`};
+    }
+    const p=pick([3,7,11,13,17,19,23]);
+    const correct=`No power of ten is divisible by ${p}`;
+    const cands=[`${p} is larger than 10`,`${p} is an odd number`,`${p} is not a factor of the numerator`];
+    const r=four(correct,cands);
+    return {prompt:`A denominator carries a factor of <b>${p}</b>. Why does that stop the decimal from terminating?`,
+      wordy:true,stack:true,...r,_meta:{rung:4,kind:'prime',p,correct},
+      why:`Every power of ten factors as ${EX(2,'k')} · ${EX(5,'k')}, so <b>no power of ten is divisible by ${p}</b>. Whatever you multiply the denominator by, that ${p} can never be cleared — and without a power-of-ten denominator the division never comes out exactly.
+        <span class="note">Multiplying by ${p} would only put more of them in. The factor has to <em>cancel</em>, which means it must already divide the numerator — and that is precisely what reducing the fraction checks.</span>`};
+  },
+
+  // 5 — how many places?
+  5(){
+    let m,n2,d;
+    do{ m=rand(0,5); n2=rand(0,5); d=Math.pow(2,m)*Math.pow(5,n2); }
+    while((m===0&&n2===0)||d>200000||m===n2&&m===0);
+    const k=Math.max(m,n2);
+    let num; do{ num=rand(1,Math.min(d-1,97)); }while(gcd(num,d)!==1);
+    const correct=String(k);
+    const cands=[String(m+n2),String(Math.min(m,n2)),String(k+1)].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>String(k+g+1));
+    return {prompt:'How many decimal places will this have?',
+      seq:`<div class="bigfrac">${F(num,factorHTML(d))}</div>`,mono:true,...r,
+      _meta:{rung:5,num,d,m,n:n2,k,correct},
+      why:`You must reach ${P10(k)}, and a power of ten needs <em>equal</em> counts of 2s and 5s — so the larger of ${m} and ${n2} sets the length: <b>${k}</b> place${k>1?'s':''}. Indeed ${F(num,fmt(d))} = ${decString(num,d)}.
+        <span class="note">It is <b>max</b>(m, n), not m + n. The shorter side is topped up to match the longer one; it does not add to it. Here ${m} + ${n2} = ${m+n2} would have been ${m+n2===k?'the same by coincidence':'far too many'}.</span>`};
+  },
+
+  // 6 — which one behaves differently?
+  6(){
+    const oddTerminates=rand(0,1)===1;
+    const items=[];
+    const seenKeys=new Set();
+    const push=(f,isOdd)=>{
+      const key=`${f.n}/${f.d}`;
+      if(seenKeys.has(key)) return false;
+      seenKeys.add(key); items.push({...f,isOdd}); return true;
+    };
+    let guard=0;
+    while(items.length<1&&guard++<50) push(fracWith(oddTerminates),true);
+    guard=0;
+    while(items.length<4&&guard++<200) push(fracWith(!oddTerminates),false);
+    if(items.length<4) return GEN[2]();
+    /* at least one of the others should be unreduced, so the habit stays live */
+    const others=items.filter(o=>!o.isOdd);
+    if(others.length){
+      const t=others[0];
+      const k=pick([2,3]);
+      if(t.n*k<400&&t.d*k<2000&&terminates(t.n*k,t.d*k)===terminates(t.n,t.d)){ t.n*=k; t.d*=k; }
+    }
+    const all=shuffle(items.slice());
+    return {prompt:`Three of these behave the same way. Which one is <b>different</b>?`,
+      seq:`<div class="workbox"><span class="lbl">${oddTerminates?'three repeat, one stops':'three stop, one repeats'}</span>
+            <div class="row dim">reduce each one before you factor it</div></div>`,
+      options:all.map(o=>({text:F(fmt(o.n),fmt(o.d))})),
+      answer:all.findIndex(o=>o.isOdd),
+      _meta:{rung:6,all:all.map(o=>({n:o.n,d:o.d,isOdd:o.isOdd,term:terminates(o.n,o.d)})),oddTerminates},
+      why:`<b>${F(fmt(all.find(o=>o.isOdd).n),fmt(all.find(o=>o.isOdd).d))}</b> is the one that ${oddTerminates?'terminates':'repeats'}. Reduced and factored:<br>
+        ${all.map(o=>{const [rn,rd]=simp(o.n,o.d);
+          return `${F(fmt(o.n),fmt(o.d))} = ${F(rn,fmt(rd))} → ${fmt(rd)} = ${factorHTML(rd)} → <b>${terminates(o.n,o.d)?'stops':'repeats'}</b>`;}).join('<br>')}`};
+  },
+
+  // 7 — build a denominator
+  7(){
+    const wantTerm=rand(0,1)===1;
+    const good=[2,4,5,8,10,16,20,25,32,40,50], bad=[3,6,7,9,11,12,14,15,18,21,22,24,26,28,30,33,35,42,45,48];
+    const correct=String(pick(wantTerm?good:bad));
+    const pool=shuffle((wantTerm?bad:good).slice()).slice(0,6);
+    const cands=pool.map(String).filter(v=>v!==correct);
+    const r=four(correct,cands);
+    return {prompt:`Which of these denominators gives a fraction that <b>${wantTerm?'terminates':'repeats'}</b>?`,
+      seq:`<div class="bigfrac">${F(1,'<span style="color:#C98F16">?</span>')}</div>`,
+      mono:true,...r,
+      _meta:{rung:7,wantTerm,correct},
+      why: wantTerm
+        ? `<b>${correct}</b> = ${factorHTML(Number(correct))} — only 2s and 5s, so ${F(1,correct)} = ${decString(1,Number(correct))}. The others each carry a prime that no power of ten contains.`
+        : `<b>${correct}</b> = ${factorHTML(Number(correct))}, and that ${badPrime(Number(correct))} can never be cleared — so ${F(1,correct)} = ${decString(1,Number(correct))}, going on forever. The others are built from 2s and 5s alone and all stop.`};
+  },
+
+  // 8 — irrationals, lightly
+  8(){
+    const IRR=[{h:'√2',w:'the square root of 2'},{h:'√3',w:'the square root of 3'},
+               {h:'√5',w:'the square root of 5'},{h:'√7',w:'the square root of 7'},
+               {h:'π',w:'pi'},{h:'√10',w:'the square root of 10'}];
+    const it=pick(IRR);
+    const rep=fracWith(false), ter=fracWith(true);
+    const items=[
+      {key:'ok',   html:it.h},
+      {key:'rep',  html:F(rep.n,fmt(rep.d))},
+      {key:'ter',  html:F(ter.n,fmt(ter.d))},
+      {key:'dec',  html:pick(['0.125','0.75','2.5','0.4'])},
+      {key:'seven',html:F(22,7)},
+    ];
+    const r=fourKeyed(items,'ok');
+    return {prompt:'Which of these is <b>irrational</b>?',...r,
+      _meta:{rung:8,irr:it.h,correct:it.h},
+      why:`<b>${it.h}</b> — ${it.w} is non-terminating <em>and</em> non-repeating, so it cannot be written as a fraction at all.
+        <span class="note">Every other option is a fraction, and every fraction is rational — including ${F(rep.n,fmt(rep.d))}, whose decimal never stops. <b>Not stopping is not the same as being irrational</b>; it also has to never repeat. ${F(22,7)} is a particularly tempting one: it is often used <em>for</em> π, but it is a fraction, so it repeats and is perfectly rational.</span>`};
+  },
+
+  // 9 — diagnose the reasoning
+  9(){
+    if(rand(0,1)===1){
+      /* claims it repeats, but it reduces and terminates */
+      let n,d,rn,rd,bp;
+      for(let t=0;t<500;t++){
+        const base=pick([2,4,5,8,10,20,25,40]);
+        const k=pick([3,7,9,11,13]);
+        rd=base; rn=rand(1,base-1);
+        if(gcd(rn,rd)!==1) continue;
+        d=rd*k; n=rn*k;
+        if(d>600) continue;
+        bp=badPrime(d);
+        if(bp===null||!terminates(n,d)) continue;
+        break;
+      }
+      const correct=`They did not reduce — ${fmt(n)}/${fmt(d)} is ${rn}/${fmt(rd)}, which terminates`;
+      const cands=[`They factored ${fmt(d)} incorrectly`,
+                   `A factor of ${bp} does not affect whether a decimal terminates`,
+                   `Nothing — the reasoning is correct`];
+      const r=four(correct,cands);
+      return {prompt:`A student says ${F(fmt(n),fmt(d))} repeats, because ${fmt(d)} has a factor of ${bp}. What is wrong with the reasoning?`,
+        seq:`<div class="workbox"><span class="lbl">their working</span>
+              <div class="row">${fmt(d)} = ${factorHTML(d)} &nbsp;<span class="dim">→ contains ${bp} → repeats</span></div></div>`,
+        wordy:true,stack:true,...r,
+        _meta:{rung:9,kind:'noreduce',n,d,rn,rd,bp,correct},
+        why:`The factoring is right and the rule is right — but the rule applies to the fraction in <b>lowest terms</b>. GCF(${fmt(n)}, ${fmt(d)}) = ${gcd(n,d)}, so this is really ${F(rn,fmt(rd))}, and ${fmt(rd)} = ${factorHTML(rd)}. It terminates at <b>${decString(n,d)}</b>.
+          <span class="note">The ${bp} was in both parts and cancelled. Reduce first, always — the test says nothing at all about a fraction that has not been reduced.</span>`};
+    }
+    /* claims it terminates because the denominator is even */
+    const d=pick([6,12,14,18,22,24,26,28,30,36,44,48]);
+    let n; do{ n=rand(1,d-1); }while(gcd(n,d)!==1);
+    const bp=badPrime(d);
+    const correct=`Being even is not enough — the denominator must contain <em>only</em> 2s and 5s`;
+    const cands=[`${fmt(d)} is not actually even`,
+                 `The numerator ${n} must also be even`,
+                 `Nothing — the reasoning is correct`];
+    const r=four(correct,cands);
+    return {prompt:`A student says ${F(n,fmt(d))} terminates, because ${fmt(d)} is even and 2 is allowed. What is wrong?`,
+      seq:`<div class="workbox"><span class="lbl">their working</span>
+            <div class="row">${fmt(d)} is even &nbsp;<span class="dim">→ has a 2 → terminates</span></div></div>`,
+      wordy:true,stack:true,...r,
+      _meta:{rung:9,kind:'even',n,d,bp,correct},
+      why:`${fmt(d)} = ${factorHTML(d)} — there <em>is</em> a 2 in there, but there is also a <b>${bp}</b>, and the rule requires that <b>nothing else</b> be present. So ${F(n,fmt(d))} = ${decString(n,d)}, repeating forever.
+        <span class="note">“Contains a 2” and “contains only 2s and 5s” are very different tests. Every even number passes the first; only ${EX(2,'m')} · ${EX(5,'n')} passes the second.</span>`};
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'The four definitions',short:'terminating to irrational'},
+  {id:2,title:'Factor and decide',short:'without dividing'},
+  {id:3,title:'Reduce first',short:'21/28 = 3/4'},
+  {id:4,title:'Why 2s and 5s',short:'10 = 2 · 5'},
+  {id:5,title:'How many places?',short:'max(m, n)'},
+  {id:6,title:'Spot the odd one',short:'reduce each first'},
+  {id:7,title:'Build a denominator',short:'the rule backwards'},
+  {id:8,title:'Irrational numbers',short:'never stops, never repeats'},
+  {id:9,title:'Diagnose the claim',short:'what went wrong'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='willItTerminateLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>22);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero ============ */
+(function(){
+  document.getElementById('heroSteps').innerHTML=
+    `<div class="s3c"><div class="n">1 — reduce</div>
+       <div class="b">${F(21,28)} <span style="color:#8FB0B2">=</span> ${F(3,4)}</div>
+       <div class="d">GCF(21, 28) = 7,<br>and the 7 cancels</div></div>
+     <div class="s3c"><div class="n">2 — factor</div>
+       <div class="b">4 = ${EX(2,2)}</div>
+       <div class="d">as written it was 28 = ${EX(2,2)} · <span class="bad">7</span><br>which would have said “repeats”</div></div>
+     <div class="s3c"><div class="n">3 — decide</div>
+       <div class="b good">0.75</div>
+       <div class="d">only 2s, so it stops —<br>two decimal places</div></div>`;
+})();
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
