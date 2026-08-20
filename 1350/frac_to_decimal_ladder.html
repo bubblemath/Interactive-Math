@@ -1,0 +1,732 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fractions → Decimals — divide, or build a power of ten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  /* Superscripts: a <sup> that is a DIRECT child of a flex container becomes a flex
+     item, and vertical-align stops applying — it drops flat onto the baseline. The
+     cure is never to let that happen: every exponent is emitted inside .ex, an
+     inline-block whose contents are normal inline flow, so vertical-align works. */
+  sup{font-size:.62em;vertical-align:super;line-height:0}
+  sub{font-size:.62em;vertical-align:sub;line-height:0}
+  .ex{display:inline-block;white-space:nowrap}
+
+
+  sub{
+    font-size:.60em; line-height:0;
+    vertical-align:baseline; align-self:baseline;
+    position:relative; top:.22em;
+  }
+
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.05rem;box-shadow:var(--shadow);font-family:"Space Mono"}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .mixnum{display:inline-flex;align-items:center;gap:.18em;line-height:1}
+  .frac{display:inline-flex;flex-direction:column;align-items:center;text-align:center;
+        line-height:1.08;font-size:.68em;font-weight:700}
+  .frac .fn{border-bottom:1.7px solid currentColor;padding:0 .26em .1em}
+  .frac .fd{padding:.1em .26em 0}
+
+  .duo{margin:34px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:780px){.duo{grid-template-columns:1fr}}
+  .panel{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:20px 16px;box-shadow:var(--shadow)}
+  .panel.a{border-color:rgba(87,199,190,.4)} .panel.b{border-color:rgba(239,181,63,.42)}
+  .ptitle{font-family:"Space Mono";font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px;text-align:center}
+  .panel.a .ptitle{color:var(--teal-bright)} .panel.b .ptitle{color:var(--amber)}
+  .psub{font-family:"Space Mono";font-size:.7rem;color:var(--muted);text-align:center;margin-bottom:14px}
+  .prow{font-family:"Space Mono";font-size:.88rem;color:#CFE2E0;line-height:2.2;
+    display:flex;align-items:center;justify-content:center;gap:.3em;flex-wrap:wrap}
+  .prow .dim{color:var(--muted);font-size:.86em}
+  .prow .hit{color:var(--amber);font-weight:700}
+  .prow .hit2{color:var(--teal-bright);font-weight:700}
+  .pfoot{text-align:center;margin-top:13px;padding-top:12px;border-top:1px solid var(--line);
+    font-family:"Space Mono";font-size:.72rem;color:var(--muted);line-height:1.7}
+  .pfoot b{color:var(--paper)}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:490px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.02rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  .bigfrac{font-family:"Space Mono";font-weight:700;font-size:clamp(1.4rem,4.6vw,2.05rem);color:var(--ink);
+    display:inline-flex;align-items:center;gap:.3em;flex-wrap:wrap;justify-content:center}
+  .workbox{display:inline-block;background:#EFE9DA;border-radius:10px;padding:13px 20px;
+    font-family:"Space Mono";font-weight:700;font-size:clamp(.84rem,2.5vw,1.02rem);color:var(--ink);line-height:2.2;text-align:left}
+  .workbox .lbl{font-family:"IBM Plex Sans";font-weight:500;font-size:.7rem;color:#7A8887;letter-spacing:.09em;text-transform:uppercase;display:block;margin-bottom:7px}
+  .workbox .row{display:flex;align-items:center;gap:.28em;flex-wrap:wrap}
+  .workbox .dim{color:#8A9897}
+  .workbox .up{color:#B07800}
+  .workbox .q{color:var(--clay)}
+  .workbox .rule{border-top:1px dashed #C6BFAD;margin:8px 0}
+  /* the remainder chain */
+  .chain{display:inline-flex;flex-direction:column;gap:3px;font-family:"Space Mono";font-weight:700}
+  .chain .lane{display:flex;align-items:center;gap:0}
+  .chain .cell{min-width:2.5em;text-align:center;font-size:1rem;color:var(--ink)}
+  .chain .arrow{color:#8A9897;font-size:.8rem;padding:0 .1em}
+  .chain .lab{font-family:"IBM Plex Sans";font-weight:500;font-size:.66rem;color:#7A8887;
+    min-width:6.4em;text-align:right;padding-right:.6em;letter-spacing:.05em}
+  .chain .dig{color:#B07800}
+  .chain .zero{color:var(--green)}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1.04rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.5}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"Space Mono";font-weight:700;letter-spacing:.03em;display:inline-flex;align-items:center;gap:.15em;flex-wrap:wrap}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500;letter-spacing:0;font-size:.95rem;display:inline;line-height:1.45}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .feedback .note{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed #C6BFAD;color:#5C6E6D;font-style:italic}
+  .feedback .alt{display:block;margin-top:6px;color:#5C6E6D;font-style:italic}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">a÷b</span> Fractions → Decimals</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 10 · fractions to decimals</div>
+    <h1>Divide,<br>or <span class="hl">build a ten.</span></h1>
+    <p class="lede">Every fraction is a division waiting to happen, so long division converts anything at all. But when the denominator is made only of <strong>2s and 5s</strong>, there is a quicker route — scale it up into a power of ten and read the answer straight off. The skill is knowing which one is in front of you.</p>
+
+    <div class="duo" id="heroPanels"></div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>To balance the denominator, multiply by whichever base you have <em>fewer</em> of.</b> Your notes' example is <code>6/(2³·5⁴)</code>: a power of ten needs equal numbers of 2s and 5s, and here there are four 5s but only three 2s — so you are short <b>one 2</b>, and you multiply top and bottom by <b>2</b>. Students look at the bigger exponent, see the 5⁴, and multiply by 5, which only makes the imbalance worse. <b>The second trap is counting the places.</b> <code>205/10,000</code> is <code>0.0205</code>, not <code>0.205</code> — the denominator demands <em>four</em> decimal places and the numerator supplies only three digits, so a zero has to be written in.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–2 read off power-of-ten denominators, the second by your notes' expanded-numerator method. Rung 3 is long division. Rungs 4–7 build powers of ten — factoring, balancing, finishing and predicting the length. Rungs 8–9 choose the method and diagnose when building is impossible.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Digit strings, not floating point</h3><p>Every decimal is assembled from exact integer arithmetic, so nothing drifts at the far end of a long answer.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>Division is always an option</h3><p>On rung 8 it is excluded from the choices whenever something quicker exists, and named in the feedback instead.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Powers of ten are free</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>Where the termination rule comes from</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>Building explains the rule</h3><p>The next ladder states which fractions terminate. This one shows the mechanism — and a rule you have watched work is a rule you can rebuild.</p></div>
+      <div class="why-card"><h3>Division never fails</h3><p>Whatever the denominator, <code>a ÷ b</code> produces a decimal. Knowing you always have that route makes it safe to try the quicker one first.</p></div>
+      <div class="why-card"><h3>Remainders are the next lesson</h3><p>The chain of remainders in long division is what decides whether a decimal stops or repeats, and it is already visible here.</p></div>
+    </div>
+    <p class="closing">Two methods, and the choice between them takes one glance at the denominator. <b>Factor it: if only 2s and 5s appear, balance them into a power of ten and read the digits off; if anything else is there, divide — and expect the answer never to stop.</b></p>
+  </section>
+
+  <footer>Fractions → Decimals · 7/250 = 0.028 · 1/125 = 0.008 · 6/(2³·5⁴) = 0.0012 · 205/10,000 = 0.0205</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const MIN='\u2212';
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||1;};
+const fmt=n=>n.toLocaleString('en-US');
+const F=(n,d)=>`<span class="mixnum"><span class="frac"><span class="fn">${n}</span><span class="fd">${d}</span></span></span>`;
+const P10=k=>`<span class="ex">10<sup>${k<0?MIN+(-k):k}</sup></span>`;
+function simp(n,d){const g=gcd(n,d);return [n/g,d/g];}
+
+/* ---- exact: a whole numerator over a power of ten, as a decimal string ---- */
+function overPowerOfTen(num,k){
+  let s=String(num);
+  if(k===0) return s;
+  while(s.length<=k) s='0'+s;
+  let out=s.slice(0,s.length-k)+'.'+s.slice(s.length-k);
+  out=out.replace(/0+$/,'').replace(/\.$/,'');
+  out=out.replace(/^0+(?=\d)/,'');
+  return out;
+}
+/* ---- how many 2s and 5s, and what is left over ---- */
+function twoFive(d){
+  let v=d,m=0,n=0;
+  while(v%2===0){v/=2;m++;}
+  while(v%5===0){v/=5;n++;}
+  return {m,n,rest:v};
+}
+/* the factor that balances a 2^m·5^n denominator into a power of ten */
+function balance(d){
+  const {m,n,rest}=twoFive(d);
+  if(rest!==1) return null;
+  const k=Math.max(m,n);
+  return {m,n,rest,k,mult:Math.pow(2,k-m)*Math.pow(5,k-n),
+          need2:k-m, need5:k-n, target:Math.pow(10,k)};
+}
+function factorHTML(d){
+  const {m,n,rest}=twoFive(d);
+  const parts=[];
+  if(m) parts.push(m===1?'2':`<span class="ex">2<sup>${m}</sup></span>`);
+  if(n) parts.push(n===1?'5':`<span class="ex">5<sup>${n}</sup></span>`);
+  if(rest!==1) parts.push(String(rest));
+  return parts.join(' · ')||'1';
+}
+/* ---- long division: the digits and the chain of remainders ---- */
+function divide(n,d,maxDigits){
+  maxDigits=maxDigits||12;
+  const intPart=Math.floor(n/d);
+  let r=n%d;
+  const digits=[], rems=[r];
+  const seen=new Map(); let repStart=-1;
+  while(r!==0&&digits.length<maxDigits){
+    if(seen.has(r)){ repStart=seen.get(r); break; }
+    seen.set(r,digits.length);
+    const v=r*10;
+    digits.push(Math.floor(v/d));
+    r=v%d;
+    rems.push(r);
+  }
+  return {intPart,digits,rems,repStart,terminates:r===0};
+}
+function chainHTML(res){
+  const cells=res.rems.map((v,i)=>
+    `<span class="cell ${v===0?'zero':''}">${v}</span>`+(i<res.rems.length-1?'<span class="arrow">→</span>':''));
+  const digs=res.digits.map((v,i)=>
+    `<span class="cell dig">${v}</span>`+(i<res.digits.length-1?'<span class="arrow">&nbsp;</span>':''));
+  return `<div class="chain">
+    <div class="lane"><span class="lab">remainders</span>${cells.join('')}</div>
+    <div class="lane"><span class="lab">digits</span><span class="cell"></span><span class="arrow">&nbsp;</span>${digs.join('')}</div>
+  </div>`;
+}
+
+function four(correct,cands,pad){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c!==null&&c!==undefined&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<200){ const c=pad?pad(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+function fourKeyed(items,correctKey,pad){
+  const seen=new Set(); const uniq=[];
+  for(const it of items){ if(uniq.length>=4)break; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  let g=1;
+  while(uniq.length<4&&g<80){ const it=pad?pad(g):null; g++; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  const sh=shuffle(uniq.slice(0,4));
+  return {options:sh.map(o=>({text:o.html})), answer:sh.findIndex(o=>o.key===correctKey)};
+}
+/* denominators built only from 2s and 5s, not already a power of ten */
+function buildableDen(){
+  for(let t=0;t<200;t++){
+    const m=rand(0,4), n=rand(0,4);
+    if(m===n) continue;                 /* that is already a power of ten */
+    if(m===0&&n===0) continue;
+    const d=Math.pow(2,m)*Math.pow(5,n);
+    if(d<2||d>6250) continue;
+    return d;
+  }
+  return 250;
+}
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — a power-of-ten denominator is free
+  1(){
+    const BANK=[[25,1],[56,2],[205,4],[7,3],[3,1],[1204,3],[9,2],[80,3]];
+    let [num,k]=pick(BANK.concat([[0,0]]));
+    if(k===0){ k=rand(1,4); num=rand(1,Math.pow(10,rand(1,4))-1); }
+    const ans=overPowerOfTen(num,k);
+    const cands=[overPowerOfTen(num,k-1)||String(num),overPowerOfTen(num,k+1),
+                 `0.${num}`].filter(v=>v!==ans);
+    const r=four(ans,cands,g=>overPowerOfTen(num,k+g+1));
+    return {prompt:'Write this fraction as a decimal.',
+      seq:`<div class="bigfrac">${F(fmt(num),fmt(Math.pow(10,k)))}</div>`,mono:true,...r,
+      _meta:{rung:1,num,k,ans,correct:ans},
+      why:`The denominator is ${P10(k)}, so the answer has <b>${k}</b> decimal place${k>1?'s':''}: <b>${ans}</b>.
+        <span class="note">${String(num).length<k?`The numerator ${num} has only ${String(num).length} digit${String(num).length>1?'s':''} but ${k} places are needed, so ${k-String(num).length} zero${k-String(num).length>1?'s must be':' must be'} written in after the point. Leaving ${it0(num,k)} would be a different number entirely.`:`Count the places from the right-hand end of ${num}: that is what the exponent of the denominator is telling you.`}</span>`};
+    function it0(n2,k2){ return `0.${n2}`; }
+  },
+
+  // 2 — expand the numerator and divide each term (the worksheet's method)
+  2(){
+    const BANK=[[25,1],[56,2],[205,4],[1204,3],[309,3],[42,2]];
+    let [num,k]=pick(BANK.concat([[0,0]]));
+    if(k===0){ k=rand(2,4); num=rand(10,Math.pow(10,rand(2,4))-1); }
+    const ans=overPowerOfTen(num,k);
+    const s=String(num);
+    const terms=[];
+    for(let i=0;i<s.length;i++){
+      const d=Number(s[i]); if(!d) continue;
+      terms.push({d,p:s.length-1-i});
+    }
+    const before=terms.map(t=>`${t.d}·${P10(t.p)}`).join(' + ');
+    const after =terms.map(t=>`${t.d}·${P10(t.p-k)}`).join(' + ');
+    const cands=[overPowerOfTen(num,k-1)||String(num),overPowerOfTen(num,k+1),`0.${num}`].filter(v=>v!==ans);
+    const r=four(ans,cands,g=>overPowerOfTen(num,k+g+1));
+    return {prompt:'Expand the numerator, then divide each term by the denominator.',
+      seq:`<div class="workbox"><span class="lbl">${fmt(num)} over ${P10(k)}</span>
+            <div class="row dim">${fmt(num)} = ${before}</div>
+            <div class="row">÷ ${P10(k)} each &nbsp;→&nbsp; <span class="up">${after}</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:2,num,k,ans,terms,correct:ans},
+      why:`Dividing each term subtracts ${k} from its exponent — the rule from the last ladder — and every term then names its own place: <b>${ans}</b>.
+        <span class="note">This is worth more than “count the places”, because each digit arrives in a <em>named</em> place. Any place with no term is visibly empty and gets a zero, which is exactly how ${fmt(num)} over ${P10(k)} avoids being misread.</span>`};
+  },
+
+  // 3 — long division, shown as the remainder chain
+  3(){
+    const BANK=[[3,8],[1,4],[7,8],[3,5],[9,16],[1,2],[7,20],[5,8],[11,16],[3,4]];
+    let [n,d]=pick(BANK.concat([[0,0]]));
+    if(d===0){ do{ d=pick([2,4,5,8,16,20,25,32,40,50]); n=rand(1,d-1); }while(gcd(n,d)!==1); }
+    const res=divide(n,d);
+    const ans=overPowerOfTen(Number(res.digits.join('')||'0'),res.digits.length);
+    const full=res.intPart+ (res.digits.length?'.'+res.digits.join(''):'');
+    const correct=full.replace(/^0(?=\.)/,'0');
+    const cands=[res.digits.join(''),
+                 `0.${res.digits.slice().reverse().join('')}`,
+                 overPowerOfTen(Number(res.digits.join('')),res.digits.length+1)].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>overPowerOfTen(Number(res.digits.join(''))+g,res.digits.length));
+    return {prompt:`Divide <code>${n} ÷ ${d}</code>. The chain of remainders is below.`,
+      seq:chainHTML(res),mono:true,...r,
+      _meta:{rung:3,n,d,digits:res.digits.join(''),rems:res.rems,correct},
+      why:`Each remainder is multiplied by 10 and divided by ${d} again: ${res.rems.join(' → ')}. The quotients that fall out are ${res.digits.join('')}, so ${n} ÷ ${d} = <b>${correct}</b>.
+        <span class="note">The chain reaches <b>0</b>, which is what makes the decimal stop. Two ladders from now the same chain will be watched for a remainder that <em>repeats</em> instead — and that is the whole difference between a terminating and a repeating decimal.</span>`};
+  },
+
+  // 4 — factor the denominator
+  4(){
+    const BANK=[250,125,5000,16,80,40,32,200,625,1250,64,500];
+    const d=pick(BANK.concat([0]))||buildableDen();
+    const {m,n,rest}=twoFive(d);
+    const correct=factorHTML(d);
+    const cands=[factorHTML(d*2),factorHTML(d*5),
+                 (m?`<span class="ex">2<sup>${m+1}</sup></span>`:'2')+(n?` · <span class="ex">5<sup>${n}</sup></span>`:'')].filter(x=>x!==correct);
+    const r=four(correct,cands,g=>factorHTML(d*Math.pow(2,g)));
+    return {prompt:'Factor this denominator into primes.',
+      seq:`<div class="bigfrac">${fmt(d)}</div>`,mono:true,...r,
+      _meta:{rung:4,d,m,n,rest,correct},
+      why:`${fmt(d)} = <b>${correct}</b> — ${m} two${m===1?'':'s'} and ${n} five${n===1?'':'s'}${rest!==1?`, and a ${rest} besides`:''}.
+        <span class="note">Reading m and n off the factorization is the whole preparation for the next two rungs: the balance you need is the difference between them.</span>`};
+  },
+
+  // 5 — what must you multiply by? (the flagship)
+  5(){
+    const BANK=[250,125,5000,16,80,40,32,200,625,1250,8,20];
+    let d=pick(BANK.concat([0]))||buildableDen();
+    const B=balance(d);
+    if(!B||B.mult===1) return GEN[5]();
+    const correct=String(B.mult);
+    const short=B.need2>0?2:5;
+    const other=short===2?5:2;
+    const cands=[String(Math.pow(other,Math.max(B.need2,B.need5))),
+                 String(short),
+                 String(B.mult*short)].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>String(B.mult*Math.pow(short,g)));
+    return {prompt:`To turn this denominator into a power of ten, what must you multiply by?`,
+      seq:`<div class="workbox"><span class="lbl">the denominator, factored</span>
+            <div class="row">${fmt(d)} = ${factorHTML(d)}</div>
+            <div class="rule"></div>
+            <div class="row dim">a power of ten needs <b>equal</b> numbers of 2s and 5s</div>
+            <div class="row">here: ${B.m} two${B.m===1?'':'s'} and ${B.n} five${B.n===1?'':'s'} &nbsp;→&nbsp; short <span class="up">${Math.max(B.need2,B.need5)} ${short}${Math.max(B.need2,B.need5)===1?'':'s'}</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:5,d,B,short,correct},
+      why:`You need as many 2s as 5s. There ${B.m===1?'is':'are'} ${B.m} two${B.m===1?'':'s'} and ${B.n} five${B.n===1?'':'s'}, so supply <b>${Math.max(B.need2,B.need5)} more ${short}${Math.max(B.need2,B.need5)===1?'':'s'}</b> — that is <b>${B.mult}</b>, giving ${fmt(d)} × ${B.mult} = ${fmt(B.target)} = ${P10(B.k)}.
+        <span class="note">Always multiply by whichever base you have <em>fewer</em> of. Reaching for the bigger exponent — the ${other} here — pushes the two counts further apart and never produces a power of ten.</span>`};
+  },
+
+  // 6 — finish the conversion
+  6(){
+    const BANK=[[7,250],[1,125],[6,5000],[3,8],[9,16],[7,20],[3,40],[11,80],[13,200],[1,32]];
+    let [n,d]=pick(BANK.concat([[0,0]]));
+    if(d===0){ d=buildableDen(); n=rand(1,Math.min(d-1,40)); const g=gcd(n,d); n/=g; d/=g; }
+    const B=balance(d);
+    if(!B) return GEN[6]();
+    const newNum=n*B.mult;
+    const ans=overPowerOfTen(newNum,B.k);
+    const cands=[overPowerOfTen(n,B.k),overPowerOfTen(newNum,B.k+1),overPowerOfTen(newNum,Math.max(0,B.k-1))]
+                  .filter(v=>v!==ans);
+    const r=four(ans,cands,g=>overPowerOfTen(newNum+g,B.k));
+    return {prompt:'Convert to a decimal by building a power of ten.',
+      seq:`<div class="bigfrac">${F(n,fmt(d))}</div>
+           <div class="workbox" style="margin-top:14px"><span class="lbl">scale it up</span>
+             <div class="row">${F(n,fmt(d))} · ${F(B.mult,B.mult)} = ${F(fmt(newNum),fmt(B.target))}</div></div>`,
+      mono:true,...r,
+      _meta:{rung:6,n,d,B,newNum,ans,correct:ans},
+      why:`${fmt(d)} = ${factorHTML(d)}, so multiply both parts by <b>${B.mult}</b>: ${F(n,fmt(d))} = ${F(fmt(newNum),fmt(B.target))} = <b>${ans}</b>.
+        <span class="note">Scaling both parts by the same factor is the Fundamental Law of Fractions from Lesson 9 — the point of choosing ${B.mult} is that it lands the denominator exactly on ${P10(B.k)}, where the decimal can simply be read off.</span>`};
+  },
+
+  // 7 — how many decimal places?
+  7(){
+    let m,n,d;
+    do{ m=rand(0,5); n=rand(0,5); d=Math.pow(2,m)*Math.pow(5,n); }
+    while((m===0&&n===0)||d>100000||!balance(d));
+    const k=Math.max(m,n);
+    const correct=String(k);
+    const cands=[String(m+n),String(Math.min(m,n)),String(k+1)].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>String(k+g+1));
+    let num; do{ num=rand(1,Math.min(d-1,97)); }while(d>1&&gcd(num,d)!==1);
+    return {prompt:`How many decimal places will this have?`,
+      seq:`<div class="bigfrac">${F(num,factorHTML(d))}</div>`,mono:true,...r,
+      _meta:{rung:7,num,d,m,n,k,correct},
+      why:`You must reach ${P10(k)}, because a power of ten needs equal counts and the larger of ${m} and ${n} is <b>${k}</b>. So the answer has <b>${k}</b> decimal place${k>1?'s':''} — here ${F(num,fmt(d))} = ${overPowerOfTen(num*balance(d).mult,k)}.
+        <span class="note">It is <em>max</em>(m, n), not the sum: the shorter side is topped up to match the longer one, and the longer one sets the length. Predicting the shape of an answer before computing it catches a great many slips.</span>`};
+  },
+
+  // 8 — which method is quicker?
+  8(){
+    const M={
+      build:'Build an equivalent fraction with a power-of-ten denominator',
+      divide:'Long division',
+      already:'It is already over a power of ten — just read it off',
+      simplify:'Simplify to lowest terms and it becomes a power of ten',
+      invert:'Invert the fraction and multiply',
+    };
+    let key,n,d;
+    for(let t=0;t<300;t++){
+      key=pick(['build','divide','already']);
+      if(key==='already'){ const k=rand(1,4); d=Math.pow(10,k); n=rand(1,d-1);
+        if(gcd(n,d)!==1) continue; }
+      else if(key==='build'){ d=buildableDen(); n=rand(1,Math.max(1,Math.min(d-1,40)));
+        if(gcd(n,d)!==1) continue; if(!balance(d)) continue; }
+      else { do{ d=rand(3,60); }while(twoFive(d).rest===1); n=rand(1,d-1);
+        if(gcd(n,d)!==1) continue; if(twoFive(d).rest===1) continue; }
+      break;
+    }
+    const alsoValid = key!=='divide' ? ['divide'] : [];
+    const banned=new Set([key,...alsoValid]);
+    const others=shuffle(Object.keys(M).filter(k2=>!banned.has(k2))).slice(0,3);
+    const opts=shuffle([key,...others].map(k2=>({t:M[k2],k:k2})));
+    return {prompt:'Which is the <b>quickest</b> way to convert this to a decimal?',
+      seq:`<div class="bigfrac">${F(n,fmt(d))}</div>
+           <div class="workbox" style="margin-top:14px"><span class="lbl">the denominator, factored</span>
+             <div class="row">${fmt(d)} = ${factorHTML(d)}</div></div>`,
+      wordy:true,stack:true,
+      options:opts.map(o=>({text:o.t})),answer:opts.findIndex(o=>o.k===key),
+      _meta:{rung:8,key,n,d,alsoValid,correct:M[key]},
+      /* LAZY: an object literal evaluates every branch, and balance(d) is null
+         for the 'divide' case — so each explanation must be a function. */
+      why:({
+        build:()=>{const B=balance(d);return `${fmt(d)} = ${factorHTML(d)} — only 2s and 5s, so it can be scaled into ${P10(B.k)} by multiplying both parts by ${B.mult}. That is one multiplication against several steps of division.`;},
+        divide:()=>`${fmt(d)} = ${factorHTML(d)}, and that ${twoFive(d).rest} is neither a 2 nor a 5. No power of ten is divisible by it, so no scaling will ever work and <b>long division</b> is the only route.`,
+        already:()=>`The denominator <em>is</em> ${P10(String(d).length-1)}, so there is nothing to build — the digits can be read straight off with ${String(d).length-1} decimal place${String(d).length-1>1?'s':''}.`,
+      })[key]()+(alsoValid.length?`<span class="alt">Long division would also work — it always does. The point is to notice when something faster is available.</span>`:'')};
+  },
+
+  // 9 — when building is impossible
+  9(){
+    let d; do{ d=rand(3,80); }while(twoFive(d).rest===1);
+    const bad=twoFive(d).rest;
+    let n; do{ n=rand(1,d-1); }while(gcd(n,d)!==1);
+    const badPrime=(()=>{ let v=bad; for(let p=3;p*p<=v;p+=2) if(v%p===0) return p; return v; })();
+    const correct=`Because ${fmt(d)} has ${badPrime} as a factor, and no power of ten does`;
+    const cands=[`Because the numerator ${n} is not a factor of ${fmt(d)}`,
+                 `Because ${fmt(d)} is not an even number`,
+                 `Because ${fmt(d)} is larger than 10`];
+    const r=four(correct,cands);
+    return {prompt:`Why can this <b>not</b> be converted by building a power of ten?`,
+      seq:`<div class="bigfrac">${F(n,fmt(d))}</div>
+           <div class="workbox" style="margin-top:14px"><span class="lbl">the denominator, factored</span>
+             <div class="row">${fmt(d)} = ${factorHTML(d)}</div></div>`,
+      wordy:true,stack:true,...r,
+      _meta:{rung:9,n,d,bad,badPrime,correct},
+      why:`Every power of ten is ${P10(1)} multiplied by itself, and 10 = 2 · 5 — so a power of ten is built from <b>2s and 5s and nothing else</b>. Since ${fmt(d)} carries a factor of <b>${badPrime}</b>, no amount of scaling will ever clear it.
+        <span class="note">Multiplying by ${badPrime} would only put more of them in the denominator. This is exactly the diagnosis the next ladder turns into a general rule — and the decimal for ${F(n,fmt(d))} never stops.</span>`};
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Powers of ten are free',short:'205/10,000 = 0.0205'},
+  {id:2,title:'Expand the numerator',short:'each term its own place'},
+  {id:3,title:'Long division',short:'the remainder chain'},
+  {id:4,title:'Factor the denominator',short:'read off m and n'},
+  {id:5,title:'What to multiply by',short:'the flagship'},
+  {id:6,title:'Finish the build',short:'7/250 = 0.028'},
+  {id:7,title:'How many places?',short:'max(m, n)'},
+  {id:8,title:'Which method?',short:'one glance at the bottom'},
+  {id:9,title:'When building fails',short:'a 3 is fatal'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='fracToDecLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>22);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero ============ */
+(function(){
+  const B=balance(250);
+  const res=divide(5,7,8);
+  document.getElementById('heroPanels').innerHTML=
+    `<div class="panel b"><div class="ptitle">build a power of ten</div>
+       <div class="psub">when the bottom is only 2s and 5s</div>
+       <div class="prow">${F(7,250)} <span class="dim">and</span> 250 = 2 · <span class="ex">5<sup>3</sup></span></div>
+       <div class="prow"><span class="dim">short two 2s, so ×</span> <span class="hit">4</span></div>
+       <div class="prow">${F(7,250)} · ${F(4,4)} = ${F(28,'1000')} = <span class="hit">0.028</span></div>
+       <div class="pfoot">one multiplication, then read it off<br><b>quick — but only sometimes available</b></div></div>
+     <div class="panel a"><div class="ptitle">long division</div>
+       <div class="psub">works on absolutely anything</div>
+       <div class="prow">${F(5,7)} <span class="dim">and</span> 7 = 7</div>
+       <div class="prow"><span class="dim">no power of ten has a 7 in it</span></div>
+       <div class="prow"><span class="hit2">5 ÷ 7 = 0.714285…</span></div>
+       <div class="pfoot">remainders ${res.rems.slice(0,7).join(' → ')}<br><b>always works — and here it never ends</b></div></div>`;
+})();
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
