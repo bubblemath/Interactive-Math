@@ -1,0 +1,755 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Repetend, Period &amp; Bar Notation — the bar covers the repeat, and only the repeat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  /* a <sup> that is a direct child of a flex container becomes a flex item and
+     vertical-align stops applying — so every exponent is emitted inside .ex */
+  sup{font-size:.62em;vertical-align:super;line-height:0}
+  .ex{display:inline-block;white-space:nowrap}
+  /* The overline must span exactly the repetend and sit close above the digits.
+     border-top on an inline-block enlarges the box and baseline-shifts the whole
+     thing, leaving the rule floating high; text-decoration hugs the glyphs. */
+  .bar{text-decoration:overline;text-decoration-thickness:2px;text-underline-offset:0}
+
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1rem;box-shadow:var(--shadow);font-family:"Space Mono"}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .mixnum{display:inline-flex;align-items:center;gap:.18em;line-height:1;vertical-align:middle}
+  /* an inline-flex fraction baselines on its own first line, which drops it about
+     10px below the surrounding prose; middle seats it on the text's midline */
+  .frac{display:inline-flex;flex-direction:column;align-items:center;text-align:center;
+        line-height:1.08;font-size:.68em;font-weight:700}
+  .frac .fn{border-bottom:1.7px solid currentColor;padding:0 .26em .1em}
+  .frac .fd{padding:.1em .26em 0}
+
+  .anat{margin:34px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:24px 16px;box-shadow:var(--shadow)}
+  .atitle{font-family:"Space Mono";font-size:.74rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-bright);text-align:center;margin-bottom:4px}
+  .asub{font-family:"Space Mono";font-size:.76rem;color:var(--muted);text-align:center;margin-bottom:22px}
+  .acanvas{background:var(--paper);border-radius:11px;padding:20px 10px 14px;overflow-x:auto}
+  .acanvas svg{display:block;margin:0 auto;max-width:100%;height:auto}
+  .acmp{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+  @media (max-width:620px){.acmp{grid-template-columns:1fr}}
+  .ac{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:14px 12px;text-align:center}
+  .ac.no{border-color:rgba(215,113,73,.45)} .ac.yes{border-color:rgba(87,184,127,.42)}
+  .ac .k{font-family:"Space Mono";font-size:.63rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px}
+  .ac.no .k{color:var(--clay)} .ac.yes .k{color:var(--green)}
+  .ac .v{font-family:"Space Mono";font-weight:700;font-size:1.35rem;color:#CFE2E0}
+  .ac .d{font-family:"Space Mono";font-size:.66rem;color:var(--muted);margin-top:9px;line-height:1.6}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar2{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar2 span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:490px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.02rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  .bigdec{font-family:"Space Mono";font-weight:700;font-size:clamp(1.45rem,4.8vw,2.15rem);color:var(--ink);letter-spacing:.03em}
+  .bigfrac{font-family:"Space Mono";font-weight:700;font-size:clamp(1.4rem,4.6vw,2.05rem);color:var(--ink);
+    display:inline-flex;align-items:center;gap:.3em;flex-wrap:wrap;justify-content:center}
+  .workbox{display:inline-block;background:#EFE9DA;border-radius:10px;padding:13px 20px;
+    font-family:"Space Mono";font-weight:700;font-size:clamp(.86rem,2.6vw,1.04rem);color:var(--ink);line-height:2.2;text-align:left}
+  .workbox .lbl{font-family:"IBM Plex Sans";font-weight:500;font-size:.7rem;color:#7A8887;letter-spacing:.09em;text-transform:uppercase;display:block;margin-bottom:7px}
+  .workbox .row{display:flex;align-items:center;gap:.28em;flex-wrap:wrap}
+  .workbox .dim{color:#8A9897}
+  /* the remainder chain, now able to show a loop */
+  .chain{display:inline-flex;flex-direction:column;gap:4px;font-family:"Space Mono";font-weight:700}
+  .chain .lane{display:flex;align-items:center}
+  .chain .cell{min-width:2.5em;text-align:center;font-size:1rem;color:var(--ink)}
+  .chain .cell.hit{color:#B07800;background:#FBF0D8;border-radius:5px}
+  .chain .arrow{color:#8A9897;font-size:.8rem;padding:0 .1em}
+  .chain .lab{font-family:"IBM Plex Sans";font-weight:500;font-size:.66rem;color:#7A8887;
+    min-width:6.4em;text-align:right;padding-right:.6em;letter-spacing:.05em}
+  .chain .dig{color:#2A6E68}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1.04rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.5}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"Space Mono";font-weight:700;letter-spacing:.03em;display:inline-flex;align-items:center;gap:.15em;flex-wrap:wrap}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500;letter-spacing:0;font-size:.95rem;display:inline;line-height:1.45}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .feedback .note{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed #C6BFAD;color:#5C6E6D;font-style:italic}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">0.3̄</span> Repetend &amp; Period</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 10 · repeating decimals</div>
+    <h1>The bar covers the repeat<br><span class="hl">and only the repeat.</span></h1>
+    <p class="lede">Two words, and they are not interchangeable. The <strong>repetend</strong> is the block of digits that recurs; the <strong>period</strong> is how long that block is. And the bar goes over the repetend <em>exactly</em> — not over the digits that happen to sit in front of it, and never left off altogether.</p>
+
+    <div class="anat">
+      <div class="atitle">0.8333… — the anatomy</div>
+      <div class="asub">one digit waits, then a single digit repeats forever</div>
+      <div class="acanvas" id="heroAnat"></div>
+      <div class="acmp" id="heroCmp"></div>
+    </div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>The digit in front gets swept into the bar, and it changes the number.</b> Your notes open with <code>0.8333…</code>, and that is the right place to start because the 8 sits immediately before the repeat where it is easy to include by accident. Written correctly the repetend is <b>3</b> and the period is <b>1</b>. Written as <code>0.83</code> with a bar over both digits it says <code>0.838383…</code>, which is a different number. <b>And leaving the bar off is not a small omission</b> — <code>0.272727</code> without a bar claims the decimal <em>stops</em> there, which is false. <b>One more convention:</b> the repetend is always the <em>shortest</em> block that works, starting as early as it can. Marking <code>1818</code> as the repetend of <code>0.181818…</code> describes the number correctly but names the wrong block.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–3 fix the vocabulary and move between the bar and the written-out digits. Rung 4 converts fractions. Rungs 5–7 count the non-repeating digits, measure the period, and explain why it is bounded. Rungs 8–9 read the remainder chain and pick the correct notation.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Repeats found by remainder</h3><p>Every decimal comes from real long division, and the repeat is detected when a remainder recurs — never by inspecting a floating-point number.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>Shortest block, earliest start</h3><p>That is the convention throughout, and a doubled block is offered as a distractor — correct as a description, wrong as a repetend.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar2"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Name the parts</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>Notation that carries a claim</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>The bar is a statement</h3><p>It asserts that these digits go on forever. Misplacing it or omitting it does not make the writing untidy — it makes it false.</p></div>
+      <div class="why-card"><h3>Remainders explain everything</h3><p>Why a decimal repeats, where the repeat starts, and how long it can be are all answered by watching the remainders.</p></div>
+      <div class="why-card"><h3>The pre-period is the old rule</h3><p>How many digits wait before the cycle begins is <code>max(m, n)</code> — the very quantity that counted decimal places for terminating fractions.</p></div>
+    </div>
+    <p class="closing">A repeating decimal is exact, not approximate — the bar is what makes it so. <b>Divide until a remainder comes back, mark the block between its two appearances, and put the bar over that block and nothing else.</b></p>
+  </section>
+
+  <footer>Repetend &amp; Period · 0.8333… = 0.8‾3, period 1 · 2/11 period 2 · 1/7 period 6 · period &lt; denominator</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||1;};
+const fmt=n=>n.toLocaleString('en-US');
+const F=(n,d)=>`<span class="mixnum"><span class="frac"><span class="fn">${n}</span><span class="fd">${d}</span></span></span>`;
+const EX=(b,e)=>`<span class="ex">${b}<sup>${e}</sup></span>`;
+function simp(n,d){const g=gcd(n,d);return [n/g,d/g];}
+
+/* ---- long division, tracking remainders ----
+   The standard algorithm stops the moment a remainder recurs, which yields the
+   SHORTEST repetend starting at the EARLIEST possible position. That is the
+   convention used throughout this ladder. */
+function divide(n,d,maxDigits){
+  maxDigits=maxDigits||400;
+  const intPart=Math.floor(n/d);
+  let r=n%d;
+  const digits=[], rems=[r];
+  const seen=new Map(); let repStart=-1;
+  while(r!==0&&digits.length<maxDigits){
+    if(seen.has(r)){ repStart=seen.get(r); break; }
+    seen.set(r,digits.length);
+    const v=r*10;
+    digits.push(Math.floor(v/d));
+    r=v%d;
+    rems.push(r);
+  }
+  if(r===0) return {intPart,pre:digits.join(''),rep:'',rems,digits,terminates:true,truncated:false};
+  if(repStart<0){
+    /* ran out of digits before any remainder recurred — the period is longer than
+       maxDigits. Say so rather than reporting a repetend that is not one. */
+    return {intPart,pre:digits.join(''),rep:'',rems,digits,terminates:false,truncated:true};
+  }
+  return {intPart,pre:digits.slice(0,repStart).join(''),rep:digits.slice(repStart).join(''),
+          rems,digits,repStart,terminates:false,truncated:false};
+}
+/* how many digits wait before the cycle begins: max(m, n) of the denominator */
+function preLen(d){ let v=d,m=0,n=0;
+  while(v%2===0){v/=2;m++;} while(v%5===0){v/=5;n++;} return Math.max(m,n); }
+function coprimePart(d){ let v=d; while(v%2===0)v/=2; while(v%5===0)v/=5; return v; }
+function factorHTML(d){
+  const parts=[]; let v=d;
+  for(let p=2;p*p<=v;p++){ let e=0; while(v%p===0){v/=p;e++;} if(e) parts.push(e===1?String(p):EX(p,e)); }
+  if(v>1) parts.push(String(v));
+  return parts.join(' · ')||'1';
+}
+/* display */
+const BAR=s=>`<span class="bar">${s}</span>`;
+const decHTML=x=>`${x.intPart}.${x.pre}${x.rep?BAR(x.rep):''}`;
+const decTXT =x=>`${x.intPart}.${x.pre}${x.rep?'('+x.rep+')':''}`;
+/* written out longhand, no bar */
+function longhand(x,minLen){
+  minLen=minLen||8;
+  let s=x.pre;
+  while(s.length<minLen) s+=x.rep;
+  return `${x.intPart}.${s}…`;
+}
+function chainHTML(res,markLoop){
+  const rs=res.rems;
+  const loopAt = markLoop&&!res.terminates ? res.repStart : -1;
+  const cells=rs.map((v,i)=>{
+    const hit = loopAt>=0 && (i===loopAt||i===rs.length-1);
+    return `<span class="cell ${hit?'hit':''}">${v}</span>`+(i<rs.length-1?'<span class="arrow">→</span>':'');
+  });
+  const digs=res.digits.map((v,i)=>
+    `<span class="cell dig">${v}</span>`+(i<res.digits.length-1?'<span class="arrow">&nbsp;</span>':''));
+  return `<div class="chain">
+    <div class="lane"><span class="lab">remainders</span>${cells.join('')}</div>
+    <div class="lane"><span class="lab">digits</span><span class="cell"></span><span class="arrow">&nbsp;</span>${digs.join('')}</div>
+  </div>`;
+}
+
+function four(correct,cands,pad){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c!==null&&c!==undefined&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<200){ const c=pad?pad(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+function fourKeyed(items,correctKey,pad){
+  const seen=new Set(); const uniq=[];
+  for(const it of items){ if(uniq.length>=4)break; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  let g=1;
+  while(uniq.length<4&&g<80){ const it=pad?pad(g):null; g++; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  const sh=shuffle(uniq.slice(0,4));
+  return {options:sh.map(o=>({text:o.html})), answer:sh.findIndex(o=>o.key===correctKey)};
+}
+/* a reduced fraction that repeats, optionally with a pre-period */
+function repeater(wantPre){
+  const WITH=[6,12,14,15,18,22,24,28,30,33,35,44,45,48,55,66,75,80*0+12];
+  const WITHOUT=[3,7,9,11,13,21,27,33*0+37,41,11,7,13,3,9,27,11];
+  for(let t=0;t<400;t++){
+    const d = wantPre===undefined ? pick(WITH.concat(WITHOUT))
+            : wantPre ? pick([6,12,14,18,22,24,28,30,44,48,15,35,45,55])
+                      : pick([3,7,9,11,13,21,27,33,37,41,7,11,13]);
+    const n=rand(1,d-1);
+    if(gcd(n,d)!==1) continue;
+    const res=divide(n,d);
+    if(res.terminates||res.truncated) continue;
+    if(wantPre===true && res.pre.length===0) continue;
+    if(wantPre===false && res.pre.length!==0) continue;
+    if(res.rep.length>8) continue;
+    return {n,d,res};
+  }
+  return {n:5,d:6,res:divide(5,6)};
+}
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — name the parts
+  1(){
+    const {n,d,res}=repeater();
+    const askPeriod=rand(0,1)===1;
+    if(askPeriod){
+      const correct=String(res.rep.length);
+      const cands=[String(res.pre.length+res.rep.length),String(res.rep.length+1),
+                   String(Math.max(1,res.pre.length))].filter(v=>v!==correct);
+      const r=four(correct,cands,g=>String(res.rep.length+g+1));
+      return {prompt:'What is the <b>period</b> of this decimal?',
+        seq:`<div class="bigdec">${decHTML(res)}</div>`,mono:true,...r,
+        _meta:{rung:1,n,d,pre:res.pre,rep:res.rep,askPeriod,correct},
+        why:`The period is the <b>length of the repetend</b> — the block under the bar is <b>${res.rep}</b>, so the period is <b>${res.rep.length}</b>.
+          ${res.pre?`<span class="note">The ${res.pre.length} digit${res.pre.length>1?'s':''} before the bar (${res.pre}) ${res.pre.length>1?'are':'is'} not part of the repetend and ${res.pre.length>1?'do':'does'} not count towards the period.</span>`:''}`};
+    }
+    const items=[
+      {key:'ok',  html:res.rep},
+      {key:'all', html:res.pre+res.rep},
+      {key:'pre', html:res.pre||'0'},
+      /* the first digit alone IS the repetend when the period is 1 — skip it there */
+      res.rep.length>1?{key:'one', html:res.rep[0]}:null,
+      {key:'dbl', html:res.rep+res.rep},
+      {key:'rev', html:res.rep.split('').reverse().join('')},
+    ].filter(Boolean);
+    const r=fourKeyed(items,'ok',g=>({key:'p'+g,html:String(Number(res.rep)+g)}));
+    return {prompt:'What is the <b>repetend</b> of this decimal?',
+      seq:`<div class="bigdec">${decHTML(res)}</div>`,mono:true,...r,
+      _meta:{rung:1,n,d,pre:res.pre,rep:res.rep,askPeriod,correct:res.rep},
+      why:`The repetend is the block that recurs — the digits <em>under the bar</em>: <b>${res.rep}</b>.
+        ${res.pre?`<span class="note">${res.pre} comes before the bar and never repeats, so it is not part of the repetend. Including it would name a different number.</span>`
+                 :`<span class="note">Here the repeat starts immediately after the point, so there is nothing in front of the bar at all.</span>`}`};
+  },
+
+  // 2 — where does the bar go? (the flagship)
+  2(){
+    const {n,d,res}=repeater(true);           /* always a non-repeating digit in front */
+    const written=longhand(res,7);
+    const items=[
+      {key:'ok',   html:`${res.intPart}.${res.pre}${BAR(res.rep)}`},
+      {key:'wide', html:`${res.intPart}.${BAR(res.pre+res.rep)}`},
+      {key:'none', html:`${res.intPart}.${(res.pre+res.rep.repeat(4)).slice(0,6)}`},
+      {key:'part', html:`${res.intPart}.${res.pre}${res.rep}${BAR(res.rep)}`},
+    ];
+    const r=fourKeyed(items,'ok');
+    return {prompt:`Write this with the bar in the right place.`,
+      seq:`<div class="bigdec">${written}</div>`,mono:true,stack:true,...r,
+      _meta:{rung:2,n,d,pre:res.pre,rep:res.rep,written,correct:decTXT(res)},
+      why:`The <b>${res.pre}</b> happens once and then <b>${res.rep}</b> repeats forever, so the bar covers <b>${res.rep}</b> alone: <b>${decHTML(res)}</b>.
+        <span class="note">A bar over ${res.pre}${res.rep} would say ${res.intPart}.${(res.pre+res.rep).repeat(3)}… — a different number. Writing the digits with no bar at all says the decimal <em>stops</em>, which is a different and false claim.</span>`};
+  },
+
+  // 3 — read the bar back
+  3(){
+    const {n,d,res}=repeater();
+    const correct=longhand(res,8);
+    /* Distractors must differ in MEANING, not just in string. Repeating "33" is the
+       same number as repeating "3", and reversing a one-digit block changes nothing —
+       so those two only work when the period is longer than one. */
+    const cands=[];
+    if(res.pre) cands.push(longhand({intPart:res.intPart,pre:'',rep:res.pre+res.rep},8));
+    if(res.rep.length>1){
+      const rev=res.rep.split('').reverse().join('');
+      if(rev!==res.rep) cands.push(longhand({intPart:res.intPart,pre:res.pre,rep:rev},8));
+      cands.push(longhand({intPart:res.intPart,pre:res.pre+res.rep[0],rep:res.rep.slice(1)},8));
+    }
+    cands.push(`${res.intPart}.${res.pre}${res.rep}`);          /* claims it stops */
+    const swap=String((Number(res.rep[0])+1)%10)+res.rep.slice(1);
+    cands.push(longhand({intPart:res.intPart,pre:res.pre,rep:swap},8));
+    const r=four(correct,cands.filter(v=>v!==correct),
+      g=>{const alt=String((Number(res.rep[0])+g+2)%10)+res.rep.slice(1);
+          const v=longhand({intPart:res.intPart,pre:res.pre,rep:alt},8);
+          return v!==correct?v:null;});
+    return {prompt:'Written out longhand, this is:',
+      seq:`<div class="bigdec">${decHTML(res)}</div>`,mono:true,stack:true,...r,
+      _meta:{rung:3,n,d,pre:res.pre,rep:res.rep,correct},
+      why:`Only the barred digits repeat, so ${decHTML(res)} runs <b>${correct}</b>.
+        ${res.pre?`<span class="note">The ${res.pre} appears exactly once. Repeating it as well would be reading a bar that is not there.</span>`
+                 :`<span class="note">The bar starts immediately, so the block ${res.rep} begins again the moment it finishes.</span>`}`};
+  },
+
+  // 4 — convert a fraction and mark it
+  4(){
+    const BANK=[[2,11],[1,7],[5,18],[5,6],[1,3],[7,12],[3,22],[4,9],[1,6],[5,11],[2,7],[7,15]];
+    let [n,d]=pick(BANK.concat([[0,0]]));
+    if(d===0){ const g=repeater(); n=g.n; d=g.d; }
+    const res=divide(n,d);
+    if(res.terminates) return GEN[4]();
+    const items=[
+      {key:'ok',   html:decHTML(res)},
+      {key:'wide', html:`${res.intPart}.${BAR(res.pre+res.rep)}`},
+      {key:'dbl',  html:`${res.intPart}.${res.pre}${BAR(res.rep+res.rep)}`},
+      {key:'none', html:`${res.intPart}.${(res.pre+res.rep.repeat(4)).slice(0,6)}`},
+      res.rep.length>1?{key:'one', html:`${res.intPart}.${res.pre}${BAR(res.rep[0])}`}:null,
+      {key:'shift',html:`${res.intPart}.${res.pre}${res.rep}${BAR(res.rep)}`},
+    ].filter(Boolean);
+    const r=fourKeyed(items,'ok',g=>({key:'p'+g,
+      html:`${res.intPart}.${res.pre}${BAR(res.rep.repeat(g+2))}`}));
+    return {prompt:'Convert to a decimal, with the bar correctly placed.',
+      seq:`<div class="bigfrac">${F(n,fmt(d))}</div>`,...r,
+      _meta:{rung:4,n,d,pre:res.pre,rep:res.rep,correct:decTXT(res)},
+      why:`${F(n,fmt(d))} = <b>${decHTML(res)}</b> — ${res.pre?`${res.pre.length} digit${res.pre.length>1?'s':''} first, then `:''}a repetend of <b>${res.rep}</b>, period ${res.rep.length}.
+        <span class="note">The doubled block ${res.rep+res.rep} describes the same number correctly but is <em>not</em> the repetend: the convention is always the <b>shortest</b> block that works, starting as early as it can.</span>`};
+  },
+
+  // 5 — how many digits before the repeat starts?
+  5(){
+    const {n,d,res}=repeater(true);
+    const k=preLen(d);
+    const correct=String(k);
+    const cands=[String(k+1),String(Math.max(0,k-1)),String(res.rep.length)].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>String(k+g+1));
+    return {prompt:'How many digits appear <b>before</b> the repeating block begins?',
+      seq:`<div class="bigfrac">${F(n,fmt(d))}</div>
+           <div class="workbox" style="margin-top:14px"><span class="lbl">the denominator, factored</span>
+             <div class="row">${fmt(d)} = ${factorHTML(d)}</div></div>`,
+      mono:true,...r,
+      _meta:{rung:5,n,d,k,pre:res.pre,rep:res.rep,correct},
+      why:`<b>${k}</b> — and it is ${F(n,fmt(d))} = ${decHTML(res)}, with ${res.pre} waiting before the cycle starts.
+        <span class="note">The count is <b>max(m, n)</b> for the 2s and 5s in the denominator — exactly the quantity that gave the number of decimal places when a fraction terminated. Here it measures the delay instead of the length, which is a rather satisfying reuse of the same fact.</span>`};
+  },
+
+  // 6 — period length
+  6(){
+    const BANK=[[1,7],[1,11],[1,13],[1,3],[1,9],[1,37],[1,41],[2,11],[1,27],[1,21],[1,33]];
+    let [n,d]=pick(BANK.concat([[0,0]]));
+    if(d===0){ const g=repeater(false); n=g.n; d=g.d; }
+    const res=divide(n,d);
+    if(res.terminates) return GEN[6]();
+    const L=res.rep.length;
+    const correct=String(L);
+    const cands=[String(d),String(d-1),String(L+1),String(Math.max(1,L-1))].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>String(L+g+1));
+    return {prompt:'What is the <b>period</b> of this fraction\u2019s decimal?',
+      seq:`<div class="bigfrac">${F(n,fmt(d))}</div>`,mono:true,...r,
+      _meta:{rung:6,n,d,L,correct},
+      why:`${F(n,fmt(d))} = ${decHTML(res)}, so the repetend is <b>${res.rep}</b> and the period is <b>${L}</b>.
+        <span class="note">A period can never reach the denominator: dividing by ${d} leaves at most ${coprimePart(d)-1} different non-zero remainders once the 2s and 5s are stripped out, so a remainder must recur within that many steps. Here ${L} ${L===coprimePart(d)-1?'is exactly that maximum':'is comfortably inside it'}.</span>`};
+  },
+
+  // 7 — why the period is bounded
+  7(){
+    const d=pick([7,11,13,17,19,23,29,31]);
+    const res=divide(1,d);
+    const correct=`Because dividing by ${d} leaves only ${d-1} possible non-zero remainders, so one must come back`;
+    const cands=[`Because ${d} is a prime number`,
+                 `Because the digits 0 to 9 must all appear first`,
+                 `Because ${d} is smaller than 100`];
+    const r=four(correct,cands);
+    return {prompt:`Why can the decimal for ${F(1,d)} never have a period of <b>${d}</b> or more?`,
+      seq:`<div class="workbox"><span class="lbl">the remainders, in order</span>
+            <div class="row">${res.rems.slice(0,Math.min(res.rems.length,12)).join(' → ')}${res.rems.length>12?' → …':''}</div></div>`,
+      wordy:true,stack:true,...r,
+      _meta:{rung:7,d,L:res.rep.length,correct},
+      why:`Every step divides by ${d}, and a non-zero remainder can only be one of <b>${d-1}</b> values. Do ${d} divisions and some remainder must appear twice — and once a remainder returns, every digit after it repeats too.
+        <span class="note">That is the pigeonhole principle, and it is Lesson 6's remainders doing new work. Here the period is ${res.rep.length}, comfortably under the bound of ${d-1}.</span>`};
+  },
+
+  // 8 — spot the remainder that comes back
+  8(){
+    let n,d,res;
+    for(let t=0;t<300;t++){
+      const g=repeater(); n=g.n; d=g.d; res=g.res;
+      if(res.rems.length>=3&&res.rems.length<=9&&!res.terminates) break;
+    }
+    const loopVal=res.rems[res.repStart];
+    const correct=String(loopVal);
+    const others=res.rems.filter((v,i)=>i!==res.repStart&&i!==res.rems.length-1);
+    const cands=[...new Set(others.map(String))].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>String(loopVal+g+1));
+    return {prompt:`Dividing ${n} by ${d}, the chain of remainders is below. <b>Which remainder comes back?</b>`,
+      seq:chainHTML(res,false),mono:true,...r,
+      _meta:{rung:8,n,d,rems:res.rems,repStart:res.repStart,loopVal,correct},
+      why:`<b>${loopVal}</b> appears at step ${res.repStart+1} and again at the end — and once a remainder returns, the whole calculation from that point on must repeat, because the next step depends on nothing else.
+        <span class="note">That is why ${F(n,fmt(d))} = ${decHTML(res)}: the digits between the two appearances of ${loopVal} are exactly the repetend <b>${res.rep}</b>. A chain that reaches <b>0</b> instead is a decimal that stops — the only two things a remainder chain can do.</span>`};
+  },
+
+  // 9 — which notation is correct?
+  9(){
+    const {n,d,res}=repeater();
+    const items=[
+      {key:'ok',   html:decHTML(res)},
+      {key:'wide', html:`${res.intPart}.${BAR(res.pre+res.rep)}`},
+      {key:'dbl',  html:`${res.intPart}.${res.pre}${BAR(res.rep+res.rep)}`},
+      {key:'none', html:`${res.intPart}.${(res.pre+res.rep.repeat(4)).slice(0,Math.max(4,res.pre.length+res.rep.length+1))}`},
+      {key:'shift',html:`${res.intPart}.${res.pre}${res.rep[0]}${BAR(res.rep.slice(1)+res.rep[0])}`},
+    ];
+    const r=fourKeyed(items,'ok');
+    return {prompt:`All four describe a decimal. Which is the <b>correct notation</b> for ${F(n,fmt(d))}?`,...r,
+      _meta:{rung:9,n,d,pre:res.pre,rep:res.rep,correct:decTXT(res)},
+      why:`<b>${decHTML(res)}</b> — bar over ${res.rep} and nothing else, the shortest block, starting as early as it can.
+        <span class="note">Of the others: a wider bar names a different number; a doubled block ${res.rep+res.rep} is a true description but the wrong repetend; and no bar at all claims the decimal terminates.</span>`};
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Name the parts',short:'repetend and period'},
+  {id:2,title:'Where does the bar go?',short:'the flagship'},
+  {id:3,title:'Read the bar back',short:'write it longhand'},
+  {id:4,title:'Convert and mark',short:'2/11, 1/7, 5/18'},
+  {id:5,title:'Before the repeat',short:'max(m, n) again'},
+  {id:6,title:'Period length',short:'1/7 has period 6'},
+  {id:7,title:'Why it is bounded',short:'only so many remainders'},
+  {id:8,title:'The remainder returns',short:'read the chain'},
+  {id:9,title:'Correct notation',short:'four descriptions, one right'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='repetendPeriodLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt;
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>22);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  /* rung 8 highlights the recurring remainder once the answer is in */
+  const m=currentQ._meta;
+  if(m&&m.rung===8) qseqEl.innerHTML=chainHTML(divide(m.n,m.d),true);
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero ============ */
+(function(){
+  /* 0.8333… with each part named.
+     The captions are far wider than the 38px between the digits they describe, so
+     they are pulled apart: one goes out to the LEFT on a leader, the other DOWN. */
+  const W=540,H=150, INK='#12333A';
+  const digits=['0','.','8','3','3','3','…'];
+  const x0=232, dw=38;
+  const xOf=i=>x0+i*dw;
+  const yD=64;
+  let g='';
+  digits.forEach((c,i)=>{
+    const isRep=i>=3&&i<=5;
+    g+=`<text x="${xOf(i)}" y="${yD}" font-family="Space Mono" font-size="30" font-weight="700"
+          fill="${i===2?'#C98F16':isRep?'#1D6E68':INK}" text-anchor="middle">${c}</text>`;
+  });
+  /* the bar covers the first repeating digit only */
+  g+=`<line x1="${xOf(3)-13}" y1="${yD-28}" x2="${xOf(3)+13}" y2="${yD-28}" stroke="#1D6E68" stroke-width="3"/>`;
+
+  /* the 8 — brace, then a leader out to the LEFT, caption right-anchored */
+  const ay=yD+14;
+  g+=`<path d="M${xOf(2)-13},${ay} v7 h26 v-7" fill="none" stroke="#C98F16" stroke-width="2"/>`;
+  g+=`<path d="M${xOf(2)},${ay+7} v11 H${x0-42}" fill="none" stroke="#C98F16" stroke-width="2"/>`;
+  g+=`<text x="${x0-50}" y="${ay+22}" font-family="Space Mono" font-size="12" font-weight="700"
+        fill="#B07800" text-anchor="end">happens once</text>`;
+
+  /* the repetend — brace dropped lower, caption centred well below */
+  const by=ay+26;
+  g+=`<path d="M${xOf(3)-14},${ay} v${by-ay} h28 v-${by-ay}" fill="none" stroke="#1D6E68" stroke-width="2"/>`;
+  g+=`<line x1="${xOf(3)}" y1="${by}" x2="${xOf(3)}" y2="${by+10}" stroke="#1D6E68" stroke-width="2"/>`;
+  g+=`<text x="${xOf(3)}" y="${by+26}" font-family="Space Mono" font-size="12" font-weight="700"
+        fill="#1D6E68" text-anchor="middle">repetend — repeats forever</text>`;
+  g+=`<text x="${xOf(3)}" y="${by+43}" font-family="Space Mono" font-size="11"
+        fill="#5C6E6D" text-anchor="middle">one digit long, so the period is 1</text>`;
+  document.getElementById('heroAnat').innerHTML=
+    `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+
+  document.getElementById('heroCmp').innerHTML=
+    `<div class="ac yes"><div class="k">correct</div>
+       <div class="v">0.8${'<span class="bar">3</span>'}</div>
+       <div class="d">repetend <b>3</b>, period <b>1</b><br>= 0.8333333…</div></div>
+     <div class="ac no"><div class="k">the bar swept too wide</div>
+       <div class="v">0.${'<span class="bar">83</span>'}</div>
+       <div class="d">this says <b>0.838383…</b><br>a different number entirely</div></div>`;
+})();
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
