@@ -1,0 +1,751 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rational or Irrational? — a pattern is not a repeating block</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  sup{font-size:.62em;vertical-align:super;line-height:0}
+  .ex{display:inline-block;white-space:nowrap}
+  .bar{text-decoration:overline;text-decoration-thickness:2px}
+  .rad{display:inline-flex;align-items:stretch;line-height:1;vertical-align:middle}
+  .rad .sym{font-family:"Space Mono";padding-right:.05em}
+  .rad .rcd{border-top:1.6px solid currentColor;padding:.12em .18em 0 .12em}
+
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.15rem;box-shadow:var(--shadow);font-family:"Space Mono"}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .mixnum{display:inline-flex;align-items:center;gap:.18em;line-height:1;vertical-align:middle}
+  .frac{display:inline-flex;flex-direction:column;align-items:center;text-align:center;
+        line-height:1.08;font-size:.68em;font-weight:700}
+  .frac .fn{border-bottom:1.7px solid currentColor;padding:0 .26em .1em}
+  .frac .fd{padding:.1em .26em 0}
+
+  .duo{margin:34px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:780px){.duo{grid-template-columns:1fr}}
+  .panel{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:20px 16px;box-shadow:var(--shadow)}
+  .panel.rat{border-color:rgba(87,199,190,.42)} .panel.irr{border-color:rgba(239,181,63,.45)}
+  .pk{font-family:"Space Mono";font-size:.66rem;letter-spacing:.11em;text-transform:uppercase;text-align:center;margin-bottom:5px}
+  .panel.rat .pk{color:var(--teal-bright)} .panel.irr .pk{color:var(--amber)}
+  .pkk{font-family:"Space Mono";font-size:.72rem;color:var(--muted);text-align:center;margin-bottom:16px}
+  .num{font-family:"Space Mono";font-weight:700;font-size:1.02rem;color:#CFE2E0;text-align:center;
+    padding:9px 6px;border-radius:9px;background:rgba(255,255,255,.04);margin-bottom:7px}
+  .num small{display:block;font-weight:400;font-size:.7rem;color:var(--muted);margin-top:5px;letter-spacing:.02em}
+  .num.hard{background:rgba(215,113,73,.14);box-shadow:inset 0 0 0 1px rgba(215,113,73,.35)}
+  .num.hard small{color:#F0A17B}
+  .pfoot{text-align:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line);
+    font-family:"Space Mono";font-size:.73rem;color:var(--muted);line-height:1.75}
+  .pfoot b{color:var(--paper)}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar2{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar2 span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num2{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num2{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num2{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:490px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.02rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .story{background:#EFE9DA;border-left:3px solid var(--teal);border-radius:0 10px 10px 0;
+    padding:14px 16px;margin:12px 0 4px;font-size:1.01rem;color:var(--ink);line-height:1.62}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  .qseq svg{max-width:100%;height:auto}
+  .bignum{font-family:"Space Mono";font-weight:700;font-size:clamp(1.35rem,4.4vw,1.95rem);color:var(--ink);letter-spacing:.03em}
+  .workbox{display:inline-block;background:#EFE9DA;border-radius:10px;padding:14px 20px;
+    font-family:"Space Mono";font-weight:700;font-size:clamp(.84rem,2.5vw,1.02rem);color:var(--ink);line-height:2.1;text-align:left;
+    max-width:100%;overflow-wrap:anywhere}
+  .workbox .lbl{font-family:"IBM Plex Sans";font-weight:500;font-size:.7rem;color:#7A8887;letter-spacing:.09em;text-transform:uppercase;display:block;margin-bottom:8px}
+  .workbox .row{display:flex;align-items:center;gap:.28em;flex-wrap:wrap}
+  .workbox .dim{color:#8A9897}
+  .workbox .up{color:#B07800}
+  .workbox .q{color:var(--clay)}
+  .workbox .rule{border-top:1.6px solid #C6BFAD;margin:7px 0}
+  .proof{display:inline-block;background:#EFE9DA;border-radius:10px;padding:15px 20px;text-align:left;
+    font-family:"Space Mono";font-size:.9rem;color:var(--ink);line-height:2.05}
+  .proof .n{color:#8A9897;font-size:.82em;margin-right:.5em}
+  .proof .hit{color:#B07800;font-weight:700}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1.04rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.5}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"Space Mono";font-weight:700;letter-spacing:.03em;display:inline-flex;align-items:center;gap:.15em;flex-wrap:wrap;overflow-wrap:anywhere}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500;letter-spacing:0;font-size:.95rem;display:inline;line-height:1.45}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px;overflow-wrap:anywhere}
+  .feedback .note{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed #C6BFAD;color:#5C6E6D;font-style:italic}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">√2</span> Rational or Irrational?</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 12 · rational &amp; irrational numbers</div>
+    <h1>A pattern is not<br><span class="hl">a repeating block.</span></h1>
+    <p class="lede">Your notes give three characteristics: infinitely many digits to the <strong>right</strong> of the point, <strong>no repeating block</strong>, and <strong>not expressible as a/b</strong>. The first two together <em>are</em> the third — Lesson 10 proved the fractions are exactly the terminating-and-repeating decimals, and this is that theorem turned around.</p>
+
+    <div class="duo" id="heroDuo"></div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>You cannot settle this by looking at the digits.</b> <code>1/17</code> begins <code>0.0588235294117647…</code> and looks utterly patternless — but it repeats with a block of sixteen, and it is a fraction by construction. Meanwhile <code>0.1010010001…</code> has an obvious visible pattern and is <em>irrational</em>, because the gaps keep growing so no <em>fixed block</em> ever cycles. A pattern is not a repeating block, and no finite stretch of digits decides anything. <b>Nor does a radical sign.</b> <code>√9 = 3</code> and <code>√0.25 = 0.5</code>; for a whole number the test is whether the radicand is a <em>perfect square</em>, not whether a root is written. <b>And <code>22/7</code> is not π</b> — it is a famous approximation, it is rational, and its decimal repeats with period 6.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–3 fix the three characteristics and dispose of terminating and repeating decimals. Rung 4 is the mixed classification, rungs 5–7 handle square roots, famous constants and numbers built to be irrational. Rung 8 is the diagonal of the unit square, and rung 9 combines them.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Decided by structure</h3><p>Every classification comes from the number's construction — perfect squares, or Lesson 10's 2s-and-5s rule — never from how a decimal happens to look.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>The hard cases keep coming</h3><p>Rung 4 always includes at least one of the two deceivers — a rational that looks random, or an irrational that looks patterned.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar2"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">The three characteristics</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>The number line has holes the fractions cannot fill</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>A length you can draw but not write</h3><p>The diagonal of a one-by-one square exists, can be measured, and is not any fraction. That discovery is said to have shocked the people who made it.</p></div>
+      <div class="why-card"><h3>Lesson 10 already did the work</h3><p>Fractions are exactly the terminating-or-repeating decimals. Anything that neither stops nor cycles therefore cannot be a fraction — no new proof needed.</p></div>
+      <div class="why-card"><h3>Appearance proves nothing</h3><p>Sixteen unpredictable digits can still be a sixteenth of a cycle, and an obvious pattern can still fail to repeat. Structure decides; eyes do not.</p></div>
+    </div>
+    <p class="closing">Irrational numbers are not exotic — they outnumber the fractions, and one of them is the diagonal of the simplest square you can draw. <b>Ask how the number was built, not what its digits look like: a ratio of whole numbers is rational, a root of a non-square is not, and a decimal that neither stops nor cycles cannot be a fraction at all.</b></p>
+  </section>
+
+  <footer>Rational or Irrational? · √2 is irrational · √9 = 3 is not · 22/7 repeats with period 6 · 0.1010010001… never cycles</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||1;};
+const F=(n,d)=>`<span class="mixnum"><span class="frac"><span class="fn">${n}</span><span class="fd">${d}</span></span></span>`;
+const BAR=s=>`<span class="bar">${s}</span>`;
+const SQ=s=>`<span class="rad"><span class="sym">√</span><span class="rcd">${s}</span></span>`;
+
+/* ---- classification comes from STRUCTURE, never from inspecting digits ---- */
+const isPerfectSquare=n=>{ if(n<0) return false; const r=Math.round(Math.sqrt(n)); return r*r===n; };
+/* Lesson 10's rule: a fraction terminates iff its reduced denominator is only 2s and 5s */
+function fracTerminates(n,d){
+  let dd=d/gcd(n,d);
+  while(dd%2===0)dd/=2;
+  while(dd%5===0)dd/=5;
+  return dd===1;
+}
+/* long division with remainder tracking, for showing a period */
+function longDiv(n,d,maxDigits){
+  maxDigits=maxDigits||60;
+  const intPart=Math.floor(n/d);
+  let r=n%d; const digits=[]; const seen=new Map(); let repStart=-1;
+  while(r!==0&&digits.length<maxDigits){
+    if(seen.has(r)){ repStart=seen.get(r); break; }
+    seen.set(r,digits.length);
+    const v=r*10; digits.push(Math.floor(v/d)); r=v%d;
+  }
+  if(r===0) return {intPart,pre:digits.join(''),rep:'',terminates:true};
+  if(repStart<0) return {intPart,pre:digits.join(''),rep:'',terminates:false,truncated:true};
+  return {intPart,pre:digits.slice(0,repStart).join(''),rep:digits.slice(repStart).join(''),terminates:false};
+}
+const decHTML=x=>`${x.intPart}.${x.pre}${x.rep?BAR(x.rep)+'…':''}`;
+/* first n digits of a decimal expansion, for display */
+function expandTo(n,d,k){
+  let s=`${Math.floor(n/d)}.`; let r=n%d;
+  for(let i=0;i<k;i++){ const v=r*10; s+=Math.floor(v/d); r=v%d; }
+  return s+'…';
+}
+
+function four(correct,cands,pad){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c!==null&&c!==undefined&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<200){ const c=pad?pad(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+function fourKeyed(items,correctKey,pad){
+  const seen=new Set(); const uniq=[];
+  for(const it of items){ if(uniq.length>=4)break; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  let g=1;
+  while(uniq.length<4&&g<80){ const it=pad?pad(g):null; g++; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  const sh=shuffle(uniq.slice(0,4));
+  return {options:sh.map(o=>({text:o.html})), answer:sh.findIndex(o=>o.key===correctKey)};
+}
+
+/* ---- the number bank: every entry carries its reason ---- */
+const IRRATIONAL=[
+  {html:'π', why:'π is irrational — its decimal never stops and never cycles. 3.14159265358979…', hard:false},
+  {html:'e', why:'e is irrational — 2.718281828459045…, and the “1828” repeating twice early on is a coincidence, not a cycle.', hard:true},
+  {html:SQ(2), why:'2 is not a perfect square, so √2 is irrational — 1.41421356…', hard:false},
+  {html:SQ(3), why:'3 is not a perfect square, so √3 is irrational.', hard:false},
+  {html:SQ(5), why:'5 is not a perfect square, so √5 is irrational.', hard:false},
+  {html:SQ(10),why:'10 is not a perfect square, so √10 is irrational.', hard:false},
+  {html:SQ(50),why:'50 is not a perfect square, so √50 is irrational (it is 5√2).', hard:false},
+  {html:'0.1010010001…', why:'The gaps between the 1s keep growing — one zero, then two, then three — so no fixed block ever repeats. Irrational, despite the obvious pattern.', hard:true},
+  {html:'0.123456789101112…', why:'The counting numbers written end to end. It has a rule but no repeating block, so it is irrational.', hard:true},
+  {html:'2π', why:'A non-zero rational times an irrational is always irrational, so 2π is irrational.', hard:false},
+  {html:`1 + ${SQ(2)}`, why:'A rational plus an irrational is always irrational, so 1 + √2 is irrational.', hard:true},
+];
+const RATIONAL=[
+  {html:'0.75', why:'0.75 stops, so it is a fraction — 3/4. A terminating decimal is always rational.', hard:false},
+  {html:F(1,4), why:'Any ratio of whole numbers is rational by definition.', hard:false},
+  {html:F(22,7), why:'22/7 is a ratio of whole numbers, so it is rational. Its decimal is 3.'+BAR('142857')+'… — period 6. It is a famous <em>approximation</em> to π, not π.', hard:true},
+  {html:F(1,17), why:'1/17 = 0.'+BAR('0588235294117647')+'… — sixteen digits before it repeats, which looks random but is a perfect cycle. Rational by construction.', hard:true},
+  {html:F(355,113), why:'355/113 is a ratio of whole numbers, so it is rational — another celebrated approximation to π, accurate to six decimal places.', hard:true},
+  {html:SQ(9), why:'9 is a perfect square, so √9 = 3 — rational. A radical sign does not make a number irrational.', hard:true},
+  {html:SQ(16),why:'16 is a perfect square, so √16 = 4 — rational.', hard:true},
+  {html:SQ(25),why:'25 is a perfect square, so √25 = 5 — rational.', hard:true},
+  {html:SQ(144),why:'144 is a perfect square, so √144 = 12 — rational.', hard:true},
+  {html:'0.'+BAR('3')+'…', why:'A repeating decimal is always a fraction — this one is 1/3. Lesson 10 showed how to find it.', hard:false},
+  {html:'0.'+BAR('45')+'…', why:'A repeating decimal is always a fraction — this one is 45/99 = 5/11.', hard:false},
+  {html:'−7', why:'Every integer is rational: −7 is −7/1.', hard:false},
+  {html:'0', why:'0 is rational — it is 0/1.', hard:false},
+  {html:'2.5', why:'2.5 stops, so it is rational — 5/2.', hard:false},
+];
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — the three characteristics
+  1(){
+    const V=rand(0,2);
+    if(V===0){
+      const correct='right';
+      const r=four(correct,['left','both sides','middle']);
+      return {prompt:'Characteristic 1: an irrational number has infinitely many non-zero digits to the ______ of the decimal point.',
+        wordy:true,...r,
+        _meta:{rung:1,V,correct},
+        why:`To the <b>right</b>. Every number has finitely many digits to the left of the point — the digits that run on forever are the fractional ones.
+          <span class="note">“Infinitely many” is half the test and it is the half students drop. 0.25 has no repeating block either, and it is perfectly rational — because its digits stop.</span>`};
+    }
+    if(V===1){
+      const correct='repeating';
+      const r=four(correct,['even','zero','increasing']);
+      return {prompt:'Characteristic 2: an irrational number has no ______ block of digits.',
+        wordy:true,...r,
+        _meta:{rung:1,V,correct},
+        why:`No <b>repeating</b> block. A block that cycles forever is exactly what makes a decimal a fraction.
+          <span class="note">Note the word <em>block</em>. 0.1010010001… has a visible <em>pattern</em>, but no fixed block ever repeats, so it is irrational. Pattern and repeating block are not the same thing.</span>`};
+    }
+    const correct='a ratio of two integers';
+    const r=four(correct,['a decimal','a square root','a negative number']);
+    return {prompt:'Characteristic 3: an irrational number cannot be written as ______.',
+      wordy:true,stack:true,...r,
+      _meta:{rung:1,V,correct},
+      why:`As <b>a ratio of two integers</b> — that is, as ${F('a','b')} with b ≠ 0.
+        <span class="note">And the three characteristics are not independent. Lesson 10 proved that fractions are exactly the decimals that terminate or repeat, so characteristics 1 and 2 together <em>are</em> characteristic 3, said in the language of digits.</span>`};
+  },
+
+  // 2 — terminating decimals
+  2(){
+    let n,d;
+    do{ d=pick([2,4,5,8,10,16,20,25,40,50]); n=rand(1,d*3); }while(n%d===0);
+    const dec=longDiv(n,d);
+    if(!dec.terminates) return GEN[2]();
+    const shown=`${dec.intPart}.${dec.pre}`;
+    const correct='Rational — the digits stop';
+    const cands=['Irrational — the digits do not repeat',
+                 'Irrational — it has a decimal point',
+                 'It cannot be decided from the decimal'];
+    const r=four(correct,cands);
+    return {prompt:'Is this number rational or irrational?',
+      seq:`<div class="bignum">${shown}</div>`,wordy:true,stack:true,...r,
+      _meta:{rung:2,n,d,shown,correct},
+      why:`<b>Rational.</b> The decimal <em>terminates</em>, and a terminating decimal is always a fraction — this one is ${F(n/gcd(n,d),d/gcd(n,d))}.
+        <span class="note">It is true that ${shown} has no repeating block, but that alone proves nothing. An irrational number must fail <em>both</em> of the first two characteristics: it must go on forever <b>and</b> never cycle. This one stops at the first hurdle.</span>`};
+  },
+
+  // 3 — repeating decimals
+  3(){
+    let n,d;
+    do{ d=pick([3,6,7,9,11,12,13,15,22,27]); n=rand(1,d*2); }while(fracTerminates(n,d)||n%d===0);
+    const dec=longDiv(n,d);
+    if(dec.terminates||dec.truncated) return GEN[3]();
+    const correct='Rational — a repeating block always means a fraction';
+    const cands=['Irrational — the digits never stop',
+                 'Irrational — the digits look unpredictable',
+                 'It depends on how long the repeating block is'];
+    const r=four(correct,cands);
+    return {prompt:'Is this number rational or irrational?',
+      seq:`<div class="bignum">${decHTML(dec)}</div>`,wordy:true,stack:true,...r,
+      _meta:{rung:3,n,d,dec,correct},
+      why:`<b>Rational.</b> The block <b>${dec.rep}</b> repeats forever, and Lesson 10 showed that every repeating decimal can be turned into a fraction — this one is ${F(n/gcd(n,d),d/gcd(n,d))}.
+        <span class="note">The digits do go on forever, so characteristic 1 is met. But characteristic 2 fails: there <em>is</em> a repeating block, ${dec.rep.length} digit${dec.rep.length===1?'':'s'} long. Both must fail for a number to be irrational.</span>`};
+  },
+
+  // 4 — which one is irrational? (the flagship)
+  4(){
+    /* always include at least one deceiver: a rational that looks random,
+       or an irrational that looks patterned */
+    const irr=pick(IRRATIONAL);
+    const rats=shuffle(RATIONAL.slice()).slice(0,3);
+    if(!irr.hard&&!rats.some(x=>x.hard)){
+      rats[rand(0,2)]=pick(RATIONAL.filter(x=>x.hard));
+    }
+    const items=[{key:'ok',html:irr.html}].concat(rats.map((x,i)=>({key:'r'+i,html:x.html})));
+    const r=fourKeyed(items,'ok');
+    return {prompt:'Which of these is <b>irrational</b>?',stack:true,...r,
+      _meta:{rung:4,irr,rats,correct:irr.html},
+      why:`<b>${irr.html}</b> — ${irr.why}
+        <span class="note">The others are all rational. ${rats.filter(x=>x.hard).map(x=>x.why).join(' ')||rats[0].why}</span>`};
+  },
+
+  // 5 — square roots
+  5(){
+    const wantRational=rand(0,1)===1;
+    let n;
+    if(wantRational){ n=pick([4,9,16,25,36,49,64,81,100,121,144,169,196,225]); }
+    else { do{ n=rand(2,225); }while(isPerfectSquare(n)); }
+    const root=Math.round(Math.sqrt(n));
+    const correct=wantRational?`Rational — ${SQ(n)} = ${root}`:`Irrational — ${n} is not a perfect square`;
+    /* a wrong option should be wrong about the classification — never assert a
+       false equation like "√96 = 10", which a student might remember as fact */
+    const cands=[wantRational?`Irrational — ${n} is not a perfect square`
+                             :`Rational — it works out to a whole number`,
+                 'Irrational — every square root is irrational',
+                 'Rational — every square root of a whole number is rational'];
+    const r=four(correct,cands);
+    /* the neighbouring perfect squares, revealed afterwards */
+    let lo=Math.floor(Math.sqrt(n)), hi=lo+1;
+    return {prompt:'Is this rational or irrational?',
+      seq:`<div class="bignum">${SQ(n)}</div>`,wordy:true,stack:true,...r,
+      _meta:{rung:5,n,root,wantRational,lo,hi,correct},
+      why: wantRational
+        ? `<b>Rational.</b> ${n} is a perfect square — ${root} × ${root} = ${n} — so ${SQ(n)} = ${root}, a whole number.
+           <span class="note">A radical sign is not a guarantee of irrationality. For a whole number the test is simply whether the radicand is a perfect square.</span>`
+        : `<b>Irrational.</b> ${n} sits between the perfect squares ${lo*lo} and ${hi*hi}, so ${SQ(n)} lies between ${lo} and ${hi} and is not a whole number — and for a whole number, a square root that is not a whole number is always irrational.
+           <span class="note">${lo}<sup>2</sup> = ${lo*lo} &lt; ${n} &lt; ${hi*hi} = ${hi}<sup>2</sup>. Squeezing it between neighbouring perfect squares like this is the method your notes use to approximate it.</span>`};
+  },
+
+  // 6 — the famous ones
+  6(){
+    const FAMOUS=[
+      {h:'π',irr:true,w:'π is irrational — proved in 1761. Its decimal begins 3.14159265358979… and never cycles.'},
+      {h:'e',irr:true,w:'e is irrational — the base of natural logarithms, 2.718281828…'},
+      {h:SQ(2),irr:true,w:'√2 is irrational — the discovery that started all of this.'},
+      {h:F(22,7),irr:false,w:'22/7 is a ratio of whole numbers, hence rational. It approximates π to two decimal places and repeats with period 6.'},
+      {h:F(355,113),irr:false,w:'355/113 is rational — an approximation to π accurate to six decimal places.'},
+      {h:'3.14',irr:false,w:'3.14 terminates, so it is rational — 314/100. It is a rounded value of π, not π.'},
+    ];
+    const askIrr=rand(0,1)===1;
+    const pool=FAMOUS.filter(f=>f.irr===askIrr);
+    const other=FAMOUS.filter(f=>f.irr!==askIrr);
+    const target=pick(pool);
+    const rest=shuffle(other.slice()).slice(0,3);
+    const items=[{key:'ok',html:target.h}].concat(rest.map((x,i)=>({key:'o'+i,html:x.h})));
+    const r=fourKeyed(items,'ok');
+    return {prompt:`Which of these is <b>${askIrr?'irrational':'rational'}</b>?`,stack:true,...r,
+      _meta:{rung:6,target,rest,askIrr,correct:target.h},
+      why:`<b>${target.h}</b> — ${target.w}
+        <span class="note">${askIrr?`The others are all rational: each is a ratio of whole numbers or a decimal that stops. Being <em>close</em> to π does not make a number irrational — 22/7, 355/113 and 3.14 are all approximations, and all three are fractions.`:`The others are all irrational — genuine non-terminating, non-repeating decimals rather than approximations of them.`}</span>`};
+  },
+
+  // 7 — built to be irrational
+  7(){
+    const BUILT=[
+      {h:'0.1010010001…',w:'one zero, then two, then three — the gaps grow forever',
+       q:'Why is this number irrational?',
+       a:'The gaps between the 1s keep growing, so no fixed block ever repeats',
+       d:['It contains only 0s and 1s','The digits are not random enough','It has infinitely many zeros']},
+      {h:'0.123456789101112…',w:'the counting numbers written end to end',
+       q:'Why is this number irrational?',
+       a:'It follows a rule but never settles into a repeating block',
+       d:['It uses every digit','The numbers keep getting bigger','It has no obvious pattern']},
+      {h:'0.2020020002…',w:'one zero, then two, then three, between the 2s',
+       q:'Why is this number irrational?',
+       a:'The gaps between the 2s keep growing, so no fixed block ever repeats',
+       d:['It contains only 0s and 2s','It is not a square root','The digits never reach 3']},
+    ];
+    const b=pick(BUILT);
+    const r=four(b.a,b.d);
+    return {prompt:b.q,
+      seq:`<div class="bignum">${b.h}</div>
+           <div class="workbox" style="margin-top:14px"><span class="lbl">how it is built</span>
+             <div class="row dim">${b.w}</div></div>`,
+      wordy:true,stack:true,...r,
+      _meta:{rung:7,b,correct:b.a},
+      why:`<b>${b.a}.</b>
+        <span class="note">This is the sharpest case in the ladder, because the number obviously <em>has</em> a pattern — you could write out the next hundred digits without hesitating. But characteristic 2 asks for a <b>repeating block</b>: some fixed string that cycles forever. Here every proposed block is eventually broken by a longer run of zeros, so no such block exists, and the number is irrational.</span>`};
+  },
+
+  // 8 — the diagonal of the unit square (recognition level)
+  8(){
+    if(rand(0,1)===1){
+      const correct=SQ(2);
+      const cands=['2',SQ(4),'1.5'];
+      const r=four(correct,cands);
+      return {prompt:'A square has sides of length 1. How long is its <b>diagonal</b>?',
+        seq:`<div id="sqfig"></div>`,figure:true,mono:true,...r,
+        _meta:{rung:8,kind:'diagonal',correct:'sqrt2'},
+        why:`By Pythagoras, the diagonal <em>d</em> satisfies d<sup>2</sup> = 1<sup>2</sup> + 1<sup>2</sup> = 2, so d = <b>${SQ(2)}</b> ≈ 1.41421356…
+          <span class="note">And √2 is irrational. So the simplest square you can draw has a diagonal you can measure with a ruler but cannot write as any fraction — which is what made this discovery matter.</span>`};
+    }
+    const correct='Both a and b turn out to be even, contradicting “lowest terms”';
+    const cands=['a turns out to be larger than b',
+                 'The equation has no solution at all',
+                 'a<sup>2</sup> turns out to be odd'];
+    const r=four(correct,cands);
+    return {prompt:'Your notes prove √2 is irrational by contradiction. <b>What is the contradiction?</b>',
+      seq:`<div class="proof">
+             <div><span class="n">1.</span> Suppose ${SQ(2)} = ${F('a','b')} in <span class="hit">lowest terms</span></div>
+             <div><span class="n">2.</span> Then 2 = ${F('a<sup>2</sup>','b<sup>2</sup>')}, so a<sup>2</sup> = 2b<sup>2</sup></div>
+             <div><span class="n">3.</span> So a<sup>2</sup> is even, and therefore <span class="hit">a is even</span></div>
+             <div><span class="n">4.</span> Write a = 2k: then 4k<sup>2</sup> = 2b<sup>2</sup>, so b<sup>2</sup> = 2k<sup>2</sup></div>
+             <div><span class="n">5.</span> So b<sup>2</sup> is even, and therefore <span class="hit">b is even</span></div>
+           </div>`,
+      wordy:true,stack:true,...r,
+      _meta:{rung:8,kind:'proof',correct},
+      why:`<b>Both a and b turn out to be even</b> — so the fraction ${F('a','b')} was not in lowest terms after all, which contradicts step 1.
+        <span class="note">Since every step follows from the assumption, the assumption itself must be false: there is no such fraction, and √2 is irrational. This is the only proof by contradiction in the course, and it is worth recognising the shape — assume the opposite, follow it faithfully, and arrive somewhere impossible.</span>`};
+  },
+
+  // 9 — combining them
+  9(){
+    const CASES=[
+      {e:`${SQ(2)} · ${SQ(2)}`,ans:'Rational',w:'√2 · √2 = 2, which is rational. Two irrationals can multiply to a rational.'},
+      {e:`${SQ(2)} + ${SQ(2)}`,ans:'Irrational',w:'√2 + √2 = 2√2, a non-zero rational times an irrational — still irrational.'},
+      {e:`${SQ(2)} − ${SQ(2)}`,ans:'Rational',w:'√2 − √2 = 0, which is rational. Two irrationals can subtract to a rational.'},
+      {e:`3 + ${SQ(5)}`,ans:'Irrational',w:'A rational plus an irrational is always irrational — if 3 + √5 were a fraction, subtracting 3 would make √5 one too.'},
+      {e:`${F(1,2)} + ${F(1,3)}`,ans:'Rational',w:'A sum of two fractions is always a fraction — here 5/6.'},
+      {e:`2 · ${SQ(3)}`,ans:'Irrational',w:'A non-zero rational times an irrational is always irrational.'},
+      {e:`π − π`,ans:'Rational',w:'π − π = 0, which is rational.'},
+      {e:`${SQ(9)} + ${SQ(16)}`,ans:'Rational',w:'√9 + √16 = 3 + 4 = 7 — both radicands are perfect squares, so neither root was irrational to begin with.'},
+      {e:`${SQ(2)} · ${SQ(3)}`,ans:'Irrational',w:'√2 · √3 = √6, and 6 is not a perfect square — so the product is irrational.'},
+      {e:`π + 1`,ans:'Irrational',w:'A rational plus an irrational is always irrational.'},
+      {e:`${F(3,4)} · 8`,ans:'Rational',w:'A product of two rationals is always rational — here 6.'},
+      {e:`${SQ(5)} − 2`,ans:'Irrational',w:'An irrational minus a rational is always irrational.'},
+    ];
+    const c=pick(CASES);
+    const correct=c.ans;
+    const opts=shuffle(['Rational','Irrational','It depends on the values','Neither']).map(t=>({text:t}));
+    return {prompt:'Is the result rational or irrational?',
+      seq:`<div class="bignum">${c.e}</div>`,wordy:true,
+      options:opts,answer:opts.findIndex(o=>o.text===correct),
+      _meta:{rung:9,c,correct},
+      why:`<b>${correct}.</b> ${c.w}
+        <span class="note">The rules worth carrying: rational + rational is <em>always</em> rational; rational + irrational is <em>always</em> irrational; but irrational combined with irrational could be <em>either</em> — which is why each of those has to be worked out rather than assumed.</span>`};
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Three characteristics',short:'right, repeating, ratio'},
+  {id:2,title:'Terminating decimals',short:'they stop, so rational'},
+  {id:3,title:'Repeating decimals',short:'a Lesson 10 callback'},
+  {id:4,title:'Spot the irrational',short:'the flagship'},
+  {id:5,title:'Square roots',short:'perfect square or not'},
+  {id:6,title:'The famous ones',short:'π vs 22/7'},
+  {id:7,title:'Built to be irrational',short:'pattern ≠ repeating'},
+  {id:8,title:'The unit square',short:'and the proof'},
+  {id:9,title:'Combining them',short:'either can happen'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='rationalIrrationalLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ---- the unit square figure ---- */
+function squareSVG(){
+  /* the diagonal label sits OUTSIDE the square on a short leader — placed on the
+     diagonal itself it lands right on top of the line */
+  const S=88, x0=30, y0=18;
+  const INK='#12333A';
+  const mx=x0+S/2, my=y0+S/2;
+  let g='';
+  g+=`<rect x="${x0}" y="${y0}" width="${S}" height="${S}" fill="#E4EEE7" stroke="${INK}" stroke-width="1.6"/>`;
+  g+=`<line x1="${x0}" y1="${y0+S}" x2="${x0+S}" y2="${y0}" stroke="#C98F16" stroke-width="2.4"/>`;
+  /* side labels, clear of the corners */
+  g+=`<text x="${x0+S/2}" y="${y0+S+18}" font-family="Space Mono" font-size="12.5" font-weight="700"
+        fill="${INK}" text-anchor="middle">1</text>`;
+  g+=`<text x="${x0-10}" y="${y0+S/2+4}" font-family="Space Mono" font-size="12.5" font-weight="700"
+        fill="${INK}" text-anchor="end">1</text>`;
+  /* leader from the diagonal's midpoint out to the right */
+  g+=`<circle cx="${mx}" cy="${my}" r="2.6" fill="#C98F16"/>`;
+  g+=`<path d="M${mx},${my} L${x0+S+14},${y0+14}" fill="none" stroke="#C98F16" stroke-width="1.1" stroke-dasharray="3 2"/>`;
+  g+=`<text x="${x0+S+18}" y="${y0+18}" font-family="Space Mono" font-size="12.5" font-weight="700"
+        fill="#B07800">d = ?</text>`;
+  return `<svg viewBox="0 0 200 130" width="100%" style="max-width:210px" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num2">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt+(currentQ.story?`<div class="story">${currentQ.story}</div>`:'');
+  qseqEl.innerHTML=currentQ.seq||'';
+  if(currentQ.figure){ const t=document.getElementById('sqfig'); if(t) t.innerHTML=squareSVG(); }
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>22);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero ============ */
+(function(){
+  document.getElementById('heroDuo').innerHTML=
+    `<div class="panel rat"><div class="pk">rational</div>
+       <div class="pkk">stops, or repeats forever</div>
+       <div class="num">0.75 <small>terminates — it is 3/4</small></div>
+       <div class="num">0.${BAR('3')}… <small>repeats — it is 1/3</small></div>
+       <div class="num hard">${F(1,17)} = 0.0588235294117647… <small>looks random — but the block is 16 digits long</small></div>
+       <div class="num hard">${F(22,7)} = 3.${BAR('142857')}… <small>an approximation of π, and a fraction</small></div>
+       <div class="num hard">${SQ(9)} = 3 <small>a radical sign proves nothing</small></div>
+       <div class="pfoot">every one of these is <b>a ratio of whole numbers</b></div></div>
+
+     <div class="panel irr"><div class="pk">irrational</div>
+       <div class="pkk">runs forever and never cycles</div>
+       <div class="num">${SQ(2)} = 1.41421356… <small>the diagonal of a 1 × 1 square</small></div>
+       <div class="num">π = 3.14159265… <small>not 22/7, and not 3.14</small></div>
+       <div class="num hard">0.1010010001… <small>an obvious pattern — and still no repeating block</small></div>
+       <div class="num">${SQ(10)} <small>10 is not a perfect square</small></div>
+       <div class="num">e = 2.71828182… <small>the “1828” twice over is a coincidence</small></div>
+       <div class="pfoot">none of these can be written as <b>a/b</b></div></div>`;
+})();
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
