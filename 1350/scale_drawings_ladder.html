@@ -1,0 +1,686 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scale Drawings — let the proportion decide the direction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  sup{font-size:.62em;vertical-align:super;line-height:0}
+  .ex{display:inline-block;white-space:nowrap}
+
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:.98rem;box-shadow:var(--shadow);font-family:"Space Mono"}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .mixnum{display:inline-flex;align-items:center;gap:.18em;line-height:1;vertical-align:middle}
+  .frac{display:inline-flex;flex-direction:column;align-items:center;text-align:center;
+        line-height:1.08;font-size:.68em;font-weight:700}
+  .frac .fn{border-bottom:1.7px solid currentColor;padding:0 .26em .1em}
+  .frac .fd{padding:.1em .26em 0}
+
+  .mappanel{margin:34px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:22px 16px;box-shadow:var(--shadow)}
+  .ptitle{font-family:"Space Mono";font-size:.74rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-bright);text-align:center;margin-bottom:4px}
+  .psub{font-family:"Space Mono";font-size:.76rem;color:var(--muted);text-align:center;margin-bottom:18px}
+  .pcanvas{background:var(--paper);border-radius:11px;padding:14px 10px;display:flex;justify-content:center}
+  .pcanvas svg{display:block;max-width:100%;height:auto}
+  .dirs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  @media (max-width:620px){.dirs{grid-template-columns:1fr}}
+  .dcard{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:14px 12px;text-align:center}
+  .dcard .k{font-family:"Space Mono";font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:9px}
+  .dcard .op{font-family:"Space Mono";font-weight:700;font-size:1.02rem;color:var(--amber)}
+  .dcard .eg{font-family:"Space Mono";font-size:.82rem;color:#CFE2E0;margin-top:7px}
+  .pnote{text-align:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+    font-family:"Space Mono";font-size:.85rem;color:#CFE2E0;line-height:1.9}
+  .pnote b{color:var(--amber)}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar2{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar2 span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:490px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.02rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .story{background:#EFE9DA;border-left:3px solid var(--teal);border-radius:0 10px 10px 0;
+    padding:14px 16px;margin:12px 0 4px;font-size:1.01rem;color:var(--ink);line-height:1.62}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  .qseq svg{max-width:100%;height:auto}
+  .bigscale{font-family:"Space Mono";font-weight:700;font-size:clamp(1.25rem,4vw,1.75rem);color:var(--ink);letter-spacing:.03em}
+  .workbox{display:inline-block;background:#EFE9DA;border-radius:10px;padding:14px 20px;
+    font-family:"Space Mono";font-weight:700;font-size:clamp(.86rem,2.6vw,1.04rem);color:var(--ink);line-height:2.1;text-align:left}
+  .workbox .lbl{font-family:"IBM Plex Sans";font-weight:500;font-size:.7rem;color:#7A8887;letter-spacing:.09em;text-transform:uppercase;display:block;margin-bottom:8px}
+  .workbox .row{display:flex;align-items:center;gap:.28em;flex-wrap:wrap}
+  .workbox .dim{color:#8A9897}
+  .workbox .up{color:#B07800}
+  .workbox .q{color:var(--clay)}
+  .workbox .rule{border-top:1.6px solid #C6BFAD;margin:7px 0}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1.04rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.5}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"Space Mono";font-weight:700;letter-spacing:.03em;display:inline-flex;align-items:center;gap:.15em;flex-wrap:wrap}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500;letter-spacing:0;font-size:.95rem;display:inline;line-height:1.45}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .feedback .note{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed #C6BFAD;color:#5C6E6D;font-style:italic}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">1:n</span> Scale Drawings</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 11 · scale drawings</div>
+    <h1>Let the proportion<br><span class="hl">decide the direction.</span></h1>
+    <p class="lede">A scale is the <strong>ratio of a length in the drawing to the matching length in reality</strong>. Your notes' <code>1 inch : 600 feet</code> says one inch on the map stands for six hundred feet on the ground — and every question about that map is a proportion built from those two numbers.</p>
+
+    <div class="mappanel" id="heroMap"></div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>Same scale, opposite operations, and students apply whichever they did last.</b> Going from the drawing outwards you <em>multiply</em>: 3 inches on the map is 3 × 600 = 1800 feet. Coming back the other way you <em>divide</em>: a real distance of 2400 feet is 2400 ÷ 600 = 4 inches on the map. Neither is hard, and choosing between them under pressure is where it goes wrong. <b>Write it as a proportion and the direction stops being a decision</b> — <code>1/600 = 3/x</code> has only one solution, and you never have to recall which way round it went. <b>Watch the units, too.</b> <code>1 : 600</code> on its own is not the scale: the ratio is one <em>inch</em> to six hundred <em>feet</em>, and those are different units. Convert both to inches and the true scale factor is <code>1 : 7200</code> — a pure number that looks nothing like the one you started with.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–3 read a scale and travel in both directions. Rung 4 is the direction trap and rung 5 removes it by writing a proportion. Rungs 6–7 convert inside the scale and recover a scale from measurements, and rungs 8–9 check plausibility and scale a whole shape.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>One base unit inside</h3><p>Every length is held in inches (or centimetres) as an exact fraction, so a drawing length of 4.5 inches is exact rather than rounded.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>The direction is derived</h3><p>On rung 4 the proportion is written out after you answer, so the multiply-or-divide question answers itself.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar2"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Read a scale</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>Proportional reasoning you can see</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>The proportion removes the guesswork</h3><p>Multiply or divide is a decision; a proportion is an equation. Writing one down converts a recalled rule into something you can solve.</p></div>
+      <div class="why-card"><h3>Units live inside the ratio</h3><p><code>1 : 24000</code> and <code>1 inch : 2000 feet</code> are the same map scale. They look unrelated until both sides are put in one unit.</p></div>
+      <div class="why-card"><h3>One factor for every length</h3><p>Every measurement in the drawing shrinks by the same factor. That single fact is what keeps the shape recognisable.</p></div>
+    </div>
+    <p class="closing">A scale drawing is a proportion made visible — every length reduced by one shared factor. <b>Write the scale as a ratio, set the known length against its match, and solve for the one you want; the equation knows which way to go even when you do not.</b></p>
+  </section>
+
+  <footer>Scale Drawings · 1 inch : 600 feet · 3 inches → 1800 feet · 2400 feet → 4 inches · 1 : 7200</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||1;};
+const fmt=n=>n.toLocaleString('en-US');
+const F=(n,d)=>`<span class="mixnum"><span class="frac"><span class="fn">${n}</span><span class="fd">${d}</span></span></span>`;
+
+/* ---- exact division: a decimal when it terminates, otherwise a reduced fraction ---- */
+function exactDiv(n,d){
+  const g=gcd(n,d); let num=n/g, den=d/g;
+  let keepN=num, keepD=den, p=0;
+  while(den%2===0){den/=2;num*=5;p++;}
+  while(den%5===0){den/=5;num*=2;p++;}
+  if(den!==1) return {frac:true,n:keepN,d:keepD,text:`${fmt(keepN)}/${fmt(keepD)}`};
+  let t=String(num);
+  if(p>0){ t=t.padStart(p+1,'0'); t=`${t.slice(0,t.length-p)}.${t.slice(t.length-p)}`; }
+  t=t.replace(/^0+(?=\d)/,'').replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'');
+  return {frac:false,n:keepN,d:keepD,text:t};
+}
+const divText=(n,d)=>exactDiv(n,d).text;
+
+/* ---- the unit systems: everything held in the small unit ---- */
+const SYSTEMS=[
+  {small:'inch',smalls:'inches',big:'foot',bigs:'feet',per:12},
+  {small:'centimetre',smalls:'centimetres',big:'metre',bigs:'metres',per:100},
+];
+/* a scale: 1 <small> represents `realBig` <big> */
+function makeScale(sys){
+  const s=sys||pick(SYSTEMS);
+  const realBig=pick(s.per===12?[4,5,8,10,20,25,50,100,200,600]:[2,4,5,8,10,20,25,50,100]);
+  return {s,realBig,text:`1 ${s.small} : ${fmt(realBig)} ${s.bigs}`};
+}
+const MAPCTX=[
+  {a:'your house',b:'the playground'},{a:'the school',b:'the library'},
+  {a:'the museum',b:'the station'},{a:'the park gate',b:'the lake'},
+];
+
+function four(correct,cands,pad){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c!==null&&c!==undefined&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<200){ const c=pad?pad(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+function fourKeyed(items,correctKey,pad){
+  const seen=new Set(); const uniq=[];
+  for(const it of items){ if(uniq.length>=4)break; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  let g=1;
+  while(uniq.length<4&&g<80){ const it=pad?pad(g):null; g++; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  const sh=shuffle(uniq.slice(0,4));
+  return {options:sh.map(o=>({text:o.html})), answer:sh.findIndex(o=>o.key===correctKey)};
+}
+
+/* ---- the map picture ---- */
+const INK='#12333A';
+function mapSVG(drawLen,sc,labA,labB){
+  /* laid out so nothing collides: the street names sit clear of the centred
+     measurement caption, and the scale line gets its own band at the bottom */
+  const W=390,H=132;
+  const px=Math.min(196,drawLen*44);
+  const x0=(W-px)/2;
+  const yPts=66;
+  let g='';
+  /* Main St runs across the top, Oak Dr down through the first point */
+  g+=`<line x1="16" y1="30" x2="${W-16}" y2="30" stroke="#C6BFAD" stroke-width="6"/>`;
+  g+=`<text x="20" y="23" font-family="IBM Plex Sans" font-size="9" fill="#A79C82">Main St</text>`;
+  g+=`<line x1="${x0}" y1="16" x2="${x0}" y2="96" stroke="#C6BFAD" stroke-width="6"/>`;
+  g+=`<text x="${x0-7}" y="105" font-family="IBM Plex Sans" font-size="9"
+        fill="#A79C82" text-anchor="end">Oak Dr</text>`;
+  /* the two places */
+  g+=`<line x1="${x0}" y1="${yPts}" x2="${x0+px}" y2="${yPts}" stroke="${INK}" stroke-width="1.6" stroke-dasharray="4 3"/>`;
+  g+=`<circle cx="${x0}" cy="${yPts}" r="5.5" fill="#2FA39B" stroke="${INK}" stroke-width="1.3"/>`;
+  g+=`<circle cx="${x0+px}" cy="${yPts}" r="5.5" fill="#EFB53F" stroke="${INK}" stroke-width="1.3"/>`;
+  g+=`<text x="${x0}" y="${yPts-13}" font-family="Space Mono" font-size="9.5" fill="#2A6E68" text-anchor="middle">${labA}</text>`;
+  g+=`<text x="${x0+px}" y="${yPts-13}" font-family="Space Mono" font-size="9.5" fill="#B07800" text-anchor="middle">${labB}</text>`;
+  /* the measured length, braced below and captioned clear of the street name */
+  g+=`<path d="M${x0},${yPts+12} v6 H${x0+px} v-6" fill="none" stroke="#5C6E6D" stroke-width="1.3"/>`;
+  g+=`<text x="${x0+px/2}" y="${yPts+39}" font-family="Space Mono" font-size="10.5" font-weight="700"
+        fill="${INK}" text-anchor="middle">${drawLen} ${drawLen===1?sc.s.small:sc.s.smalls} on the map</text>`;
+  /* the scale, in its own band at the foot */
+  g+=`<line x1="16" y1="${H-20}" x2="${W-16}" y2="${H-20}" stroke="#E1DAC8" stroke-width="1"/>`;
+  g+=`<text x="${W/2}" y="${H-6}" font-family="Space Mono" font-size="10.5" font-weight="700"
+        fill="#B07800" text-anchor="middle">scale &nbsp;${sc.text}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+}
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — read a scale
+  1(){
+    const sc=makeScale();
+    const correct=`1 ${sc.s.small} on the drawing represents ${fmt(sc.realBig)} ${sc.s.bigs} in reality`;
+    const cands=[`1 ${sc.s.big} on the drawing represents ${fmt(sc.realBig)} ${sc.s.smalls} in reality`,
+                 `${fmt(sc.realBig)} ${sc.s.smalls} on the drawing represents 1 ${sc.s.big} in reality`,
+                 `The drawing is ${fmt(sc.realBig)} times larger than the real object`];
+    const r=four(correct,cands);
+    return {prompt:'What does this scale mean?',
+      seq:`<div class="bigscale">${sc.text}</div>`,wordy:true,stack:true,...r,
+      _meta:{rung:1,sc,correct},
+      why:`<b>${correct}.</b> A scale is written <em>drawing first, reality second</em> — it is the ratio of a length on the page to the matching length in the world.
+        <span class="note">So the real thing is ${fmt(sc.realBig)} ${sc.s.bigs} for every single ${sc.s.small} you measure. The drawing is very much <em>smaller</em> than reality, which is the point of making one.</span>`};
+  },
+
+  // 2 — drawing to real
+  2(){
+    const sc=makeScale();
+    const ctx=pick(MAPCTX);
+    const draw=pick([2,3,4,5,6,2.5,1.5,3.5]);
+    const realExact=draw*sc.realBig;
+    if(!Number.isInteger(realExact)) return GEN[2]();
+    const correct=`${fmt(realExact)} ${sc.s.bigs}`;
+    const cands=[`${divText(draw*100,sc.realBig*100)} ${sc.s.bigs}`,
+                 `${fmt(sc.realBig)} ${sc.s.bigs}`,
+                 `${fmt(realExact*sc.s.per)} ${sc.s.bigs}`].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>`${fmt(realExact+g*sc.realBig)} ${sc.s.bigs}`);
+    return {prompt:'How far apart are they in <b>reality</b>?',
+      story:`On a map, ${ctx.a} is <b>${draw} ${sc.s.smalls}</b> from ${ctx.b}. The scale is <b>${sc.text}</b>.`,
+      seq:mapSVG(draw,sc,ctx.a.split(' ').pop(),ctx.b.split(' ').pop()),
+      mono:true,...r,
+      _meta:{rung:2,sc,draw,realExact,correct},
+      why:`Each ${sc.s.small} stands for ${fmt(sc.realBig)} ${sc.s.bigs}, and there are ${draw} of them: ${draw} × ${fmt(sc.realBig)} = <b>${fmt(realExact)} ${sc.s.bigs}</b>.
+        <span class="note">Going from the drawing outwards you <em>multiply</em>, because reality is the bigger of the two. As a proportion: ${F(1,fmt(sc.realBig))} = ${F(draw,'x')}, so x = ${fmt(realExact)}.</span>`};
+  },
+
+  // 3 — real to drawing
+  3(){
+    const sc=makeScale();
+    const ctx=pick(MAPCTX);
+    const mult=pick([2,3,4,5,6,8]);
+    const real=sc.realBig*mult;
+    const draw=mult;
+    const correct=`${fmt(draw)} ${sc.s.smalls}`;
+    const cands=[`${fmt(real*sc.realBig)} ${sc.s.smalls}`,
+                 `${fmt(sc.realBig)} ${sc.s.smalls}`,
+                 `${divText(sc.realBig,real)} ${sc.s.smalls}`].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>`${fmt(draw+g)} ${sc.s.smalls}`);
+    return {prompt:'How long is that on the <b>drawing</b>?',
+      story:`${ctx.a.charAt(0).toUpperCase()+ctx.a.slice(1)} is really <b>${fmt(real)} ${sc.s.bigs}</b> from ${ctx.b}. The scale is <b>${sc.text}</b>.`,
+      mono:true,...r,
+      _meta:{rung:3,sc,real,draw,correct},
+      why:`Every ${fmt(sc.realBig)} ${sc.s.bigs} of reality becomes one ${sc.s.small} on the page: ${fmt(real)} ÷ ${fmt(sc.realBig)} = <b>${fmt(draw)} ${sc.s.smalls}</b>.
+        <span class="note">Coming back <em>towards</em> the drawing you divide — the same scale as the previous rung, the opposite operation. As a proportion: ${F(1,fmt(sc.realBig))} = ${F('x',fmt(real))}, so x = ${fmt(draw)}.</span>`};
+  },
+
+  // 4 — which operation? (the flagship)
+  4(){
+    const sc=makeScale();
+    const toReal=rand(0,1)===1;
+    const correct=toReal?`Multiply by ${fmt(sc.realBig)}`:`Divide by ${fmt(sc.realBig)}`;
+    /* when the scale number happens to equal the unit conversion factor (1 cm : 100 m),
+       the "per" distractors collide with the real ones — so pad with other multiples */
+    const cands=[toReal?`Divide by ${fmt(sc.realBig)}`:`Multiply by ${fmt(sc.realBig)}`,
+                 `Multiply by ${fmt(sc.s.per)}`,`Divide by ${fmt(sc.s.per)}`];
+    const r=four(correct,cands,g=>{
+      const v=sc.realBig*(g+1);
+      return v===sc.realBig?null:`${toReal?'Multiply':'Divide'} by ${fmt(v)}`;
+    });
+    return {prompt:`With a scale of <code>${sc.text}</code>, how do you get from a <b>${toReal?'drawing length to the real length':'real length to the drawing length'}</b>?`,
+      wordy:true,...r,
+      _meta:{rung:4,sc,toReal,correct},
+      why:`<b>${correct}</b>. ${toReal?`Reality is the larger of the two, so the number must grow.`:`The drawing is the smaller of the two, so the number must shrink.`}
+        <span class="note">Better than remembering: write the proportion and let it decide. ${toReal?`${F(1,fmt(sc.realBig))} = ${F('drawing','real')} gives real = drawing × ${fmt(sc.realBig)}.`:`${F(1,fmt(sc.realBig))} = ${F('drawing','real')} gives drawing = real ÷ ${fmt(sc.realBig)}.`} The equation cannot forget which way round it goes, and you can.</span>`};
+  },
+
+  // 5 — set it up as a proportion
+  5(){
+    const sc=makeScale();
+    const draw=pick([2,3,4,5,6]);
+    const real=draw*sc.realBig;
+    const R=fmt(sc.realBig);
+    const good=`${F(1,R)} = ${F(draw,'x')}`;
+    const mixed=`${F(1,R)} = ${F('x',draw)}`;
+    const flipped=`${F(R,1)} = ${F(draw,'x')}`;
+    const crossed=`${F('x',R)} = ${F(1,draw)}`;
+    const items=[
+      {key:'ok',   html:good},
+      {key:'mixed',html:mixed},
+      {key:'flip', html:flipped},
+      {key:'cross',html:crossed},
+    ];
+    const r=fourKeyed(items,'ok');
+    return {prompt:`Which proportion finds the <b>real distance</b>? <span style="font-size:.9em;color:#5C6E6D">(Do not solve it.)</span>`,
+      story:`A length of <b>${draw} ${sc.s.smalls}</b> on a drawing with scale <b>${sc.text}</b>.`,
+      stack:true,...r,
+      _meta:{rung:5,sc,draw,real,correct:'ok'},
+      why:`<b>${good}</b> — drawing lengths on top on both sides, real lengths underneath on both. Solving gives x = ${fmt(real)} ${sc.s.bigs}.
+        <span class="note">${mixed} turns over just one side, which is the setup trap from the proportions ladder. It would give ${divText(draw*draw,sc.realBig)} instead — and nothing about the equation looks wrong until you check what each position means.</span>`};
+  },
+
+  // 6 — convert inside the scale
+  6(){
+    const sc=makeScale();
+    const pure=sc.realBig*sc.s.per;
+    const correct=`1 : ${fmt(pure)}`;
+    const cands=[`1 : ${fmt(sc.realBig)}`,
+                 `1 : ${fmt(sc.realBig*(sc.s.per===12?100:12))}`,
+                 `${fmt(sc.s.per)} : ${fmt(sc.realBig)}`].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>`1 : ${fmt(pure*(g+1))}`);
+    return {prompt:'Write this scale as a <b>pure ratio</b>, with no units.',
+      seq:`<div class="bigscale">${sc.text}</div>
+           <div class="workbox" style="margin-top:14px"><span class="lbl">put both sides in ${sc.s.smalls}</span>
+             <div class="row">1 ${sc.s.big} = ${sc.s.per} ${sc.s.smalls}</div>
+             <div class="row">${fmt(sc.realBig)} ${sc.s.bigs} = <span class="up">${fmt(pure)} ${sc.s.smalls}</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:6,sc,pure,correct},
+      why:`${fmt(sc.realBig)} ${sc.s.bigs} is ${fmt(sc.realBig)} × ${sc.s.per} = ${fmt(pure)} ${sc.s.smalls}, so the scale is <b>1 : ${fmt(pure)}</b>.
+        <span class="note">A ratio is only unitless once both sides carry the same unit — <code>1 : ${fmt(sc.realBig)}</code> would be comparing ${sc.s.smalls} with ${sc.s.bigs}, which compares nothing at all. This is why map scales like <code>1 : 24000</code> look so unlike the <code>1 ${sc.s.small} : n ${sc.s.bigs}</code> form: they are the same idea after conversion.</span>`};
+  },
+
+  // 7 — find the scale from measurements
+  7(){
+    const sc=makeScale();
+    const draw=pick([2,4,5,8,10]);
+    const perInch=pick([4,5,6,8,10,12,20,25]);
+    const real=draw*perInch;
+    const correct=`1 ${sc.s.small} : ${fmt(perInch)} ${sc.s.bigs}`;
+    const cands=[`1 ${sc.s.small} : ${fmt(real)} ${sc.s.bigs}`,
+                 `1 ${sc.s.small} : ${fmt(draw)} ${sc.s.bigs}`,
+                 `${fmt(draw)} ${sc.s.smalls} : 1 ${sc.s.big}`].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>`1 ${sc.s.small} : ${fmt(perInch+g)} ${sc.s.bigs}`);
+    return {prompt:'What is the <b>scale</b> of the drawing?',
+      story:`A room that is really <b>${fmt(real)} ${sc.s.bigs}</b> long is drawn <b>${draw} ${sc.s.smalls}</b> long.`,
+      mono:true,...r,
+      _meta:{rung:7,sc,draw,real,perInch,correct},
+      why:`Divide reality by the drawing: ${fmt(real)} ÷ ${draw} = ${fmt(perInch)}, so one ${sc.s.small} stands for <b>${fmt(perInch)} ${sc.s.bigs}</b>.
+        <span class="note">The scale is the ratio ${F(`${draw} ${sc.s.smalls}`,`${fmt(real)} ${sc.s.bigs}`)}, reduced until the drawing side is 1 — the unit-rate move from the previous ladder, applied to a pair of lengths.</span>`};
+  },
+
+  // 8 — does it make sense?
+  8(){
+    const OBJ=[
+      {n:'model car',len:6,factor:18,realUnit:'feet',plausible:'a car about 9 feet long'},
+      {n:'model aeroplane',len:12,factor:72,realUnit:'feet',plausible:'a wingspan of 72 feet'},
+      {n:'dolls house',len:9,factor:12,realUnit:'feet',plausible:'a room 9 feet across'},
+      {n:'model train carriage',len:8,factor:87,realUnit:'feet',plausible:'a carriage about 58 feet long'},
+    ];
+    const o=pick(OBJ);
+    const realInches=o.len*o.factor;
+    const realFeet=exactDiv(realInches,12);
+    const correct=`${realFeet.text} feet`;
+    const cands=[`${fmt(realInches)} feet`,
+                 `${divText(o.len*12,o.factor)} feet`,
+                 `${fmt(o.factor)} feet`].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>`${fmt(Number(realFeet.text)+g*3)} feet`);
+    return {prompt:'How long is the <b>real</b> object, in feet?',
+      story:`A <b>${o.n}</b> is <b>${o.len} inches</b> long, built to a scale of <b>1 : ${o.factor}</b>.`,
+      mono:true,...r,
+      _meta:{rung:8,o,realInches,realFeet:realFeet.text,correct},
+      why:`The scale <code>1 : ${o.factor}</code> is a pure ratio, so ${o.len} inches on the model is ${o.len} × ${o.factor} = ${fmt(realInches)} <em>inches</em> in reality — which is ${fmt(realInches)} ÷ 12 = <b>${realFeet.text} feet</b>.
+        <span class="note">And that is worth a moment's sanity check: ${o.plausible} is believable. Forgetting to convert inches to feet would have given ${fmt(realInches)} feet, which is absurd — the plausibility check catches the slip without redoing the arithmetic.</span>`};
+  },
+
+  // 9 — two lengths, one scale
+  9(){
+    const sc=makeScale();
+    const per=pick([2,4,5,8,10]);
+    const w=per*pick([2,3,4]), l=per*pick([3,4,5,6]);
+    if(w===l) return GEN[9]();
+    const dw=exactDiv(w,per), dl=exactDiv(l,per);
+    const correct=`${dw.text} × ${dl.text} ${sc.s.smalls}`;
+    const cands=[`${dl.text} × ${dw.text} ${sc.s.smalls}`,
+                 `${fmt(w*per)} × ${fmt(l*per)} ${sc.s.smalls}`,
+                 `${dw.text} × ${dw.text} ${sc.s.smalls}`].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>`${divText(w,per+g)} × ${divText(l,per+g)} ${sc.s.smalls}`);
+    return {prompt:'What are the <b>drawing</b> dimensions?',
+      story:`A room measures <b>${fmt(w)} ${sc.s.bigs} by ${fmt(l)} ${sc.s.bigs}</b>. It is drawn at a scale of <b>1 ${sc.s.small} : ${per} ${sc.s.bigs}</b>.`,
+      mono:true,...r,
+      _meta:{rung:9,sc,per,w,l,dw:dw.text,dl:dl.text,correct},
+      why:`Divide <em>each</em> length by ${per}: ${fmt(w)} ÷ ${per} = ${dw.text} and ${fmt(l)} ÷ ${per} = ${dl.text}, giving <b>${dw.text} × ${dl.text} ${sc.s.smalls}</b>.
+        <span class="note">The same factor applies to every length in the drawing, and that is precisely what makes the drawing recognisable — shrink the two sides by different amounts and the room would come out the wrong shape.</span>`};
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Read a scale',short:'drawing first'},
+  {id:2,title:'Drawing → real',short:'multiply'},
+  {id:3,title:'Real → drawing',short:'divide'},
+  {id:4,title:'Which operation?',short:'the flagship'},
+  {id:5,title:'Write the proportion',short:'let it decide'},
+  {id:6,title:'A pure ratio',short:'1 : 7200'},
+  {id:7,title:'Find the scale',short:'from two lengths'},
+  {id:8,title:'Does it make sense?',short:'plausibility'},
+  {id:9,title:'Two lengths',short:'one shared factor'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='scaleDrawingsLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt+(currentQ.story?`<div class="story">${currentQ.story}</div>`:'');
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>22);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  /* rung 4 writes the proportion out, so the direction is derived not recalled */
+  const m=currentQ._meta;
+  if(m&&m.rung===4&&m.sc){
+    const R=fmt(m.sc.realBig);
+    qseqEl.innerHTML=`<div class="workbox"><span class="lbl">let the proportion decide</span>
+      <div class="row">${F(`1 ${m.sc.s.small}`,`${R} ${m.sc.s.bigs}`)} = ${F('drawing','real')}</div>
+      <div class="row dim" style="font-size:.84em">cross-multiplying: real = drawing × ${R}</div></div>`;
+  }
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero ============ */
+(function(){
+  const sc={s:SYSTEMS[0],realBig:600,text:'1 inch : 600 feet'};
+  document.getElementById('heroMap').innerHTML=
+    `<div class="ptitle">your house is 3 inches from the playground</div>
+     <div class="psub">scale 1 inch : 600 feet — so how far is that really?</div>
+     <div class="pcanvas">${mapSVG(3,sc,'house','playground')}</div>
+     <div class="dirs">
+       <div class="dcard"><div class="k">drawing → real</div>
+         <div class="op">× 600</div>
+         <div class="eg">3 inches → <b style="color:#EFB53F">1800 feet</b></div></div>
+       <div class="dcard"><div class="k">real → drawing</div>
+         <div class="op">÷ 600</div>
+         <div class="eg">2400 feet → <b style="color:#EFB53F">4 inches</b></div></div>
+     </div>
+     <div class="pnote">one scale, two directions — write <b>1/600 = 3/x</b> and stop having to choose<br>
+       <span style="font-size:.85em;color:#8FB0B2">and as a pure ratio, 600 feet is 7200 inches, so the scale is 1 : 7200</span></div>`;
+})();
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
