@@ -1,0 +1,675 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Percent Change &amp; Working Backwards — the base moves</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  sup{font-size:.62em;vertical-align:super;line-height:0}
+  .ex{display:inline-block;white-space:nowrap}
+
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.05rem;box-shadow:var(--shadow);font-family:"Space Mono"}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:34px 0 20px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:20px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.02em;margin-bottom:20px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.18rem);color:#DCEAE9;max-width:62ch}
+  .lede strong{color:var(--paper)}
+  .lede em{color:var(--teal-bright);font-style:normal}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  .mixnum{display:inline-flex;align-items:center;gap:.18em;line-height:1;vertical-align:middle}
+  .frac{display:inline-flex;flex-direction:column;align-items:center;text-align:center;
+        line-height:1.08;font-size:.68em;font-weight:700}
+  .frac .fn{border-bottom:1.7px solid currentColor;padding:0 .26em .1em}
+  .frac .fd{padding:.1em .26em 0}
+
+  .mpanel{margin:34px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:22px 16px;box-shadow:var(--shadow)}
+  .ptitle{font-family:"Space Mono";font-size:.74rem;letter-spacing:.13em;text-transform:uppercase;color:var(--teal-bright);text-align:center;margin-bottom:4px}
+  .psub{font-family:"Space Mono";font-size:.76rem;color:var(--muted);text-align:center;margin-bottom:18px}
+  .pcanvas{background:var(--paper);border-radius:11px;padding:14px 10px;display:flex;justify-content:center}
+  .pcanvas svg{display:block;max-width:100%;height:auto}
+  .mrow{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:16px}
+  @media (max-width:760px){.mrow{grid-template-columns:1fr}}
+  .mcard{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:14px 11px;text-align:center}
+  .mcard.bad{border-color:rgba(215,113,73,.42)}
+  .mcard .k{font-family:"Space Mono";font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;line-height:1.5}
+  .mcard .v{font-family:"Space Mono";font-weight:700;font-size:.98rem;color:#CFE2E0;line-height:1.7}
+  .mcard .r{font-family:"Space Mono";font-size:.8rem;font-weight:700;margin-top:8px;color:var(--teal-bright)}
+  .mcard.bad .r{color:#F0A17B}
+  .pnote{text-align:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+    font-family:"Space Mono";font-size:.86rem;color:#CFE2E0;line-height:1.9}
+  .pnote b{color:var(--amber)}
+
+  .trap{margin:26px 0 0;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--clay);
+    background:rgba(215,113,73,.09);padding:18px 20px;border-radius:0 12px 12px 0}
+  .trap .hand{font-size:1.4rem;line-height:1}
+  .trap p{font-size:.96rem;color:#F1DFD6}
+  .trap b{color:#fff}
+  .trap code{font-family:"Space Mono";background:rgba(0,0,0,.18);padding:1px 6px;border-radius:5px}
+
+  .section{padding:56px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:-.01em;margin-bottom:8px}
+  .sub{color:var(--muted);max-width:64ch;margin-bottom:8px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  .step{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .step .n{font-family:"Space Mono";font-size:.8rem;color:var(--teal-bright);margin-bottom:10px}
+  .step h3{font-family:"Space Grotesk";font-weight:600;font-size:1.08rem;margin-bottom:6px}
+  .step p{font-size:.9rem;color:#CBDDDB}
+  .step kbd{font-family:"Space Mono";background:rgba(255,255,255,.1);border:1px solid var(--line-strong);border-radius:5px;padding:1px 6px;font-size:.82rem}
+
+  .lab{margin-top:30px;display:grid;grid-template-columns:300px 1fr;gap:22px;align-items:start}
+  @media (max-width:820px){.lab{grid-template-columns:1fr}}
+  .progress{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.04);
+    border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:14px;grid-column:1/-1}
+  .progress .count{font-family:"Space Grotesk";font-weight:600}
+  .progress .count b{color:var(--amber)}
+  .progress .bar2{flex:1;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden;max-width:340px}
+  .progress .bar2 span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;font-size:.82rem;padding:7px 12px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  .rail{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:16px;padding:10px}
+  .rung{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;text-align:left;
+    background:none;border:none;color:var(--paper);font:inherit;padding:12px;border-radius:11px;cursor:pointer;transition:.16s}
+  .rung:hover{background:rgba(255,255,255,.05)}
+  .rung.active{background:rgba(47,163,155,.16);box-shadow:inset 0 0 0 1px rgba(87,199,190,.5)}
+  .rung .num2{font-family:"Space Mono";font-weight:700;font-size:.9rem;width:34px;height:34px;border-radius:9px;
+    display:grid;place-items:center;background:rgba(255,255,255,.06);color:var(--muted);flex:none}
+  .rung.active .num2{background:var(--teal);color:var(--ground-2)}
+  .rung.done .num2{background:var(--amber);color:var(--ground-2)}
+  .rung .rt{font-size:.92rem;font-weight:500;line-height:1.25}
+  .rung .rt small{display:block;color:var(--muted);font-size:.76rem;font-weight:400;margin-top:2px}
+  .rung .badge{font-size:1.05rem;opacity:.25}
+  .rung.done .badge{opacity:1}
+
+  .card{background:var(--paper);color:var(--ink);border-radius:18px;padding:26px 26px 22px;box-shadow:var(--shadow);
+    min-height:490px;display:flex;flex-direction:column}
+  .card-top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:4px}
+  .card-rung{font-family:"Space Grotesk";font-weight:600;font-size:1.15rem;color:var(--ink)}
+  .card-skill{font-size:.82rem;color:#5C6E6D;margin-top:2px}
+  .pips{display:flex;gap:7px;align-items:center}
+  .pip{width:13px;height:13px;border-radius:50%;border:2px solid #C6BFAD;background:transparent;transition:.2s}
+  .pip.on{background:var(--green);border-color:var(--green)}
+  .pips-label{font-size:.72rem;color:#7A8887;font-family:"Space Mono";margin-right:2px}
+
+  .qbody{flex:1;display:flex;flex-direction:column;justify-content:center;padding:14px 0}
+  .prompt{font-size:1.02rem;color:var(--ink);margin-bottom:8px;line-height:1.6}
+  .prompt code{font-family:"Space Mono";background:#EDE7D8;padding:2px 7px;border-radius:5px;font-weight:700}
+  .story{background:#EFE9DA;border-left:3px solid var(--teal);border-radius:0 10px 10px 0;
+    padding:14px 16px;margin:12px 0 4px;font-size:1.01rem;color:var(--ink);line-height:1.62}
+  .qseq{margin:12px 0 18px;text-align:center}
+  .qseq:empty{margin:0}
+  .qseq svg{max-width:100%;height:auto}
+  .bigch{font-family:"Space Mono";font-weight:700;font-size:clamp(1.3rem,4.2vw,1.85rem);color:var(--ink);letter-spacing:.03em}
+  .workbox{display:inline-block;background:#EFE9DA;border-radius:10px;padding:14px 20px;
+    font-family:"Space Mono";font-weight:700;font-size:clamp(.86rem,2.6vw,1.04rem);color:var(--ink);line-height:2.15;text-align:left}
+  .workbox .lbl{font-family:"IBM Plex Sans";font-weight:500;font-size:.7rem;color:#7A8887;letter-spacing:.09em;text-transform:uppercase;display:block;margin-bottom:8px}
+  .workbox .row{display:flex;align-items:center;gap:.28em;flex-wrap:wrap}
+  .workbox .dim{color:#8A9897}
+  .workbox .up{color:#B07800}
+  .workbox .dn{color:#2A6E68}
+  .workbox .q{color:var(--clay)}
+  .workbox .rule{border-top:1.6px solid #C6BFAD;margin:7px 0}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .opts.stack{grid-template-columns:1fr}
+  @media (max-width:480px){.opts{grid-template-columns:1fr}}
+  .opt{display:flex;align-items:center;gap:12px;background:#fff;border:1.6px solid #E1DAC8;border-radius:12px;
+    padding:14px 16px;font:inherit;font-size:1.04rem;color:var(--ink);cursor:pointer;text-align:left;transition:.14s;font-weight:500;line-height:1.5}
+  .opt:hover:not(:disabled){border-color:var(--teal);transform:translateY(-1px)}
+  .opt:disabled{cursor:default}
+  .opt .key{font-family:"Space Mono";font-weight:700;font-size:.82rem;width:22px;height:22px;border-radius:6px;
+    background:#EFE9DA;display:grid;place-items:center;color:#6C7A79;flex:none;align-self:flex-start;margin-top:2px}
+  .opt .body{font-family:"Space Mono";font-weight:700;letter-spacing:.03em;display:inline-flex;align-items:center;gap:.15em;flex-wrap:wrap}
+  .opt.wordy .body{font-family:"IBM Plex Sans";font-weight:500;letter-spacing:0;font-size:.95rem;display:inline;line-height:1.45}
+  .opt.correct{border-color:var(--green);background:#EAF7EF}
+  .opt.correct .key{background:var(--green);color:#fff}
+  .opt.wrong{border-color:var(--clay);background:#FBEDE6}
+  .opt.wrong .key{background:var(--clay);color:#fff}
+
+  .feedback{min-height:52px;margin-top:18px;font-size:.92rem;display:flex;align-items:flex-start;gap:10px;color:#3A4746}
+  .feedback .mark{font-weight:700;flex:none}
+  .feedback.ok .mark{color:var(--green)}
+  .feedback.no .mark{color:var(--clay)}
+  .feedback b{color:var(--ink)}
+  .feedback code{font-family:"Space Mono";background:#EDE7D8;padding:0 4px;border-radius:4px}
+  .feedback .note{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed #C6BFAD;color:#5C6E6D;font-style:italic}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+  .btn-next{background:var(--ink);color:var(--paper);border:none;font:inherit;font-weight:600;font-size:.95rem;
+    padding:12px 22px;border-radius:10px;cursor:pointer;transition:.16s;opacity:.4;pointer-events:none}
+  .btn-next.ready{opacity:1;pointer-events:auto}
+  .btn-next:hover{background:#173037}
+  .foot-hint{font-size:.78rem;color:#8A9897;font-family:"Space Mono"}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(120%);background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:14px 24px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:50;display:flex;gap:10px;align-items:center;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:26px}
+  @media (max-width:720px){.why-grid{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:16px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.05rem;margin-bottom:6px}
+  .why-card p{font-size:.9rem;color:#C6D8D6}
+  .closing{margin-top:28px;font-size:1.02rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:64px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-family:"Space Mono";font-size:.78rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">×1.2</span> Percent Change</div>
+    <nav class="topnav">
+      <a href="#how">How it works</a>
+      <a href="#ladder">The ladder</a>
+      <a href="#why">Why it matters</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 12 · percent change &amp; reversals</div>
+    <h1>The base<br><span class="hl">moves.</span></h1>
+    <p class="lede">A percent change is a percent <strong>of where you started</strong> — and the result becomes a <em>new</em> starting point. Everything awkward about this topic follows from that one sentence: changes will not reverse, will not add, and cannot be undone by applying their opposite.</p>
+
+    <div class="mpanel" id="heroPanel"></div>
+
+    <div class="trap">
+      <span class="hand">✋</span>
+      <p><b>Use multipliers and all three difficulties collapse into one idea.</b> A 20% increase is <code>× 1.2</code>; a 20% decrease is <code>× 0.8</code>. Multipliers <em>compose by multiplying</em>, which is why percent changes do not add — your notes' Leo takes two 10% raises and gets <code>1.1 × 1.1 = 1.21</code>, a <b>21%</b> rise, not 20%, because the second raise is of his already-raised salary. It is why up-then-down does not return you home: <code>1.2 × 0.8 = 0.96</code>, so you finish <b>4% below</b> where you began, whatever the starting amount. <b>And it is why undoing a change means dividing.</b> Brittany's scooter sold for <code>$1440</code> after 20% off, so <code>$1440 ÷ 0.8 = $1800</code> — while adding 20% back gives <code>$1728</code>, which is wrong because that 20% is of the smaller number.</p>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="kicker">How it works</div>
+    <h2>Climb it, or jump to the rung you need</h2>
+    <p class="sub">Rungs 1–3 build the multiplier and apply it. Rung 4 finds a percent change from two values, rungs 5–6 show that changes neither reverse nor add, rungs 7–8 undo a change in each direction, and rung 9 combines two discounts into one.</p>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><h3>Money in exact cents</h3><p>Every amount is a whole number of cents and every division comes out exactly, so no answer here is ever decided by rounding.</p></div>
+      <div class="step"><div class="n">02</div><h3>Four in a row earns the badge</h3><p>Answer by mouse or press <kbd>1</kbd>–<kbd>4</kbd>. Four consecutive right earns the rung; one miss resets the streak.</p></div>
+      <div class="step"><div class="n">03</div><h3>The wrong answer is computed</h3><p>On rungs 6, 7 and 9 the answer you get by adding percents instead of multiplying is worked out and offered every time.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="ladder">
+    <div class="kicker">The ladder</div>
+    <h2>Pick a rung and practice</h2>
+    <div class="lab">
+      <div class="progress">
+        <span class="count"><b id="pcount">0</b> of 10 badges</span>
+        <div class="bar2"><span id="pbar"></span></div>
+        <button class="btn-ghost" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="rail" id="rail"></div>
+      <div class="card">
+        <div class="card-top">
+          <div>
+            <div class="card-rung" id="cardRung">Rung 1</div>
+            <div class="card-skill" id="cardSkill">Increase or decrease?</div>
+          </div>
+          <div class="pips">
+            <span class="pips-label">streak</span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+        </div>
+        <div class="qbody">
+          <div class="prompt" id="prompt"></div>
+          <div class="qseq" id="qseq"></div>
+          <div class="opts" id="opts"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <div class="card-foot">
+          <span class="foot-hint">Keys 1–4 to answer · Enter for next</span>
+          <button class="btn-next" id="nextBtn">Next →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it matters</div>
+    <h2>Where everyday percent reasoning goes wrong</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>Sales stack multiplicatively</h3><p>“30% off, then a further 10% off” is 37% off, not 40%. Shops rely on the difference being invisible.</p></div>
+      <div class="why-card"><h3>A cut and a raise are not inverse</h3><p>A 10% pay cut followed by a 10% rise leaves you 1% down. The two percents are of different salaries.</p></div>
+      <div class="why-card"><h3>Backwards means dividing</h3><p>Removing tax from a total, or finding a pre-sale price, is a division — and applying the percent again is the standard mistake.</p></div>
+    </div>
+    <p class="closing">Percent changes compose the way multipliers do, because that is what they are. <b>Turn every change into one number — up 20% is × 1.2, down 20% is × 0.8 — multiply them together to combine, and divide to undo.</b></p>
+  </section>
+
+  <footer>Percent Change · up 20% then down 20% = 0.96 · two 10% raises = 21% · $1440 ÷ 0.8 = $1800</footer>
+</main>
+
+<div class="toast" id="toast"><span>🏅</span><span id="toastText">Badge earned</span></div>
+
+<script>
+/* ============ helpers ============ */
+const rand=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rand(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||1;};
+const fmt=n=>n.toLocaleString('en-US');
+const F=(n,d)=>`<span class="mixnum"><span class="frac"><span class="fn">${n}</span><span class="fd">${d}</span></span></span>`;
+
+/* ---- money is whole cents; every change is an exact integer operation ---- */
+const money=c=>c%100===0?`$${fmt(c/100)}`:`$${fmt(Math.floor(c/100))}.${String(c%100).padStart(2,'0')}`;
+/* the multiplier for a p% change, as an exact decimal string */
+function multStr(p,up){
+  const m=up?100+p:100-p;                     /* m/100 */
+  if(m%100===0) return String(m/100);
+  if(m%10===0) return `${Math.floor(m/100)}.${(m%100)/10}`;
+  return `${Math.floor(m/100)}.${String(m%100).padStart(2,'0')}`;
+}
+/* apply a p% change to an amount in cents, exactly; null if it is not whole cents */
+function applyPct(cents,p,up){
+  const m=up?100+p:100-p;
+  const v=cents*m;
+  return v%100===0?v/100:null;
+}
+/* undo a p% change: divide */
+function undoPct(cents,p,up){
+  const m=up?100+p:100-p;
+  const v=cents*100;
+  return v%m===0?v/m:null;
+}
+
+function four(correct,cands,pad){
+  const seen=new Set([correct]); const out=[correct];
+  for(const c of cands){ if(out.length>=4)break; if(c!==null&&c!==undefined&&!seen.has(c)){seen.add(c);out.push(c);} }
+  let g=1;
+  while(out.length<4&&g<200){ const c=pad?pad(g):null; g++; if(c&&!seen.has(c)){seen.add(c);out.push(c);} }
+  const sh=shuffle(out.slice());
+  return {options:sh.map(t=>({text:t})),answer:sh.indexOf(correct)};
+}
+function fourKeyed(items,correctKey,pad){
+  const seen=new Set(); const uniq=[];
+  for(const it of items){ if(uniq.length>=4)break; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  let g=1;
+  while(uniq.length<4&&g<80){ const it=pad?pad(g):null; g++; if(it&&!seen.has(it.html)){seen.add(it.html);uniq.push(it);} }
+  const sh=shuffle(uniq.slice(0,4));
+  return {options:sh.map(o=>({text:o.html})), answer:sh.findIndex(o=>o.key===correctKey)};
+}
+const ITEMS=['a bicycle','a camera','a laptop','a guitar','a sofa','a coat','a phone','a desk'];
+
+/* ---- the up-then-down picture ---- */
+const INK='#12333A';
+function updownSVG(start,p){
+  const W=400,H=124;
+  const up=start*(100+p)/100, back=up*(100-p)/100;
+  const maxV=Math.max(start,up);
+  const x=[46,180,318], baseY=88, maxH=52;
+  const h=v=>Math.max(8,v/maxV*maxH);
+  const vals=[start,up,back], labs=['start',`+${p}%`,`${'\u2212'}${p}%`];
+  const cols=['#8CCBB7','#EFB53F','#D77149'];
+  let g='';
+  /* the reference line is drawn FIRST, so the labels sit on top of it — and each
+     label gets a paper-coloured halo so it stays legible wherever it lands */
+  const h0=h(start);
+  g+=`<line x1="${x[0]-30}" y1="${baseY-h0}" x2="${x[2]+30}" y2="${baseY-h0}"
+        stroke="#5C6E6D" stroke-width="1" stroke-dasharray="4 3"/>`;
+  g+=`<line x1="20" y1="${baseY}" x2="${W-20}" y2="${baseY}" stroke="#C6BFAD" stroke-width="1.3"/>`;
+  vals.forEach((v,i)=>{
+    const hh=h(v);
+    g+=`<rect x="${x[i]-30}" y="${baseY-hh}" width="60" height="${hh}" rx="4"
+          fill="${cols[i]}" fill-opacity=".55" stroke="${INK}" stroke-width="1.2"/>`;
+    const ty=baseY-hh-9;
+    g+=`<rect x="${x[i]-32}" y="${ty-11}" width="64" height="15" rx="3" fill="#F6F2E8"/>`;
+    g+=`<text x="${x[i]}" y="${ty}" font-family="Space Mono" font-size="12" font-weight="700"
+          fill="${INK}" text-anchor="middle">${money(v)}</text>`;
+    g+=`<text x="${x[i]}" y="${baseY+16}" font-family="Space Mono" font-size="10.5"
+          fill="#5C6E6D" text-anchor="middle">${labs[i]}</text>`;
+  });
+  /* the product, formatted from the exact integer — (100+p)(100-p) over 10000.
+     Interpolating the division directly produced strings like "0.93.75". */
+  const prod=String((100+p)*(100-p)).padStart(4,'0').replace(/0+$/,'')||'0';
+  g+=`<text x="${W/2}" y="${H-6}" font-family="Space Mono" font-size="10.5" font-weight="700"
+        fill="#B07800" text-anchor="middle">${multStr(p,true)} × ${multStr(p,false)} = 0.${prod}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+}
+
+/* ============ rung generators ============ */
+const GEN={
+
+  // 1 — increase or decrease?
+  1(){
+    const p=pick([5,10,15,20,25,30,40,50,60,75]);
+    const up=rand(0,1)===1;
+    const correct=`${up?100+p:100-p}%`;
+    const cands=[`${up?100-p:100+p}%`,`${p}%`,`${100}%`].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>`${(up?100+p:100-p)+g}%`);
+    return {prompt:`After a <b>${p}% ${up?'increase':'decrease'}</b>, the new value is what percent of the old?`,
+      mono:true,...r,
+      _meta:{rung:1,p,up,correct},
+      why:`<b>${correct}</b>. ${up?`An increase adds to what was there: 100% + ${p}% = ${100+p}%.`:`A decrease takes away from what was there: 100% ${'\u2212'} ${p}% = ${100-p}%.`}
+        <span class="note">Thinking of the result as a percent <em>of the original</em> is the first step towards the multiplier — and it is why 100% keeps turning up: the whole thing is always the starting point.</span>`};
+  },
+
+  // 2 — the multiplier
+  2(){
+    const p=pick([5,8,10,12,15,20,25,30,40,50,60,75]);
+    const up=rand(0,1)===1;
+    const correct=`× ${multStr(p,up)}`;
+    const cands=[`× ${multStr(p,!up)}`,`× ${p/100}`,`× ${1+p}`].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>`× ${multStr(p+g*5,up)}`);
+    return {prompt:`What single <b>multiplier</b> carries out a <b>${p}% ${up?'increase':'decrease'}</b>?`,
+      seq:`<div class="workbox"><span class="lbl">one number, not two steps</span>
+            <div class="row">new = old × <span class="q">?</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:2,p,up,correct},
+      why:`<b>× ${multStr(p,up)}</b>, because the new value is ${up?100+p:100-p}% of the old, and ${up?100+p:100-p}% = ${multStr(p,up)}.
+        <span class="note">One multiplication does the whole job — no need to find the change and then add or subtract it. And multipliers are what make the rest of this ladder easy: to combine changes you multiply them, and to undo one you divide.</span>`};
+  },
+
+  // 3 — apply a change
+  3(){
+    const p=pick([5,10,15,20,25,30,40,50,60,75]);
+    const up=rand(0,1)===1;
+    const base=pick([2000,3000,4000,4500,6000,8000,8500,12000])*1;
+    const out=applyPct(base,p,up);
+    if(out===null) return GEN[3]();
+    const correct=money(out);
+    const cands=[money(applyPct(base,p,!up)),money(base*p/100),money(base+p)]
+                  .filter(v=>v!==correct&&/^\$/.test(v));
+    const r=four(correct,cands,g=>money(out+g*100));
+    return {prompt:`Apply the change.`,
+      story:`${pick(ITEMS).replace(/^a /,'A ')} costs <b>${money(base)}</b>. Its price ${up?'rises':'falls'} by <b>${p}%</b>.`,
+      seq:`<div class="workbox"><span class="lbl">use the multiplier</span>
+            <div class="row">${money(base)} × ${multStr(p,up)} = <span class="q">?</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:3,p,up,base,out,correct},
+      why:`<b>${money(out)}</b> — ${money(base)} × ${multStr(p,up)}.
+        <span class="note">Or the long way: ${p}% of ${money(base)} is ${money(base*p/100)}, and ${up?'adding':'subtracting'} that gives ${money(out)}. The multiplier does both steps at once.</span>`};
+  },
+
+  // 4 — find the percent change
+  4(){
+    const from=pick([2000,2500,4000,5000,8000,10000,12000]);
+    const p=pick([10,20,25,40,50,60,75]);
+    const up=rand(0,1)===1;
+    const to=applyPct(from,p,up);
+    if(to===null||to<=0) return GEN[4]();
+    const correct=`${p}% ${up?'increase':'decrease'}`;
+    /* the classic error: dividing by the NEW value instead of the original */
+    const wrongDen=Math.abs(to-from)*100/to;
+    const cands=[`${p}% ${up?'decrease':'increase'}`,
+                 Number.isInteger(wrongDen)?`${wrongDen}% ${up?'increase':'decrease'}`:null,
+                 `${Math.abs(to-from)/100}% ${up?'increase':'decrease'}`].filter(Boolean);
+    const r=four(correct,cands,g=>`${p+g*5}% ${up?'increase':'decrease'}`);
+    return {prompt:'What is the <b>percent change</b>?',
+      seq:`<div class="bigch">${money(from)} &nbsp;→&nbsp; ${money(to)}</div>`,
+      wordy:true,...r,
+      _meta:{rung:4,from,to,p,up,correct},
+      why:`<b>${correct}</b>. The change is ${money(Math.abs(to-from))}, and it is measured against the <em>original</em> ${money(from)}: ${F(money(Math.abs(to-from)),money(from))} = ${p}%.
+        <span class="note">Dividing by the new value instead would give ${(Math.abs(to-from)*100/to).toFixed(1)}%, which answers a different question. The original is the whole here, and the original is always the first of the two numbers.</span>`};
+  },
+
+  // 5 — up then down (the flagship)
+  5(){
+    const p=pick([10,20,25,50]);
+    const base=pick([10000,20000,40000,50000,80000]);
+    const upV=applyPct(base,p,true);
+    const backV=applyPct(upV,p,false);
+    if(upV===null||backV===null) return GEN[5]();
+    const correct=money(backV);
+    const cands=[money(base),money(upV),money(applyPct(base,p,false))].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>money(backV+g*100));
+    return {prompt:'Where do you end up?',
+      story:`A price of <b>${money(base)}</b> rises by <b>${p}%</b>, and then the new price falls by <b>${p}%</b>.`,
+      seq:`<div class="workbox"><span class="lbl">two multipliers</span>
+            <div class="row">${money(base)} × <span class="up">${multStr(p,true)}</span> × <span class="dn">${multStr(p,false)}</span> = <span class="q">?</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:5,p,base,upV,backV,correct},
+      why:`<b>${money(backV)}</b> — not ${money(base)}. The two multipliers give ${multStr(p,true)} × ${multStr(p,false)} = ${(100+p)*(100-p)/10000}, so you finish at ${(100+p)*(100-p)/100}% of where you began.
+        <span class="note">You are <b>${100-(100+p)*(100-p)/100}% down</b>, and that figure does not depend on the starting amount at all — it is ${p}% × ${p}% ÷ 100 for any price. The ${p}% taken off is ${p}% of the <em>raised</em> price, which is bigger than the ${p}% that was added.</span>`};
+  },
+
+  // 6 — two increases (Leo)
+  6(){
+    const p=pick([5,10,20,25]);
+    const q=rand(0,1)?p:pick([5,10,20,25]);
+    const totalMult=(100+p)*(100+q);              /* over 10000 */
+    const totalPct=(totalMult-10000)/100;
+    if(!Number.isInteger(totalPct)) return GEN[6]();
+    const correct=`${totalPct}%`;
+    const cands=[`${p+q}%`,`${p*q}%`,`${Math.max(p,q)}%`].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>`${totalPct+g}%`);
+    return {prompt:'What is the <b>total</b> increase, as a percent of the original?',
+      story:`Leo got a <b>${p}% raise</b> at the end of his first year, and another <b>${q}% raise</b> a year later.`,
+      seq:`<div class="workbox"><span class="lbl">multipliers compose</span>
+            <div class="row">${multStr(p,true)} × ${multStr(q,true)} = <span class="q">?</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:6,p,q,totalPct,correct},
+      why:`<b>${totalPct}%</b>. The multipliers multiply: ${multStr(p,true)} × ${multStr(q,true)} = ${totalMult/10000}, which is a ${totalPct}% rise.
+        <span class="note">Adding the percents gives ${p+q}%, and it is short by ${(totalPct-(p+q)).toFixed(2)}% — because the second raise is ${q}% of his <em>already raised</em> salary, not of the original. This is the statement your notes ask students to judge, and it is false for exactly this reason.</span>`};
+  },
+
+  // 7 — undo a decrease (Brittany)
+  7(){
+    const p=pick([10,20,25,40,50]);
+    const orig=pick([120000,150000,180000,200000,240000,300000]);
+    const sold=applyPct(orig,p,false);
+    if(sold===null) return GEN[7]();
+    const wrong=applyPct(sold,p,true);            /* adding the percent back */
+    const correct=money(orig);
+    const cands=[money(wrong),money(sold*p/100),money(applyPct(sold,p,false))].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>money(orig+g*10000));
+    return {prompt:'What did she pay for it?',
+      story:`Brittany bought ${pick(ITEMS)} and a year later sold it for <b>${p}% less</b> than she paid. She sold it for <b>${money(sold)}</b>.`,
+      seq:`<div class="workbox"><span class="lbl">undo the multiplier</span>
+            <div class="row">paid × <span class="dn">${multStr(p,false)}</span> = ${money(sold)}</div>
+            <div class="row">paid = ${money(sold)} ÷ ${multStr(p,false)} = <span class="q">?</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:7,p,orig,sold,wrong,correct},
+      why:`<b>${money(orig)}</b>. To undo a multiplication you divide: ${money(sold)} ÷ ${multStr(p,false)} = ${money(orig)}. Check: ${money(orig)} × ${multStr(p,false)} = ${money(sold)} ✓
+        <span class="note">Adding ${p}% back on gives ${money(wrong)}, and it is wrong because that ${p}% is of the <em>sale</em> price. ${p}% of ${money(sold)} is ${money(sold*p/100)}, but ${p}% of what she paid was ${money(orig*p/100)} — a different amount entirely.</span>`};
+  },
+
+  // 8 — undo an increase
+  8(){
+    const p=pick([8,10,20,25,50]);
+    const before=pick([2000,4000,5000,6000,8000,12000,20000]);
+    const after=applyPct(before,p,true);
+    if(after===null) return GEN[8]();
+    const wrong=applyPct(after,p,false);
+    const correct=money(before);
+    const cands=[money(wrong),money(after-before),money(applyPct(after,p,true))].filter(v=>v!==correct);
+    const r=four(correct,cands,g=>money(before+g*100));
+    return {prompt:'What was the price <b>before</b>?',
+      story:`A bill comes to <b>${money(after)}</b> after <b>${p}%</b> ${p===8?'sales tax':'has been added'}.`,
+      seq:`<div class="workbox"><span class="lbl">undo the multiplier</span>
+            <div class="row">before × <span class="up">${multStr(p,true)}</span> = ${money(after)}</div>
+            <div class="row">before = ${money(after)} ÷ ${multStr(p,true)} = <span class="q">?</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:8,p,before,after,wrong,correct},
+      why:`<b>${money(before)}</b> — divide by ${multStr(p,true)}. Check: ${money(before)} × ${multStr(p,true)} = ${money(after)} ✓
+        <span class="note">Taking ${p}% <em>off</em> the total instead gives ${money(wrong)}, which is too low: ${p}% of the total ${money(after)} is more than the ${p}% that was originally added to ${money(before)}. Removing a percent is a division, never a subtraction of the same percent.</span>`};
+  },
+
+  // 9 — one equivalent change (kept to whole-percent answers)
+  9(){
+    /* only pairs whose combined discount is a whole number of percent */
+    let p,q;
+    for(let t=0;t<400;t++){
+      p=pick([5,10,20,25,30,40,50,60]);
+      q=pick([5,10,20,25,30,40,50,60]);
+      if(((100-p)*(100-q))%100===0) break;
+    }
+    const combinedMult=(100-p)*(100-q)/100;       /* as a percent of the original */
+    const total=100-combinedMult;
+    const correct=`${total}% off`;
+    const cands=[`${p+q}% off`,`${100-combinedMult-1}% off`,`${Math.max(p,q)}% off`]
+                  .filter(v=>v!==correct);
+    const r=four(correct,cands,g=>`${total+g+1}% off`);
+    return {prompt:'What <b>single</b> discount would have the same effect?',
+      story:`A shop takes <b>${p}% off</b> a price, and then a further <b>${q}% off</b> the reduced price.`,
+      seq:`<div class="workbox"><span class="lbl">multipliers compose</span>
+            <div class="row">${multStr(p,false)} × ${multStr(q,false)} = <span class="q">?</span></div></div>`,
+      mono:true,...r,
+      _meta:{rung:9,p,q,combinedMult,total,correct},
+      why:`<b>${total}% off</b>. The multipliers give ${multStr(p,false)} × ${multStr(q,false)} = ${combinedMult/100}, so you pay ${combinedMult}% of the original — a ${total}% discount.
+        <span class="note">Adding the two would give ${p+q}%, which is ${(p+q)-total}% too generous. The second ${q}% comes off a price that has <em>already</em> been reduced, so it is worth less than ${q}% of the original. Shops are quite happy for the difference to go unnoticed.</span>`};
+  },
+
+  10(){ return GEN[rand(1,9)](); },
+};
+
+/* ============ rung metadata ============ */
+const RUNGS=[
+  {id:1,title:'Increase or decrease?',short:'as a % of the old'},
+  {id:2,title:'The multiplier',short:'× 1.2 or × 0.8'},
+  {id:3,title:'Apply a change',short:'one multiplication'},
+  {id:4,title:'Find the change',short:'over the original'},
+  {id:5,title:'Up then down',short:'the flagship'},
+  {id:6,title:'Two increases',short:'Leo\u2019s two raises'},
+  {id:7,title:'Undo a decrease',short:'divide, don\u2019t add back'},
+  {id:8,title:'Undo an increase',short:'removing the tax'},
+  {id:9,title:'One equivalent change',short:'two discounts in one'},
+  {id:10,title:'Mixed boss',short:'all nine, shuffled'},
+];
+
+/* ============ state ============ */
+const STORE='percentChangeLadderBadges_v1';
+let earned=load(),current=1,streak=0,answered=false,currentQ=null;
+function load(){try{const r=localStorage.getItem(STORE);if(r)return new Set(JSON.parse(r));}catch(e){}return new Set();}
+function save(){try{localStorage.setItem(STORE,JSON.stringify([...earned]));}catch(e){}}
+
+/* ============ DOM ============ */
+const rail=document.getElementById('rail'),cardRung=document.getElementById('cardRung'),cardSkill=document.getElementById('cardSkill'),
+promptEl=document.getElementById('prompt'),qseqEl=document.getElementById('qseq'),optsEl=document.getElementById('opts'),
+feedbackEl=document.getElementById('feedback'),nextBtn=document.getElementById('nextBtn'),pips=[...document.querySelectorAll('.pip')],
+pcount=document.getElementById('pcount'),pbar=document.getElementById('pbar'),toast=document.getElementById('toast'),toastText=document.getElementById('toastText');
+
+function renderRail(){
+  rail.innerHTML='';
+  RUNGS.forEach(r=>{
+    const done=earned.has(r.id);
+    const b=document.createElement('button');
+    b.className='rung'+(r.id===current?' active':'')+(done?' done':'');
+    b.setAttribute('aria-current',r.id===current?'true':'false');
+    b.innerHTML=`<span class="num2">${r.id}</span><span class="rt">${r.title}<small>${r.short}</small></span><span class="badge">${done?'🏅':'○'}</span>`;
+    b.onclick=()=>{current=r.id;streak=0;renderRail();newQuestion();};
+    rail.appendChild(b);
+  });
+}
+function renderProgress(){pcount.textContent=earned.size;pbar.style.width=(earned.size/RUNGS.length*100)+'%';}
+function renderPips(){pips.forEach((p,i)=>p.classList.toggle('on',i<streak));}
+
+function newQuestion(){
+  answered=false;
+  const meta=RUNGS.find(r=>r.id===current);
+  cardRung.textContent='Rung '+current;cardSkill.innerHTML=meta.title;
+  currentQ=GEN[current]();
+  promptEl.innerHTML=currentQ.prompt+(currentQ.story?`<div class="story">${currentQ.story}</div>`:'');
+  qseqEl.innerHTML=currentQ.seq||'';
+  const stack=currentQ.stack||currentQ.options.some(o=>o.text.replace(/<[^>]*>/g,'').length>22);
+  optsEl.className='opts'+(stack?' stack':'');
+  optsEl.innerHTML='';
+  currentQ.options.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt'+(currentQ.wordy?' wordy':'');
+    btn.innerHTML=`<span class="key">${i+1}</span><span class="body">${o.text}</span>`;
+    btn.onclick=()=>answer(i);
+    optsEl.appendChild(btn);
+  });
+  feedbackEl.className='feedback';feedbackEl.innerHTML='';
+  nextBtn.classList.remove('ready');renderPips();
+}
+
+function answer(idx){
+  if(answered)return;answered=true;
+  const correct=currentQ.answer,btns=[...optsEl.children];
+  btns.forEach(b=>b.disabled=true);
+  btns[correct].classList.add('correct');
+  /* rung 5 draws the round trip once the answer is in */
+  const m=currentQ._meta;
+  if(m&&m.rung===5&&m.base) qseqEl.innerHTML=updownSVG(m.base,m.p);
+  if(idx===correct){
+    streak++;feedbackEl.className='feedback ok';
+    feedbackEl.innerHTML=`<span class="mark">✓ Correct.</span><span>${currentQ.why}</span>`;
+    renderPips();
+    if(streak>=4&&!earned.has(current)){earned.add(current);save();renderProgress();renderRail();showToast(`Rung ${current} badge earned!`);}
+  }else{
+    btns[idx].classList.add('wrong');streak=0;renderPips();
+    feedbackEl.className='feedback no';
+    feedbackEl.innerHTML=`<span class="mark">✗ Not quite.</span><span>${currentQ.why} <em>Streak reset — four in a row earns the badge.</em></span>`;
+  }
+  nextBtn.classList.add('ready');
+}
+
+let toastTimer=null;
+function showToast(m){toastText.textContent=m;toast.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('show'),2600);}
+
+nextBtn.onclick=newQuestion;
+document.addEventListener('keydown',e=>{
+  if(e.key>='1'&&e.key<='4'){const i=+e.key-1;if(!answered&&optsEl.children[i])answer(i);}
+  else if((e.key==='Enter'||e.key===' ')&&answered){e.preventDefault();newQuestion();}
+});
+document.getElementById('resetBtn').onclick=()=>{earned.clear();save();streak=0;renderProgress();renderRail();newQuestion();showToast('Progress reset');};
+
+/* ============ hero ============ */
+(function(){
+  document.getElementById('heroPanel').innerHTML=
+    `<div class="ptitle">$100 up 20%, then down 20%</div>
+     <div class="psub">the same percent, and you do not come home</div>
+     <div class="pcanvas">${updownSVG(10000,20)}</div>
+     <div class="mrow">
+       <div class="mcard"><div class="k">two raises of 10%</div>
+         <div class="v">1.1 × 1.1</div><div class="r">= 21%, not 20%</div></div>
+       <div class="mcard bad"><div class="k">sold at 20% off<br>for $1440</div>
+         <div class="v">1440 ÷ 0.8</div><div class="r">= $1800, not $1728</div></div>
+       <div class="mcard"><div class="k">20% off, then 10% off</div>
+         <div class="v">0.8 × 0.9</div><div class="r">= 28% off, not 30%</div></div>
+     </div>
+     <div class="pnote">multipliers <b>compose by multiplying</b> — so changes never add<br>
+       <span style="font-size:.85em;color:#8FB0B2">and undoing one means dividing, not applying its opposite</span></div>`;
+})();
+renderRail();renderProgress();newQuestion();
+</script>
+</body>
+</html>
