@@ -1,0 +1,408 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math 1350 — Interactive Skill Ladders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:.86rem;box-shadow:var(--shadow);font-family:"Space Mono"}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:30px 0 4px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:18px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(2rem,5vw,3.3rem);letter-spacing:-.02em;margin-bottom:18px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.16rem);color:#DCEAE9;max-width:64ch}
+  .lede strong{color:var(--paper)}
+
+  /* ---- overall progress ---- */
+  .summary{margin:28px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:16px;padding:20px 18px;box-shadow:var(--shadow)}
+  .sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+  /* keep the three stats side by side on phones — stacking them pushed the
+     lesson list roughly a screen and a half down, on a page that is navigation */
+  @media (max-width:660px){
+    .sgrid{grid-template-columns:repeat(3,1fr);gap:8px}
+    .stat{padding:11px 4px}
+    .stat .v{font-size:1.3rem}
+    .stat .l{font-size:.56rem;letter-spacing:.05em;line-height:1.35}
+  }
+  .stat{text-align:center;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:14px 10px}
+  .stat .v{font-family:"Space Grotesk";font-weight:700;font-size:1.7rem;color:var(--amber);line-height:1.1}
+  .stat .l{font-family:"Space Mono";font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-top:7px}
+  .bigbar{height:10px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden}
+  .bigbar span{display:block;height:100%;width:0;border-radius:20px;
+    background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .6s}
+  .sfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;
+    font-family:"Space Mono";font-size:.76rem;color:var(--muted)}
+  .btn{background:var(--amber);color:var(--ground-2);border:none;font:inherit;font-family:"Space Grotesk";
+    font-weight:600;font-size:.88rem;padding:9px 16px;border-radius:9px;cursor:pointer;transition:.16s;text-decoration:none;display:inline-block}
+  .btn:hover{filter:brightness(1.08)}
+  .btn-ghost{background:none;border:1px solid var(--line-strong);color:var(--muted);font:inherit;
+    font-size:.8rem;padding:8px 13px;border-radius:8px;cursor:pointer;transition:.18s}
+  .btn-ghost:hover{color:var(--paper);border-color:var(--muted)}
+
+  /* ---- controls ---- */
+  .controls{position:sticky;top:0;z-index:20;margin:26px 0 0;padding:12px 0;
+    background:linear-gradient(180deg,var(--ground) 72%,rgba(16,51,58,0));
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .search{flex:1;min-width:210px;position:relative}
+  .search input{width:100%;background:rgba(255,255,255,.06);border:1px solid var(--line-strong);
+    color:var(--paper);font:inherit;font-size:.92rem;padding:11px 14px 11px 36px;border-radius:10px}
+  .search input::placeholder{color:var(--muted)}
+  .search .mag{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.9rem}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{background:rgba(255,255,255,.05);border:1px solid var(--line-strong);color:var(--muted);
+    font:inherit;font-family:"Space Mono";font-size:.74rem;padding:9px 12px;border-radius:8px;cursor:pointer;transition:.16s;white-space:nowrap}
+  .chip:hover{color:var(--paper)}
+  .chip.on{background:var(--teal);border-color:var(--teal);color:var(--ground-2);font-weight:700}
+
+  /* ---- lessons ---- */
+  .lesson{margin-top:26px;scroll-margin-top:76px}
+  .lhead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .lnum{font-family:"Space Mono";font-weight:700;font-size:.76rem;letter-spacing:.14em;color:var(--teal-bright);
+    background:rgba(47,163,155,.16);padding:5px 10px;border-radius:7px;white-space:nowrap}
+  .lhead h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.15rem,2.7vw,1.5rem);letter-spacing:-.01em;flex:1}
+  .lmeta{font-family:"Space Mono";font-size:.74rem;color:var(--muted);display:flex;align-items:center;gap:10px}
+  .lbar{width:84px;height:6px;border-radius:20px;background:rgba(255,255,255,.09);overflow:hidden}
+  .lbar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .lhead a.applets{font-family:"Space Mono";font-size:.72rem;color:var(--muted);text-decoration:none;
+    border:1px solid var(--line-strong);padding:5px 10px;border-radius:7px;transition:.16s;white-space:nowrap}
+  .lhead a.applets:hover{color:var(--paper);border-color:var(--muted)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:13px;margin-top:15px}
+  .lad{display:block;text-decoration:none;color:inherit;background:rgba(255,255,255,.045);
+    border:1px solid var(--line);border-radius:13px;padding:15px 15px 13px;transition:.16s;position:relative;overflow:hidden}
+  .lad:hover{background:rgba(255,255,255,.075);border-color:var(--line-strong);transform:translateY(-2px)}
+  .lad::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:var(--pw,0%);
+    background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .lad.done{border-color:rgba(239,181,63,.5)}
+  .lad .tt{font-family:"Space Grotesk";font-weight:600;font-size:1rem;line-height:1.3;margin-bottom:5px;
+    display:flex;align-items:flex-start;gap:7px}
+  .lad .tt .bg{flex:none;font-size:.92rem;opacity:.28;line-height:1.25}
+  .lad.done .tt .bg{opacity:1}
+  .lad .ss{font-size:.83rem;color:#B9CFCD;line-height:1.45;min-height:2.5em}
+  .lad .rr{margin-top:10px;font-family:"Space Mono";font-size:.7rem;color:var(--muted);
+    display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .lad .rr b{color:var(--teal-bright)}
+  .lad.done .rr b{color:var(--amber)}
+
+  /* ---- units ---- */
+  .unit{margin-top:46px}
+  .uhead{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:14px;padding:15px 17px}
+  .unum{font-family:"Space Mono";font-weight:700;font-size:.72rem;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ground-2);background:var(--amber);
+    padding:6px 11px;border-radius:7px;white-space:nowrap}
+  .uhead h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.2rem,2.9vw,1.62rem);
+    letter-spacing:-.01em;flex:1;min-width:180px}
+  .uhead .umeta{font-family:"Space Mono";font-size:.75rem;color:var(--muted);
+    display:flex;align-items:center;gap:10px}
+  .ubar{width:96px;height:6px;border-radius:20px;background:rgba(255,255,255,.09);overflow:hidden}
+  .ubar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .5s}
+  .rev{font-family:"Space Grotesk";font-weight:600;font-size:.82rem;color:var(--ground-2);
+    background:var(--teal-bright);text-decoration:none;padding:8px 14px;border-radius:8px;
+    transition:.16s;white-space:nowrap}
+  .rev:hover{filter:brightness(1.08)}
+  .rev.final{background:var(--amber)}
+
+  /* the review strip at the top */
+  .revbar{margin-top:22px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  .revbar .lbl{font-family:"Space Mono";font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);margin-right:2px}
+  .revbar a{font-family:"Space Mono";font-size:.78rem;color:var(--paper);text-decoration:none;
+    background:rgba(255,255,255,.05);border:1px solid var(--line-strong);
+    padding:8px 13px;border-radius:8px;transition:.16s;white-space:nowrap}
+  .revbar a:hover{border-color:var(--teal-bright);color:var(--teal-bright)}
+  .revbar a.final{border-color:rgba(239,181,63,.55);color:var(--amber)}
+
+  .empty{margin-top:30px;text-align:center;color:var(--muted);font-family:"Space Mono";font-size:.88rem;
+    padding:34px 20px;border:1px dashed var(--line-strong);border-radius:14px}
+
+  footer{margin:56px 0 40px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);
+    font-family:"Space Mono";font-size:.76rem;text-align:center;line-height:1.9}
+  /* 120% of the toast's own height does not clear its 26px offset, so a strip of
+     it stayed visible at the foot of the page — offset it past that too */
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(calc(100% + 40px));background:var(--amber);
+    color:var(--ground-2);font-family:"Space Grotesk";font-weight:600;padding:13px 22px;border-radius:12px;
+    box-shadow:var(--shadow);z-index:60;transition:transform .4s cubic-bezier(.2,.9,.3,1.3)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){.toast,.lad,.bigbar span,.lbar span,.lad::after{transition:none}}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:6px}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">1350</span> Interactive Skill Ladders</div>
+    <nav class="topnav">
+      <a href="#lessons">Lessons</a>
+      <a href="#how">How they work</a>
+    </nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · mathematics for elementary teachers</div>
+    <h1>Seventy-seven ladders,<br><span class="hl">twelve lessons.</span></h1>
+    <p class="lede">Each ladder is a self-contained practice set of ten rungs, climbing from recognition to application. <strong>Four correct in a row earns a rung's badge.</strong> Your progress is saved in this browser and shown below.</p>
+
+    <div class="summary">
+      <div class="sgrid">
+        <div class="stat"><div class="v" id="sBadges">0</div><div class="l">rungs earned</div></div>
+        <div class="stat"><div class="v" id="sLadders">0</div><div class="l">ladders finished</div></div>
+        <div class="stat"><div class="v" id="sLessons">0</div><div class="l">lessons finished</div></div>
+      </div>
+      <div class="bigbar"><span id="sBar"></span></div>
+      <div class="sfoot">
+        <span id="sText">no progress yet</span>
+        <span style="display:flex;gap:8px;flex-wrap:wrap">
+          <a class="btn" id="continueBtn" href="#">Start the first ladder</a>
+          <button class="btn-ghost" id="resetBtn">Reset all progress</button>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <div class="controls">
+    <div class="search"><span class="mag">&#9906;</span>
+      <input id="q" type="search" placeholder="Search ladders — try “fractions”, “percent”, “remainder”…" autocomplete="off"></div>
+    <div class="chips">
+      <button class="chip on" data-f="all">All</button>
+      <button class="chip" data-f="todo">Not started</button>
+      <button class="chip" data-f="doing">In progress</button>
+      <button class="chip" data-f="done">Finished</button>
+    </div>
+  </div>
+
+  <div class="revbar">
+    <span class="lbl">Exam reviews</span>
+    <a href="Unit_1_Review.html">Unit 1 &middot; Lessons 1&ndash;3</a>
+    <a href="Unit_2_Review.html">Unit 2 &middot; Lessons 4&ndash;6</a>
+    <a href="Unit_3_Review.html">Unit 3 &middot; Lessons 7&ndash;9</a>
+    <a href="Unit_4_Review.html">Unit 4 &middot; Lessons 10&ndash;12</a>
+    <a href="Final_Exam_Review.html" class="final">Final Exam Review</a>
+  </div>
+
+  <section id="lessons"></section>
+  <div class="empty" id="empty" style="display:none">No ladders match that search.</div>
+
+  <section id="how" style="padding:52px 0 0">
+    <div class="eyebrow">How they work</div>
+    <h2 style="font-family:'Space Grotesk';font-weight:600;font-size:clamp(1.4rem,3.2vw,1.9rem);margin-bottom:10px">Ten rungs, four in a row</h2>
+    <p class="lede">Every ladder opens with the idea and the mistake it causes, then ten rungs of practice. Questions are generated fresh each time, so a ladder can be climbed repeatedly. Answer with the mouse or the number keys <b>1</b>–<b>4</b>; press <b>Enter</b> for the next question. Progress lives in this browser only — it is not sent anywhere, and clearing your browser data will clear it.</p>
+  </section>
+
+  <footer>
+    BubbleMath · Math 1350 · <span id="fCount">77 ladders · 762 rungs</span><br>
+    progress stored locally in this browser
+  </footer>
+</main>
+
+<div class="toast" id="toast">Progress reset</div>
+
+<script>
+const DATA=[{"n":1,"name":"Foundations","review":"Unit_1_Review.html","lessons":[{"n":1,"title":"Problem Solving & Patterns","page":"L1.html","ladders":[{"f":"sequence_classifier_ladder.html","t":"The Sequence Classifier","s":"subtract first, then divide","k":"seqLadderBadges_v1","r":10},{"f":"nth_term_ladder.html","t":"The nth-Term Ladder","s":"one formula, and the mistake is always n\u22121","k":"nthTermLadderBadges_v1","r":10},{"f":"reasoning_ladder.html","t":"The Reasoning Ladder","s":"does this guarantee the conclusion, or only suggest it?","k":"reasoningLadderBadges_v1","r":10},{"f":"polya_strategy_picker.html","t":"The P\u00f3lya Strategy-Picker","s":"read the problem's shape before you compute","k":"polyaPickerBadges_v1","r":5}]},{"n":2,"title":"Sets & Venn Diagrams","page":"L2.html","ladders":[{"f":"membership_subset_ladder.html","t":"The Membership & Subset Ladder","s":"is the left side an element, or a set?","k":"membershipLadderBadges_v1","r":10},{"f":"set_operations_ladder.html","t":"The Set Operations Ladder","s":"translate the symbol, then act on the lists","k":"setOpsLadderBadges_v1","r":10},{"f":"venn_region_ladder.html","t":"The Venn Region Ladder","s":"every expression names a shaded region","k":"vennRegionLadderBadges_v1","r":10},{"f":"survey_ladder.html","t":"The Survey Ladder","s":"fill the center first, then work outward","k":"surveyLadderBadges_v1","r":10},{"f":"cartesian_product_ladder.html","t":"The Cartesian Product Ladder","s":"every element with every element, in order","k":"cartesianLadderBadges_v1","r":5}]},{"n":3,"title":"Numeration & Number Systems","page":"L3.html","ladders":[{"f":"place_value_ladder.html","t":"The Place Value & Fair Exchange Ladder","s":"a digit's value is digit \u00d7 place","k":"placeValueLadderBadges_v1","r":10},{"f":"base_conversion_ladder.html","t":"The Base Conversion Ladder","s":"multiply and add going in, divide and read up coming out","k":"baseConversionLadderBadges_v1","r":10},{"f":"roman_numeral_ladder.html","t":"The Roman Numeral Ladder","s":"add going right, unless the next one is bigger","k":"romanLadderBadges_v1","r":10},{"f":"ancient_systems_ladder.html","t":"The Ancient Systems Ladder","s":"does position matter, and what's the base?","k":"ancientSystemsLadderBadges_v1","r":10}]}]},{"n":2,"name":"Whole-Number Operations","review":"Unit_2_Review.html","lessons":[{"n":4,"title":"Adding & Subtracting Whole Numbers","page":"L4.html","ladders":[{"f":"properties_of_addition_ladder.html","t":"The Properties of Addition Ladder","s":"name what changed","k":"propertiesAdditionLadderBadges_v1","r":10},{"f":"other_bases_ladder.html","t":"Addition & Subtraction in Other Bases","s":"regroup at the base, not at ten","k":"otherBasesLadderBadges_v1","r":10},{"f":"diagnose_error_ladder.html","t":"Diagnose the Error","s":"a wrong answer is the output of a rule","k":"diagnoseErrorLadderBadges_v1","r":10},{"f":"subtraction_models_ladder.html","t":"The Subtraction Models Ladder","s":"same difference, different question","k":"subtractionModelsLadderBadges_v1","r":10},{"f":"strategy_picker_ladder.html","t":"The Strategy-Picker","s":"reshape the numbers before you compute","k":"strategyPickerLadderBadges_v1","r":11}]},{"n":5,"title":"Multiplying Whole Numbers","page":"L5.html","ladders":[{"f":"distributive_property_ladder.html","t":"The Distributive Property Ladder","s":"multiply every term inside","k":"distributiveLadderBadges_v1","r":10},{"f":"multiplication_models_ladder.html","t":"The Multiplication Models Ladder","s":"five pictures of one product","k":"multiplicationModelsLadderBadges_v1","r":10},{"f":"mult_algorithms_ladder.html","t":"Algorithms & the Placeholder Zero","s":"same products, different arrangement","k":"multAlgorithmsLadderBadges_v1","r":10},{"f":"mult_properties_ladder.html","t":"Properties of Multiplication","s":"six properties, one question","k":"multPropertiesLadderBadges_v1","r":11},{"f":"mult_bases_ladder.html","t":"Multiplication in Other Bases","s":"the facts change, the algorithm doesn't","k":"multBasesLadderBadges_v1","r":10},{"f":"mental_mult_ladder.html","t":"Mental Multiplication & Estimation","s":"reshape the factors first","k":"mentalMultLadderBadges_v1","r":10}]},{"n":6,"title":"Dividing Whole Numbers & Divisibility","page":"L6.html","ladders":[{"f":"divisibility_tests_ladder.html","t":"The Divisibility Tests Ladder","s":"don't divide, read the digits","k":"divisibilityLadderBadges_v1","r":10},{"f":"remainders_ladder.html","t":"Remainders & the Division Algorithm","s":"one division, four answers","k":"remaindersLadderBadges_v1","r":11},{"f":"division_models_ladder.html","t":"Division Models","s":"how many groups, or how many in each?","k":"divisionModelsLadderBadges_v1","r":10},{"f":"special_cases_ladder.html","t":"Special Cases & Divisibility Properties","s":"is there a unique c?","k":"specialCasesLadderBadges_v1","r":11},{"f":"division_algorithms_ladder.html","t":"Division Algorithms","s":"repeated subtraction, organised","k":"divAlgorithmsLadderBadges_v1","r":10},{"f":"mental_division_ladder.html","t":"Mental Division & Estimation","s":"break the dividend, not the divisor","k":"mentalDivisionLadderBadges_v1","r":11},{"f":"order_of_operations_ladder.html","t":"Order of Operations","s":"four tiers, not six","k":"orderOpsLadderBadges_v1","r":8}]}]},{"n":3,"name":"Number Theory & Fractions","review":"Unit_3_Review.html","lessons":[{"n":7,"title":"Number Theory \u2014 Primes, GCF & LCM","page":"L7.html","ladders":[{"f":"primes_composites_ladder.html","t":"Primes & Composites","s":"count the divisors","k":"primesCompositesLadderBadges_v1","r":10},{"f":"prime_factorization_ladder.html","t":"Prime Factorization & Counting Divisors","s":"one answer, every route","k":"primeFactorizationLadderBadges_v1","r":10},{"f":"gcf_ladder.html","t":"GCF: Four Methods","s":"the biggest thing they share","k":"gcfLadderBadges_v1","r":10},{"f":"lcm_ladder.html","t":"LCM: Four Methods","s":"the smallest thing they both reach","k":"lcmLadderBadges_v1","r":10},{"f":"min_max_ladder.html","t":"MIN or MAX","s":"and why GCF \u00b7 LCM = ab","k":"minMaxLadderBadges_v1","r":10},{"f":"which_tool_ladder.html","t":"Which Do I Use?","s":"GCF breaks down, LCM builds up","k":"whichToolLadderBadges_v1","r":10}]},{"n":8,"title":"Integers","page":"L8.html","ladders":[{"f":"integers_absolute_value_ladder.html","t":"Integers, Opposites & Absolute Value","s":"distance is never negative","k":"integersAbsValLadderBadges_v1","r":10},{"f":"adding_integers_ladder.html","t":"Adding Integers","s":"a positive and a negative cancel","k":"addingIntegersLadderBadges_v1","r":10},{"f":"subtracting_integers_ladder.html","t":"Subtraction = Adding the Opposite","s":"taking a bill away makes you richer","k":"subtractingIntegersLadderBadges_v1","r":10},{"f":"multiplying_integers_ladder.html","t":"Multiplying Integers","s":"why two negatives make a positive","k":"multiplyingIntegersLadderBadges_v1","r":10},{"f":"dividing_integers_ladder.html","t":"Dividing Integers","s":"the multiplication rules, read backwards","k":"dividingIntegersLadderBadges_v1","r":10},{"f":"order_ops_integers_ladder.html","t":"Order of Operations with Integers","s":"\u22123\u00b2 is not (\u22123)\u00b2","k":"orderOpsIntegersLadderBadges_v1","r":9}]},{"n":9,"title":"Fractions & Fraction Operations","page":"L9.html","ladders":[{"f":"what_is_a_fraction_ladder.html","t":"What Is a Fraction?","s":"three agreements, four models","k":"whatIsAFractionLadderBadges_v1","r":10},{"f":"equivalence_simplifying_ladder.html","t":"Equivalence & Simplifying","s":"one law, two directions","k":"equivSimplifyLadderBadges_v1","r":10},{"f":"comparing_fractions_ladder.html","t":"Comparing & Ordering Fractions","s":"bigger denominator, smaller piece","k":"comparingFractionsLadderBadges_v1","r":10},{"f":"adding_fractions_ladder.html","t":"Adding & Subtracting Fractions","s":"same size, or nothing","k":"addSubFractionsLadderBadges_v1","r":10},{"f":"multiplying_fractions_ladder.html","t":"Multiplying Fractions","s":"\u201cof\u201d means multiply","k":"multiplyFractionsLadderBadges_v1","r":10},{"f":"dividing_fractions_ladder.html","t":"Dividing Fractions","s":"how many fit inside?","k":"divideFractionsLadderBadges_v1","r":10},{"f":"fractions_decimals_ladder.html","t":"Fractions & Decimals","s":"twos and fives, or it repeats","k":"fractionsDecimalsLadderBadges_v1","r":10}]}]},{"n":4,"name":"Decimals, Ratios & Percents","review":"Unit_4_Review.html","lessons":[{"n":10,"title":"Terminating & Repeating Decimals","page":"L10.html","ladders":[{"f":"decimal_place_value_ladder.html","t":"Decimal Place Value & Expanded Form","s":"the mirror is the ones place","k":"decimalPlaceValueLadderBadges_v1","r":10},{"f":"powers_of_ten_ladder.html","t":"Powers of Ten","s":"the digits never move","k":"powersOfTenLadderBadges_v1","r":10},{"f":"frac_to_decimal_ladder.html","t":"Fractions \u2192 Decimals","s":"divide, or build a power of ten","k":"fracToDecLadderBadges_v1","r":10},{"f":"will_it_terminate_ladder.html","t":"Will It Terminate?","s":"reduce, then factor, then decide","k":"willItTerminateLadderBadges_v1","r":10},{"f":"repetend_period_ladder.html","t":"Repetend, Period & Bar Notation","s":"the bar covers the repeat, and only the repeat","k":"repetendPeriodLadderBadges_v1","r":10},{"f":"repeating_to_fraction_ladder.html","t":"Repeating \u2192 Fractions","s":"shift, subtract, and the tail cancels","k":"repeatingToFractionLadderBadges_v1","r":10},{"f":"comparing_decimals_ladder.html","t":"Comparing & Ordering Decimals","s":"longer is not bigger","k":"comparingDecimalsLadderBadges_v1","r":10},{"f":"point_nine_repeating_ladder.html","t":"Does 0.9\u0304 = 1?","s":"two names, one number","k":"pointNineRepeatingLadderBadges_v1","r":10}]},{"n":11,"title":"Ratios, Proportions & Scale Drawings","page":"L11.html","ladders":[{"f":"adding_decimals_ladder.html","t":"Adding & Subtracting Decimals","s":"line up the points","k":"addSubDecimalsLadderBadges_v1","r":10},{"f":"multiplying_decimals_ladder.html","t":"Multiplying Decimals","s":"ignore the points, then count them","k":"multiplyDecimalsLadderBadges_v1","r":10},{"f":"dividing_decimals_ladder.html","t":"Dividing Decimals","s":"move both, or move neither","k":"dividingDecimalsLadderBadges_v1","r":10},{"f":"scientific_notation_ladder.html","t":"Scientific Notation","s":"one digit before the point","k":"scientificNotationLadderBadges_v1","r":10},{"f":"decimal_mental_math_ladder.html","t":"Decimal Mental Math","s":"three operations, three adjustments","k":"decimalMentalMathLadderBadges_v1","r":10},{"f":"ratios_ladder.html","t":"Ratios","s":"to the other part, or to the whole?","k":"ratiosLadderBadges_v1","r":10},{"f":"proportions_ladder.html","t":"Proportions & Direct Variation","s":"same thing on top, both sides","k":"proportionsLadderBadges_v1","r":10},{"f":"unit_rates_ladder.html","t":"Unit Rates & Best Deal","s":"the unit tells you which way to read it","k":"unitRatesLadderBadges_v1","r":10},{"f":"scale_drawings_ladder.html","t":"Scale Drawings","s":"let the proportion decide the direction","k":"scaleDrawingsLadderBadges_v1","r":10}]},{"n":12,"title":"Real Numbers, Percents & Interest","page":"L12.html","ladders":[{"f":"rational_irrational_ladder.html","t":"Rational or Irrational?","s":"a pattern is not a repeating block","k":"rationalIrrationalLadderBadges_v1","r":10},{"f":"real_number_system_ladder.html","t":"The Real Number System","s":"not which box, but how many","k":"realNumberSystemLadderBadges_v1","r":10},{"f":"square_roots_squeeze_ladder.html","t":"Square Roots & the Squeeze","s":"two roots, one symbol","k":"squareRootsSqueezeLadderBadges_v1","r":10},{"f":"frac_dec_percent_ladder.html","t":"Fractions, Decimals, Percents","s":"the % sign is an operation","k":"fracDecPercentLadderBadges_v1","r":10},{"f":"three_percent_problems_ladder.html","t":"The Three Percent Problems","s":"one proportion, three unknowns","k":"threePercentProblemsLadderBadges_v1","r":10},{"f":"percent_change_ladder.html","t":"Percent Change & Working Backwards","s":"the base moves","k":"percentChangeLadderBadges_v1","r":10},{"f":"do_percents_add_ladder.html","t":"Do Percents Add?","s":"same base, or no","k":"doPercentsAddLadderBadges_v1","r":10},{"f":"percent_mental_math_ladder.html","t":"Percent Mental Math","s":"benchmarks, then build","k":"percentMentalMathLadderBadges_v1","r":10},{"f":"simple_interest_ladder.html","t":"Simple Interest & Future Value","s":"t is in years","k":"simpleInterestLadderBadges_v1","r":10},{"f":"compound_interest_ladder.html","t":"Compound Interest & Present Value","s":"r/n and nt, both","k":"compoundInterestLadderBadges_v1","r":10}]}]}];
+
+/* ---- read each ladder's badge set from localStorage ----
+   The ladders live at the same origin as this page, so their saved progress is
+   readable here. Each stores a JSON array of earned rung numbers. */
+function badgesFor(key){
+  try{
+    const raw=localStorage.getItem(key);
+    if(!raw) return 0;
+    const v=JSON.parse(raw);
+    return Array.isArray(v)?v.length:0;
+  }catch(e){ return 0; }
+}
+
+/* every ladder in the course, flattened — used for totals and the continue button */
+const ALL=[];
+DATA.forEach(U=>U.lessons.forEach(L=>L.ladders.forEach(x=>ALL.push(x))));
+const TOTAL_RUNGS=ALL.reduce((a,x)=>a+x.r,0);
+const TOTAL_LADDERS=ALL.length;
+
+let filter='all', query='';
+
+function state(x){
+  const b=badgesFor(x.k);
+  return {b, pct: x.r?Math.round(100*b/x.r):0, done: b>=x.r && x.r>0, started: b>0};
+}
+/* The query is parsed rather than substring-matched wholesale.
+   "lesson 12" / "unit 3" are pulled out and matched as exact numbers — plain
+   substring matching made "unit 3" also hit lesson 3, 13, 30… — and the words
+   that remain are matched against the ladder's own title and subtitle, plus the
+   lesson title. Unit names are excluded: "Decimals, Ratios & Percents" would
+   otherwise make a search for "percent" return all 27 ladders in that unit. */
+function parseQuery(q){
+  let lesson=null, unit=null;
+  q=q.replace(/\blessons?\s*(\d{1,2})\b/g,(m,n)=>{lesson=+n;return ' ';})
+     .replace(/\bunits?\s*(\d{1,2})\b/g, (m,n)=>{unit=+n;  return ' ';});
+  return {lesson,unit,words:q.split(/\s+/).filter(Boolean)};
+}
+let Q={lesson:null,unit:null,words:[]};
+
+function matches(x,lessonTitle,lessonNum,unitNum){
+  const st=state(x);
+  if(filter==='done'&&!st.done) return false;
+  if(filter==='todo'&&st.started) return false;
+  if(filter==='doing'&&(!st.started||st.done)) return false;
+  if(Q.lesson!==null && lessonNum!==Q.lesson) return false;
+  if(Q.unit!==null   && unitNum!==Q.unit)     return false;
+  if(!Q.words.length) return true;
+  const hay=(x.t+' '+x.s+' '+lessonTitle).toLowerCase();
+  return Q.words.every(w=>hay.includes(w));
+}
+const sum=(arr,f)=>arr.reduce((a,x)=>a+f(x),0);
+
+function render(){
+  const host=document.getElementById('lessons');
+  host.innerHTML='';
+  let shown=0;
+  DATA.forEach(U=>{
+    /* which lessons in this unit have anything to show under the current filter */
+    const vis=U.lessons.map(L=>({L,items:L.ladders.filter(x=>matches(x,L.title,L.n,U.n))}))
+                       .filter(o=>o.items.length);
+    if(!vis.length) return;
+    const uLad=[].concat(...U.lessons.map(L=>L.ladders));
+    const uEarn=sum(uLad,x=>state(x).b), uTot=sum(uLad,x=>x.r);
+    const uDone=uLad.every(x=>state(x).done);
+    const sec=document.createElement('section');
+    sec.className='unit'; sec.id='U'+U.n;
+    sec.innerHTML=
+      `<div class="uhead">
+         <span class="unum">Unit ${U.n}</span>
+         <h2>${U.name}</h2>
+         <span class="umeta"><span class="ubar"><span style="width:${uTot?100*uEarn/uTot:0}%"></span></span>
+           ${uEarn}/${uTot}${uDone?' &#127941;':''}</span>
+         <a class="rev" href="${U.review}">Unit ${U.n} exam review &rsaquo;</a>
+       </div>`;
+    vis.forEach(({L,items})=>{
+      const earned=sum(L.ladders,x=>state(x).b), total=sum(L.ladders,x=>x.r);
+      const lDone=L.ladders.every(x=>state(x).done);
+      shown+=items.length;
+      const d=document.createElement('div');
+      d.className='lesson'; d.id='L'+L.n;
+      d.innerHTML=
+        `<div class="lhead">
+           <span class="lnum">Lesson ${L.n}</span>
+           <h2>${L.title}</h2>
+           <a class="applets" href="${L.page}">lesson page &rsaquo;</a>
+           <span class="lmeta"><span class="lbar"><span style="width:${total?100*earned/total:0}%"></span></span>
+             ${earned}/${total}${lDone?' &#127941;':''}</span>
+         </div>
+         <div class="grid"></div>`;
+      const grid=d.querySelector('.grid');
+      items.forEach(x=>{
+        const st=state(x);
+        const a=document.createElement('a');
+        a.className='lad'+(st.done?' done':'');
+        a.href=x.f;
+        a.style.setProperty('--pw',st.pct+'%');
+        a.innerHTML=
+          `<div class="tt"><span class="bg">${st.done?'&#127941;':'&#9675;'}</span><span>${x.t}</span></div>
+           <div class="ss">${x.s||''}</div>
+           <div class="rr"><span>${x.r} rungs</span><b>${st.b?st.b+' of '+x.r:'not started'}</b></div>`;
+        grid.appendChild(a);
+      });
+      sec.appendChild(d);
+    });
+    host.appendChild(sec);
+  });
+  /* the final exam review sits after everything, when nothing is filtered out */
+  if(filter==='all'&&!query){
+    const f=document.createElement('div');
+    f.style.cssText='margin-top:40px;text-align:center';
+    f.innerHTML=`<a class="rev final" href="Final_Exam_Review.html"
+      style="display:inline-block;padding:13px 26px;font-size:.95rem">Final Exam Review &mdash; all twelve lessons &rsaquo;</a>`;
+    host.appendChild(f);
+  }
+  document.getElementById('empty').style.display=shown?'none':'block';
+  summarise();
+}
+
+function summarise(){
+  let badges=0, laddersDone=0, lessonsDone=0, unitsDone=0;
+  DATA.forEach(U=>{
+    let uAll=true;
+    U.lessons.forEach(L=>{
+      let lAll=true;
+      L.ladders.forEach(x=>{
+        const st=state(x); badges+=st.b;
+        if(st.done) laddersDone++; else { lAll=false; uAll=false; }
+      });
+      if(lAll) lessonsDone++;
+    });
+    if(uAll) unitsDone++;
+  });
+  document.getElementById('sBadges').textContent=badges;
+  document.getElementById('sLadders').textContent=laddersDone;
+  document.getElementById('sLessons').textContent=lessonsDone;
+  document.getElementById('sBar').style.width=(100*badges/TOTAL_RUNGS)+'%';
+  document.getElementById('sText').textContent =
+    badges===0 ? 'no progress yet — pick any ladder to begin'
+    : `${badges} of ${TOTAL_RUNGS} rungs · ${laddersDone} of ${TOTAL_LADDERS} ladders · ${unitsDone} of 4 units`;
+  let next=ALL.find(x=>!state(x).done);
+  const btn=document.getElementById('continueBtn');
+  if(next){ btn.href=next.f; btn.textContent=(badges===0?'Start: ':'Continue: ')+next.t; }
+  else { btn.href='Final_Exam_Review.html'; btn.textContent='All finished — go to the Final Exam Review'; }
+}
+
+document.getElementById('q').addEventListener('input',e=>{
+  query=e.target.value.trim().toLowerCase(); Q=parseQuery(query); render();});
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.chip').forEach(o=>o.classList.remove('on'));
+  c.classList.add('on'); filter=c.dataset.f; render();
+}));
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(!confirm('Clear saved progress for all 77 ladders in this browser?')) return;
+  ALL.forEach(x=>{ try{localStorage.removeItem(x.k);}catch(e){} });
+  render();
+  const t=document.getElementById('toast'); t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+});
+document.getElementById('fCount').textContent=`${TOTAL_LADDERS} ladders · ${TOTAL_RUNGS} rungs`;
+/* progress may change while this tab is open in another window */
+window.addEventListener('storage',render);
+window.addEventListener('pageshow',render);
+render();
+</script>
+</body>
+</html>
