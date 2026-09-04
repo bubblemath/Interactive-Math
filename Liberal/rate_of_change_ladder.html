@@ -1,0 +1,662 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Rate of Change Ladder — divide by the gaps, not the dots</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --round:#A66A00;
+    --round-bg:#FCF1DA;
+    --test:#0B6E77;
+    --test-bg:#DEF0F1;
+    --bar:#41586B;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--test)}
+  :focus-visible{outline:3px solid var(--test); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--round)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:16px 12px 4px}
+  .demo-top svg{display:block; width:100%; height:auto; max-width:580px; margin:0 auto}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--round); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:15px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:64px}
+  .result .verdict{font-family:var(--mono); font-size:19px; display:block; margin-bottom:4px}
+  .ok{color:var(--right)} .no{color:var(--wrong)}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--round); background:var(--round-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--round)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(186px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px}
+  .stem .q{font-size:17px; max-width:62ch; margin:0 auto 14px; color:#31404F; text-align:center}
+  .chart{margin:0 auto 14px; max-width:580px}
+  .chart svg{display:block; width:100%; height:auto}
+  .given{max-width:440px; margin:0 auto 14px; padding:11px 16px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); font-size:15px; text-align:center}
+  .given code{font-family:var(--mono); font-size:16px; color:var(--round)}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 20px 20px}
+  @media (max-width:600px){.options{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none}
+  .opt .v{font-size:16px}
+  .opt.num .v{font-family:var(--mono); font-size:17px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .fbox code{font-family:var(--mono); font-size:14.5px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>Δ</span> The Rate of Change Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 1 · average rate of change, linear models, projection</p>
+    <h1>Divide by the gaps, not the dots.</h1>
+    <p class="lede">Tuition went from $15,518 to $33,480 — a rise of $17,962. To get the yearly increase you divide that rise by the number of <b>years</b> it took. Nine bars are drawn, eight gaps sit between them, and sixteen years actually passed. Only one of those three numbers belongs under the fraction bar.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroChart"></div></div>
+      <div class="placebar" id="heroBtns">
+        <button data-d="9" aria-pressed="false">÷ 9 bars</button>
+        <button data-d="8" aria-pressed="false">÷ 8 gaps</button>
+        <button data-d="16" aria-pressed="true">÷ 16 years</button>
+      </div>
+      <div class="result" id="heroResult"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>The bars are labeled every two years, and that is the whole trap.</b> Each gap between neighboring bars is worth two years, not one, so the number of gaps and the number of years are different numbers. Count the bars and you are off by one. Count the gaps and you are off by a factor of two. Both mistakes produce a clean-looking answer that no amount of careful arithmetic afterwards will fix.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–4 build the average rate of change one piece at a time: count the span, find the total rise, divide, then handle steps worth more than a year. Rungs 5–8 turn that rate into the model <i>T</i> = <i>mx</i> + <i>b</i> and use it. Rungs 9–10 ask what the model is entitled to say.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every wrong option is a real division</h3><p>The distractors come from dividing by the bars, dividing by the gaps, dropping the starting value, or counting <i>x</i> from the wrong year. Miss one and it names the slip.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>This is slope, three chapters early</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Rise over run, in dollars</h3><p>Average rate of change is slope before it gets called slope. Getting the run right here is the same skill you will need with a formula later.</p></div>
+      <div class="step"><span class="n">02</span><h3>The model is only two numbers</h3><p>A starting value and a rate. Once you can pull both off a graph, writing <i>T</i> = <i>mx</i> + <i>b</i> is bookkeeping.</p></div>
+      <div class="step"><span class="n">03</span><h3>A projection is not a reading</h3><p>Plugging in a year past the data gives a number, and the number is a guess. Knowing which is which is part of the answer.</p></div>
+    </div>
+    <p class="closing">Count the years, not the bars. Everything after that is arithmetic you already know.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Rate of Change Ladder · rate = total change ÷ years elapsed · <i>b</i> is the value when <i>x</i> = 0 · past the data is a prediction</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function commas(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function money(n){n=Math.round(n);return (n<0?"\u2212$":"$")+commas(Math.abs(n));}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function niceStep(x){
+  const p=Math.pow(10,Math.floor(Math.log(x)/Math.LN10));
+  const c=[1,2,2.5,5,10];
+  for(let i=0;i<c.length;i++){ if(p*c[i]>=x) return p*c[i]; }
+  return p*10;
+}
+
+/* ================= chart renderers ================= */
+function barSVG(o){
+  const gapRow=o.gaps?26:0;
+  const W=580,H=320+gapRow,ml=o.ml||78,mr=14,mt=o.title?30:16,mb=(o.xTitle?54:38)+gapRow;
+  const pw=W-ml-mr, ph=H-mt-mb;
+  const yOf=function(v){return mt+ph-(v-o.yMin)/(o.yMax-o.yMin)*ph;};
+  const fmt=o.fmt||function(v){return commas(v);};
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.title||"bar graph")+'">';
+  for(let v=o.yMin;v<=o.yMax+1e-9;v+=o.step){
+    const y=yOf(v);
+    if(v>o.yMin) s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="var(--rule)" stroke-dasharray="2 3"/>';
+    s+='<text x="'+(ml-8)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" font-size="12" fill="var(--muted)">'+fmt(v)+'</text>';
+  }
+  const n=o.values.length, slot=pw/n, bw=slot*0.62;
+  o.values.forEach(function(v,i){
+    const x=ml+i*slot+(slot-bw)/2, y=yOf(v);
+    const fill=(o.hi===i||o.hi2===i)?"var(--round)":"var(--bar)";
+    s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(mt+ph-y).toFixed(1)+'" fill="'+fill+'"/>';
+    s+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(mt+ph+16)+'" text-anchor="middle" font-size="12" fill="var(--muted)">'+esc(o.labels[i])+'</text>';
+    if(o.showValues) s+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(y-5).toFixed(1)+'" text-anchor="middle" font-size="10.5" fill="var(--muted)">'+fmt(v)+'</text>';
+  });
+  if(o.gaps){
+    const yb=mt+ph+30;
+    for(let i=0;i<n-1;i++){
+      const x1=ml+i*slot+slot/2, x2=ml+(i+1)*slot+slot/2;
+      s+='<path d="M'+x1.toFixed(1)+' '+(yb-4)+' V'+yb+' H'+x2.toFixed(1)+' V'+(yb-4)+'" fill="none" stroke="var(--round)" stroke-width="1.1"/>';
+      s+='<text x="'+((x1+x2)/2).toFixed(1)+'" y="'+(yb+13)+'" text-anchor="middle" font-size="10.5" fill="var(--round)">'+esc(o.gaps)+'</text>';
+    }
+  }
+  s+='<line x1="'+ml+'" x2="'+ml+'" y1="'+mt+'" y2="'+(mt+ph)+'" stroke="var(--ink)" stroke-width="1.2"/>';
+  s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+(mt+ph)+'" y2="'+(mt+ph)+'" stroke="var(--ink)" stroke-width="1.2"/>';
+  if(o.title) s+='<text x="'+(ml+pw/2)+'" y="18" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">'+esc(o.title)+'</text>';
+  if(o.xTitle) s+='<text x="'+(ml+pw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="var(--muted)">'+esc(o.xTitle)+'</text>';
+  return s+"</svg>";
+}
+
+function lineSVG(o){
+  const W=580,H=320,ml=o.ml||72,mr=20,mt=o.title?30:16,mb=o.xTitle?54:38;
+  const pw=W-ml-mr, ph=H-mt-mb;
+  const n=o.values.length;
+  const xOf=function(i){return ml+(n===1?pw/2:i*pw/(n-1));};
+  const yOf=function(v){return mt+ph-(v-o.yMin)/(o.yMax-o.yMin)*ph;};
+  const fmt=o.fmt||function(v){return commas(v);};
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.title||"line graph")+'">';
+  for(let v=o.yMin;v<=o.yMax+1e-9;v+=o.step){
+    const y=yOf(v);
+    if(v>o.yMin) s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="var(--rule)" stroke-dasharray="2 3"/>';
+    s+='<text x="'+(ml-8)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" font-size="12" fill="var(--muted)">'+fmt(v)+'</text>';
+  }
+  let pts="";
+  o.values.forEach(function(v,i){pts+=xOf(i).toFixed(1)+","+yOf(v).toFixed(1)+" ";});
+  s+='<polyline points="'+pts.trim()+'" fill="none" stroke="var(--bar)" stroke-width="2.2"/>';
+  o.values.forEach(function(v,i){
+    const on=(o.hi===i||o.hi2===i);
+    s+='<circle cx="'+xOf(i).toFixed(1)+'" cy="'+yOf(v).toFixed(1)+'" r="'+(on?5.5:4)+'" fill="'+(on?"var(--round)":"var(--bar)")+'"/>';
+    s+='<text x="'+xOf(i).toFixed(1)+'" y="'+(mt+ph+16)+'" text-anchor="middle" font-size="12" fill="var(--muted)">'+esc(o.labels[i])+'</text>';
+  });
+  s+='<line x1="'+ml+'" x2="'+ml+'" y1="'+mt+'" y2="'+(mt+ph)+'" stroke="var(--ink)" stroke-width="1.2"/>';
+  s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+(mt+ph)+'" y2="'+(mt+ph)+'" stroke="var(--ink)" stroke-width="1.2"/>';
+  if(o.title) s+='<text x="'+(ml+pw/2)+'" y="18" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">'+esc(o.title)+'</text>';
+  if(o.xTitle) s+='<text x="'+(ml+pw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="var(--muted)">'+esc(o.xTitle)+'</text>';
+  return s+"</svg>";
+}
+
+/* ================= data ================= */
+const CONTEXTS=[
+  {t:"Average Cost of Tuition and Fees", u:"$", noun:"tuition and fees", sym:"T", x:"Ending year in the school year"},
+  {t:"Average Rent for a One-Bedroom Apartment", u:"$", noun:"rent", sym:"R", x:"Year"},
+  {t:"Average Price of a New Car", u:"$", noun:"the price", sym:"P", x:"Year"},
+  {t:"Average Annual Cost of Childcare", u:"$", noun:"childcare", sym:"C", x:"Year"},
+  {t:"Median Home Price in the County", u:"$", noun:"the median price", sym:"H", x:"Year"}
+];
+
+/* Endpoints are exact; interior points wobble slightly, as real data does. */
+function series(o){
+  o=o||{};
+  const k=o.k||pick([1,2]);
+  const n=o.n||ri(5,8);
+  const y0=o.y0||pick([1990,1995,2000,2005,2010]);
+  const b=o.b||ri(16,44)*500;
+  const span=(n-1)*k;
+  const mBase=(o.m||ri(3,20)*25);
+  let delta=mBase*span;
+  if(o.needRound) delta+=ri(1,span-1);
+  const last=b+delta;
+  const m=delta/span;
+  const years=[], values=[];
+  const wob=Math.max(20,Math.round(mBase*k*0.10));
+  for(let i=0;i<n;i++){
+    years.push(String(y0+i*k));
+    values.push(i===0?b:(i===n-1?last:Math.round(b+m*k*i+ri(-wob,wob))));
+  }
+  const step=niceStep(last/6);
+  const ctx=o.ctx||pick(CONTEXTS);
+  return {years:years,values:values,b:b,last:last,delta:delta,m:m,mRound:Math.round(m),
+          k:k,n:n,span:span,y0:y0,yLast:y0+span,step:step,yMax:Math.ceil(last/step)*step,ctx:ctx};
+}
+function chartOf(s,extra){
+  const o={labels:s.years,values:s.values,yMin:0,yMax:s.yMax,step:s.step,
+    title:s.ctx.t,xTitle:s.ctx.x,fmt:function(v){return "$"+commas(v);},ml:78};
+  if(extra) for(const key in extra) o[key]=extra[key];
+  return (s.n>6?lineSVG:barSVG)(o);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Count the gaps, not the dots",
+ sub:"Bars, gaps and years are three different counts. Only one of them is the run.",
+ gen:function(){
+   const s=series({k:pick([2,2,3,5]),n:ri(5,8)});
+   const forms=[
+     {q:"How many <b>years</b> pass between the first bar and the last?", ans:String(s.span),
+      bad:[[String(s.n),"That is the number of bars drawn, not the number of years."],
+           [String(s.n-1),"That is the number of gaps between bars. Each gap is worth "+s.k+" years, so multiply."],
+           [String(s.n*s.k),"Close, but that counts one gap too many. There are "+(s.n-1)+" gaps, not "+s.n+"."]]},
+     {q:"How many <b>gaps</b> sit between neighboring bars?", ans:String(s.n-1),
+      bad:[[String(s.n),"That is the number of bars. "+s.n+" bars have "+(s.n-1)+" gaps between them."],
+           [String(s.span),"That is the number of years covered. Each gap here spans "+s.k+" years."],
+           [String(s.n+1),"Count again: "+s.n+" bars have "+(s.n-1)+" gaps."]]},
+     {q:"Each gap between neighboring bars is worth how many <b>years</b>?", ans:String(s.k),
+      bad:[["1","Look at the year labels. They go up by "+s.k+" each time, not by 1."],
+           [String(s.n-1),"That is how many gaps there are, not how wide each one is."],
+           [String(s.span),"That is the whole span, not one gap."]]}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:s.n+" bars, "+(s.n-1)+" gaps, "+s.k+" years per gap, so "+(s.n-1)+" × "+s.k+" = "+s.span+" years in all."}]
+     .concat(f.bad.map(function(b){return {label:b[0],note:b[1]};}));
+   return {q:f.q, svg:chartOf(s,{gaps:s.k+" yr"}), opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"Total change over the span",
+ sub:"Last value minus first value. Nothing in between matters for this.",
+ gen:function(){
+   const s=series({k:pick([1,2]),n:ri(5,7)});
+   const opts=[
+     {label:money(s.delta), correct:true, note:money(s.last)+" − "+money(s.b)+" = "+money(s.delta)+"."},
+     {label:money(s.last), note:"That is the "+s.yLast+" value on its own, not the change since "+s.y0+"."},
+     {label:money(s.b), note:"That is the "+s.y0+" value, the starting point."},
+     {label:money(s.last+s.b), note:"That is the two added. A change is a difference."},
+     {label:money(s.values[1]-s.b), note:"That is only the first step, not the whole span."}
+   ];
+   return {q:"By how much did "+s.ctx.noun+" change <b>in total</b> from "+s.y0+" to "+s.yLast+"?",
+     svg:chartOf(s,{hi:0,hi2:s.n-1,showValues:true}), opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"Average change per year",
+ sub:"Here the bars are one year apart, so gaps and years are the same count. Enjoy it while it lasts.",
+ gen:function(){
+   const s=series({k:1,n:ri(5,8)});
+   const opts=[
+     {label:money(s.m), correct:true, note:money(s.delta)+" ÷ "+s.span+" years = "+money(s.m)+" per year."},
+     {label:money(s.delta/s.n), note:"You divided by "+s.n+", the number of data points. "+s.n+" points have only "+(s.n-1)+" gaps between them."},
+     {label:money(s.delta), note:"That is the total change over all "+s.span+" years, not the change per year."},
+     {label:money(s.last/s.span), note:"You divided the "+s.yLast+" value by the years. Divide the <i>change</i>, not the final amount."},
+     {label:money(s.delta/(s.n+1)), note:"There are "+(s.n-1)+" gaps between "+s.n+" points."}
+   ];
+   return {q:"What was the <b>average yearly change</b> in "+s.ctx.noun+"? Round to the nearest dollar.",
+     svg:chartOf(s,{hi:0,hi2:s.n-1,showValues:true}), opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"When each step is more than a year",
+ sub:"The gap count and the year count part ways here. This is where most answers go wrong.",
+ gen:function(){
+   const s=series({k:pick([2,2,2,3,5]),n:ri(5,8),needRound:true});
+   const perStep=s.delta/(s.n-1);
+   const opts=[
+     {label:money(s.m), correct:true, note:money(s.delta)+" ÷ "+s.span+" years = "+money(s.m)+" per year. The "+s.span+" comes from "+(s.n-1)+" gaps × "+s.k+" years each."},
+     {label:money(perStep), note:"You divided by "+(s.n-1)+", the number of gaps. Each gap covers "+s.k+" years, so that is the change per "+s.k+"-year step — "+s.k+" times too big."},
+     {label:money(s.delta/s.n), note:"You divided by "+s.n+", the number of bars drawn. Bars are not years."},
+     {label:money(s.delta/(s.n*s.k)), note:"You used "+s.n+" × "+s.k+" = "+(s.n*s.k)+" years. There are only "+(s.n-1)+" gaps, so the span is "+s.span+" years."},
+     {label:money(s.delta), note:"That is the total change, not a yearly rate."}
+   ];
+   return {q:"The bars are "+s.k+" years apart. What was the <b>average yearly change</b> in "+s.ctx.noun+"? Round to the nearest dollar.",
+     svg:chartOf(s,{hi:0,hi2:s.n-1,showValues:true,gaps:s.k+" yr"}), opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"Find b, the starting value",
+ sub:"b is the value when x = 0 — the year the counting starts from, not the last year on the graph.",
+ gen:function(){
+   const s=series({k:pick([1,2]),n:ri(5,7)});
+   const opts=[
+     {label:money(s.b), correct:true, note:"x = 0 means "+s.y0+", and the graph reads "+money(s.b)+" there."},
+     {label:money(s.last), note:"That is the value in "+s.yLast+", where x = "+s.span+", not where x = 0."},
+     {label:money(s.mRound), note:"That is the yearly rate m, not the starting value b."},
+     {label:money(s.values[1]), note:"That is "+s.years[1]+", where x = "+s.k+". b is the value at x = 0."},
+     {label:money(s.delta), note:"That is the total change over the span, not the starting value."}
+   ];
+   return {q:"A model is written as <b>"+s.ctx.sym+" = mx + b</b>, where <b>x</b> is the number of years after <b>"+s.y0+"</b>.<br>What is <b>b</b>?",
+     svg:chartOf(s,{hi:0,showValues:true}), opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"Write the model",
+ sub:"The rate multiplies x. The starting value stands alone.",
+ gen:function(){
+   const s=series({k:pick([1,2]),n:ri(5,7)});
+   const m=s.mRound, b=s.b, S=s.ctx.sym;
+   const opts=[
+     {label:S+" = "+commas(m)+"x + "+commas(b), correct:true,
+      note:"The rate "+money(m)+" per year multiplies x; the starting value "+money(b)+" is added on."},
+     {label:S+" = "+commas(b)+"x + "+commas(m),
+      note:"Swapped. That grows by "+money(b)+" every year and starts at "+money(m)+" — check which number is the yearly rate."},
+     {label:S+" = "+commas(m)+"("+"x + "+commas(b)+")",
+      note:"That multiplies the starting value by the rate as well. b is added after the multiplying, not inside it."},
+     {label:S+" = "+commas(m)+"x − "+commas(b),
+      note:"The values are rising and start at "+money(b)+", so b is added, not subtracted."},
+     {label:S+" = "+commas(m+b)+"x",
+      note:"The rate and the starting value are two separate roles. They cannot be combined into one coefficient."}
+   ];
+   return {q:"The values rise about <b>"+money(m)+" per year</b> and read <b>"+money(b)+"</b> in "+s.y0+".<br>Which model estimates "+s.ctx.noun+", <b>"+S+"</b>, x years after "+s.y0+"?",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Turn a year into an x",
+ sub:"x counts years since the base year. It is never the year itself.",
+ gen:function(){
+   const s=series({k:2,n:ri(5,7)});
+   const target=s.yLast+pick([2,3,4,5,6,8,10]);
+   const x=target-s.y0;
+   const opts=[
+     {label:String(x), correct:true, note:target+" − "+s.y0+" = "+x+" years after the base year."},
+     {label:String(target), note:"That is the year itself. x counts years <i>after</i> "+s.y0+"."},
+     {label:String(x/s.k), note:"You divided by the "+s.k+"-year bar spacing. x is counted in years, not in bars."},
+     {label:String(target-s.yLast), note:"That counts from "+s.yLast+", the last year on the graph. The model counts from "+s.y0+"."},
+     {label:String(s.span), note:"That is the last x value shown on the graph, not the x for "+target+"."}
+   ];
+   return {q:"In the model, <b>x</b> is the number of years after <b>"+s.y0+"</b>.<br>What is <b>x</b> for the year <b>"+target+"</b>?",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"Use the model",
+ sub:"Multiply first, then add. Dropping b is the commonest slip.",
+ gen:function(){
+   const s=series({k:1,n:ri(5,7)});
+   const m=s.mRound, b=s.b, x=ri(12,30), S=s.ctx.sym;
+   const opts=[
+     {label:money(m*x+b), correct:true, note:commas(m)+"("+x+") + "+commas(b)+" = "+commas(m*x)+" + "+commas(b)+" = "+money(m*x+b)+"."},
+     {label:money(m*x), note:"You stopped after multiplying. The starting value "+money(b)+" still has to be added."},
+     {label:money(m+b*x), note:"The rate multiplies x, not the starting value. It is "+commas(m)+"·x + "+commas(b)+"."},
+     {label:money((m+b)*x), note:"Only m multiplies x. b is added once, at the end."},
+     {label:money(b-m*x), note:"The values are rising, so the change is added to the starting value."}
+   ];
+   return {q:"<div class='given'><code>"+S+" = "+commas(m)+"x + "+commas(b)+"</code></div>What does the model give for <b>x = "+x+"</b>?",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"Inside the data, or beyond it",
+ sub:"A model will happily return a number for any x. Whether it is a reading or a guess is up to you.",
+ gen:function(){
+   const s=series({k:pick([1,2]),n:ri(5,7)});
+   const where=pick(["after","after","inside","before","atEnd"]);
+   let target;
+   if(where==="after") target=s.yLast+ri(2,12);
+   else if(where==="before") target=s.y0-ri(2,10);
+   else if(where==="atEnd") target=s.yLast;
+   else target=s.y0+s.k*ri(1,s.n-2);
+   const A={
+     after:"Beyond the data — the model is predicting, not reporting",
+     inside:"Inside the data — the graph already shows that year",
+     before:"Before the data begins — the model is being run backwards",
+     atEnd:"Exactly at the last year shown — the graph reports it directly"
+   };
+   const keys=["after","inside","before","atEnd"];
+   const notes={
+     after:"The graph stops at "+s.yLast+", so "+target+" is past everything observed. The model can produce a number, but nothing in the data confirms the trend continued.",
+     inside:target+" is one of the years plotted between "+s.y0+" and "+s.yLast+", so its value can be read off the graph.",
+     before:target+" is earlier than "+s.y0+", where the data starts. Running the trend backwards is just as much a guess as running it forwards.",
+     atEnd:target+" is the last year on the graph, so its value can be read off directly rather than modelled."
+   };
+   const opts=keys.map(function(k){
+     return {label:A[k], correct:k===where, note:k===where?notes[k]:("The graph runs from "+s.y0+" to "+s.yLast+", and "+target+" is not "+(k==="inside"?"inside that range":k==="after"?"past the end of it":k==="before"?"earlier than its start":"the last year shown")+".")};
+   });
+   return {q:"The graph covers <b>"+s.y0+" through "+s.yLast+"</b>. You use the model to get a value for <b>"+target+"</b>.<br>What kind of answer is that?",
+     svg:chartOf(s), opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"The whole problem",
+ sub:"Rate from the graph, model from the rate, projection from the model. Every step at once.",
+ gen:function(){
+   const s=series({k:pick([2,2,3]),n:ri(5,7),needRound:true});
+   const target=s.yLast+pick([4,6,8,10]);
+   const x=target-s.y0;
+   const m=s.mRound;
+   const perStep=Math.round(s.delta/(s.n-1));
+   const opts=[
+     {label:money(m*x+s.b), correct:true,
+      note:"Rate: "+money(s.delta)+" ÷ "+s.span+" years ≈ "+money(m)+" per year. Model: "+s.ctx.sym+" = "+commas(m)+"x + "+commas(s.b)+". Then x = "+target+" − "+s.y0+" = "+x+", giving "+money(m*x+s.b)+"."},
+     {label:money(perStep*x+s.b),
+      note:"The rate is wrong. You divided by the "+(s.n-1)+" gaps instead of the "+s.span+" years, so "+money(perStep)+" is the change per "+s.k+"-year step."},
+     {label:money(m*x),
+      note:"The rate and x are right, but the starting value "+money(s.b)+" was never added on."},
+     {label:money(m*(target-s.yLast)+s.b),
+      note:"x was counted from "+s.yLast+" instead of "+s.y0+". x should be "+x+", not "+(target-s.yLast)+"."},
+     {label:money(m*s.span+s.b),
+      note:"That is the model evaluated at the last year on the graph, not at "+target+"."}
+   ];
+   return {q:"Using the graph, project "+s.ctx.noun+" for <b>"+target+"</b>. Take x as the years after "+s.y0+" and round the yearly rate to the nearest dollar.",
+     svg:chartOf(s,{hi:0,hi2:s.n-1,showValues:true,gaps:s.k+" yr"}), opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HV=[15518,17272,19710,21235,23712,26273,29056,31701,33480];
+const HY=["2000","2002","2004","2006","2008","2010","2012","2014","2016"];
+const HD=33480-15518;
+let heroDiv=16;
+function drawHero(){
+  document.getElementById("heroChart").innerHTML=barSVG({
+    labels:HY,values:HV,yMin:0,yMax:35000,step:5000,hi:0,hi2:8,gaps:"2 yr",
+    title:"Average Cost of Tuition and Fees at Private Four-Year U.S. Colleges",
+    xTitle:"Ending year in the school year",
+    fmt:function(v){return "$"+commas(v);},ml:78
+  });
+  document.querySelectorAll("#heroBtns button").forEach(function(b){
+    b.setAttribute("aria-pressed",String(Number(b.dataset.d)===heroDiv));
+  });
+  const val=HD/heroDiv;
+  const txt={
+    9:["no","$17,962 ÷ 9 = $1,996 per year","Nine is the number of bars. Bars are not years — and nine bars only have eight gaps between them."],
+    8:["no","$17,962 ÷ 8 = $2,245 per year","Eight is the number of gaps. Each gap is worth two years, so this answer is twice as big as it should be."],
+    16:["ok","$17,962 ÷ 16 = $1,123 per year","Sixteen years passed between 2000 and 2016: eight gaps, two years each. This is the yearly increase."]
+  }[heroDiv];
+  document.getElementById("heroResult").innerHTML=
+    '<span class="verdict '+txt[0]+'">'+txt[1]+'</span>'+txt[2];
+}
+document.getElementById("heroBtns").addEventListener("click",function(e){
+  const b=e.target.closest("button"); if(!b)return;
+  heroDiv=Number(b.dataset.d); drawHero();
+});
+drawHero();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<3&&tries<30);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'+(q.svg?'<div class="chart">'+q.svg+'</div>':'');
+  const optEl=document.getElementById("options");
+  optEl.style.gridTemplateColumns=q.wide?"1fr":"";
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.num?" num":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is <b>'+right.label+'</b>. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
