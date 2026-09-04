@@ -1,0 +1,930 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radial Heat Flux Explorer — ChE 319</title>
+<style>
+  :root {
+    --paper:    #F6F8FA;
+    --panel:    #FFFFFF;
+    --ink:      #101823;
+    --ink-soft: #5A6675;
+    --rule:     #CBD5E1;
+    --rule-soft:  #E4EAF1;
+    --navy:     #16305C;
+    --flux:     #0F7A6E;
+    --temp:     #B3202B;
+    --gen:      #6B4EA8;
+    --fuel:     #E8B4A0;
+    --clad:     #4A6FA5;
+    --focus:    #0F7A6E;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 28px 20px 60px;
+  }
+
+  .wrap { max-width: 1120px; margin: 0 auto; }
+
+  /* ---------- masthead ---------- */
+  .masthead { border-bottom: 2px solid var(--navy); padding-bottom: 14px; margin-bottom: 0; }
+  h1 {
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-weight: 600;
+    font-size: clamp(24px, 4vw, 34px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--navy);
+    margin: 0 0 6px;
+  }
+  .standfirst {
+    max-width: 68ch;
+    color: var(--ink-soft);
+    font-size: 15px;
+    margin: 0;
+  }
+
+  /* ---------- tabs ---------- */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--rule); margin: 0 0 22px; flex-wrap: wrap; }
+  .tab {
+    appearance: none; background: none; border: 0;
+    border-bottom: 3px solid transparent;
+    padding: 13px 18px 11px;
+    font: inherit; font-size: 14.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] { color: var(--navy); font-weight: 600; border-bottom-color: var(--navy); }
+  .tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
+
+  /* ---------- layout ---------- */
+  .lede { max-width: 74ch; margin: 0 0 20px; color: var(--ink-soft); }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .stage { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 22px; align-items: start; }
+  .plots { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 900px) {
+    .stage { grid-template-columns: 1fr; }
+    .plots { grid-template-columns: 1fr; }
+  }
+
+  .card { background: var(--panel); border: 1px solid var(--rule); }
+  .card > h2 {
+    font-family: Georgia, "Iowan Old Style", serif;
+    font-size: 15px; font-weight: 600; color: var(--navy);
+    margin: 0; padding: 11px 16px 10px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .card .body { padding: 16px; }
+
+  /* ---------- canvas ---------- */
+  .viz { position: relative; padding: 10px 10px 4px; }
+  canvas { display: block; width: 100%; height: auto; touch-action: none; cursor: ew-resize; border-radius: 2px; }
+  canvas:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .hint { font-size: 12.5px; color: var(--ink-soft); padding: 2px 6px 8px; }
+
+  /* ---------- controls ---------- */
+  .ctl { margin-bottom: 15px; }
+  .ctl:last-child { margin-bottom: 0; }
+  .ctl .grouplabel { display:block; font-size:13.5px; margin-bottom:5px; }
+  .ctl label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13.5px; margin-bottom: 5px; }
+  .ctl .val { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--navy); }
+  input[type=range] { width: 100%; accent-color: var(--navy); margin: 0; }
+  input[type=range]:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+  .seg { display: flex; border: 1px solid var(--rule); }
+  .seg button {
+    flex: 1; appearance: none; background: var(--panel); border: 0;
+    border-right: 1px solid var(--rule);
+    padding: 8px 4px; font: inherit; font-size: 12.5px; color: var(--ink-soft); cursor: pointer;
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+  .seg button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+  .divider { height: 1px; background: var(--rule-soft); margin: 16px 0; }
+
+  /* ---------- readout ---------- */
+  .eqn {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px; font-variant-numeric: tabular-nums;
+    line-height: 1.85;
+  }
+  .eqn .row { display: flex; justify-content: space-between; gap: 12px; }
+  .eqn .k { color: var(--ink-soft); }
+  .eqn .v { color: var(--ink); font-weight: 600; }
+  .eqn .v.flux { color: var(--flux); }
+  .eqn .v.temp { color: var(--temp); }
+  .fracline { border-top: 1px solid var(--rule); margin: 7px 0; }
+
+  .note {
+    margin-top: 22px; padding: 14px 18px;
+    background: #EFF4F0; border-left: 3px solid var(--flux);
+    max-width: 78ch; font-size: 14.5px;
+  }
+  .note b { color: var(--navy); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--ink-soft); padding: 0 16px 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 16px; height: 3px; border-radius: 2px; }
+
+  .foot { margin-top: 34px; padding-top: 12px; border-top: 1px solid var(--rule); font-size: 12.5px; color: var(--ink-soft); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Radial Heat Flux Explorer</h1>
+    <p class="standfirst">Drag the radius line through the pellet. Everything on the page is tied to that one position, so you can watch how heat piles up inside a sphere and where the temperature peaks.</p>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-a" aria-controls="p-a" aria-selected="true">Where flux comes from</button>
+    <button class="tab" role="tab" id="tab-b" aria-controls="p-b" aria-selected="false">Why geometry matters</button>
+    <button class="tab" role="tab" id="tab-c" aria-controls="p-c" aria-selected="false">The fuel pellet</button>
+  </div>
+
+  <!-- ================= PANEL A ================= -->
+  <section id="p-a" role="tabpanel" aria-labelledby="tab-a">
+    <p class="lede">Heat flux at any radius is just <strong>the heat made inside that radius, divided by the area at that radius</strong>. Drag the dashed circle and watch both numbers change. The shaded core is where heat is generated; the pale ring outside it generates nothing.</p>
+
+    <div class="stage">
+      <div class="card">
+        <h2>Cross-section through the sphere</h2>
+        <div class="viz"><canvas id="cvA" tabindex="0" aria-label="Sphere cross-section. Use left and right arrow keys to move the radius."></canvas></div>
+        <p class="hint">Drag anywhere on the sphere, or focus it and use ← →</p>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <span class="grouplabel" id="aProfLbl">Heat generation inside the core</span>
+            <div class="seg" id="aProf" role="group" aria-labelledby="aProfLbl">
+              <button data-v="uniform" aria-pressed="true">Uniform</button>
+              <button data-v="rising" aria-pressed="false">Rises as r²</button>
+              <button data-v="falling" aria-pressed="false">Peaks at centre</button>
+            </div>
+          </div>
+          <div class="ctl">
+            <label for="aR1">Core radius R₁ <span class="val" id="aR1v"></span></label>
+            <input type="range" id="aR1" min="2" max="12" step="0.1" value="10">
+          </div>
+          <div class="ctl">
+            <label for="aR2">Outer radius R₂ <span class="val" id="aR2v"></span></label>
+            <input type="range" id="aR2" min="4" max="20" step="0.1" value="14">
+          </div>
+          <div class="ctl">
+            <label for="aR">Radius you're measuring at <span class="val" id="aRv"></span></label>
+            <input type="range" id="aR" min="0.1" max="20" step="0.05" value="6">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">heat made inside r</span><span class="v" id="aQ"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">area at r &nbsp;(4πr²)</span><span class="v" id="aA"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">flux q(r)</span><span class="v flux" id="aq"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="plots">
+      <div class="card">
+        <h2>Generation rate S(r)</h2>
+        <div id="plotAS"></div>
+        <div class="legend"><span><i class="swatch" style="background:var(--gen)"></i>S(r)</span></div>
+      </div>
+      <div class="card">
+        <h2>Heat flux q(r)</h2>
+        <div id="plotAQ"></div>
+        <div class="legend"><span><i class="swatch" style="background:var(--flux)"></i>q(r)</span></div>
+      </div>
+    </div>
+
+    <p class="note" id="noteA"></p>
+  </section>
+
+  <!-- ================= PANEL B ================= -->
+  <section id="p-b" role="tabpanel" aria-labelledby="tab-b" hidden>
+    <p class="lede">Same core, same uniform generation, three different shapes. Past the core nothing new is made, so the numerator freezes — but the area keeps growing at a rate that <strong>depends entirely on the geometry</strong>. That alone sets how fast the flux dies off.</p>
+
+    <div class="stage">
+      <div class="card">
+        <h2>The three geometries</h2>
+        <div class="viz"><canvas id="cvB" tabindex="0" aria-label="Sphere, cylinder and slab cross-sections."></canvas></div>
+        <p class="hint">Drag left or right to move the measuring position</p>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="bR1">Core radius R₁ <span class="val" id="bR1v"></span></label>
+            <input type="range" id="bR1" min="2" max="12" step="0.1" value="8">
+          </div>
+          <div class="ctl">
+            <label for="bR">Radius you're measuring at <span class="val" id="bRv"></span></label>
+            <input type="range" id="bR" min="0.1" max="20" step="0.05" value="12">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">sphere &nbsp;q ∝ 1/r²</span><span class="v" id="bqS" style="color:var(--temp)"></span></div>
+            <div class="row"><span class="k">cylinder &nbsp;q ∝ 1/r</span><span class="v" id="bqC" style="color:var(--flux)"></span></div>
+            <div class="row"><span class="k">slab &nbsp;q constant</span><span class="v" id="bqP" style="color:var(--clad)"></span></div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">inside the core</span><span class="v" id="bIn"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="plots">
+      <div class="card">
+        <h2>Flux against radius</h2>
+        <div id="plotB"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--temp)"></i>Sphere</span>
+          <span><i class="swatch" style="background:var(--flux)"></i>Cylinder</span>
+          <span><i class="swatch" style="background:var(--clad)"></i>Slab</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Same curves, log scale</h2>
+        <div id="plotBlog"></div>
+        <div class="legend"><span>Straight lines here mean clean power laws — the slopes are −2, −1 and 0.</span></div>
+      </div>
+    </div>
+
+    <p class="note"><b>What to notice.</b> All three curves rise together inside the core, then split the moment generation stops. The sphere sheds flux fastest because its area grows as r², the cylinder as r, and the slab not at all. This is why a sphere is such an effective shape for spreading heat out — and why the cladding on the pellet in the next tab is so effective despite being thin.</p>
+  </section>
+
+  <!-- ================= PANEL C ================= -->
+  <section id="p-c" role="tabpanel" aria-labelledby="tab-c" hidden>
+    <p class="lede">The full Lecture 3 problem. Fuel generates heat non-uniformly out to R⁽ᶠ⁾, cladding generates none out to R⁽ᶜ⁾, and the outer surface is held at T₀. The colour of the cross-section is <strong>temperature</strong>, so you can see the hot centre directly.</p>
+
+    <div class="stage">
+      <div class="card">
+        <h2>Pellet cross-section, coloured by temperature</h2>
+        <div class="viz"><canvas id="cvC" tabindex="0" aria-label="Fuel pellet cross-section coloured by temperature."></canvas></div>
+        <p class="hint">Drag to move the radius. Warmer colour means hotter.</p>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="cB">Generation skew b <span class="val" id="cBv"></span></label>
+            <input type="range" id="cB" min="0" max="6" step="0.1" value="2">
+          </div>
+          <div class="ctl">
+            <label for="cS">Generation at centre S<sub>n0</sub> <span class="val" id="cSv"></span></label>
+            <input type="range" id="cS" min="1" max="10" step="0.1" value="5">
+          </div>
+          <div class="ctl">
+            <label for="cRf">Fuel radius R⁽ᶠ⁾ <span class="val" id="cRfv"></span></label>
+            <input type="range" id="cRf" min="4" max="14" step="0.1" value="10">
+          </div>
+          <div class="ctl">
+            <label for="cRc">Cladding outer radius R⁽ᶜ⁾ <span class="val" id="cRcv"></span></label>
+            <input type="range" id="cRc" min="5" max="20" step="0.1" value="12">
+          </div>
+          <div class="ctl">
+            <label for="cKf">Fuel conductivity k⁽ᶠ⁾ <span class="val" id="cKfv"></span></label>
+            <input type="range" id="cKf" min="0.5" max="20" step="0.1" value="3">
+          </div>
+          <div class="ctl">
+            <label for="cKc">Cladding conductivity k⁽ᶜ⁾ <span class="val" id="cKcv"></span></label>
+            <input type="range" id="cKc" min="1" max="60" step="0.5" value="17">
+          </div>
+          <div class="ctl">
+            <label for="cR">Radius you're measuring at <span class="val" id="cRv"></span></label>
+            <input type="range" id="cR" min="0.05" max="20" step="0.05" value="6">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">S at this radius</span><span class="v" id="cS_r" style="color:var(--gen)"></span></div>
+            <div class="row"><span class="k">q at this radius</span><span class="v flux" id="cq_r"></span></div>
+            <div class="row"><span class="k">T at this radius</span><span class="v temp" id="cT_r"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">centre T<sub>max</sub></span><span class="v temp" id="cTmax"></span></div>
+            <div class="row"><span class="k">drop across fuel</span><span class="v" id="cDTf"></span></div>
+            <div class="row"><span class="k">drop across cladding</span><span class="v" id="cDTc"></span></div>
+            <div class="row"><span class="k">total power out</span><span class="v" id="cQ"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="plots">
+      <div class="card">
+        <h2>Heat flux q(r)</h2>
+        <div id="plotCQ"></div>
+        <div class="legend"><span><i class="swatch" style="background:var(--flux)"></i>q(r)</span><span>Peak sits exactly at the fuel–cladding boundary.</span></div>
+      </div>
+      <div class="card">
+        <h2>Temperature T(r)</h2>
+        <div id="plotCT"></div>
+        <div class="legend"><span><i class="swatch" style="background:var(--temp)"></i>T(r)</span><span>Flat at the centre, steepest near the boundary.</span></div>
+      </div>
+    </div>
+
+    <p class="note" id="noteC"></p>
+  </section>
+
+  <p class="foot">Built for ChE 319 Transport Phenomena, Lectures 2–3 (Prof. C. B. Mullins, UT Austin). Radii are shown in millimetres; S<sub>n0</sub> in units of 10⁷ W/m³; conductivities in W/m·K. Surface temperature T₀ is fixed at 400 K.</p>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Small helpers
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
+const TAU = Math.PI * 2;
+
+function fmt(v, digits) {
+  if (!isFinite(v)) return "—";
+  if (v === 0) return "0";
+  const a = Math.abs(v);
+  if (a >= 1e5 || a < 1e-3) {
+    const e = Math.floor(Math.log10(a));
+    const m = v / Math.pow(10, e);
+    return m.toFixed(digits === undefined ? 2 : digits) + "\u00d710" + sup(e);
+  }
+  if (a >= 100) return v.toFixed(0);
+  if (a >= 10)  return v.toFixed(1);
+  return v.toFixed(digits === undefined ? 2 : digits);
+}
+function sup(n) {
+  const map = {"-":"\u207b","0":"\u2070","1":"\u00b9","2":"\u00b2","3":"\u00b3",
+               "4":"\u2074","5":"\u2075","6":"\u2076","7":"\u2077","8":"\u2078","9":"\u2079"};
+  return String(n).split("").map(c => map[c] || c).join("");
+}
+
+/* nice axis ticks */
+function ticks(lo, hi, count) {
+  if (!(hi > lo)) return [lo];
+  const raw = (hi - lo) / count;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  const out = [];
+  for (let t = Math.ceil(lo / step) * step; t <= hi + step * 1e-9; t += step) out.push(t);
+  return out;
+}
+
+/* ============================================================
+   SVG line plot. Series are sampled functions of r.
+   ============================================================ */
+function drawPlot(host, cfg) {
+  const W = 470, H = 250;
+  const M = { l: 64, r: 16, t: 14, b: 40 };
+  const iw = W - M.l - M.r, ih = H - M.t - M.b;
+  const N = 260;
+  const { x0, x1 } = cfg;
+  const logY = !!cfg.logY;
+
+  // sample
+  const data = cfg.series.map(s => {
+    const pts = [];
+    for (let i = 0; i <= N; i++) {
+      const x = x0 + (x1 - x0) * i / N;
+      const y = s.f(x);
+      if (isFinite(y)) pts.push([x, y]);
+    }
+    return { ...s, pts };
+  });
+
+  // y-range
+  let ylo = Infinity, yhi = -Infinity;
+  data.forEach(s => s.pts.forEach(p => {
+    if (logY && p[1] <= 0) return;
+    if (p[1] < ylo) ylo = p[1];
+    if (p[1] > yhi) yhi = p[1];
+  }));
+  if (!isFinite(ylo)) { ylo = 0; yhi = 1; }
+  if (cfg.yMin !== undefined) ylo = cfg.yMin;
+  if (logY) {
+    ylo = Math.max(ylo, yhi / 1e4);
+  } else {
+    const pad = (yhi - ylo) * 0.08 || 1;
+    yhi += pad;
+    if (ylo > 0 && cfg.yMin === undefined) ylo = 0; else ylo -= pad;
+  }
+  if (yhi === ylo) yhi = ylo + 1;
+
+  const X = v => M.l + (v - x0) / (x1 - x0) * iw;
+  const Y = logY
+    ? v => M.t + ih - (Math.log10(Math.max(v, ylo)) - Math.log10(ylo)) / (Math.log10(yhi) - Math.log10(ylo)) * ih
+    : v => M.t + ih - (v - ylo) / (yhi - ylo) * ih;
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${cfg.aria || "plot"}" style="display:block">`;
+
+  // shaded regions
+  (cfg.regions || []).forEach(rg => {
+    svg += `<rect x="${X(rg.x0).toFixed(1)}" y="${M.t}" width="${(X(rg.x1)-X(rg.x0)).toFixed(1)}" height="${ih}" fill="${rg.fill}"/>`;
+  });
+
+  // grid + y ticks
+  const yt = logY
+    ? (() => { const o=[]; for (let e = Math.ceil(Math.log10(ylo)); e <= Math.log10(yhi); e++) o.push(Math.pow(10,e)); return o; })()
+    : ticks(ylo, yhi, 4);
+  yt.forEach(t => {
+    const y = Y(t).toFixed(1);
+    svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+iw}" y2="${y}" stroke="#E4EAF1"/>`;
+    svg += `<text x="${M.l-8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,1)}</text>`;
+  });
+
+  // x ticks
+  ticks(x0, x1, 5).forEach(t => {
+    const x = X(t).toFixed(1);
+    svg += `<line x1="${x}" y1="${M.t+ih}" x2="${x}" y2="${M.t+ih+4}" stroke="#CBD5E1"/>`;
+    svg += `<text x="${x}" y="${M.t+ih+17}" text-anchor="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,0)}</text>`;
+  });
+
+  // boundary markers
+  (cfg.marks || []).forEach(mk => {
+    const x = X(mk.x).toFixed(1);
+    svg += `<line x1="${x}" y1="${M.t}" x2="${x}" y2="${M.t+ih}" stroke="#9AA7B6" stroke-width="1" stroke-dasharray="2 3"/>`;
+    svg += `<text x="${x}" y="${M.t-3}" text-anchor="middle" font-size="10" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${mk.label}</text>`;
+  });
+
+  // axes
+  svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+ih}" stroke="#CBD5E1"/>`;
+  svg += `<line x1="${M.l}" y1="${M.t+ih}" x2="${M.l+iw}" y2="${M.t+ih}" stroke="#CBD5E1"/>`;
+
+  // curves
+  data.forEach(s => {
+    let d = "", pen = false;
+    s.pts.forEach(p => {
+      if (logY && p[1] <= 0) { pen = false; return; }
+      d += (pen ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1) + " ";
+      pen = true;
+    });
+    svg += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"${s.dash ? ` stroke-dasharray="${s.dash}"` : ""}/>`;
+  });
+
+  // cursor
+  if (cfg.cursor !== undefined) {
+    const cx = X(cfg.cursor);
+    if (cx >= M.l - 0.5 && cx <= M.l + iw + 0.5) {
+      svg += `<line x1="${cx.toFixed(1)}" y1="${M.t}" x2="${cx.toFixed(1)}" y2="${M.t+ih}" stroke="#16305C" stroke-width="1.4"/>`;
+      data.forEach(s => {
+        const v = s.f(cfg.cursor);
+        if (isFinite(v) && (!logY || v > 0)) {
+          const cy = Y(v);
+          if (cy >= M.t - 1 && cy <= M.t + ih + 1)
+            svg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${s.color}" stroke="#fff" stroke-width="1.6"/>`;
+        }
+      });
+    }
+  }
+
+  // axis labels
+  svg += `<text x="${M.l+iw/2}" y="${H-5}" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.xLabel}</text>`;
+  svg += `<text transform="translate(14,${M.t+ih/2}) rotate(-90)" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.yLabel}</text>`;
+
+  svg += `</svg>`;
+  host.innerHTML = svg;
+}
+
+/* ============================================================
+   Canvas setup with device-pixel scaling
+   ============================================================ */
+function fitCanvas(cv, cssH) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.parentElement.clientWidth - 20;
+  cv.style.height = cssH + "px";
+  cv.width = Math.max(1, Math.round(w * dpr));
+  cv.height = Math.round(cssH * dpr);
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w, h: cssH };
+}
+
+/* drag/keyboard binding: maps horizontal position to a radius */
+function bindRadius(cv, getMax, setVal, getVal, mode) {
+  let down = false;
+  const pick = ev => {
+    const r = cv.getBoundingClientRect();
+    if (mode === "linear") {
+      setVal(clamp((ev.clientX - r.left) / r.width * getMax(), 0.05, getMax()));
+      return;
+    }
+    const cx = ev.clientX - r.left - r.width / 2;
+    const cy = ev.clientY - r.top - r.height / 2;
+    const px = Math.hypot(cx, cy);
+    const scale = getMax() / (Math.min(r.width, r.height) * 0.42);
+    setVal(clamp(px * scale, 0.05, getMax()));
+  };
+  cv.addEventListener("pointerdown", e => { down = true; cv.setPointerCapture(e.pointerId); pick(e); });
+  cv.addEventListener("pointermove", e => { if (down) pick(e); });
+  cv.addEventListener("pointerup",   e => { down = false; });
+  cv.addEventListener("keydown", e => {
+    const step = e.shiftKey ? 1 : 0.25;
+    if (e.key === "ArrowRight") { setVal(clamp(getVal() + step, 0.05, getMax())); e.preventDefault(); }
+    if (e.key === "ArrowLeft")  { setVal(clamp(getVal() - step, 0.05, getMax())); e.preventDefault(); }
+  });
+}
+
+/* temperature colour ramp: cool navy -> amber -> brick */
+function tempColor(t) {
+  t = clamp(t, 0, 1);
+  const stops = [[0,[36,66,124]], [0.5,[233,178,72]], [1,[168,34,38]]];
+  let a = stops[0], b = stops[stops.length-1];
+  for (let i = 0; i < stops.length-1; i++) {
+    if (t >= stops[i][0] && t <= stops[i+1][0]) { a = stops[i]; b = stops[i+1]; break; }
+  }
+  const f = (t - a[0]) / ((b[0] - a[0]) || 1);
+  const c = a[1].map((v,i) => Math.round(v + (b[1][i]-v)*f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function genColor(t) {
+  t = clamp(t, 0, 1);
+  const c = [246,243,255].map((v,i) => Math.round(v + ([107,78,168][i]-v)*t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/* ============================================================
+   PANEL A — where flux comes from
+   ============================================================ */
+const A = { prof: "uniform", R1: 10, R2: 14, r: 6, S0: 5e7 };
+
+/* S in W/m^3 at radius a (mm) */
+function aS(a) {
+  if (a > A.R1) return 0;
+  if (A.prof === "uniform") return A.S0;
+  if (A.prof === "rising")  return A.S0 * Math.pow(a / A.R1, 2);
+  return A.S0 * (1 - Math.pow(a / A.R1, 2));
+}
+/* enclosed power (W), radii converted mm -> m */
+function aQenc(r) {
+  const rc = Math.min(r, A.R1) * 1e-3, R1 = A.R1 * 1e-3;
+  if (A.prof === "uniform") return A.S0 * (4/3) * Math.PI * rc**3;
+  if (A.prof === "rising")  return 4 * Math.PI * A.S0 * rc**5 / (5 * R1*R1);
+  return 4 * Math.PI * A.S0 * (rc**3 / 3 - rc**5 / (5 * R1*R1));
+}
+const aArea = r => 4 * Math.PI * (r*1e-3)**2;
+const aFlux = r => r <= 0 ? 0 : aQenc(r) / aArea(r);
+
+function renderA() {
+  A.R2 = Math.max(A.R2, A.R1 + 0.5);
+  $("aR2").min = (A.R1 + 0.5).toFixed(1);
+  A.r = clamp(A.r, 0.05, A.R2);
+  $("aR").max = A.R2.toFixed(2);
+
+  $("aR1v").textContent = A.R1.toFixed(1) + " mm";
+  $("aR2v").textContent = A.R2.toFixed(1) + " mm";
+  $("aRv").textContent  = A.r.toFixed(2) + " mm";
+  $("aR1").value = A.R1; $("aR2").value = A.R2; $("aR").value = A.r;
+
+  $("aQ").textContent = fmt(aQenc(A.r)) + " W";
+  $("aA").textContent = fmt(aArea(A.r)) + " m\u00b2";
+  $("aq").textContent = fmt(aFlux(A.r)) + " W/m\u00b2";
+
+  // canvas
+  const { ctx, w, h } = fitCanvas($("cvA"), 330);
+  ctx.clearRect(0, 0, w, h);
+  const cx = w/2, cy = h/2, px = Math.min(w, h) * 0.42 / A.R2;
+
+  // outer (non-generating) ring
+  ctx.beginPath(); ctx.arc(cx, cy, A.R2*px, 0, TAU);
+  ctx.fillStyle = "#E7EDF4"; ctx.fill();
+  ctx.strokeStyle = "#9AA7B6"; ctx.lineWidth = 1; ctx.stroke();
+
+  // core, shaded by local generation
+  let peak = 0;
+  for (let i = 0; i <= 60; i++) peak = Math.max(peak, aS(A.R1 * i/60));
+  const rings = 70;
+  for (let i = rings; i >= 1; i--) {
+    const rr = A.R1 * i/rings;
+    ctx.beginPath(); ctx.arc(cx, cy, rr*px, 0, TAU);
+    ctx.fillStyle = genColor(peak ? aS(rr)/peak : 0);
+    ctx.fill();
+  }
+  ctx.beginPath(); ctx.arc(cx, cy, A.R1*px, 0, TAU);
+  ctx.strokeStyle = "#6B4EA8"; ctx.lineWidth = 1.4; ctx.stroke();
+
+  // the enclosed volume, highlighted
+  ctx.beginPath(); ctx.arc(cx, cy, Math.min(A.r, A.R1)*px, 0, TAU);
+  ctx.fillStyle = "rgba(15,122,110,0.16)"; ctx.fill();
+
+  // the measuring surface
+  ctx.beginPath(); ctx.arc(cx, cy, A.r*px, 0, TAU);
+  ctx.strokeStyle = "#16305C"; ctx.lineWidth = 2; ctx.setLineDash([6,4]); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // radius arm
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + A.r*px, cy);
+  ctx.strokeStyle = "#16305C"; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx + A.r*px, cy, 5, 0, TAU);
+  ctx.fillStyle = "#16305C"; ctx.fill();
+  ctx.strokeStyle = "#fff"; ctx.lineWidth = 1.6; ctx.stroke();
+
+  ctx.font = "12px ui-monospace, Menlo, monospace";
+  ctx.fillStyle = "#16305C"; ctx.textAlign = "center";
+  ctx.fillText("r = " + A.r.toFixed(2) + " mm", cx + A.r*px/2, cy - 9);
+  ctx.fillStyle = "#5A6675";
+  ctx.fillText("R\u2081", cx, cy - A.R1*px - 7);
+  ctx.fillText("R\u2082", cx, cy - A.R2*px - 7);
+
+  // plots
+  const regions = [{ x0: A.R1, x1: A.R2, fill: "#EEF2F7" }];
+  const marks = [{ x: A.R1, label: "R\u2081" }];
+  drawPlot($("plotAS"), {
+    x0: 0, x1: A.R2, cursor: A.r, regions, marks,
+    series: [{ f: aS, color: "#6B4EA8" }],
+    xLabel: "radius r  (mm)", yLabel: "S  (W/m\u00b3)", aria: "Generation rate against radius"
+  });
+  drawPlot($("plotAQ"), {
+    x0: 0, x1: A.R2, cursor: A.r, regions, marks,
+    series: [{ f: aFlux, color: "#0F7A6E" }],
+    xLabel: "radius r  (mm)", yLabel: "q  (W/m\u00b2)", aria: "Heat flux against radius"
+  });
+
+  const inside = A.r <= A.R1;
+  const msg = {
+    uniform: "With uniform generation the enclosed heat grows as r\u00b3 while the area grows as r\u00b2, so inside the core the flux rises in a straight line: <b>q = S\u2080r/3</b>.",
+    rising:  "Generation is weakest at the centre and strongest at the edge, so the flux stays near zero for a while and then climbs steeply: <b>q = S\u2081r\u00b3/5</b>. Even so, the hottest point is still the centre.",
+    falling: "Generation is strongest at the centre and fades to zero at the core edge. Watch the flux curve carefully: it peaks around three-quarters of the way out and then <i>falls</i> before you even leave the core. Out near R\u2081 almost no new heat is being added, yet the area is still growing \u2014 so the ratio drops. The centre is still the hottest point, because the flux never turns negative."
+  }[A.prof];
+  $("noteA").innerHTML = "<b>What to notice.</b> " + msg +
+    (inside
+      ? " You are currently inside the generating core, so moving outward still adds new heat to the numerator."
+      : " You are now out in the pale ring. The numerator is frozen \u2014 no new heat is being added \u2014 while the area keeps growing, so the flux falls away as 1/r\u00b2.");
+}
+
+/* ============================================================
+   PANEL B — geometry
+   ============================================================ */
+const B = { R1: 8, R2: 20, r: 12, S0: 5e7 };
+const bSph = r => B.S0 * Math.pow(Math.min(r,B.R1)*1e-3, 3) / (3 * Math.pow(r*1e-3, 2));
+const bCyl = r => B.S0 * Math.pow(Math.min(r,B.R1)*1e-3, 2) / (2 * (r*1e-3));
+const bSlb = r => B.S0 * Math.min(r, B.R1) * 1e-3;
+
+function renderB() {
+  B.r = clamp(B.r, 0.05, B.R2);
+  $("bR1v").textContent = B.R1.toFixed(1) + " mm";
+  $("bRv").textContent  = B.r.toFixed(2) + " mm";
+  $("bR1").value = B.R1; $("bR").value = B.r;
+
+  $("bqS").textContent = fmt(bSph(B.r)) + " W/m\u00b2";
+  $("bqC").textContent = fmt(bCyl(B.r)) + " W/m\u00b2";
+  $("bqP").textContent = fmt(bSlb(B.r)) + " W/m\u00b2";
+  $("bIn").textContent = B.r <= B.R1 ? "yes \u2014 still adding heat" : "no \u2014 numerator frozen";
+
+  const { ctx, w, h } = fitCanvas($("cvB"), 330);
+  ctx.clearRect(0, 0, w, h);
+  const pad = 14, colW = (w - pad*2) / 3, cy = h/2;
+  const px = Math.min(colW*0.44, h*0.36) / B.R2;
+  const labels = ["Sphere", "Cylinder", "Slab"];
+  const cols = ["#B3202B", "#0F7A6E", "#4A6FA5"];
+
+  for (let g = 0; g < 3; g++) {
+    const cx = pad + colW*g + colW/2;
+    ctx.save();
+    if (g < 2) {
+      ctx.beginPath(); ctx.arc(cx, cy, B.R2*px, 0, TAU);
+      ctx.fillStyle = "#E7EDF4"; ctx.fill();
+      ctx.strokeStyle = "#9AA7B6"; ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, B.R1*px, 0, TAU);
+      ctx.fillStyle = "#DCCDEF"; ctx.fill();
+      ctx.strokeStyle = "#6B4EA8"; ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, B.r*px, 0, TAU);
+      ctx.strokeStyle = cols[g]; ctx.lineWidth = 2; ctx.setLineDash([6,4]); ctx.stroke();
+      ctx.setLineDash([]);
+      if (g === 1) { // hint at extrusion
+        ctx.globalAlpha = 0.35;
+        ctx.beginPath(); ctx.ellipse(cx, cy - B.R2*px*0.42, B.R2*px, B.R2*px*0.3, 0, 0, TAU);
+        ctx.strokeStyle = "#9AA7B6"; ctx.lineWidth = 1; ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    } else {
+      const half = B.R2*px, top = cy - half, hh = half*2;
+      ctx.fillStyle = "#E7EDF4";
+      ctx.fillRect(cx - half, top, hh, hh);
+      ctx.strokeStyle = "#9AA7B6"; ctx.strokeRect(cx - half, top, hh, hh);
+      ctx.fillStyle = "#DCCDEF";
+      ctx.fillRect(cx - half, top, B.R1*px, hh);
+      ctx.strokeStyle = "#6B4EA8"; ctx.strokeRect(cx - half, top, B.R1*px, hh);
+      ctx.beginPath();
+      ctx.moveTo(cx - half + B.r*px, top); ctx.lineTo(cx - half + B.r*px, top + hh);
+      ctx.strokeStyle = cols[g]; ctx.lineWidth = 2; ctx.setLineDash([6,4]); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+    ctx.font = "12.5px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "center"; ctx.fillStyle = cols[g];
+    ctx.fillText(labels[g], cx, h - 6);
+  }
+
+  const regions = [{ x0: B.R1, x1: B.R2, fill: "#EEF2F7" }];
+  const marks = [{ x: B.R1, label: "R\u2081" }];
+  const series = [
+    { f: bSph, color: "#B3202B" },
+    { f: bCyl, color: "#0F7A6E" },
+    { f: bSlb, color: "#4A6FA5" }
+  ];
+  drawPlot($("plotB"), {
+    x0: 0.05, x1: B.R2, cursor: B.r, regions, marks, series,
+    xLabel: "radius r  (mm)", yLabel: "q  (W/m\u00b2)", aria: "Flux for three geometries"
+  });
+  drawPlot($("plotBlog"), {
+    x0: 0.05, x1: B.R2, cursor: B.r, regions, marks, series, logY: true,
+    xLabel: "radius r  (mm)", yLabel: "q  (log scale)", aria: "Flux on log scale"
+  });
+}
+
+/* ============================================================
+   PANEL C — the fuel pellet (Lecture 3)
+   ============================================================ */
+const C = { b: 2, S: 5, Rf: 10, Rc: 12, kF: 3, kC: 17, r: 6, T0: 400 };
+
+const cSn0   = () => C.S * 1e7;
+const cBrack = () => 1/3 + C.b/5;
+const cSgen  = r => r <= C.Rf ? cSn0() * (1 + C.b * Math.pow(r/C.Rf, 2)) : 0;
+
+function cFlux(r) {
+  const m = 1e-3;
+  if (r <= C.Rf) return cSn0() * (r*m) * (1/3 + (C.b/5) * Math.pow(r/C.Rf, 2));
+  return cSn0() * Math.pow(C.Rf*m, 3) * cBrack() / Math.pow(r*m, 2);
+}
+/* temperature rise across the cladding, from R^(C) inward to radius r */
+function cTclad(r) {
+  const m = 1e-3;
+  return cSn0() * Math.pow(C.Rf*m, 3) / C.kC * cBrack() * (1/(r*m) - 1/(C.Rc*m)) + C.T0;
+}
+function cTemp(r) {
+  if (r >= C.Rf) return cTclad(r);
+  const m = 1e-3;
+  const rise = cSn0() * Math.pow(C.Rf*m, 2) / (6*C.kF) *
+               (1 - Math.pow(r/C.Rf, 2) + (3*C.b/10) * (1 - Math.pow(r/C.Rf, 4)));
+  return rise + cTclad(C.Rf);
+}
+
+function renderC() {
+  C.Rc = Math.max(C.Rc, C.Rf + 0.5);
+  $("cRc").min = (C.Rf + 0.5).toFixed(1);
+  C.r = clamp(C.r, 0.05, C.Rc);
+  $("cR").max = C.Rc.toFixed(2);
+
+  $("cBv").textContent  = C.b.toFixed(1);
+  $("cSv").textContent  = C.S.toFixed(1) + "\u00d710\u2077 W/m\u00b3";
+  $("cRfv").textContent = C.Rf.toFixed(1) + " mm";
+  $("cRcv").textContent = C.Rc.toFixed(1) + " mm";
+  $("cKfv").textContent = C.kF.toFixed(1);
+  $("cKcv").textContent = C.kC.toFixed(1);
+  $("cRv").textContent  = C.r.toFixed(2) + " mm";
+  ["cB","cS","cRf","cRc","cKf","cKc","cR"].forEach((id,i) =>
+    $(id).value = [C.b,C.S,C.Rf,C.Rc,C.kF,C.kC,C.r][i]);
+
+  const Tmax = cTemp(0.0001), Tif = cTclad(C.Rf);
+  const dTf = Tmax - Tif, dTc = Tif - C.T0;
+  const Qtot = cFlux(C.Rc) * 4 * Math.PI * Math.pow(C.Rc*1e-3, 2);
+
+  $("cS_r").textContent  = fmt(cSgen(C.r)) + " W/m\u00b3";
+  $("cq_r").textContent  = fmt(cFlux(C.r)) + " W/m\u00b2";
+  $("cT_r").textContent  = cTemp(C.r).toFixed(0) + " K";
+  $("cTmax").textContent = Tmax.toFixed(0) + " K";
+  $("cDTf").textContent  = dTf.toFixed(0) + " K";
+  $("cDTc").textContent  = dTc.toFixed(0) + " K";
+  $("cQ").textContent    = fmt(Qtot) + " W";
+
+  // canvas coloured by temperature
+  const { ctx, w, h } = fitCanvas($("cvC"), 330);
+  ctx.clearRect(0, 0, w, h);
+  const cx = w/2, cy = h/2, px = Math.min(w, h) * 0.42 / C.Rc;
+  const span = Math.max(Tmax - C.T0, 1);
+
+  const rings = 110;
+  for (let i = rings; i >= 1; i--) {
+    const rr = C.Rc * i/rings;
+    ctx.beginPath(); ctx.arc(cx, cy, rr*px, 0, TAU);
+    ctx.fillStyle = tempColor((cTemp(rr) - C.T0) / span);
+    ctx.fill();
+  }
+  // boundaries
+  ctx.beginPath(); ctx.arc(cx, cy, C.Rf*px, 0, TAU);
+  ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 1.6; ctx.setLineDash([5,4]); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(cx, cy, C.Rc*px, 0, TAU);
+  ctx.strokeStyle = "#5A6675"; ctx.lineWidth = 1.2; ctx.stroke();
+
+  // measuring surface
+  ctx.beginPath(); ctx.arc(cx, cy, C.r*px, 0, TAU);
+  ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 2.4; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + C.r*px, cy);
+  ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx + C.r*px, cy, 5, 0, TAU);
+  ctx.fillStyle = "#FFFFFF"; ctx.fill();
+  ctx.strokeStyle = "#101823"; ctx.lineWidth = 1.4; ctx.stroke();
+
+  ctx.font = "12px ui-monospace, Menlo, monospace";
+  ctx.textAlign = "center"; ctx.fillStyle = "#FFFFFF";
+  ctx.fillText(cTemp(C.r).toFixed(0) + " K", cx + C.r*px/2, cy - 10);
+  ctx.fillStyle = "#5A6675";
+  ctx.fillText("R\u207d\u1da0\u207e", cx, cy - C.Rf*px - 6);
+  ctx.fillText("R\u207d\u1d9c\u207e", cx, cy - C.Rc*px - 6);
+
+  const regions = [{ x0: C.Rf, x1: C.Rc, fill: "#EEF2F7" }];
+  const marks = [{ x: C.Rf, label: "R\u207d\u1da0\u207e" }];
+  drawPlot($("plotCQ"), {
+    x0: 0, x1: C.Rc, cursor: C.r, regions, marks,
+    series: [{ f: cFlux, color: "#0F7A6E" }],
+    xLabel: "radius r  (mm)", yLabel: "q  (W/m\u00b2)", aria: "Flux against radius in the pellet"
+  });
+  drawPlot($("plotCT"), {
+    x0: 0, x1: C.Rc, cursor: C.r, regions, marks, yMin: C.T0 - (Tmax-C.T0)*0.06,
+    series: [{ f: cTemp, color: "#B3202B" }],
+    xLabel: "radius r  (mm)", yLabel: "T  (K)", aria: "Temperature against radius in the pellet"
+  });
+
+  const pct = Math.round(100 * dTf / Math.max(dTf + dTc, 1e-9));
+  $("noteC").innerHTML = "<b>What to notice.</b> Right now <b>" + pct +
+    "%</b> of the total temperature rise happens across the fuel and " + (100-pct) +
+    "% across the cladding. Turn the fuel conductivity k\u207d\u1da0\u207e down and the centre races away from the surface \u2014 that is the melting risk a reactor designer is actually managing. Raising the skew b piles more generation near the outer edge of the fuel, which lifts the flux everywhere but raises T<sub>max</sub> far less than simply making more heat overall does.";
+}
+
+/* ============================================================
+   Wiring
+   ============================================================ */
+function bindRange(id, obj, key, after) {
+  $(id).addEventListener("input", e => { obj[key] = parseFloat(e.target.value); after(); });
+}
+
+bindRange("aR1", A, "R1", renderA);
+bindRange("aR2", A, "R2", renderA);
+bindRange("aR",  A, "r",  renderA);
+$("aProf").addEventListener("click", e => {
+  const btn = e.target.closest("button"); if (!btn) return;
+  A.prof = btn.dataset.v;
+  [...$("aProf").querySelectorAll("button")].forEach(b =>
+    b.setAttribute("aria-pressed", String(b === btn)));
+  renderA();
+});
+bindRadius($("cvA"), () => A.R2, v => { A.r = v; renderA(); }, () => A.r);
+
+bindRange("bR1", B, "R1", renderB);
+bindRange("bR",  B, "r",  renderB);
+bindRadius($("cvB"), () => B.R2, v => { B.r = v; renderB(); }, () => B.r, "linear");
+
+bindRange("cB",  C, "b",  renderC);
+bindRange("cS",  C, "S",  renderC);
+bindRange("cRf", C, "Rf", renderC);
+bindRange("cRc", C, "Rc", renderC);
+bindRange("cKf", C, "kF", renderC);
+bindRange("cKc", C, "kC", renderC);
+bindRange("cR",  C, "r",  renderC);
+bindRadius($("cvC"), () => C.Rc, v => { C.r = v; renderC(); }, () => C.r);
+
+const panels = { "tab-a": "p-a", "tab-b": "p-b", "tab-c": "p-c" };
+document.querySelectorAll(".tab").forEach(t => {
+  t.addEventListener("click", () => {
+    Object.entries(panels).forEach(([tid, pid]) => {
+      const on = tid === t.id;
+      $(tid).setAttribute("aria-selected", String(on));
+      $(pid).hidden = !on;
+    });
+    renderAll();
+  });
+});
+
+function renderAll() {
+  if (!$("p-a").hidden) renderA();
+  if (!$("p-b").hidden) renderB();
+  if (!$("p-c").hidden) renderC();
+}
+
+let rt;
+window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(renderAll, 120); });
+renderAll();
+</script>
+</body>
+</html>
