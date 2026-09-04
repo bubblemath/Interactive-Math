@@ -1,0 +1,764 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Graph Reading Ladder — read the axis, not the picture</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --round:#A66A00;
+    --round-bg:#FCF1DA;
+    --test:#0B6E77;
+    --test-bg:#DEF0F1;
+    --bar:#41586B;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--test)}
+  :focus-visible{outline:3px solid var(--test); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--test)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:16px 12px 4px}
+  .demo-top svg{display:block; width:100%; height:auto; max-width:560px; margin:0 auto}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--test); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--test); background:var(--test-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--test)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(178px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px}
+  .stem .q{font-size:17px; max-width:62ch; margin:0 auto 14px; color:#31404F; text-align:center}
+  .chart{margin:0 auto 14px; max-width:560px}
+  .chart svg{display:block; width:100%; height:auto}
+  .facts{max-width:420px; margin:0 auto 14px; font-size:15px; border:1px solid var(--rule); border-radius:8px; overflow:hidden}
+  .facts div{display:flex; justify-content:space-between; padding:7px 13px; border-bottom:1px solid var(--rule)}
+  .facts div:last-child{border-bottom:none}
+  .facts span:last-child{font-family:var(--mono)}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 20px 20px}
+  @media (max-width:600px){.options{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none}
+  .opt .v{font-size:16px}
+  .opt.num .v{font-family:var(--mono); font-size:17px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>▨</span> The Graph Reading Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 1 · circle graphs, bar graphs, line graphs</p>
+    <h1>Read the axis, not the picture.</h1>
+    <p class="lede">A bar looks twice as tall, so the value must be twice as big. A slice is 22%, so 22 students picked it. Both feel obvious and both are wrong. Every number a graph reports comes from the scale beside it or the total behind it — never from how the shape looks.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroChart"></div></div>
+      <div class="placebar" id="heroBtns">
+        <button data-b="0" aria-pressed="true">axis starts at $0</button>
+        <button data-b="15000" aria-pressed="false">axis starts at $15,000</button>
+      </div>
+      <div class="result" id="heroResult"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>The same eight numbers, drawn two ways.</b> Nothing about the data changed between those two buttons — only where the vertical axis begins. Tuition roughly doubled over sixteen years, but on the cropped axis it appears to grow more than thirty times over. Newspapers, ads and annual reports all use this, and it works because people read the picture instead of the scale.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–4 are about the scale: which graph to use, how to read a value off one, and what a cropped axis does to your eyes. Rungs 5–6 are about the whole a percent is taken from. Rungs 7–10 are about matching the number you find to the question actually asked.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every graph is drawn fresh</h3><p>The bars, lines and slices are generated each time, so you have to actually read them. The wrong options are the answers you get from reading the neighbouring bar, from trusting the picture, or from using the percent as a count.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Graphs are arguments, not pictures</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Someone chose that scale</h3><p>Where the axis starts, which categories appear, what the total is — all decisions, all made before you ever see the graph.</p></div>
+      <div class="step"><span class="n">02</span><h3>Percents need a whole</h3><p>40% is a bigger share than 30% and can still be fewer people. Without the total, a percent is not a count.</p></div>
+      <div class="step"><span class="n">03</span><h3>It sets up the rest of the lesson</h3><p>Rates of change, linear models and projections all start with reading a value off a graph correctly. Errors here travel.</p></div>
+    </div>
+    <p class="closing">Find the scale, find the total, then answer the question that was asked. The picture is the last thing to trust.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Graph Reading Ladder · circle graphs show shares of one whole · bar graphs compare separate amounts · line graphs show change over time</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function commas(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function money(n){return "$"+commas(n);}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+const PIE=["#16202B","#0B6E77","#A66A00","#4E9BA2","#7C8A97","#D2A24C","#2F4A5C","#B9C4CE"];
+
+/* ================= chart renderers ================= */
+function barSVG(o){
+  const W=580,H=320,ml=o.ml||66,mr=14,mt=o.title?30:16,mb=o.xTitle?54:38;
+  const pw=W-ml-mr, ph=H-mt-mb;
+  const yOf=function(v){return mt+ph-(v-o.yMin)/(o.yMax-o.yMin)*ph;};
+  const fmt=o.fmt||function(v){return commas(v);};
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.title||"bar graph")+'">';
+  for(let v=o.yMin;v<=o.yMax+1e-9;v+=o.step){
+    const y=yOf(v);
+    if(v>o.yMin) s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="var(--rule)" stroke-dasharray="2 3"/>';
+    s+='<text x="'+(ml-8)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" font-size="12" fill="var(--muted)">'+fmt(v)+'</text>';
+  }
+  const n=o.values.length, slot=pw/n, bw=slot*0.66;
+  o.values.forEach(function(v,i){
+    const x=ml+i*slot+(slot-bw)/2, y=yOf(v);
+    const fill=(o.hi===i)?"var(--test)":"var(--bar)";
+    s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+(mt+ph-y).toFixed(1)+'" fill="'+fill+'"/>';
+    s+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(mt+ph+16)+'" text-anchor="middle" font-size="12" fill="var(--muted)">'+esc(o.labels[i])+'</text>';
+  });
+  s+='<line x1="'+ml+'" x2="'+ml+'" y1="'+mt+'" y2="'+(mt+ph)+'" stroke="var(--ink)" stroke-width="1.2"/>';
+  s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+(mt+ph)+'" y2="'+(mt+ph)+'" stroke="var(--ink)" stroke-width="1.2"/>';
+  if(o.yMin>0){ // axis break mark
+    const yb=mt+ph;
+    s+='<path d="M'+(ml-5)+' '+(yb-4)+' l5 -5 l-5 -5" fill="none" stroke="var(--ink)" stroke-width="1.2"/>';
+  }
+  if(o.title) s+='<text x="'+(ml+pw/2)+'" y="18" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">'+esc(o.title)+'</text>';
+  if(o.xTitle) s+='<text x="'+(ml+pw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="var(--muted)">'+esc(o.xTitle)+'</text>';
+  return s+"</svg>";
+}
+
+function lineSVG(o){
+  const W=580,H=320,ml=o.ml||60,mr=18,mt=o.title?30:16,mb=o.xTitle?54:38;
+  const pw=W-ml-mr, ph=H-mt-mb;
+  const n=o.values.length;
+  const xOf=function(i){return ml+(n===1?pw/2:i*pw/(n-1));};
+  const yOf=function(v){return mt+ph-(v-o.yMin)/(o.yMax-o.yMin)*ph;};
+  const fmt=o.fmt||function(v){return commas(v);};
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.title||"line graph")+'">';
+  for(let v=o.yMin;v<=o.yMax+1e-9;v+=o.step){
+    const y=yOf(v);
+    if(v>o.yMin) s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="var(--rule)" stroke-dasharray="2 3"/>';
+    s+='<text x="'+(ml-8)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" font-size="12" fill="var(--muted)">'+fmt(v)+'</text>';
+  }
+  let pts="";
+  o.values.forEach(function(v,i){ pts+=xOf(i).toFixed(1)+","+yOf(v).toFixed(1)+" "; });
+  s+='<polyline points="'+pts.trim()+'" fill="none" stroke="var(--bar)" stroke-width="2.2"/>';
+  o.values.forEach(function(v,i){
+    s+='<circle cx="'+xOf(i).toFixed(1)+'" cy="'+yOf(v).toFixed(1)+'" r="'+(o.hi===i?5.5:4)+'" fill="'+(o.hi===i?"var(--test)":"var(--bar)")+'"/>';
+    s+='<text x="'+xOf(i).toFixed(1)+'" y="'+(mt+ph+16)+'" text-anchor="middle" font-size="12" fill="var(--muted)">'+esc(o.labels[i])+'</text>';
+  });
+  s+='<line x1="'+ml+'" x2="'+ml+'" y1="'+mt+'" y2="'+(mt+ph)+'" stroke="var(--ink)" stroke-width="1.2"/>';
+  s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+(mt+ph)+'" y2="'+(mt+ph)+'" stroke="var(--ink)" stroke-width="1.2"/>';
+  if(o.title) s+='<text x="'+(ml+pw/2)+'" y="18" text-anchor="middle" font-size="13" font-weight="600" fill="var(--ink)">'+esc(o.title)+'</text>';
+  if(o.xTitle) s+='<text x="'+(ml+pw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="var(--muted)">'+esc(o.xTitle)+'</text>';
+  return s+"</svg>";
+}
+
+function pieSVG(o){
+  const W=580,H=Math.max(300,40+o.slices.length*26),cx=150,cy=H/2,r=112;
+  let a=-Math.PI/2, s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(o.title||"circle graph")+'">';
+  o.slices.forEach(function(sl,i){
+    const ang=sl.pct/100*2*Math.PI, b=a+ang;
+    const x1=cx+r*Math.cos(a), y1=cy+r*Math.sin(a), x2=cx+r*Math.cos(b), y2=cy+r*Math.sin(b);
+    s+='<path d="M'+cx+' '+cy+' L'+x1.toFixed(1)+' '+y1.toFixed(1)+' A'+r+' '+r+' 0 '+(ang>Math.PI?1:0)+' 1 '+x2.toFixed(1)+' '+y2.toFixed(1)+' Z" fill="'+PIE[i%PIE.length]+'" stroke="var(--card)" stroke-width="1.5"/>';
+    a=b;
+  });
+  const top=(H-o.slices.length*26)/2+16;
+  o.slices.forEach(function(sl,i){
+    const ly=top+i*26;
+    s+='<rect x="300" y="'+(ly-11)+'" width="13" height="13" rx="2" fill="'+PIE[i%PIE.length]+'"/>';
+    s+='<text x="322" y="'+ly+'" font-size="13.5" fill="var(--ink)">'+esc(sl.label)+(o.hidePct?"":"  —  "+sl.pct+"%")+'</text>';
+  });
+  return s+"</svg>";
+}
+
+/* ================= data builders ================= */
+const NAMES=["Arneshia","Beto","Carli","David","Eli","Freddy","Georgia","Hannah"];
+const COLORS=["Dark Blue","Orange","Grey","Yellow","Light Blue","Green","Navy","Red"];
+const FLAVORS=["Vanilla","Chocolate","Strawberry","Mint","Coffee"];
+const SPORTS=["Soccer","Basketball","Swimming","Track","Tennis"];
+const SUBJECTS=["Math","History","Biology","Art","Music"];
+
+function pctSet(k){ // k whole percents, each >=6, summing to 100
+  while(true){
+    const cuts=[];
+    for(let i=0;i<k-1;i++)cuts.push(ri(1,99));
+    cuts.sort(function(a,b){return a-b;});
+    const out=[]; let prev=0;
+    for(let i=0;i<k-1;i++){out.push(cuts[i]-prev); prev=cuts[i];}
+    out.push(100-prev);
+    if(out.every(function(v){return v>=6;})&&new Set(out).size===k) return out.sort(function(a,b){return b-a;});
+  }
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Which graph fits the question",
+ sub:"Circle for shares of one whole. Bar to compare separate amounts. Line for change over time.",
+ gen:function(){
+   const bank=[
+     {t:"circle", q:"You want to show what share of a family's monthly budget goes to rent, food, transport and savings."},
+     {t:"circle", q:"You want to show what percent of a survey chose each of five brands of cereal."},
+     {t:"circle", q:"You want to show how a school's students are divided among four grade levels."},
+     {t:"line",   q:"You want to show how a city's population changed each decade from 1950 to 2020."},
+     {t:"line",   q:"You want to show how one student's test score changed across six exams."},
+     {t:"line",   q:"You want to show a company's monthly revenue over the last two years."},
+     {t:"bar",    q:"You want to compare the number of books read by each of six different students."},
+     {t:"bar",    q:"You want to compare average rainfall last year in five different cities."},
+     {t:"bar",    q:"You want to compare the cost of the same laptop at four different stores."}
+   ];
+   const it=pick(bank);
+   const why={
+     circle:"The categories are pieces of one whole, and the question is about share.",
+     line:"The horizontal axis is time, and the question is about change.",
+     bar:"The amounts are separate quantities being compared side by side, not pieces of one total."
+   };
+   const wrong={
+     circle:"A circle graph only makes sense when the categories add up to one whole and you care about each one's share.",
+     line:"A line graph is for change over time. There is no time axis here.",
+     bar:"A bar graph compares separate amounts. It does not show shares of a whole or change over time as clearly as the alternative here."
+   };
+   const names={circle:"Circle graph",bar:"Bar graph",line:"Line graph"};
+   const opts=["circle","bar","line"].map(function(t){
+     return {label:names[t], correct:t===it.t, note:t===it.t?why[t]:wrong[t]};
+   });
+   return {q:it.q+"<br><b>Which display fits best?</b>", opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"Read a value off a bar",
+ sub:"Find the gridlines above and below the bar, then read between them.",
+ gen:function(){
+   const n=8, vals=[];
+   while(vals.length<n){const v=ri(9,19)*5; if(vals.indexOf(v)<0)vals.push(v);}
+   const i=ri(0,n-1), v=vals[i];
+   const j=(i+ri(1,n-1))%n;
+   const opts=[
+     {label:String(v), correct:true, note:"The bar for "+NAMES[i]+" sits at "+v+"."},
+     {label:String(v+10), note:"That is one gridline too high. Check which line the top of the bar is nearest."},
+     {label:String(v-10), note:"That is one gridline too low."},
+     {label:String(vals[j]), note:"That is "+NAMES[j]+"'s bar, not "+NAMES[i]+"'s."},
+     {label:String(v+5), note:"Close, but off by half a gridline."}
+   ];
+   return {q:"Estimate <b>"+NAMES[i]+"</b>'s grade on the first exam.",
+     svg:barSVG({labels:NAMES,values:vals,yMin:0,yMax:100,step:10,hi:i,title:"First Exam Grades",xTitle:"Student"}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"Read a point off a line",
+ sub:"Same idea, but the value sits at a dot instead of the top of a bar.",
+ gen:function(){
+   const n=8, vals=[];
+   for(let i=0;i<n;i++)vals.push(ri(2,14)*2.5);
+   const i=ri(0,n-1), v=vals[i];
+   let j=(i+ri(1,n-1))%n;
+   const fmt=function(x){return "$"+(x%1?x.toFixed(1):x);};
+   const opts=[
+     {label:fmt(v), correct:true, note:"In year "+(i+1)+" the share price is "+fmt(v)+"."},
+     {label:fmt(v+5), note:"One gridline too high."},
+     {label:fmt(v-5), note:"One gridline too low."},
+     {label:fmt(vals[j]), note:"That is the value in year "+(j+1)+", not year "+(i+1)+"."},
+     {label:fmt(v+2.5), note:"Half a gridline off."}
+   ];
+   return {q:"What was the stock price in <b>year "+(i+1)+"</b>?",
+     svg:lineSVG({labels:["1","2","3","4","5","6","7","8"],values:vals,yMin:0,yMax:40,step:5,hi:i,
+       title:"Stock Price in $ per Share",xTitle:"Years after purchase",fmt:function(x){return "$"+x;}}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"When the axis doesn't start at zero",
+ sub:"A cropped axis stretches every difference. The numbers are still the numbers.",
+ gen:function(){
+   const base=ri(12,20)*1000;
+   const start=ri(4,12)*100+base;
+   const step=ri(9,13)*100;
+   const vals=[]; for(let i=0;i<8;i++)vals.push(start+i*step+ri(-40,40));
+   const yMin=base, yMax=base+Math.ceil((vals[7]-base)/2000)*2000;
+   const years=["2000","2002","2004","2006","2008","2010","2012","2014"];
+   const chart=barSVG({labels:years,values:vals,yMin:yMin,yMax:yMax,step:2000,
+     title:"Average Cost of Tuition and Fees",xTitle:"Ending year in the school year",
+     fmt:function(v){return "$"+commas(v);},ml:74});
+   const actual=vals[7]/vals[0];
+   const visual=(vals[7]-yMin)/(vals[0]-yMin);
+   const forms=[
+     {q:"On this graph the last bar looks about <b>"+Math.round(visual)+" times</b> as tall as the first bar. About how many times the 2000 cost is the 2014 cost, really?",
+      ans:actual.toFixed(1)+" times",
+      bad:[[Math.round(visual)+" times","That is the ratio of the bar heights, which the cropped axis exaggerates. Divide the actual dollar amounts instead."],
+           [commas(Math.round((vals[7]-vals[0])/1000))+" times","That is roughly the increase in thousands of dollars, not a ratio."],
+           ["about the same","The cost rose by "+money(vals[7]-vals[0])+". That is not about the same."]]},
+     {q:"What value does the <b>vertical axis begin at</b> on this graph?",
+      ans:money(yMin),
+      bad:[["$0","Look at the bottom label on the vertical axis. It is not zero — that is what makes the bars look so different."],
+           [money(vals[0]),"That is the height of the first bar, not where the axis starts."],
+           [money(2000),"That is the spacing between gridlines, not the starting value."]]},
+     {q:"How much did the cost actually rise from <b>2000 to 2014</b>?",
+      ans:money(vals[7]-vals[0]),
+      bad:[[money(vals[7]),"That is the 2014 value on its own, not the rise."],
+           [money(vals[7]-yMin),"That is the height of the last bar above the cropped axis, not the rise since 2000."],
+           [money(vals[1]-vals[0]),"That is the rise over the first two years only."]]}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:"Read the dollar amounts off the scale; ignore how tall the bars look."}]
+     .concat(f.bad.map(function(b){return {label:b[0],note:b[1]};}));
+   return {q:f.q, svg:chart, opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"Percent to a count",
+ sub:"A percent is a share. To turn it into people, you need the total.",
+ gen:function(){
+   const total=pick([200,400,500,1000]);
+   const pcts=pctSet(5);
+   const cats=shuffle(pick([COLORS,FLAVORS,SPORTS,SUBJECTS]).slice(0)).slice(0,5);
+   const slices=cats.map(function(c,i){return {label:c,pct:pcts[i]};});
+   const i=ri(0,4), p=pcts[i], ans=p*total/100;
+   const opts=[
+     {label:commas(ans), correct:true, note:p+"% of "+commas(total)+" is 0."+(p<10?"0":"")+p+" × "+commas(total)+" = "+commas(ans)+"."},
+     {label:String(p), note:"That is the percent itself. A percent is not a number of people until you multiply by the total."},
+     {label:commas(total-ans), note:"That is everyone who did <i>not</i> choose "+slices[i].label+"."},
+     {label:String(ans/10), note:"Decimal slip. 0."+(p<10?"0":"")+p+" × "+commas(total)+", not × "+commas(total/10)+"."},
+     {label:commas(ans*2), note:"That is double. Multiply the total by the percent written as a decimal."}
+   ];
+   return {q:"A survey of <b>"+commas(total)+"</b> students asked for a favorite. About how many chose <b>"+slices[i].label+"</b>?",
+     svg:pieSVG({slices:slices,title:"Favorite — survey of "+commas(total)+" students"}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"Percent of what",
+ sub:"A bigger percent of a smaller group can be fewer people. Compare counts, not percents.",
+ gen:function(){
+   let nA,nB,pA,pB,cA,cB,tries=0;
+   do{
+     nA=ri(2,9)*100; nB=ri(2,9)*100;
+     pA=ri(2,9)*5; pB=ri(2,9)*5;
+     cA=nA*pA/100; cB=nB*pB/100; tries++;
+   }while((cA===cB||nA===nB||pA===pB||Math.abs(cA-cB)<15)&&tries<200);
+   const bigPct=pA>pB?"A":"B", winner=cA>cB?"A":"B";
+   const opts=[
+     {label:"School "+winner, correct:true, note:"School A: "+pA+"% of "+commas(nA)+" is "+commas(cA)+". School B: "+pB+"% of "+commas(nB)+" is "+commas(cB)+"."},
+     {label:"School "+(winner==="A"?"B":"A"), note:"School A has "+commas(cA)+" and School B has "+commas(cB)+". "+(bigPct===(winner==="A"?"B":"A")?"The bigger percent came from the smaller school.":"Multiply each percent by its own total.")},
+     {label:"The two are equal", note:"School A has "+commas(cA)+" and School B has "+commas(cB)+"."},
+     {label:"There is no way to tell", note:"There is: each percent has its own total right there, so both counts can be computed."}
+   ];
+   return {q:"School A has <b>"+commas(nA)+"</b> students and <b>"+pA+"%</b> ride the bus.<br>School B has <b>"+commas(nB)+"</b> students and <b>"+pB+"%</b> ride the bus.<br><b>Which school has more bus riders?</b>",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"How much, or how much more",
+ sub:"One question wants a value off the graph. The other wants a difference between two.",
+ gen:function(){
+   const n=6, cities=["Austin","Bern","Cusco","Dakar","Enna","Faro"], vals=[];
+   while(vals.length<n){const v=ri(4,19)*5; if(vals.indexOf(v)<0)vals.push(v);}
+   const i=ri(0,n-1); let j=ri(0,n-1); while(j===i)j=ri(0,n-1);
+   const askDiff=Math.random()<.55;
+   const diff=Math.abs(vals[i]-vals[j]);
+   const chart=barSVG({labels:cities,values:vals,yMin:0,yMax:100,step:10,hi:i,
+     title:"Rainy Days Last Year",xTitle:"City"});
+   let q,opts;
+   if(askDiff){
+     q="<b>How many more</b> rainy days did "+cities[i]+" have than "+cities[j]+"?";
+     opts=[
+       {label:String(diff), correct:true, note:cities[i]+" had "+vals[i]+" and "+cities[j]+" had "+vals[j]+". The difference is "+diff+"."},
+       {label:String(vals[i]), note:"That is "+cities[i]+"'s total, not how much more it had. Subtract."},
+       {label:String(vals[j]), note:"That is "+cities[j]+"'s total, not the difference."},
+       {label:String(vals[i]+vals[j]), note:"That is the two added together. \u201cHow many more\u201d asks for a difference."}
+     ];
+   }else{
+     q="<b>How many</b> rainy days did "+cities[i]+" have?";
+     opts=[
+       {label:String(vals[i]), correct:true, note:"Read straight across from the top of "+cities[i]+"'s bar to the scale."},
+       {label:String(diff), note:"That is the gap between "+cities[i]+" and "+cities[j]+", not "+cities[i]+"'s own total."},
+       {label:String(vals[j]), note:"That is "+cities[j]+"'s bar."},
+       {label:String(vals[i]+10), note:"One gridline too high."}
+     ];
+   }
+   return {q:q, svg:chart, opts:shuffle(distinctOpts(opts).slice(0,4)), num:true};
+ }
+},
+{
+ title:"Highest, or rising fastest",
+ sub:"The tallest point and the steepest climb are almost never the same place.",
+ gen:function(){
+   let vals,jumps,hiIdx,jmpIdx,tries=0;
+   do{
+     vals=[ri(10,20)];
+     for(let i=1;i<7;i++)vals.push(Math.max(4,vals[i-1]+ri(-6,9)));
+     jumps=[]; for(let i=1;i<7;i++)jumps.push(vals[i]-vals[i-1]);
+     hiIdx=vals.indexOf(Math.max.apply(null,vals));
+     jmpIdx=jumps.indexOf(Math.max.apply(null,jumps));
+     tries++;
+   }while((hiIdx===jmpIdx+1||hiIdx===0||Math.max.apply(null,jumps)<3||vals.filter(function(v){return v===Math.max.apply(null,vals);}).length>1)&&tries<300);
+   const yrs=["2019","2020","2021","2022","2023","2024","2025"];
+   const chart=lineSVG({labels:yrs,values:vals,yMin:0,yMax:Math.ceil(Math.max.apply(null,vals)/10)*10+5,step:5,
+     title:"Members (thousands)",xTitle:"Year"});
+   const askJump=Math.random()<.5;
+   let q,opts;
+   if(askJump){
+     q="Between which two years did membership <b>rise the most</b>?";
+     opts=[
+       {label:yrs[jmpIdx]+" to "+yrs[jmpIdx+1], correct:true, note:"That climb is "+jumps[jmpIdx]+" thousand, the steepest segment on the graph."},
+       {label:yrs[hiIdx-1]+" to "+yrs[hiIdx], note:"That is where the line reaches its highest point. Highest is not the same as fastest rising — look for the steepest segment."},
+       {label:yrs[0]+" to "+yrs[1], note:jumps[0]>=0?("That segment rises "+jumps[0]+" thousand, less than the steepest."):("That segment falls by "+(-jumps[0])+" thousand.")},
+       {label:yrs[5]+" to "+yrs[6], note:jumps[5]>=0?("That segment rises "+jumps[5]+" thousand, less than the steepest."):("That segment falls by "+(-jumps[5])+" thousand.")},
+       {label:yrs[2]+" to "+yrs[3], note:jumps[2]>=0?("That segment rises "+jumps[2]+" thousand, less than the steepest."):("That segment falls by "+(-jumps[2])+" thousand.")},
+       {label:yrs[3]+" to "+yrs[4], note:jumps[3]>=0?("That segment rises "+jumps[3]+" thousand, less than the steepest."):("That segment falls by "+(-jumps[3])+" thousand.")}
+     ];
+   }else{
+     q="In which year was membership <b>highest</b>?";
+     opts=[
+       {label:yrs[hiIdx], correct:true, note:"The highest point on the line is "+vals[hiIdx]+" thousand, in "+yrs[hiIdx]+"."},
+       {label:yrs[jmpIdx+1], note:"That is the end of the steepest climb. Rising fastest is not the same as being highest — look for the top point."},
+       {label:yrs[6], note:"The last year is not automatically the highest. The peak is at "+vals[hiIdx]+" thousand."},
+       {label:yrs[0], note:"The first year reads "+vals[0]+" thousand, below the peak of "+vals[hiIdx]+"."}
+     ];
+   }
+   return {q:q, svg:chart, opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Can this graph answer that",
+ sub:"Percents alone cannot give counts. Notice when the graph is missing what you need.",
+ gen:function(){
+   const pcts=pctSet(5);
+   const cats=shuffle(pick([COLORS,FLAVORS,SPORTS,SUBJECTS]).slice(0)).slice(0,5);
+   const slices=cats.map(function(c,i){return {label:c,pct:pcts[i]};});
+   const chart=pieSVG({slices:slices,title:"Survey results"});
+   const top=slices[0], low=slices[4];
+   const two=pcts[0]+pcts[1];
+   const forms=[
+     {q:"<b>How many people</b> chose "+top.label+"?", ans:"The graph does not show this",
+      bad:[[String(top.pct)+" people","That is the percent who chose it, not a head count."],
+           [String(top.pct*2)+" people","That assumes 200 people were surveyed. The graph never says how many there were."],
+           ["About a third of them","This may be roughly true as a share, but the question asked how many people."]],
+      note:"The graph gives shares only. Without the number of people surveyed, no count can be found."},
+     {q:"<b>What percent</b> chose "+top.label+" or "+slices[1].label+"?", ans:two+"%",
+      bad:[[top.pct+"%","That is only "+top.label+". The question asks for both together."],
+           [(100-two)+"%","That is everyone else."],
+           ["The graph does not show this","It does — add the two slices."]],
+      note:"Percents of the same whole can be added: "+top.pct+"% + "+pcts[1]+"% = "+two+"%."},
+     {q:"Which choice was the <b>least popular</b>?", ans:low.label,
+      bad:[[top.label,"That is the largest slice, not the smallest."],
+           [slices[1].label,"That is the second largest."],
+           ["The graph does not show this","It does — compare the slices."]],
+      note:"The smallest slice is "+low.label+" at "+low.pct+"%."},
+     {q:"<b>How many more people</b> chose "+top.label+" than "+low.label+"?", ans:"The graph does not show this",
+      bad:[[(top.pct-low.pct)+" people","That is the difference in percent, not in people."],
+           [(top.pct-low.pct)+"%","That is a correct difference in percent, but the question asked for people."],
+           [String((top.pct-low.pct)*2)+" people","That assumes 200 were surveyed, which the graph never states."]],
+      note:"A difference in people needs the total surveyed, and this graph does not give it."},
+     {q:"Did <b>more than half</b> choose "+top.label+"?", ans:pcts[0]>50?"Yes":"No",
+      bad:[[pcts[0]>50?"No":"Yes",top.label+" is "+top.pct+"%, which is "+(pcts[0]>50?"more":"less")+" than 50%."],
+           ["The graph does not show this","It does — compare that slice to 50%."],
+           ["Only if 200 people were surveyed","A share above or below half does not depend on the group size."]],
+      note:top.label+" is "+top.pct+"%, so the answer follows from the percent alone."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(b){return {label:b[0],note:b[1]};}));
+   return {q:f.q, svg:chart, opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"What's wrong with the claim",
+ sub:"Some of these claims are fine. Say what the problem is, or say there isn't one.",
+ gen:function(){
+   const F={
+     axis:"The vertical axis does not start at zero, so the picture exaggerates the difference",
+     whole:"The two percents come from different totals, so they cannot be compared directly",
+     count:"That is a percent, not a number of people",
+     time:"The categories are not in time order, so there is no trend to read",
+     missing:"The graph does not give the total, so no count can be found",
+     fine:"Nothing is wrong — the claim matches the graph"
+   };
+   const keys=Object.keys(F);
+   const pcts=pctSet(5);
+   const cats=shuffle(COLORS.slice(0)).slice(0,5);
+   const slices=cats.map(function(c,i){return {label:c,pct:pcts[i]};});
+   const cityVals=[]; const cities=["Austin","Bern","Cusco","Dakar","Enna"];
+   while(cityVals.length<5){const v=ri(6,19)*5; if(cityVals.indexOf(v)<0)cityVals.push(v);}
+   const base=15000, tv=[]; for(let i=0;i<6;i++)tv.push(15600+i*1150+ri(-50,50));
+   const surveyed=pick([400,500,800]);
+   const bank=[
+     {claim:"\u201cTuition in 2010 was more than ten times what it was in 2000.\u201d", key:"axis",
+      note:"The 2010 bar really is about ten times the height of the 2000 bar \u2014 but only because the axis begins at "+money(base)+". In dollars the cost went from about "+money(tv[0])+" to about "+money(tv[5])+".",
+      svg:barSVG({labels:["2000","2002","2004","2006","2008","2010"],values:tv,yMin:base,yMax:24000,step:2000,
+        title:"Average Cost of Tuition and Fees",fmt:function(v){return "$"+commas(v);},ml:74})},
+     {claim:"\u201cOut of the "+commas(surveyed)+" people surveyed, "+slices[0].pct+" chose "+slices[0].label+".\u201d", key:"count",
+      note:"The total is given, so a count can be found \u2014 but "+slices[0].pct+" is the percent. The count is "+slices[0].pct+"% of "+commas(surveyed)+", which is "+commas(slices[0].pct*surveyed/100)+" people.",
+      svg:pieSVG({slices:slices,title:"Survey of "+commas(surveyed)+" people"})},
+     {claim:"\u201cRainfall has been climbing steadily from Austin through Enna.\u201d", key:"time",
+      note:"The bars do get taller left to right, but the horizontal axis is cities, not years. Reorder the cities and the climb disappears.",
+      svg:barSVG({labels:cities,values:cityVals.slice(0).sort(function(a,b){return a-b;}),yMin:0,yMax:100,step:20,
+        title:"Rainy Days Last Year",xTitle:"City"})},
+     {claim:"\u201cAbout "+cityVals[0]+" rainy days fell in Austin last year.\u201d", key:"fine",
+      note:"Austin's bar reads "+cityVals[0]+" against a scale that starts at zero. Not every claim is a trap.",
+      svg:barSVG({labels:cities,values:cityVals,yMin:0,yMax:100,step:10,hi:0,
+        title:"Rainy Days Last Year",xTitle:"City"})},
+     {claim:"\u201c"+slices[0].label+" beat "+slices[1].label+" by "+(slices[0].pct-slices[1].pct)+" percentage points.\u201d", key:"fine",
+      note:slices[0].pct+"% minus "+slices[1].pct+"% is "+(slices[0].pct-slices[1].pct)+" percentage points. Both come from the same whole, so subtracting them is fair.",
+      svg:pieSVG({slices:slices,title:"Survey results"})},
+     {claim:"\u201cMore students chose "+slices[0].label+" here than chose it at the school across town, where it took 60%.\u201d", key:"whole",
+      note:"Shares from two different schools cannot be compared as head counts without knowing how many students each school has.",
+      svg:pieSVG({slices:slices,title:"Survey results \u2014 this school only"})},
+     {claim:"\u201cExactly 340 students chose "+slices[1].label+".\u201d", key:"missing",
+      note:"The graph reports shares and never says how many students were surveyed, so no head count can come out of it.",
+      svg:pieSVG({slices:slices,title:"Survey results"})}
+   ];
+   const it=pick(bank);
+   const wrongs=shuffle(keys.filter(function(k){return k!==it.key;})).slice(0,3);
+   const opts=[{label:F[it.key], correct:true, note:it.note}]
+     .concat(wrongs.map(function(k){return {label:F[k], note:"Not this one. Compare what the claim asserts with what the graph actually reports."};}));
+   return {q:"Someone says: "+it.claim+"<br><b>What is the problem?</b>", svg:it.svg, opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO_VALS=[15518,17272,19710,21235,23712,26273,29056,31701];
+const HERO_YRS=["2000","2002","2004","2006","2008","2010","2012","2014"];
+let heroBase=0;
+function drawHero(){
+  document.getElementById("heroChart").innerHTML=barSVG({
+    labels:HERO_YRS, values:HERO_VALS, yMin:heroBase,
+    yMax:heroBase===0?35000:34000, step:heroBase===0?5000:2000,
+    title:"Average Cost of Tuition and Fees at Private Four-Year U.S. Colleges",
+    xTitle:"Ending year in the school year",
+    fmt:function(v){return "$"+commas(v);}, ml:78
+  });
+  document.querySelectorAll("#heroBtns button").forEach(function(b){
+    b.setAttribute("aria-pressed", String(Number(b.dataset.b)===heroBase));
+  });
+  document.getElementById("heroResult").innerHTML = heroBase===0
+    ? "Honest scale. From $15,518 to $31,701 — the cost slightly more than <b>doubled</b> in fourteen years."
+    : "Same numbers, axis cropped at $15,000. The last bar is now about <b>32 times</b> the height of the first, though the cost still only doubled.";
+}
+document.getElementById("heroBtns").addEventListener("click",function(e){
+  const b=e.target.closest("button"); if(!b)return;
+  heroBase=Number(b.dataset.b); drawHero();
+});
+drawHero();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<3&&tries<30);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+    '<p class="q">'+q.q+'</p>'+(q.svg?'<div class="chart">'+q.svg+'</div>':'');
+  const optEl=document.getElementById("options");
+  optEl.style.gridTemplateColumns=q.wide?"1fr":"";
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.num?" num":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is <b>'+right.label+'</b>. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
