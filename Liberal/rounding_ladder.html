@@ -1,0 +1,680 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Rounding Ladder — find the place, then look right once</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --round:#A66A00;
+    --round-bg:#FCF1DA;
+    --test:#0B6E77;
+    --test-bg:#DEF0F1;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --shadow:0 1px 0 var(--rule);
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important; animation:none !important}}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); font-size:17px; line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--test)}
+  :focus-visible{outline:3px solid var(--test); outline-offset:2px; border-radius:3px}
+
+  /* ---------- nav ---------- */
+  nav{
+    position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94);
+    backdrop-filter:blur(6px); border-bottom:1px solid var(--rule);
+  }
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--round)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  /* ---------- hero ---------- */
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{
+    font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px);
+    line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:16ch;
+  }
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  /* ---------- hero demo ---------- */
+  .demo{
+    margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px;
+    background:var(--paper); overflow:hidden;
+  }
+  .demo-top{padding:22px 20px 6px; text-align:center}
+  .numline{
+    font-family:var(--mono); font-size:clamp(28px,7vw,46px); letter-spacing:.02em;
+    display:inline-flex; align-items:flex-end;
+  }
+  .numline .dg{padding:2px 3px; border-radius:5px; transition:background .18s, color .18s}
+  .dg.is-round{background:var(--round-bg); color:var(--round); font-weight:700}
+  .dg.is-test{background:var(--test-bg); color:var(--test); font-weight:700}
+  .roles{display:flex; justify-content:center; gap:26px; flex-wrap:wrap; font-size:14px; margin-top:10px}
+  .roles b{font-weight:600}
+  .swatch{display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:6px; vertical-align:baseline}
+  .sw-round{background:var(--round)} .sw-test{background:var(--test)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:16px 14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{
+    font:inherit; font-size:13px; padding:6px 11px; border-radius:20px; cursor:pointer;
+    border:1px solid var(--rule); background:var(--paper); color:var(--muted);
+  }
+  .placebar button:hover{border-color:var(--test); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px}
+  .result strong{font-family:var(--mono); font-size:19px}
+
+  /* ---------- warning ---------- */
+  .warn{
+    display:flex; gap:18px; align-items:flex-start; margin:0 0 54px;
+    border-left:4px solid var(--round); background:var(--round-bg);
+    padding:20px 22px; border-radius:0 8px 8px 0;
+  }
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--round)}
+
+  /* ---------- sections ---------- */
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  section:first-of-type{border-top:none}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  /* ---------- ladder ---------- */
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{
+    text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px;
+    border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink);
+    display:flex; gap:9px; align-items:flex-start; line-height:1.35;
+  }
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper);
+  }
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule); background:transparent}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:26px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 16px; color:#31404F}
+  .stem .big{font-family:var(--mono); font-size:clamp(24px,5.6vw,38px); letter-spacing:.02em; margin:6px 0 12px}
+  .stem .big .dg{padding:2px 3px; border-radius:5px}
+  .stem ul{list-style:none; padding:0; margin:0 auto 14px; max-width:340px; text-align:left; font-family:var(--mono); font-size:15px}
+  .stem ul li{display:flex; justify-content:space-between; border-bottom:1px dotted var(--rule); padding:3px 0}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 20px 20px}
+  @media (max-width:560px){.options{grid-template-columns:1fr}}
+  .opt{
+    font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px;
+    border:1.5px solid var(--rule); background:var(--card); color:var(--ink);
+    display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s;
+  }
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px}
+  .opt .v{font-family:var(--mono); font-size:17px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:38ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>≈</span> The Rounding Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 1 · estimation, place value, rounding</p>
+    <h1>Find the place, then look right exactly once.</h1>
+    <p class="lede">Rounding is two moves. Mark the digit in the place you were asked for — that's the <b style="color:var(--round)">rounding digit</b>. Look at the one digit immediately to its right — that's the <b style="color:var(--test)">test digit</b>. Five or more, raise the score; four or less, let it rest. Nothing further right ever gets a vote.</p>
+
+    <div class="demo">
+      <div class="demo-top">
+        <div class="numline" id="heroNum"></div>
+        <div class="roles">
+          <span><span class="swatch sw-round"></span><b>rounding digit</b> — the place you were asked for</span>
+          <span><span class="swatch sw-test"></span><b>test digit</b> — the one digit to its right</span>
+        </div>
+      </div>
+      <div class="placebar" id="heroPlaces"></div>
+      <div class="result" id="heroResult"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Three slips account for almost every wrong answer.</b> Counting the place from the wrong end — <i>tens</i> and <i>tenths</i> sit on opposite sides of the decimal point. Working right to left, so a 9 at the end quietly bumps everything ahead of it. And forgetting that a whole number keeps its zeros while a decimal drops its tail. Every rung below is built on one of the three.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–3 build place value and the two roles. Rungs 4–7 do the rounding itself, adding carries and the traps that come with them. Rungs 8–10 turn it into estimation, which is what the rounding was for.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every wrong option is a real mistake</h3><p>The distractors are the answers you get from rounding at the neighbouring place, from chopping instead of rounding, and from working right to left. Miss one and it tells you which move you made.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+
+    <div class="rungs" id="rungList"></div>
+
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Estimation is the check on every answer that follows</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>It catches the big errors</h3><p>A misplaced decimal or a dropped zero turns an answer wrong by a factor of ten. An estimate made first is the only thing that catches it.</p></div>
+      <div class="step"><span class="n">02</span><h3>Place value never goes away</h3><p>Reading a graph axis, scaling a percent, writing a linear model — all of it is place value wearing a different hat.</p></div>
+      <div class="step"><span class="n">03</span><h3>The rule is short, the habit is not</h3><p>Everyone can recite "five or more, raise the score." The mistakes come from where you look, not from the rule itself. That takes reps.</p></div>
+    </div>
+    <p class="closing">Two moves, in order: mark the place, then look right once. Do them in that order and rounding stops being guesswork.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Rounding Ladder · rounding digit = the place you were asked for · test digit = the one digit to its right · 5 or more, raise the score</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ============ helpers ============ */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function commas(s){s=String(s);const p=s.split(".");p[0]=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,",");return p.join(".");}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o && o.label!=null && !seen[o.label]){seen[o.label]=1; out.push(o);} }
+  return out.slice(0,4);
+}
+const WHOLE=["ones","tens","hundreds","thousands","ten thousands","hundred thousands","millions","ten millions","hundred millions","billions"];
+const DEC=["tenths","hundredths","thousandths","ten-thousandths","hundred-thousandths"];
+
+/* a 10-digit number whose digits are all different, so distractors never collide */
+function permNumber(){
+  const d=shuffle([0,1,2,3,4,5,6,7,8,9]);
+  if(d[0]===0){const t=d[0];d[0]=d[4];d[4]=t;}
+  return d; // left to right; index i has place WHOLE[9-i]
+}
+function decNumber(){ // 3 integer digits + 5 decimal digits, all different
+  const d=shuffle([0,1,2,3,4,5,6,7,8,9]).slice(0,8);
+  if(d[0]===0){const t=d[0];d[0]=d[3];d[3]=t;}
+  return d; // [hundreds,tens,ones, tenths,hundredths,thousandths,ten-thousandths,hundred-thousandths]
+}
+function decStr(d){return d.slice(0,3).join("")+"."+d.slice(3).join("");}
+
+/* Exact digit-string rounding. place: 0 = ones, 2 = hundreds, -2 = hundredths.
+   mode: "round" (half up), "down" (chop), "up" (always bump).            */
+function roundCore(input, place, mode){
+  let s=String(input).replace(/,/g,"");
+  let parts=s.split("."), ip=parts[0], fp=parts[1]||"";
+  const need = place<0 ? -place+1 : 0;      // decimals needed to see the test digit
+  while(fp.length<need) fp+="0";
+  const intLen=ip.length;
+  const digits=(ip+fp).split("").map(Number);
+  const rIdx=intLen-1-place;                 // index of the rounding digit
+  if(rIdx<0) return "0";
+  const tIdx=rIdx+1;
+  let carry=0;
+  if(mode==="up") carry=1;
+  else if(mode!=="down" && tIdx<digits.length && digits[tIdx]>=5) carry=1;
+  let kept=digits.slice(0,rIdx+1);
+  let i=kept.length-1;
+  while(carry&&i>=0){ kept[i]+=1; if(kept[i]===10){kept[i]=0;} else {carry=0;} i--; }
+  let ilen=intLen;
+  if(carry){ kept.unshift(1); ilen=intLen+1; }
+  if(place>=0){
+    let out=kept.join("");
+    while(out.length<ilen) out+="0";
+    return commas(out);
+  }
+  const head=kept.slice(0,ilen).join("")||"0";
+  const tail=kept.slice(ilen).join("");
+  return commas(head+"."+tail);
+}
+function roundAt(n,p){return roundCore(n,p,"round");}
+function chopAt(n,p){return roundCore(n,p,"down");}
+function bumpAt(n,p){return roundCore(n,p,"up");}
+
+/* ============ rung definitions ============ */
+const RUNGS=[
+{
+ title:"Name the place — whole numbers",
+ sub:"Places are counted from the ones digit, on the right. Never from the left.",
+ gen:function(){
+   const d=permNumber(), s=commas(d.join(""));
+   const p=pick([1,2,3,4,6,7,8]), idx=9-p;
+   const opts=[
+     {label:String(d[idx]), correct:true, note:"That digit is in the "+WHOLE[p]+" place."},
+     {label:String(d[idx-1]), note:"One place too far left. That digit is in the "+WHOLE[p+1]+" place."},
+     {label:String(d[idx+1]), note:"One place too far right. That digit is in the "+WHOLE[p-1]+" place."},
+     {label:String(d[p]), note:"That came from counting places from the left. Place value is always counted from the ones digit."},
+     {label:String(d[idx+2]), note:"Two places too far right — that is the "+WHOLE[p-2>=0?p-2:0]+" place."}
+   ];
+   return {q:"Which digit is in the <b>"+WHOLE[p]+"</b> place?", big:s, opts:distinctOpts(opts)};
+ }
+},
+{
+ title:"Name the place — decimals",
+ sub:"Tens and tenths are on opposite sides of the decimal point. So are hundreds and hundredths.",
+ gen:function(){
+   const d=decNumber(), s=decStr(d);
+   const k=ri(0,2); // tenths, hundredths, thousandths
+   const mirror=[1,0,0][k]; // tenths↔tens(idx1), hundredths↔hundreds(idx0)
+   const mirrorName=["tens","hundreds","hundreds"][k];
+   const opts=[
+     {label:String(d[3+k]), correct:true, note:"That is the "+DEC[k]+" place — the "+(k+1)+(k===0?"st":k===1?"nd":"rd")+" digit after the decimal point."},
+     {label:String(d[mirror]), note:"That is the "+mirrorName+" digit, on the left of the decimal point. Decimal places are counted to the right of it."},
+     {label:String(d[3+k+1]!==undefined?d[3+k+1]:d[7]), note:"One place too far right — that is the "+DEC[k+1]+" place."},
+     {label:String(k>0?d[3+k-1]:d[2]), note:k>0?("One place too far left — that is the "+DEC[k-1]+" place."):"That is the ones digit, not a decimal place."},
+     {label:String(d[0]), note:"That is the hundreds digit, on the left of the decimal point."}
+   ];
+   return {q:"Which digit is in the <b>"+DEC[k]+"</b> place?", big:s, opts:distinctOpts(opts)};
+ }
+},
+{
+ title:"Rounding digit and test digit",
+ sub:"Name the pair before you touch anything. The test digit is the next one to the right — only that one.",
+ gen:function(){
+   const useDec=Math.random()<.45;
+   let s, rd, td, place, right;
+   if(useDec){
+     const d=decNumber(); s=decStr(d);
+     const k=ri(0,2); place=DEC[k]; rd=d[3+k]; td=d[3+k+1]; right=d[7];
+   }else{
+     const d=permNumber().slice(0,6); if(d[0]===0)d[0]=9; s=commas(d.join(""));
+     const p=ri(2,4); place=WHOLE[p]; const idx=5-p; rd=d[idx]; td=d[idx+1]; right=d[5];
+   }
+   const opts=[
+     {label:"rounding "+rd+", test "+td, correct:true, note:"Right. The "+place+" digit is "+rd+", and the single digit to its right is "+td+"."},
+     {label:"rounding "+td+", test "+rd, note:"Swapped. The rounding digit is the one in the place you were asked for; the test digit is the one after it."},
+     {label:"rounding "+rd+", test "+right, note:"The test digit is the digit <i>immediately</i> to the right, not the last digit of the number."},
+     {label:"rounding "+td+", test "+right, note:"Both off. Mark the "+place+" place first, then look one step right."}
+   ];
+   return {q:"Round <b>"+s+"</b> to the <b>"+place+"</b>. Which digits play which role?", big:"", opts:distinctOpts(opts), wide:true};
+ }
+},
+{
+ title:"Round whole numbers",
+ sub:"Everything to the right of the rounding digit becomes zero — the number keeps its length.",
+ gen:function(){
+   let d=permNumber().slice(0,ri(4,6));
+   if(d[0]===0)d[0]=7;
+   const L=d.length;
+   const p=ri(1,L-2), idx=L-1-p;
+   if(d[idx]===9)d[idx]=ri(1,8);
+   const num=parseInt(d.join(""),10), s=commas(num);
+   const test=d[idx+1];
+   const opts=[
+     {label:roundAt(num,p), correct:true, note:"Test digit "+test+(test>=5?" is 5 or more, so the rounding digit went up and the rest became zeros.":" is less than 5, so the rounding digit stayed and the rest became zeros.")},
+     {label:test>=5?chopAt(num,p):bumpAt(num,p), note:test>=5?("The test digit is "+test+", which is 5 or more — the rounding digit should have gone up."):("The test digit is "+test+", which is less than 5 — the rounding digit stays put.")},
+     {label:roundAt(num,p+1), note:"Rounded one place too far — that is the "+WHOLE[p+1]+" place."},
+     {label:p===1?commas(num):roundAt(num,p-1), note:p===1?"That is the number unchanged. The ones digit still has to be replaced by a zero.":("Rounded one place short — that is the "+WHOLE[p-1]+" place.")},
+     {label:chopAt(num,p), note:"That is the number chopped off at the "+WHOLE[p]+" place. Chopping is not rounding — the test digit still gets a vote."},
+     {label:bumpAt(num,p), note:"That rounds up no matter what. The test digit is "+test+"."},
+     {label:roundAt(num,p+2), note:"Rounded two places too far — that is the "+WHOLE[p+2]+" place."},
+     {label:commas(num), note:"That is the original number, still unrounded."}
+   ];
+   return {q:"Round to the <b>"+WHOLE[p]+"</b>.", big:s, opts:distinctOpts(opts)};
+ }
+},
+{
+ title:"Round decimals",
+ sub:"Here the tail is dropped, not zeroed. 8.7463 to the hundredths is 8.75, not 8.7500.",
+ gen:function(){
+   const d=decNumber(), s=decStr(d), num=s;
+   const k=ri(0,2); // rounding to tenths..thousandths
+   const p=-(k+1), test=d[3+k+1];
+   const correct=roundAt(num,p), chopped=chopAt(num,p), bumped=bumpAt(num,p);
+   const opts=[
+     {label:correct, correct:true, note:"Test digit "+test+(test>=5?" is 5 or more, so the "+DEC[k]+" digit went up.":" is less than 5, so the "+DEC[k]+" digit stayed and the tail was dropped.")},
+     {label:test>=5?chopped:bumped, note:test>=5?("The test digit is "+test+" — 5 or more, so round up."):("The test digit is "+test+" — less than 5, so leave the rounding digit alone.")},
+     {label:roundAt(num,p-1), note:"That is rounded to the "+DEC[k+1]+", one place too far right."},
+     {label:roundAt(num,p+1), note:"That is rounded to the "+(k===0?"ones":DEC[k-1])+", one place too far left."},
+     {label:chopAt(num,p), note:"That is the tail chopped off at the "+DEC[k]+", not rounded. The test digit is "+test+"."},
+     {label:bumpAt(num,p), note:"That rounds up no matter what. The test digit is "+test+"."},
+     {label:roundAt(num,p-2), note:"That is rounded to the "+DEC[k+2]+", two places too far right."},
+     {label:commas(s), note:"That is the original number, still unrounded."}
+   ];
+   return {q:"Round to the <b>"+DEC[k]+"</b>.", big:s, opts:distinctOpts(opts)};
+ }
+},
+{
+ title:"Only the next digit votes",
+ sub:"A big digit at the far right does not travel. And a test digit of exactly 5 rounds up.",
+ gen:function(){
+   const bank=[
+     {n:"6.2492", place:"tenths", ans:"6.2", bad:[["6.3","That comes from working right to left: 92 rounds the 4 up to 5, and the 5 rounds the 2 up. Digits do not pass a bump along. The test digit is 4 and nothing else votes."],["6.25","That is rounded to the hundredths."],["6.24","That is chopped at the hundredths, not rounded to the tenths."]]},
+     {n:"3.4489", place:"tenths", ans:"3.4", bad:[["3.5","Worked right to left. The only digit that matters is the 4 immediately after the 4 you are rounding."],["3.45","Rounded to the hundredths instead."],["3.449","Rounded to the thousandths instead."]]},
+     {n:"0.85", place:"tenths", ans:"0.9", bad:[["0.8","A test digit of exactly 5 counts as \u201c5 or more\u201d — it rounds up."],["1.0","That is rounded to the ones place."],["0.85","Unchanged — the tenths place still has to be decided."]]},
+     {n:"24.4962", place:"tenths", ans:"24.5", bad:[["24.4","The test digit is 9, which is 5 or more."],["25.0","That is rounded to the ones place."],["24.50","Right value, wrong form — rounding to the tenths leaves one decimal place."]]},
+     {n:"7,4|9|8", place:"hundreds", ans:"7,500", bad:[["7,400","The test digit is 9 — the 4 goes up to 5."],["7,490","Rounded to the tens instead."],["7,000","Rounded to the thousands instead."]]},
+     {n:"1.6501", place:"hundredths", ans:"1.65", bad:[["1.66","The test digit is 0. The 1 at the far right does not push it up."],["1.7","Rounded to the tenths instead."],["1.650","Rounding to the hundredths leaves two decimal places."]]}
+   ];
+   const it=pick(bank), s=it.n.replace(/\|/g,"");
+   const opts=[{label:it.ans,correct:true,note:"The test digit alone decides it, and everything past it is ignored."}]
+     .concat(it.bad.map(function(b){return {label:b[0],note:b[1]};}));
+   return {q:"Round to the <b>"+it.place+"</b>.", big:s, opts:shuffle(distinctOpts(opts))};
+ }
+},
+{
+ title:"When the rounding digit is 9",
+ sub:"Adding 1 to a 9 makes 10, so the carry moves into the next column on the left.",
+ gen:function(){
+   const bank=[
+     {n:"3,962", place:"hundreds", ans:"4,000", bad:[["3,900","The test digit is 6, so the hundreds digit must go up — and 9 + 1 carries."],["4,900","The 1 was carried into the wrong column. 9 hundreds + 1 hundred is 10 hundreds, which is 1 thousand."],["3,960","Rounded to the tens instead."]]},
+     {n:"2,397", place:"hundreds", ans:"2,400", bad:[["2,300","The test digit is 9, which is 5 or more."],["2,390","Rounded to the tens instead."],["3,400","The carry went too far. Only the hundreds digit changed."]]},
+     {n:"4.98", place:"tenths", ans:"5.0", bad:[["4.9","The test digit is 8 — the 9 tenths must go up, and 9 + 1 carries into the ones."],["4.10","Ten tenths is not written as .10; it is one whole."],["5.1","Only one 1 gets carried, not two."]]},
+     {n:"19,748", place:"thousands", ans:"20,000", bad:[["19,000","The test digit is 7, so the 9 thousands go up — and that carries."],["10,000","The carry replaced the ten thousands digit instead of adding to it."],["19,700","Rounded to the hundreds instead."]]},
+     {n:"0.397", place:"hundredths", ans:"0.40", bad:[["0.39","The test digit is 7, so the 9 hundredths go up."],["0.4","Right value, but rounding to the hundredths leaves two decimal places."],["0.30","The carry was dropped instead of added to the tenths."]]},
+     {n:"897,214", place:"ten thousands", ans:"900,000", bad:[["890,000","The test digit is 7, so the 9 ten thousands go up."],["800,000","The carry was thrown away instead of added to the hundred thousands."],["897,000","Rounded to the thousands instead."]]}
+   ];
+   const it=pick(bank);
+   const opts=[{label:it.ans,correct:true,note:"9 + 1 is 10, so a zero is written and the 1 moves one column left."}]
+     .concat(it.bad.map(function(b){return {label:b[0],note:b[1]};}));
+   return {q:"Round to the <b>"+it.place+"</b>.", big:it.n, opts:shuffle(distinctOpts(opts))};
+ }
+},
+{
+ title:"Name the mistake",
+ sub:"Each answer below is wrong. Say which move produced it.",
+ gen:function(){
+   const E=[
+     "Worked right to left, letting each digit round the one before it",
+     "Chopped the number off instead of rounding it",
+     "Rounded at the wrong place",
+     "Rounded up even though the test digit was less than 5",
+     "Threw the carry away instead of adding it to the next column"
+   ];
+   const bank=[
+     {n:"3.4489", place:"tenths", got:"3.5", right:"3.4", e:0},
+     {n:"24,681", place:"thousands", got:"24,000", right:"25,000", e:1},
+     {n:"0.0748", place:"hundredths", got:"0.1", right:"0.07", e:2},
+     {n:"5.312", place:"tenths", got:"5.4", right:"5.3", e:3},
+     {n:"6.2492", place:"tenths", got:"6.3", right:"6.2", e:0},
+     {n:"897,214", place:"ten thousands", got:"800,000", right:"900,000", e:4},
+     {n:"18,462", place:"hundreds", got:"18,400", right:"18,500", e:1},
+     {n:"7.9531", place:"hundredths", got:"8.0", right:"7.95", e:2}
+   ];
+   const it=pick(bank);
+   const wrongs=shuffle([0,1,2,3,4].filter(function(i){return i!==it.e;})).slice(0,3);
+   const opts=[{label:E[it.e],correct:true,note:"Right. The correct answer is "+it.right+"."}]
+     .concat(wrongs.map(function(i){return {label:E[i],note:"Not this one. Compare "+it.got+" with the correct answer, "+it.right+", and ask what single move turns one into the other."};}));
+   return {q:"A student rounded <b>"+it.n+"</b> to the <b>"+it.place+"</b> and wrote <b>"+it.got+"</b>. What happened?", big:"", opts:shuffle(distinctOpts(opts)), wide:true};
+ }
+},
+{
+ title:"Round, then compute",
+ sub:"This is what the rounding was for: an answer close enough to check the real one.",
+ gen:function(){
+   const bank=[
+     {q:"Round each number to the nearest <b>ten</b>, then add:<br><b>248 + 797</b>", ans:"1,050", bad:[["1,000","That is rounding to the nearest hundred, not the nearest ten."],["1,045","That is the exact answer, not the estimate."],["1,040","250 + 800 is 1,050. Check the 248."]]},
+     {q:"Round each number to the nearest <b>whole number</b>, then add:<br><b>12.93 + 4.08 + 24.34</b>", ans:"41", bad:[["40","12.93 rounds to 13, not 12."],["41.35","That is the exact answer, not the estimate."],["42","4.08 rounds to 4, not 5."]]},
+     {q:"Round 1.97 to the nearest <b>whole number</b> and 305 to the nearest <b>hundred</b>, then multiply:<br><b>(1.97)(305)</b>", ans:"600", bad:[["610","305 rounded to the nearest hundred is 300."],["600.85","That is the exact answer, not the estimate."],["300","1.97 rounds to 2, so the product doubles."]]},
+     {q:"Round 52.34 to the nearest <b>ten</b> and 5.11 to the nearest <b>whole number</b>, then divide:<br><b>52.34 ÷ 5.11</b>", ans:"10", bad:[["10.24","That is the exact answer, not the estimate."],["26","50 ÷ 5 is 10. Check the division."],["5","50 ÷ 5 is 10, not 5."]]},
+     {q:"Round each number to the nearest <b>hundred</b>, then subtract:<br><b>4,182 − 1,647</b>", ans:"2,500", bad:[["2,535","That is the exact answer, not the estimate."],["2,600","1,647 rounds to 1,600, not 1,500."],["2,000","That is rounding to the nearest thousand."]]},
+     {q:"Round each number to the nearest <b>whole number</b>, then multiply:<br><b>(8.87)(3.12)</b>", ans:"27", bad:[["24","8.87 rounds to 9, not 8."],["27.67","That is the exact answer, not the estimate."],["32","3.12 rounds to 3, not 4."]]}
+   ];
+   const it=pick(bank);
+   const opts=[{label:it.ans,correct:true,note:"Round first, then compute — the arithmetic should be doable in your head."}]
+     .concat(it.bad.map(function(b){return {label:b[0],note:b[1]};}));
+   return {q:it.q, big:"", opts:shuffle(distinctOpts(opts))};
+ }
+},
+{
+ title:"Estimation in the wild",
+ sub:"Real numbers, and a question about whether your estimate lands high or low.",
+ gen:function(){
+   const cafe="<ul><li><span>soup</span><span>$3.40</span></li><li><span>tomato juice</span><span>$2.25</span></li><li><span>roast beef sandwich</span><span>$5.60</span></li><li><span>chicken salad sandwich</span><span>$5.40</span></li><li><span>two coffees</span><span>$3.40</span></li><li><span>apple pie</span><span>$2.85</span></li><li><span>chocolate cake</span><span>$3.95</span></li></ul>";
+   const bank=[
+     {q:"You and a friend ate at Ye Olde Cafe. Round each item to the nearest <b>dollar</b> and add. About what is the check?", big:cafe, ans:"$26", bad:[["$25","Check the 5.60 and the 2.85 — both round up."],["$27","Round each item first: 3 + 2 + 6 + 5 + 3 + 3 + 4."],["$26.85","That is the exact total, not the estimate."]]},
+     {q:"The estimate for the Ye Olde Cafe check is $26 and the exact total is $26.85. The estimate is:", big:"", ans:"below the exact total", bad:[["above the exact total","$26 is less than $26.85."],["exactly right","Rounding each item changed the total by 85 cents."],["impossible to compare","You have both numbers — compare them."]], wide:true},
+     {q:"A stadium reported 48,617 fans. Round to the nearest <b>thousand</b> for the headline.", big:"48,617", ans:"49,000", bad:[["48,000","The test digit is 6, which is 5 or more."],["48,600","That is rounded to the hundreds."],["50,000","That is rounded to the ten thousands."]]},
+     {q:"A bill comes to $38.72. Round it to the nearest <b>ten dollars</b>, then estimate a 20% tip.", big:"$38.72", ans:"$8", bad:[["$7.74","That is 20% of the exact bill, not an estimate."],["$4","That is 10%, not 20%."],["$6","20% of $40 is $8."]]},
+     {q:"A car went 297.4 miles on 11.8 gallons. Round both to the nearest <b>whole number</b> that divides easily, then estimate the miles per gallon.", big:"297.4 ÷ 11.8", ans:"25", bad:[["25.2","That is the exact answer, not the estimate."],["30","300 ÷ 12 is 25, not 30."],["20","300 ÷ 12 is 25."]]},
+     {q:"A class of 200 students was surveyed, and 22% chose grey. About how many students is that?", big:"22% of 200", ans:"44", bad:[["22","22% of 200 is not 22. Multiply 0.22 by 200."],["40","That is 20% of 200 — close, but 22% is asked for."],["4.4","That is 22% of 20, not of 200."]]}
+   ];
+   const it=pick(bank);
+   const opts=[{label:it.ans,correct:true,note:"Round to numbers you can work with, then do the arithmetic."}]
+     .concat(it.bad.map(function(b){return {label:b[0],note:b[1]};}));
+   return {q:it.q, big:it.big||"", opts:shuffle(distinctOpts(opts)), wide:it.wide};
+ }
+}
+];
+
+/* ============ hero demo ============ */
+const HERO_DIGITS=[
+  {ch:"3", place:3}, {ch:",", place:null}, {ch:"7", place:2}, {ch:"4", place:1}, {ch:"8", place:0},
+  {ch:".", place:null}, {ch:"6", place:-1}, {ch:"2", place:-2}, {ch:"9", place:-3}
+];
+const HERO_PLACES=[
+  {name:"thousands", p:3},{name:"hundreds", p:2},{name:"tens", p:1},
+  {name:"ones", p:0},{name:"tenths", p:-1},{name:"hundredths", p:-2}
+];
+const HERO_VALUE=3748.629;
+let heroSel=1;
+
+function drawHero(){
+  const numEl=document.getElementById("heroNum");
+  numEl.innerHTML=HERO_DIGITS.map(function(d){
+    let cls="dg";
+    if(d.place===heroSel)cls+=" is-round";
+    else if(d.place===heroSel-1)cls+=" is-test";
+    return '<span class="'+cls+'">'+d.ch+'</span>';
+  }).join("");
+  document.querySelectorAll("#heroPlaces button").forEach(function(b){
+    b.setAttribute("aria-pressed", String(Number(b.dataset.p)===heroSel));
+  });
+  const nm=HERO_PLACES.filter(function(x){return x.p===heroSel;})[0].name;
+  const rd=HERO_DIGITS.filter(function(d){return d.place===heroSel;})[0].ch;
+  const td=HERO_DIGITS.filter(function(d){return d.place===heroSel-1;})[0].ch;
+  const res=roundAt(HERO_VALUE, heroSel);
+  const verdict=Number(td)>=5 ? "5 or more, so the "+rd+" goes up" : "less than 5, so the "+rd+" stays";
+  document.getElementById("heroResult").innerHTML=
+    "Rounding to the "+nm+": test digit is "+td+" — "+verdict+". &nbsp;→&nbsp; <strong>"+res+"</strong>";
+}
+(function buildHero(){
+  const bar=document.getElementById("heroPlaces");
+  bar.innerHTML=HERO_PLACES.map(function(x){return '<button data-p="'+x.p+'" aria-pressed="false">'+x.name+'</button>';}).join("");
+  bar.addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.p); drawHero();
+  });
+  drawHero();
+})();
+
+/* ============ ladder state ============ */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+
+function buildRungList(){
+  const el=document.getElementById("rungList");
+  el.innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'">'+
+           '<span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+
+function drawStreak(){
+  for(let i=0;i<4;i++){
+    document.getElementById("p"+i).className="pip"+(i<streak?" on":"");
+  }
+}
+
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4 && tries<30);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+    '<p class="q">'+q.q+'</p>'+(q.big?'<div class="big">'+q.big+'</div>':'');
+  const optEl=document.getElementById("options");
+  optEl.style.gridTemplateColumns=q.wide?"1fr":"";
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  const btns=document.querySelectorAll(".opt");
+  btns.forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  const fb=document.getElementById("feedback");
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList();
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>';
+      streak=0;
+    }
+    if(streak>=4&&earned[current])streak=0;
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is <b>'+right.label+'</b>. '+right.note+'</div>';
+  }
+  fb.innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn");
+  nb.disabled=false; nb.focus();
+}
+
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0){answer(Number(e.key)-1);}
+  }else if(e.key==="Enter"&&answered){
+    e.preventDefault(); newQuestion();
+  }
+});
+
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
