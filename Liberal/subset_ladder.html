@@ -1,0 +1,773 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Subset Ladder — ⊆ is ≤ and ⊂ is &lt;</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --round:#A66A00;
+    --round-bg:#FCF1DA;
+    --test:#0B6E77;
+    --test-bg:#DEF0F1;
+    --plum:#6B3F87;
+    --plum-bg:#F0E9F5;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--plum)}
+  :focus-visible{outline:3px solid var(--plum); outline-offset:2px; border-radius:3px}
+
+  .st{font-family:var(--serif); font-size:1.04em}
+  .st i{font-style:italic}
+  .st b{font-weight:700}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--plum)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:15ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .checkrow{background:var(--card); padding:20px 18px 16px}
+  .setline{font-family:var(--serif); font-size:clamp(16px,3.2vw,19px); margin-bottom:12px}
+  .chips{display:flex; flex-wrap:wrap; gap:7px; align-items:center; margin-top:10px}
+  .chip{font-family:var(--serif); font-size:15px; padding:3px 11px; border-radius:16px; border:1.5px solid var(--rule)}
+  .chip.in{background:var(--right-bg); border-color:#8FC9A9; color:var(--right)}
+  .chip.out{background:var(--wrong-bg); border-color:#E2A2AC; color:var(--wrong)}
+  .chip .mk{font-weight:700; margin-left:5px}
+  .chiplbl{font-size:13px; color:var(--muted); margin-right:4px}
+  .verdicts{display:flex; flex-wrap:wrap; background:var(--rule); border-top:1px solid var(--rule); gap:1px}
+  .verdicts div{flex:1 1 190px; background:var(--card); padding:12px 16px; font-size:15px; display:flex; align-items:center; gap:9px}
+  .verdicts .lab{font-family:var(--serif); font-size:16px}
+  .tag{font-size:12.5px; font-weight:600; padding:2px 9px; border-radius:20px; margin-left:auto}
+  .yes{background:var(--right-bg); color:var(--right)}
+  .no{background:var(--wrong-bg); color:var(--wrong)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--plum); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--plum); background:var(--plum-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--plum)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:62ch; margin:0 auto 12px; color:#31404F}
+  .stem .big{margin:12px auto 16px; font-family:var(--serif); font-size:clamp(19px,4vw,26px); line-height:1.5; max-width:36ch}
+  .twoset{margin:12px auto 16px; max-width:420px; text-align:left; font-family:var(--serif); font-size:clamp(17px,3.4vw,21px); line-height:1.75}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 20px 20px}
+  @media (max-width:640px){.options{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>⊆</span> The Subset Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 2 · subsets, proper subsets, ⊆ and ⊂ and ⊄</p>
+    <h1>⊆ is ≤. ⊂ is &lt;.</h1>
+    <p class="lede">That one line settles nearly every question on this page. Just as 3 ≤ 3 is true while 3 &lt; 3 is false, a set is always a subset of itself but never a <i>proper</i> subset of itself. Checking a subset is mechanical: walk through the elements of the first set one at a time and ask whether each one is also in the second. One failure is all it takes.</p>
+
+    <div class="demo">
+      <div class="checkrow">
+        <div class="setline" id="hSets"></div>
+        <div class="chips" id="hChips"></div>
+      </div>
+      <div class="verdicts">
+        <div><span class="lab" id="lab1"></span><span class="tag" id="v1"></span></div>
+        <div><span class="lab" id="lab2"></span><span class="tag" id="v2"></span></div>
+        <div><span class="lab" id="lab3"></span><span class="tag" id="v3"></span></div>
+      </div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroResult"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Three things trip people up, and all three are cured by the ≤ analogy.</b> A set is a subset of itself, because every element of it is in it — the same reason 3 ≤ 3 holds. The empty set is a subset of absolutely everything, because it has no element that could fail the test. And ⊂ is the stricter claim, so it can never be true when ⊆ is false. Whatever else you forget, remember that ⊂ demands everything ⊆ demands, and then one thing more.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–3 are the mechanical check: does every element carry over, and which one breaks it when it doesn't. Rungs 4–6 handle the two cases everyone gets wrong — a set against itself, and the empty set. Rungs 7–10 add categories, the ≤ analogy, and both directions at once.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every wrong option is a real belief</h3><p>Subsets must be smaller. A set can't contain itself. The empty set is inside nothing. Each of those shows up as an option somewhere, and the feedback takes it apart.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Containment is the shape of most mathematics</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Every square is a rectangle</h3><p>Classification claims are subset claims. Once the notation clicks, sentences like that one stop being memorized facts and start being checkable.</p></div>
+      <div class="step"><span class="n">02</span><h3>The empty set is not a special case</h3><p>It follows the ordinary rule. Nothing in it can fail the test, so it passes for every set there is — including itself.</p></div>
+      <div class="step"><span class="n">03</span><h3>⊆ and ∈ are next</h3><p>The notation people confuse most is set-versus-set against element-versus-set. Being fluent with ⊆ first makes that distinction visible.</p></div>
+    </div>
+    <p class="closing">Walk the elements. One failure ends it. If nothing fails and something was left over, it is proper.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Subset Ladder · A ⊆ B when every element of A is in B · A ⊂ B when also A ≠ B · ∅ is a subset of every set</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+const SUB="\u2286", PSUB="\u2282", NSUB="\u2284", EMP="\u2205";
+const X="<i>x</i>";
+function st(s){return '<span class="st">'+s+'</span>';}
+function rost(a){return st(a.length?("{"+a.join(", ")+"}"):"{ }");}
+function nums(k,lo,hi){const s=[];while(s.length<k){const v=ri(lo,hi); if(s.indexOf(v)<0)s.push(v);}return s;}
+const LET="abcdefghijklmnopqrstuvwxyz".split("");
+function lets(k){return shuffle(LET.slice(0)).slice(0,k);}
+function asc(a){return a.slice(0).sort(function(x,y){return x-y;});}
+function distinctLetters(w){const o=[];for(let i=0;i<w.length;i++){if(w[i]!==" "&&o.indexOf(w[i])<0)o.push(w[i]);}return o;}
+function isSub(A,B){for(let i=0;i<A.length;i++){if(B.indexOf(A[i])<0)return false;}return true;}
+function sameSet(A,B){return isSub(A,B)&&isSub(B,A);}
+function takeFrom(arr,m){return shuffle(arr.slice(0)).slice(0,m);}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Does every element carry over",
+ sub:"Walk the elements of the first set. Every one of them has to be in the second.",
+ gen:function(){
+   const useNums=Math.random()<.6;
+   const pool=useNums?nums(6,1,20):lets(6);
+   const B=useNums?asc(pool):pool;
+   const outside=useNums
+     ? nums(3,21,40)
+     : shuffle(LET.filter(function(c){return B.indexOf(c)<0;})).slice(0,3);
+   const good=takeFrom(B,ri(2,4));
+   const mk=function(extra){
+     const base=takeFrom(B,ri(2,3)).concat([extra]);
+     return useNums?asc(base):shuffle(base);
+   };
+   const b1=mk(outside[0]), b2=mk(outside[1]), b3=mk(outside[2]);
+   const opts=[
+     {label:rost(useNums?asc(good):good), correct:true,
+      note:"Every one of those elements appears in "+st("<i>B</i>")+", so it is a subset."},
+     {label:rost(b1), note:"<b>"+outside[0]+"</b> is in that set but not in "+st("<i>B</i>")+", so it fails."},
+     {label:rost(b2), note:"<b>"+outside[1]+"</b> is in that set but not in "+st("<i>B</i>")+", so it fails."},
+     {label:rost(b3), note:"<b>"+outside[2]+"</b> is in that set but not in "+st("<i>B</i>")+", so it fails."}
+   ];
+   return {q:"Let "+st("<i>B</i>")+" = "+rost(B)+".<br>Which of these sets is a <b>subset</b> of "+st("<i>B</i>")+"?",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Find the element that breaks it",
+ sub:"When a subset claim fails, exactly one thing needs naming: an element on the left that is missing on the right.",
+ gen:function(){
+   const useNums=Math.random()<.6;
+   const B=useNums?asc(nums(6,1,20)):lets(6);
+   const culprit=useNums
+     ? (function(){let v; do{v=ri(1,30);}while(B.indexOf(v)>=0); return v;})()
+     : shuffle(LET.filter(function(c){return B.indexOf(c)<0;}))[0];
+   const shared=takeFrom(B,3);
+   const A=useNums?asc(shared.concat([culprit])):shuffle(shared.concat([culprit]));
+   const inBnotA=shuffle(B.filter(function(e){return A.indexOf(e)<0;}))[0];
+   const opts=[
+     {label:String(culprit), correct:true,
+      note:"<b>"+culprit+"</b> is in "+st("<i>A</i>")+" but nowhere in "+st("<i>B</i>")+", and one failure is enough to end it."},
+     {label:String(shared[0]), note:"<b>"+shared[0]+"</b> is in both sets, so it causes no trouble at all."},
+     {label:String(inBnotA), note:"<b>"+inBnotA+"</b> is in "+st("<i>B</i>")+" but not in "+st("<i>A</i>")+". Extra elements on the right never break a subset claim — only missing ones on the left do."},
+     {label:"Nothing — "+st("<i>A</i>")+" is a subset of "+st("<i>B</i>")+" after all", note:"It is not. Check each element of "+st("<i>A</i>")+" against "+st("<i>B</i>")+" one at a time."}
+   ];
+   return {q:st("<i>A</i>")+" "+NSUB+" "+st("<i>B</i>")+". <b>Which element of "+st("<i>A</i>")+" is responsible?</b>",
+     two:st("<i>A</i>")+" = "+rost(A)+"<br>"+st("<i>B</i>")+" = "+rost(B),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Letters in two words",
+ sub:"Turn each word into its set of distinct letters first, then compare.",
+ gen:function(){
+   const pairs=[
+     ["roof","proof"],["moon","monsoon"],["ate","plate"],["rat","star"],["pear","spare"],
+     ["stop","spot"],["listen","silent"],["team","meat"],["bear","bare"],["read","dread"],
+     ["cat","dog"],["fish","clam"],["note","tone"],["cider","cried"],["angel","glean"],
+     ["ton","stone"],["ear","heart"],["lime","smile"],["bat","tab"],["pot","top"],
+     ["proof","roof"],["monsoon","moon"],["plate","ate"],["star","rat"],["smile","lime"],
+     ["gold","hint"],["conversation","voices rant on"]
+   ];
+   const pr=pick(pairs);
+   const w1=pr[0], w2=pr[1];
+   const A=distinctLetters(w1), B=distinctLetters(w2);
+   const ab=isSub(A,B), ba=isSub(B,A);
+   let kind;
+   if(ab&&ba)kind="equal"; else if(ab)kind="aInB"; else if(ba)kind="bInA"; else kind="neither";
+   const L={
+     aInB:st("<i>A</i> "+SUB+" <i>B</i>")+", but "+st("<i>B</i> "+NSUB+" <i>A</i>"),
+     bInA:st("<i>B</i> "+SUB+" <i>A</i>")+", but "+st("<i>A</i> "+NSUB+" <i>B</i>"),
+     equal:st("<i>A</i> "+SUB+" <i>B</i>")+" and "+st("<i>B</i> "+SUB+" <i>A</i>")+", so "+st("<i>A</i> = <i>B</i>"),
+     neither:"Neither one is a subset of the other"
+   };
+   const extraB=B.filter(function(c){return A.indexOf(c)<0;});
+   const extraA=A.filter(function(c){return B.indexOf(c)<0;});
+   const notes={
+     aInB:"<i>"+w1+"</i> gives "+rost(A)+" and <i>"+w2+"</i> gives "+rost(B)+". Every letter of the first is in the second, and <b>"+extraB.join(", ")+"</b> is left over.",
+     bInA:"<i>"+w1+"</i> gives "+rost(A)+" and <i>"+w2+"</i> gives "+rost(B)+". Every letter of the second is in the first, and <b>"+extraA.join(", ")+"</b> is left over.",
+     equal:"<i>"+w1+"</i> and <i>"+w2+"</i> use exactly the same "+A.length+" letters: "+rost(A)+". Each is a subset of the other, so the sets are equal.",
+     neither:"<i>"+w1+"</i> gives "+rost(A)+" and <i>"+w2+"</i> gives "+rost(B)+". Each has a letter the other lacks, so neither contains the other."
+   };
+   const wrongNote={
+     aInB:"That would need every letter of <i>"+w1+"</i> inside <i>"+w2+"</i>, with something left over.",
+     bInA:"That would need every letter of <i>"+w2+"</i> inside <i>"+w1+"</i>, with something left over.",
+     equal:"That would need the two words to use exactly the same letters.",
+     neither:"That would need each word to have a letter the other one lacks."
+   };
+   const keys=["aInB","bInA","equal","neither"];
+   const opts=keys.map(function(k){
+     return {label:L[k], correct:k===kind, note:k===kind?notes[k]:wrongNote[k]};
+   });
+   return {q:"Let "+st("<i>A</i>")+" be the set of letters in <b><i>"+w1+"</i></b> and "+st("<i>B</i>")+" the set of letters in <b><i>"+w2+"</i></b>.<br>Which is true?",
+     opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"A set against itself",
+ sub:"3 ≤ 3 is true and 3 < 3 is false. Sets behave exactly the same way.",
+ gen:function(){
+   const A=asc(nums(ri(3,4),1,15));
+   const forms=[
+     {q:"Is "+st("<i>A</i> "+SUB+" <i>A</i>")+" true, where "+st("<i>A</i>")+" = "+rost(A)+"?",
+      ans:"True — every element of "+st("<i>A</i>")+" is in "+st("<i>A</i>"),
+      bad:[["False — a set cannot be a subset of itself","It can. The test asks whether every element of the left set is in the right one, and here they are the same set, so every element passes."],
+           ["True, but only because "+st("<i>A</i>")+" is finite","Size has nothing to do with it. Any set at all is a subset of itself."],
+           ["False — a subset has to be smaller than the original","That is the rule for <i>proper</i> subsets, written "+st(PSUB)+". Plain "+st(SUB)+" allows the two sets to be the same."]],
+      note:"Like 3 ≤ 3. The relation allows equality, so a set always passes against itself."},
+     {q:"Is "+st("<i>A</i> "+PSUB+" <i>A</i>")+" true, where "+st("<i>A</i>")+" = "+rost(A)+"?",
+      ans:"False — a proper subset has to leave something out",
+      bad:[["True — every set is a proper subset of itself","That is true for "+st(SUB)+" but not for "+st(PSUB)+". A proper subset must be different from the original."],
+           ["True, because every element of "+st("<i>A</i>")+" is in "+st("<i>A</i>"),"Every element does carry over, which is why "+st("<i>A</i> "+SUB+" <i>A</i>")+" holds. "+st(PSUB)+" asks for that <i>and</i> for the sets to differ."],
+           ["It depends on how many elements "+st("<i>A</i>")+" has","It does not. No set is ever a proper subset of itself, whatever its size."]],
+      note:"Like 3 < 3. Strictness rules out the equal case, so this fails for every set."},
+     {q:"Which number statement plays the same role as "+st("<i>A</i> "+PSUB+" <i>A</i>")+"?",
+      ans:"3 &lt; 3",
+      bad:[["3 \u2264 3","That is the parallel for "+st("<i>A</i> "+SUB+" <i>A</i>")+", which is true. "+st(PSUB)+" is the strict one."],
+           ["3 &lt; 5","That is a proper subset of a genuinely bigger set, not a set against itself."],
+           ["5 &lt; 3","Nothing about "+st("<i>A</i> "+PSUB+" <i>A</i>")+" reverses the two sides."]],
+      note:st(SUB)+" matches \u2264 and "+st(PSUB)+" matches &lt;, so a set against itself matches 3 &lt; 3 — false."},
+     {q:"Which number statement plays the same role as "+st("<i>A</i> "+SUB+" <i>A</i>")+"?",
+      ans:"3 \u2264 3",
+      bad:[["3 &lt; 3","That is the parallel for "+st("<i>A</i> "+PSUB+" <i>A</i>")+", which is false."],
+           ["3 \u2264 5","That would be a set sitting inside a strictly larger one, not a set against itself."],
+           ["3 = 3","Close in spirit, but "+st(SUB)+" also holds when one set is genuinely smaller, so \u2264 is the right match."]],
+      note:st(SUB)+" matches \u2264, and 3 \u2264 3 is true for exactly the reason "+st("<i>A</i> "+SUB+" <i>A</i>")+" is."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"The empty set fits inside everything",
+ sub:"∅ has no element that could fail the test, so it passes for every set — including itself.",
+ gen:function(){
+   const B=asc(nums(ri(3,5),1,15));
+   const forms=[
+     {q:"Which is true of "+st(EMP)+" and "+st("<i>B</i>")+" = "+rost(B)+"?",
+      ans:"Both "+st(EMP+" "+SUB+" <i>B</i>")+" and "+st(EMP+" "+PSUB+" <i>B</i>"),
+      bad:[[st(EMP+" "+SUB+" <i>B</i>")+" only,"+"","Since "+st("<i>B</i>")+" has elements, "+st(EMP)+" is different from "+st("<i>B</i>")+", so the proper version holds too."],
+           [st(EMP+" "+PSUB+" <i>B</i>")+" only","Every proper subset is also a subset. "+st(PSUB)+" can never hold on its own."],
+           ["Neither — "+st(EMP)+" has nothing in common with "+st("<i>B</i>")+"","Having elements in common is not the test. The test is whether any element of "+st(EMP)+" is missing from "+st("<i>B</i>")+", and there are none to miss."]],
+      note:st(EMP)+" has no elements, so nothing can fail. And "+st(EMP)+" is not equal to "+st("<i>B</i>")+", so it is proper as well."},
+     {q:"Which is true of "+st(EMP)+" and "+st(EMP)+"?",
+      ans:st(EMP+" "+SUB+" "+EMP)+" is true, but "+st(EMP+" "+PSUB+" "+EMP)+" is false",
+      bad:[["Both are true","A proper subset must differ from the set it sits in, and "+st(EMP)+" does not differ from itself."],
+           ["Both are false","The subset test never fails for "+st(EMP)+", so "+st(EMP+" "+SUB+" "+EMP)+" holds."],
+           [st(EMP+" "+PSUB+" "+EMP)+" is true, but "+st(EMP+" "+SUB+" "+EMP)+" is false","That has it backwards, and it is also impossible — "+st(PSUB)+" never holds without "+st(SUB)+"."]],
+      note:"Exactly like 3 \u2264 3 being true while 3 &lt; 3 is false."},
+     {q:"How many sets have "+st(EMP)+" as a subset?", ans:"Every set there is",
+      bad:[["Only the empty set","That is the only set "+st(EMP)+" is <i>equal</i> to, but it is a subset of all of them."],
+           ["Only sets that contain "+st(EMP)+" as an element","Being an element and being a subset are different claims."],
+           ["None — "+st(EMP)+" has nothing to contribute","The subset test asks what fails, not what is contributed. Nothing in "+st(EMP)+" can fail."]],
+      note:"There is no element of "+st(EMP)+" that could be missing from anything, so the check passes every time."},
+     {q:"Which of these statements is <b>false</b>?", ans:st(EMP+" "+PSUB+" "+EMP),
+      bad:[[st(EMP+" "+SUB+" "+EMP),"True — the subset check has nothing to fail on."],
+           [st(EMP+" "+SUB+" ")+rost(B),"True — "+st(EMP)+" is a subset of every set."],
+           [st(EMP+" "+PSUB+" ")+rost(B),"True — "+st(EMP)+" sits inside "+rost(B)+" and is not equal to it."]],
+      note:"A proper subset has to be different from the set containing it, and "+st(EMP)+" is not different from itself."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Subset, proper subset, or neither",
+ sub:"One of the four options below can never be the answer for any pair of sets.",
+ gen:function(){
+   const kind=pick(["proper","proper","equal","neither"]);
+   const useNums=Math.random()<.6;
+   const B=useNums?asc(nums(5,1,20)):lets(5);
+   let A;
+   if(kind==="proper") A=takeFrom(B,ri(2,4));
+   else if(kind==="equal") A=shuffle(B.slice(0));
+   else {
+     const outside=useNums
+       ? (function(){let v;do{v=ri(1,30);}while(B.indexOf(v)>=0);return v;})()
+       : shuffle(LET.filter(function(c){return B.indexOf(c)<0;}))[0];
+     A=takeFrom(B,2).concat([outside]);
+   }
+   if(useNums)A=asc(A);
+   const L={
+     proper:"Both: "+st("<i>A</i> "+SUB+" <i>B</i>")+" and "+st("<i>A</i> "+PSUB+" <i>B</i>"),
+     equal:"Subset only: "+st("<i>A</i> "+SUB+" <i>B</i>")+", but not proper, because "+st("<i>A</i> = <i>B</i>"),
+     neither:"Neither: "+st("<i>A</i> "+NSUB+" <i>B</i>"),
+     impossible:"Proper only: "+st("<i>A</i> "+PSUB+" <i>B</i>")+", but not "+st("<i>A</i> "+SUB+" <i>B</i>")
+   };
+   const missing=kind==="neither"?A.filter(function(e){return B.indexOf(e)<0;})[0]:null;
+   const leftover=kind==="proper"?B.filter(function(e){return A.indexOf(e)<0;}):[];
+   const notes={
+     proper:"Every element of "+st("<i>A</i>")+" is in "+st("<i>B</i>")+", and "+st("<i>B</i>")+" still has <b>"+leftover.join(", ")+"</b> left over, so the containment is proper.",
+     equal:"The same elements in a different order. Every element carries over, so "+st(SUB)+" holds — but nothing is left over, so it is not proper.",
+     neither:"<b>"+missing+"</b> is in "+st("<i>A</i>")+" and not in "+st("<i>B</i>")+", so the subset check fails immediately.",
+     impossible:"That combination is impossible for any pair of sets. "+st(PSUB)+" asks for everything "+st(SUB)+" asks for, plus one more condition, so it can never hold on its own."
+   };
+   const wrongNotes={
+     proper:"That would need every element of "+st("<i>A</i>")+" inside "+st("<i>B</i>")+" with something left over.",
+     equal:"That would need the two sets to hold exactly the same elements.",
+     neither:"That would need an element of "+st("<i>A</i>")+" to be missing from "+st("<i>B</i>")+".",
+     impossible:notes.impossible
+   };
+   const keys=["proper","equal","neither","impossible"];
+   const opts=keys.map(function(k){
+     return {label:L[k], correct:k===kind, note:k===kind?notes[k]:wrongNotes[k]};
+   });
+   return {q:"How is "+st("<i>A</i>")+" related to "+st("<i>B</i>")+"?",
+     two:st("<i>A</i>")+" = "+rost(A)+"<br>"+st("<i>B</i>")+" = "+rost(B),
+     opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"Subsets of categories",
+ sub:"No roster to write. Ask whether every member of the first group is automatically a member of the second.",
+ gen:function(){
+   const bank=[
+     {a:"people who live in Atlanta", b:"people who live in Georgia", kind:"aInB",
+      why:"Everyone in Atlanta is in Georgia, and Georgia also has people outside Atlanta."},
+     {a:"men", b:"people", kind:"aInB", why:"Every man is a person, and there are people who are not men."},
+     {a:"squares", b:"rectangles", kind:"aInB", why:"Every square is a rectangle with equal sides, and plenty of rectangles are not squares."},
+     {a:"vowels", b:"letters of the alphabet", kind:"aInB", why:"All five vowels are letters, and most letters are not vowels."},
+     {a:"weekdays", b:"days of the week", kind:"aInB", why:"Every weekday is a day of the week, and Saturday and Sunday are not weekdays."},
+     {a:"even natural numbers", b:"natural numbers", kind:"aInB", why:"Every even natural number is a natural number, and the odd ones are not even."},
+     {a:"people who live in Georgia", b:"people who live in Atlanta", kind:"bInA",
+      why:"It runs the other way: everyone in Atlanta is in Georgia, but not the reverse."},
+     {a:"rectangles", b:"squares", kind:"bInA", why:"It runs the other way: every square is a rectangle, but a long thin rectangle is not a square."},
+     {a:"natural numbers less than 5", b:"natural numbers less than 10", kind:"aInB",
+      why:"1, 2, 3 and 4 are all below 10, and 5 through 9 are below 10 but not below 5."},
+     {a:"dogs", b:"cats", kind:"neither", why:"No dog is a cat and no cat is a dog, so neither group sits inside the other."},
+     {a:"months with 31 days", b:"months with 30 days", kind:"neither", why:"The two groups have no members in common at all."},
+     {a:"weekdays", b:"days of the week other than Saturday and Sunday", kind:"equal",
+      why:"The two descriptions pick out exactly the same five days, so each is a subset of the other."},
+     {a:"vowels", b:"letters in the word <i>aeiou</i>", kind:"equal",
+      why:"Both descriptions name the same five letters, so the sets are equal."}
+   ];
+   const it=pick(bank);
+   const L={
+     aInB:st("<i>A</i> "+PSUB+" <i>B</i>")+" — every A is a B, and B has more besides",
+     bInA:st("<i>B</i> "+PSUB+" <i>A</i>")+" — every B is an A, and A has more besides",
+     equal:st("<i>A</i> = <i>B</i>")+" — the two descriptions pick out the same members",
+     neither:"Neither one sits inside the other"
+   };
+   const wrongNote={
+     aInB:"That would need every "+it.a.replace(/<[^>]*>/g,"")+" to count as "+it.b.replace(/<[^>]*>/g,"")+", with some left over on the right.",
+     bInA:"That would need every "+it.b.replace(/<[^>]*>/g,"")+" to count as "+it.a.replace(/<[^>]*>/g,"")+", with some left over on the left.",
+     equal:"That would need the two descriptions to name exactly the same members.",
+     neither:"That would need each group to have a member the other one lacks."
+   };
+   const keys=["aInB","bInA","equal","neither"];
+   const opts=keys.map(function(k){
+     return {label:L[k], correct:k===it.kind, note:k===it.kind?it.why:wrongNote[k]};
+   });
+   return {q:"How are these two sets related?",
+     two:st("<i>A</i>")+" = the set of "+it.a+"<br>"+st("<i>B</i>")+" = the set of "+it.b,
+     opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"Reading the symbol",
+ sub:"⊆ allows the two sets to be the same. ⊂ does not. ⊄ says the check failed outright.",
+ gen:function(){
+   const A=asc(nums(3,1,9)), extra=ri(10,18);
+   const B=asc(A.concat([extra]));
+   const forms=[
+     {q:"Which symbol belongs in the blank?", two:rost(A)+" ____ "+rost(B), ans:st(PSUB)+" (and "+st(SUB)+" as well)",
+      bad:[[st(SUB)+" only","Every element carries over <i>and</i> "+st("<i>B</i>")+" has <b>"+extra+"</b> left over, so the proper symbol fits too."],
+           [st(NSUB),"Check again — all three elements on the left appear on the right."],
+           [st(PSUB)+" only","A proper subset is always a subset as well, so both symbols apply."]],
+      note:"All of the left set is in the right set, and "+extra+" is left over, so this is a proper subset — and therefore a subset."},
+     {q:"Which symbol belongs in the blank?", two:rost(B)+" ____ "+rost(A), ans:st(NSUB),
+      bad:[[st(SUB),"<b>"+extra+"</b> is on the left and not on the right, so the check fails."],
+           [st(PSUB),"The plain subset claim already fails, and "+st(PSUB)+" asks for more, not less."],
+           ["Both "+st(SUB)+" and "+st(PSUB),"Neither holds — <b>"+extra+"</b> has nowhere to go."]],
+      note:"Subset claims have a direction. Swapping the sides here turns a true statement into a false one."},
+     {q:"Which symbol belongs in the blank?", two:rost(A)+" ____ "+rost(shuffle(A.slice(0))), ans:st(SUB)+" but not "+st(PSUB),
+      bad:[["Both "+st(SUB)+" and "+st(PSUB),"The two sets hold the same elements, so nothing is left over and the containment is not proper."],
+           [st(NSUB),"Every element on the left appears on the right — the order is just different."],
+           [st(PSUB)+" but not "+st(SUB),"That is impossible. "+st(PSUB)+" always brings "+st(SUB)+" with it."]],
+      note:"Same set written two ways. Like 3 \u2264 3 being true while 3 &lt; 3 is false."},
+     {q:"Which symbol belongs in the blank?", two:st(EMP)+" ____ "+rost(B), ans:st(PSUB)+" (and "+st(SUB)+" as well)",
+      bad:[[st(NSUB),"There is no element of "+st(EMP)+" that could be missing, so the check cannot fail."],
+           [st(SUB)+" only","True as far as it goes, but "+st(EMP)+" is not equal to "+rost(B)+", so it is proper too."],
+           ["No symbol fits — "+st(EMP)+" is not a set","It is a set. It just has no elements."]],
+      note:st(EMP)+" is a subset of every set, and it is a proper subset of every set except itself."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, two:f.two, opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"True or false in general",
+ sub:"Statements about all sets at once. One counterexample settles a false one.",
+ gen:function(){
+   const T=[
+     {s:"Every set is a subset of itself.", w:"The check asks whether every element of the left set is in the right one, and against itself every element passes. Like 3 \u2264 3."},
+     {s:st(EMP)+" is a subset of every set.", w:st(EMP)+" has no element that could be missing, so the check never fails."},
+     {s:"If "+st("<i>A</i> "+PSUB+" <i>B</i>")+", then "+st("<i>A</i> "+SUB+" <i>B</i>")+".", w:"A proper subset satisfies everything a subset does, and one condition more."},
+     {s:"If "+st("<i>A</i> "+SUB+" <i>B</i>")+" and "+st("<i>B</i> "+SUB+" <i>A</i>")+", then "+st("<i>A</i> = <i>B</i>")+".", w:"Containment in both directions leaves no room for a difference between them."},
+     {s:"If "+st("<i>A</i> "+PSUB+" <i>B</i>")+", then "+st("<i>A</i>")+" and "+st("<i>B</i>")+" are not equal.", w:"That is exactly what the word <i>proper</i> adds to the plain subset claim."},
+     {s:"A set with three elements can be a subset of another set with three elements.", w:"It can, when the two sets are the same set. Then "+st(SUB)+" holds, though "+st(PSUB)+" does not."}
+   ];
+   const F=[
+     {s:"Every set is a proper subset of itself.", w:"A proper subset must differ from the set containing it, and nothing differs from itself. Like 3 &lt; 3."},
+     {s:"If "+st("<i>A</i> "+SUB+" <i>B</i>")+", then "+st("<i>A</i> "+PSUB+" <i>B</i>")+".", w:"Not when the two sets are equal. Then "+st(SUB)+" holds and "+st(PSUB)+" does not."},
+     {s:st(EMP+" "+PSUB+" "+EMP)+".", w:st(EMP)+" is a subset of itself but not a proper one, since it is not different from itself."},
+     {s:"A subset must have fewer elements than the set it sits in.", w:"That is the rule for proper subsets. A plain subset may be the whole set."},
+     {s:"If "+st("<i>A</i> "+SUB+" <i>B</i>")+", then "+st("<i>B</i> "+SUB+" <i>A</i>")+".", w:"Subset claims have a direction. "+rost([1,2])+" sits inside "+rost([1,2,3])+", but not the other way round."},
+     {s:"Two sets that share no elements can still be subsets of one another.", w:"If they share nothing and either has an element, the check fails at once."},
+     {s:st(EMP)+" is a subset only of sets that contain "+st(EMP)+" as an element.", w:"Being an element and being a subset are different claims. "+st(EMP)+" is a subset of everything."}
+   ];
+   if(Math.random()<.5){
+     const right=pick(T), wrongs=shuffle(F.slice(0)).slice(0,3);
+     const opts=[{label:right.s,correct:true,note:right.w}]
+       .concat(wrongs.map(function(x){return {label:x.s,note:"That one is false. "+x.w};}));
+     return {q:"Which of these statements is <b>true</b>?", opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+   }
+   const right=pick(F), wrongs=shuffle(T.slice(0)).slice(0,3);
+   const opts=[{label:right.s,correct:true,note:right.w}]
+     .concat(wrongs.map(function(x){return {label:x.s,note:"That one is true. "+x.w};}));
+   return {q:"Which of these statements is <b>false</b>?", opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Both directions at once",
+ sub:"Say what is true of A against B and of B against A. Only one option gets both halves right.",
+ gen:function(){
+   const kind=pick(["aInB","bInA","equal","neither"]);
+   const useNums=Math.random()<.6;
+   const big=useNums?asc(nums(5,1,20)):lets(5);
+   let A,B;
+   if(kind==="aInB"){ B=big; A=takeFrom(big,ri(2,4)); }
+   else if(kind==="bInA"){ A=big; B=takeFrom(big,ri(2,4)); }
+   else if(kind==="equal"){ A=big; B=shuffle(big.slice(0)); }
+   else {
+     const outPool=useNums?[] :shuffle(LET.filter(function(c){return big.indexOf(c)<0;}));
+     const out1=useNums?(function(){let v;do{v=ri(21,40);}while(big.indexOf(v)>=0);return v;})():outPool[0];
+     const out2=useNums?(function(){let v;do{v=ri(41,60);}while(big.indexOf(v)>=0);return v;})():outPool[1];
+     A=takeFrom(big,2).concat([out1]);
+     B=takeFrom(big,2).concat([out2]);
+   }
+   if(useNums){A=asc(A);B=asc(B);}
+   const L={
+     aInB:st("<i>A</i> "+PSUB+" <i>B</i>")+" and "+st("<i>B</i> "+NSUB+" <i>A</i>"),
+     bInA:st("<i>B</i> "+PSUB+" <i>A</i>")+" and "+st("<i>A</i> "+NSUB+" <i>B</i>"),
+     equal:st("<i>A</i> "+SUB+" <i>B</i>")+" and "+st("<i>B</i> "+SUB+" <i>A</i>"),
+     neither:st("<i>A</i> "+NSUB+" <i>B</i>")+" and "+st("<i>B</i> "+NSUB+" <i>A</i>")
+   };
+   const extraB=B.filter(function(e){return A.indexOf(e)<0;});
+   const extraA=A.filter(function(e){return B.indexOf(e)<0;});
+   const notes={
+     aInB:"Every element of "+st("<i>A</i>")+" is in "+st("<i>B</i>")+", and "+st("<i>B</i>")+" keeps <b>"+extraB.join(", ")+"</b> besides — so the containment goes one way only.",
+     bInA:"Every element of "+st("<i>B</i>")+" is in "+st("<i>A</i>")+", and "+st("<i>A</i>")+" keeps <b>"+extraA.join(", ")+"</b> besides — so the containment goes one way only.",
+     equal:"The same elements written in a different order, so each set contains the other. Neither containment is proper.",
+     neither:"<b>"+extraA.join(", ")+"</b> is in "+st("<i>A</i>")+" but not "+st("<i>B</i>")+", and <b>"+extraB.join(", ")+"</b> is in "+st("<i>B</i>")+" but not "+st("<i>A</i>")+". Both checks fail."
+   };
+   const wrongNotes={
+     aInB:"Check whether every element of "+st("<i>A</i>")+" really appears in "+st("<i>B</i>")+".",
+     bInA:"Check whether every element of "+st("<i>B</i>")+" really appears in "+st("<i>A</i>")+".",
+     equal:"That claims containment in both directions, which happens only when the sets hold exactly the same elements.",
+     neither:"That claims both checks fail. At least one of them succeeds here."
+   };
+   const keys=["aInB","bInA","equal","neither"];
+   const opts=keys.map(function(k){
+     return {label:L[k], correct:k===kind, note:k===kind?notes[k]:wrongNotes[k]};
+   });
+   return {q:"Which statement describes <b>both</b> directions correctly?",
+     two:st("<i>A</i>")+" = "+rost(A)+"<br>"+st("<i>B</i>")+" = "+rost(B),
+     opts:shuffle(opts), wide:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {k:"proper subset", A:[2,4,6,8], B:[2,8,4,6,10], An:"A", Bn:"B",
+   note:"Every element of A lands in B, and B still has 10 left over. That extra element is what makes the containment <i>proper</i>. Like 4 &lt; 5."},
+  {k:"equal sets", A:[0,2,4,6,8], B:[8,0,6,2,4], An:"A", Bn:"B",
+   note:"Same five elements, different order. A ⊆ B holds, but nothing is left over in B, so A ⊂ B fails. Like 3 ≤ 3 being true while 3 &lt; 3 is false."},
+  {k:"one element short", A:[-3,0,3], B:[-3,-1,1,3], An:"A", Bn:"B",
+   note:"0 is in A and nowhere in B. One failure ends the check, so A ⊄ B — no matter how much else the two sets share."},
+  {k:"empty set", A:[], B:[8,0,6,2,4], An:"∅", Bn:"B",
+   note:"There is nothing in ∅ that could be missing from B, so the check passes with no work at all. And since ∅ is not equal to B, the containment is proper."},
+  {k:"empty against empty", A:[], B:[], An:"∅", Bn:"∅",
+   note:"∅ ⊆ ∅ is true for the same reason as above. But ∅ ⊂ ∅ is false, because a proper subset has to differ from the set holding it."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  const inB=function(e){return h.B.indexOf(e)>=0;};
+  document.getElementById("hSets").innerHTML=
+    "<b>"+h.An+"</b> = "+rost(h.A)+" &nbsp;&nbsp; <b>"+h.Bn+"</b> = "+rost(h.B);
+  document.getElementById("hChips").innerHTML= h.A.length
+    ? '<span class="chiplbl">each element of '+h.An+", checked against "+h.Bn+":</span>"+
+      h.A.map(function(e){
+        return '<span class="chip '+(inB(e)?"in":"out")+'">'+e+'<span class="mk">'+(inB(e)?"\u2713":"\u2717")+"</span></span>";
+      }).join("")
+    : '<span class="chiplbl">'+h.An+" has no elements, so there is nothing to check — and nothing that can fail.</span>";
+  const sub=h.A.every(inB);
+  const eq=sub&&h.B.every(function(e){return h.A.indexOf(e)>=0;});
+  const proper=sub&&!eq;
+  const rows=[["<b>"+h.An+"</b> ⊆ <b>"+h.Bn+"</b>",sub],
+              ["<b>"+h.An+"</b> ⊂ <b>"+h.Bn+"</b>",proper],
+              ["<b>"+h.Bn+"</b> ⊆ <b>"+h.An+"</b>",h.B.every(function(e){return h.A.indexOf(e)>=0;})]];
+  rows.forEach(function(r,i){
+    document.getElementById("lab"+(i+1)).innerHTML=r[0];
+    const t=document.getElementById("v"+(i+1));
+    t.className="tag "+(r[1]?"yes":"no"); t.textContent=r[1]?"true":"false";
+  });
+  document.getElementById("heroResult").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.k+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<3&&tries<30);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.big?'<div class="big">'+q.big+'</div>':'')
+    +(q.two?'<div class="twoset">'+q.two+'</div>':'');
+  const optEl=document.getElementById("options");
+  optEl.style.gridTemplateColumns=q.wide?"1fr":"";
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
