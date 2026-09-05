@@ -1,0 +1,805 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Proof by Regions Ladder — same regions, same set</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --pf:#8A4A1F;
+    --pf-bg:#F7EDE5;
+    --cA:#0B6E77;
+    --cB:#A66A00;
+    --cC:#6B4C9A;
+    --shade:#8A4A1F;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--pf)}
+  :focus-visible{outline:3px solid var(--pf); outline-offset:2px; border-radius:3px}
+
+  .st{font-family:var(--serif); font-size:1.04em}
+  .st i{font-style:italic}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--pf)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:15ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .pairgrid{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--rule)}
+  @media (max-width:660px){.pairgrid{grid-template-columns:1fr}}
+  .side{background:var(--card); padding:14px 14px 12px}
+  .side .cap{font-family:var(--serif); font-size:clamp(17px,3vw,21px); text-align:center; margin-bottom:8px}
+  .side svg{display:block; width:100%; height:auto}
+  .side .regs{margin-top:8px; text-align:center; font-size:14px; color:var(--muted)}
+  .side .regs b{font-family:var(--serif); color:var(--ink); font-size:15px}
+  .verdict{padding:13px 18px; border-top:1px solid var(--rule); background:var(--card); text-align:center; font-size:15.5px}
+  .verdict .badge{display:inline-block; font-size:13px; font-weight:600; padding:2px 11px; border-radius:20px; margin-right:9px}
+  .same{background:var(--right-bg); color:var(--right)}
+  .diff{background:var(--wrong-bg); color:var(--wrong)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-family:var(--serif); font-size:15px; padding:5px 13px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--pf); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:62px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--pf); background:var(--pf-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--pf)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .q{font-size:17px; max-width:62ch; margin:0 auto 12px; color:#31404F}
+  .stem .big{margin:12px auto 16px; font-family:var(--serif); font-size:clamp(20px,4.4vw,29px); line-height:1.45; max-width:32ch}
+  .chart{margin:0 auto 14px; max-width:560px}
+  .chart svg{display:block; width:100%; height:auto}
+  .proof{margin:12px auto 16px; max-width:470px; border:1px solid var(--rule); border-radius:9px; overflow:hidden; background:var(--paper); text-align:left}
+  .proof div{padding:10px 16px; font-family:var(--serif); font-size:clamp(15px,3vw,18px)}
+  .proof div+div{border-top:1px solid var(--rule)}
+  .proof .blank{display:inline-block; min-width:70px; border-bottom:2.5px solid var(--pf); margin:0 4px}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 20px 20px}
+  @media (max-width:640px){.options{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt.sym .v{font-family:var(--serif); font-size:20px}
+  .opt.roman .v{font-family:var(--serif); font-size:20px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>≡</span> The Proof by Regions Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 4 · equality of sets, De Morgan's laws, the distributive laws</p>
+    <h1>Same regions, same set.</h1>
+    <p class="lede">There is a way to settle whether two set expressions are equal that never guesses and never needs an example. Work out which regions of a general Venn diagram each one covers. If the two lists match, the sets are equal for every possible A, B and C. If a single region appears in one list and not the other, they are not equal, and that region is the proof.</p>
+
+    <div class="demo">
+      <div class="pairgrid">
+        <div class="side"><div class="cap" id="capL"></div><div id="svgL"></div><div class="regs" id="regL"></div></div>
+        <div class="side"><div class="cap" id="capR"></div><div id="svgR"></div><div class="regs" id="regR"></div></div>
+      </div>
+      <div class="verdict" id="verdict"></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Checking one example is not a proof.</b> If you pick some sets and both expressions give {2, 5, 9}, all you have shown is that they agree once. The region method is different: a general diagram covers every arrangement the three sets could possibly have, so matching region lists settle the question for all of them at once. That is why your worksheet says this <i>deductively proves</i> the two sets are equal.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–3 run the method in two circles, exactly as the lesson introduces it, and end at De Morgan's laws. Rungs 4–7 move to three circles, where the region lists get long enough that comparing them is real work. Rungs 8–10 name the distributive laws and finish with full verdicts.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>No rosters anywhere</h3><p>There are no elements on this ladder. Everything is settled by regions, because that is what makes the argument a proof rather than a spot check.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>A method, not a memory test</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>You can check any claim</h3><p>Forgotten whether the prime flips the operation? Work out both region lists and find out, instead of guessing.</p></div>
+      <div class="step"><span class="n">02</span><h3>One region is enough to disprove</h3><p>Showing two expressions are different takes a single region that belongs to one and not the other.</p></div>
+      <div class="step"><span class="n">03</span><h3>The same argument returns in logic</h3><p>Truth tables do for statements exactly what region lists do for sets: check every case at once.</p></div>
+    </div>
+    <p class="closing">Two region lists. If they match, the sets are equal always. If they differ anywhere, they are not equal at all.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Proof by Regions Ladder · (A ∩ B)′ = A′ ∪ B′ · (A ∪ B)′ = A′ ∩ B′ · A ∪ (B ∩ C) = (A ∪ B) ∩ (A ∪ C)</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function st(s){return '<span class="st">'+s+'</span>';}
+const CUP="\u222a", CAP="\u2229", PR="\u2032";
+const Ai="<i>A</i>", Bi="<i>B</i>", Ci="<i>C</i>";
+
+/* ---- region algebra over a fixed list of region names ---- */
+function alg(ALLR){
+  return {
+    all:ALLR,
+    U:function(a,b){return ALLR.filter(function(r){return a.indexOf(r)>=0||b.indexOf(r)>=0;});},
+    N:function(a,b){return ALLR.filter(function(r){return a.indexOf(r)>=0&&b.indexOf(r)>=0;});},
+    C:function(a){return ALLR.filter(function(r){return a.indexOf(r)<0;});}
+  };
+}
+const REG2=["I","II","III","IV"];
+const REG3=["I","II","III","IV","V","VI","VII","VIII"];
+const g2=alg(REG2), g3=alg(REG3);
+const A2=["I","II"], B2=["II","III"];
+const A3=["I","II","IV","V"], B3=["II","III","V","VI"], C3=["IV","V","VI","VII"];
+
+function regWords(rs){
+  if(!rs.length) return "no regions at all";
+  if(rs.length===1) return "region "+rs[0];
+  return "regions "+rs.slice(0,-1).join(", ")+" and "+rs[rs.length-1];
+}
+function cap1(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+
+/* ---- two-set expressions ---- */
+const E2={
+  "AuB":  {n:Ai+" "+CUP+" "+Bi,                 r:g2.U(A2,B2)},
+  "AnB":  {n:Ai+" "+CAP+" "+Bi,                 r:g2.N(A2,B2)},
+  "AuBp": {n:"("+Ai+" "+CUP+" "+Bi+")"+PR,      r:g2.C(g2.U(A2,B2))},
+  "AnBp": {n:"("+Ai+" "+CAP+" "+Bi+")"+PR,      r:g2.C(g2.N(A2,B2))},
+  "ApuBp":{n:Ai+PR+" "+CUP+" "+Bi+PR,           r:g2.U(g2.C(A2),g2.C(B2))},
+  "ApnBp":{n:Ai+PR+" "+CAP+" "+Bi+PR,           r:g2.N(g2.C(A2),g2.C(B2))},
+  "ApnB": {n:Ai+PR+" "+CAP+" "+Bi,              r:g2.N(g2.C(A2),B2)},
+  "AnBp2":{n:Ai+" "+CAP+" "+Bi+PR,              r:g2.N(A2,g2.C(B2))},
+  "ApuB": {n:Ai+PR+" "+CUP+" "+Bi,              r:g2.U(g2.C(A2),B2)},
+  "AuBp2":{n:Ai+" "+CUP+" "+Bi+PR,              r:g2.U(A2,g2.C(B2))},
+  "Ap":   {n:Ai+PR,                             r:g2.C(A2)},
+  "Bp":   {n:Bi+PR,                             r:g2.C(B2)}
+};
+/* ---- three-set expressions ---- */
+const E3={
+  "AuBnC":  {n:Ai+" "+CUP+" ("+Bi+" "+CAP+" "+Ci+")",                     r:g3.U(A3,g3.N(B3,C3))},
+  "dAuB":   {n:"("+Ai+" "+CUP+" "+Bi+") "+CAP+" ("+Ai+" "+CUP+" "+Ci+")", r:g3.N(g3.U(A3,B3),g3.U(A3,C3))},
+  "BnCuA":  {n:"("+Bi+" "+CAP+" "+Ci+") "+CUP+" "+Ai,                     r:g3.U(g3.N(B3,C3),A3)},
+  "AuB_nC": {n:"("+Ai+" "+CUP+" "+Bi+") "+CAP+" "+Ci,                     r:g3.N(g3.U(A3,B3),C3)},
+  "AnBuC":  {n:Ai+" "+CAP+" ("+Bi+" "+CUP+" "+Ci+")",                     r:g3.N(A3,g3.U(B3,C3))},
+  "dAnB":   {n:"("+Ai+" "+CAP+" "+Bi+") "+CUP+" ("+Ai+" "+CAP+" "+Ci+")", r:g3.U(g3.N(A3,B3),g3.N(A3,C3))},
+  "BuCnA":  {n:"("+Bi+" "+CUP+" "+Ci+") "+CAP+" "+Ai,                     r:g3.N(g3.U(B3,C3),A3)},
+  "AnB_uC": {n:"("+Ai+" "+CAP+" "+Bi+") "+CUP+" "+Ci,                     r:g3.U(g3.N(A3,B3),C3)},
+  "ABC":    {n:Ai+" "+CAP+" "+Bi+" "+CAP+" "+Ci,                          r:g3.N(g3.N(A3,B3),C3)},
+  "AuBuC":  {n:Ai+" "+CUP+" "+Bi+" "+CUP+" "+Ci,                          r:g3.U(g3.U(A3,B3),C3)},
+  "AuBuCp": {n:"("+Ai+" "+CUP+" "+Bi+" "+CUP+" "+Ci+")"+PR,               r:g3.C(g3.U(g3.U(A3,B3),C3))},
+  "ApBpCp": {n:Ai+PR+" "+CAP+" "+Bi+PR+" "+CAP+" "+Ci+PR,                 r:g3.N(g3.N(g3.C(A3),g3.C(B3)),g3.C(C3))},
+  "AuBpnCp":{n:"("+Ai+" "+CUP+" "+Bi+")"+PR+" "+CAP+" "+Ci+PR,            r:g3.N(g3.C(g3.U(A3,B3)),g3.C(C3))},
+  "ABCp":   {n:"("+Ai+" "+CAP+" "+Bi+" "+CAP+" "+Ci+")"+PR,               r:g3.C(g3.N(g3.N(A3,B3),C3))},
+  "ApuBpuCp":{n:Ai+PR+" "+CUP+" "+Bi+PR+" "+CUP+" "+Ci+PR,                r:g3.U(g3.U(g3.C(A3),g3.C(B3)),g3.C(C3))},
+  "AnBpuCp":{n:"("+Ai+" "+CAP+" "+Bi+")"+PR+" "+CUP+" "+Ci+PR,            r:g3.U(g3.C(g3.N(A3,B3)),g3.C(C3))},
+  "AnBuCp": {n:Ai+" "+CAP+" ("+Bi+" "+CUP+" "+Ci+PR+")",                  r:g3.N(A3,g3.U(B3,g3.C(C3)))},
+  "AuBnCp": {n:Ai+" "+CUP+" ("+Bi+" "+CAP+" "+Ci+PR+")",                  r:g3.U(A3,g3.N(B3,g3.C(C3)))},
+  "BnC":    {n:Bi+" "+CAP+" "+Ci,                                         r:g3.N(B3,C3)},
+  "AnB3":   {n:Ai+" "+CAP+" "+Bi,                                         r:g3.N(A3,B3)},
+  "AnC3":   {n:Ai+" "+CAP+" "+Ci,                                         r:g3.N(A3,C3)},
+  "AuB3":   {n:Ai+" "+CUP+" "+Bi,                                         r:g3.U(A3,B3)},
+  "A3":     {n:Ai,                                                        r:A3},
+  "C3":     {n:Ci,                                                        r:C3},
+  "Ap3":    {n:Ai+PR,                                                     r:g3.C(A3)}
+};
+function nm(E,k){return E[k].n;}
+function pl(E,k){return E[k].n.replace(/<[^>]+>/g,"");}
+function sg(E,k){return E[k].r.join(",");}
+function diff(a,b){return a.filter(function(r){return b.indexOf(r)<0;});}
+
+/* families of expressions that name the same set */
+const FAM3=[
+  ["AuBnC","dAuB","BnCuA"],
+  ["AnBuC","dAnB","BuCnA"],
+  ["AuBuCp","ApBpCp","AuBpnCp"],
+  ["ABCp","ApuBpuCp","AnBpuCp"]
+];
+
+/* ================= renderers ================= */
+let svgUid=0;
+function venn2(o){
+  o=o||{};
+  const uid="t"+(++svgUid), shade=o.shade||[];
+  const ax=220,bx=330,cy=160,r=100;
+  const cc=function(x){return '<circle cx="'+x+'" cy="'+cy+'" r="'+r+'"';};
+  let s='<svg viewBox="0 0 600 320" role="img" aria-label="Venn diagram with two sets">';
+  s+='<rect x="10" y="10" width="580" height="300" rx="4" fill="none" stroke="var(--ink)" stroke-width="1.3"/>';
+  s+='<text x="26" y="36" font-family="Georgia,serif" font-style="italic" font-size="19" fill="var(--ink)">U</text>';
+  const RECT='<rect x="10" y="10" width="580" height="300" fill="#fff"/>';
+  s+='<defs><clipPath id="'+uid+'cA">'+cc(ax)+'/></clipPath>'
+    +'<mask id="'+uid+'nA">'+RECT+cc(ax)+' fill="#000"/></mask>'
+    +'<mask id="'+uid+'nB">'+RECT+cc(bx)+' fill="#000"/></mask>'
+    +'<mask id="'+uid+'nAB">'+RECT+cc(ax)+' fill="#000"/>'+cc(bx)+' fill="#000"/></mask></defs>';
+  const F='fill="var(--shade)" fill-opacity="0.32"';
+  const h=function(k){return shade.indexOf(k)>=0;};
+  if(h("IV")) s+='<rect x="10" y="10" width="580" height="300" '+F+' mask="url(#'+uid+'nAB)"/>';
+  if(h("I"))  s+=cc(ax)+' '+F+' mask="url(#'+uid+'nB)"/>';
+  if(h("III"))s+=cc(bx)+' '+F+' mask="url(#'+uid+'nA)"/>';
+  if(h("II")) s+=cc(bx)+' '+F+' clip-path="url(#'+uid+'cA)"/>';
+  s+=cc(ax)+' fill="var(--cA)" fill-opacity="0.10" stroke="var(--cA)" stroke-width="1.7"/>';
+  s+=cc(bx)+' fill="var(--cB)" fill-opacity="0.10" stroke="var(--cB)" stroke-width="1.7"/>';
+  const T=function(x,y,t,sz,col,it){return '<text x="'+x+'" y="'+y+'" text-anchor="middle" font-family="Georgia,serif" font-size="'+sz+'"'+(it?' font-style="italic"':'')+' fill="'+col+'">'+esc(t)+'</text>';};
+  s+=T(160,48,"A",20,"var(--cA)",true)+T(390,48,"B",20,"var(--cB)",true);
+  s+=T(175,168,"I",19,"var(--muted)")+T(275,168,"II",19,"var(--muted)")
+    +T(375,168,"III",19,"var(--muted)")+T(520,168,"IV",19,"var(--muted)");
+  return s+"</svg>";
+}
+const GEO={A:{x:240,y:150,r:100},B:{x:360,y:150,r:100},C:{x:300,y:250,r:100},
+  slots:{I:{x:190,y:118},II:{x:300,y:110},III:{x:410,y:118},IV:{x:228,y:222},
+         V:{x:300,y:202},VI:{x:372,y:222},VII:{x:300,y:300},VIII:{x:536,y:312}}};
+function venn3(o){
+  o=o||{};
+  const uid="h"+(++svgUid), shade=o.shade||[];
+  const A=GEO.A,B=GEO.B,C=GEO.C;
+  const circ=function(c){return '<circle cx="'+c.x+'" cy="'+c.y+'" r="'+c.r+'"';};
+  let s='<svg viewBox="0 0 600 380" role="img" aria-label="Venn diagram with three sets">';
+  s+='<rect x="10" y="10" width="580" height="360" rx="4" fill="none" stroke="var(--ink)" stroke-width="1.3"/>';
+  s+='<text x="26" y="36" font-family="Georgia,serif" font-style="italic" font-size="19" fill="var(--ink)">U</text>';
+  const RECT='<rect x="10" y="10" width="580" height="360" fill="#fff"/>';
+  const blk=function(c){return circ(c)+' fill="#000"/>';};
+  s+='<defs>'
+    +'<clipPath id="'+uid+'cA">'+circ(A)+'/></clipPath>'
+    +'<clipPath id="'+uid+'cB">'+circ(B)+'/></clipPath>'
+    +'<mask id="'+uid+'nA">'+RECT+blk(A)+'</mask>'
+    +'<mask id="'+uid+'nB">'+RECT+blk(B)+'</mask>'
+    +'<mask id="'+uid+'nC">'+RECT+blk(C)+'</mask>'
+    +'<mask id="'+uid+'nBC">'+RECT+blk(B)+blk(C)+'</mask>'
+    +'<mask id="'+uid+'nAC">'+RECT+blk(A)+blk(C)+'</mask>'
+    +'<mask id="'+uid+'nAB">'+RECT+blk(A)+blk(B)+'</mask>'
+    +'<mask id="'+uid+'nABC">'+RECT+blk(A)+blk(B)+blk(C)+'</mask></defs>';
+  const F='fill="var(--shade)" fill-opacity="0.32"';
+  const h=function(k){return shade.indexOf(k)>=0;};
+  if(h("VIII")) s+='<rect x="10" y="10" width="580" height="360" '+F+' mask="url(#'+uid+'nABC)"/>';
+  if(h("I"))   s+=circ(A)+' '+F+' mask="url(#'+uid+'nBC)"/>';
+  if(h("III")) s+=circ(B)+' '+F+' mask="url(#'+uid+'nAC)"/>';
+  if(h("VII")) s+=circ(C)+' '+F+' mask="url(#'+uid+'nAB)"/>';
+  if(h("II"))  s+=circ(B)+' '+F+' clip-path="url(#'+uid+'cA)" mask="url(#'+uid+'nC)"/>';
+  if(h("IV"))  s+=circ(C)+' '+F+' clip-path="url(#'+uid+'cA)" mask="url(#'+uid+'nB)"/>';
+  if(h("VI"))  s+=circ(C)+' '+F+' clip-path="url(#'+uid+'cB)" mask="url(#'+uid+'nA)"/>';
+  if(h("V"))   s+='<g clip-path="url(#'+uid+'cA)"><g clip-path="url(#'+uid+'cB)">'+circ(C)+' '+F+'/></g></g>';
+  s+=circ(A)+' fill="var(--cA)" fill-opacity="0.09" stroke="var(--cA)" stroke-width="1.7"/>';
+  s+=circ(B)+' fill="var(--cB)" fill-opacity="0.09" stroke="var(--cB)" stroke-width="1.7"/>';
+  s+=circ(C)+' fill="var(--cC)" fill-opacity="0.09" stroke="var(--cC)" stroke-width="1.7"/>';
+  const T=function(x,y,t,sz,col,it){return '<text x="'+x+'" y="'+y+'" text-anchor="middle" font-family="Georgia,serif" font-size="'+sz+'"'+(it?' font-style="italic"':'')+' fill="'+col+'">'+esc(t)+'</text>';};
+  s+=T(172,46,"A",20,"var(--cA)",true)+T(428,46,"B",20,"var(--cB)",true)+T(300,364,"C",20,"var(--cC)",true);
+  REG3.forEach(function(k){ const p=GEO.slots[k]; s+=T(p.x,p.y,k,18,"var(--muted)"); });
+  return s+"</svg>";
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Regions in two circles",
+ sub:"Start where the lesson does. Which numbered regions does the expression cover?",
+ gen:function(){
+   const keys=Object.keys(E2);
+   const key=pick(keys);
+   const others=shuffle(keys.filter(function(k){return sg(E2,k)!==sg(E2,key);})).slice(0,3);
+   const opts=[{label:cap1(regWords(E2[key].r)), correct:true,
+     note:pl(E2,key)+" covers "+regWords(E2[key].r)+"."}]
+     .concat(others.map(function(k){
+       return {label:cap1(regWords(E2[k].r)), note:"That is "+pl(E2,k)+"."};
+     }));
+   return {q:"Which regions represent "+st(nm(E2,key))+"?", svg:venn2({}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Do the two lists match",
+ sub:"Work out both region lists, then compare. That comparison is the whole proof.",
+ gen:function(){
+   const keys=Object.keys(E2);
+   const same=Math.random()<.5;
+   let a,b;
+   if(same){
+     const groups={};
+     keys.forEach(function(k){ (groups[sg(E2,k)]=groups[sg(E2,k)]||[]).push(k); });
+     const g=pick(Object.keys(groups).filter(function(s){return groups[s].length>1;}));
+     const two=shuffle(groups[g].slice(0)).slice(0,2); a=two[0]; b=two[1];
+   }else{
+     a=pick(keys);
+     b=pick(keys.filter(function(k){return sg(E2,k)!==sg(E2,a);}));
+   }
+   const d1=diff(E2[a].r,E2[b].r), d2=diff(E2[b].r,E2[a].r);
+   const opts=[
+     {label:"Yes \u2014 the two cover exactly the same regions", correct:same,
+      note:same?("Both come out as "+regWords(E2[a].r)+", so the two expressions name the same set for every choice of A and B."):("They do not match: "+pl(E2,a)+" is "+regWords(E2[a].r)+" and "+pl(E2,b)+" is "+regWords(E2[b].r)+".")},
+     {label:"No \u2014 the two cover different regions", correct:!same,
+      note:!same?("<b>"+pl(E2,a)+"</b> is "+regWords(E2[a].r)+"; <b>"+pl(E2,b)+"</b> is "+regWords(E2[b].r)+". "+(d1.length?(regWords(d1)+" is in the first and not the second."):(regWords(d2)+" is in the second and not the first."))):("Both come out as "+regWords(E2[a].r)+", so they do match.")},
+     {label:"Yes, but only for some choices of A and B",
+      note:"A general Venn diagram already covers every arrangement of A and B, so the answer never depends on which sets you pick."},
+     {label:"There is not enough information to decide",
+      note:"There is: work out each side's region list from the diagram and compare them."}
+   ];
+   return {q:"Are these two expressions the same set?",
+     big:st(nm(E2,a))+" &nbsp;and&nbsp; "+st(nm(E2,b)),
+     svg:venn2({}), opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"De Morgan's laws",
+ sub:"The two results the region method delivers in two circles.",
+ gen:function(){
+   const forms=[
+     {q:"Complete the law: "+st("("+Ai+" "+CAP+" "+Bi+")"+PR)+" = ?", ans:st(Ai+PR+" "+CUP+" "+Bi+PR),
+      bad:[[st(Ai+PR+" "+CAP+" "+Bi+PR),"That is "+regWords(E2.ApnBp.r)+", but ("+Ai+" "+CAP+" "+Bi+")"+PR+" is "+regWords(E2.AnBp.r)+"."],
+           [st(Ai+" "+CUP+" "+Bi),"That is "+regWords(E2.AuB.r)+", and no complement has been taken."],
+           [st(Ai+PR+" "+CAP+" "+Bi),"That is "+regWords(E2.ApnB.r)+"."]],
+      note:"Both sides cover "+regWords(E2.AnBp.r)+". When the prime crosses the bracket, "+CAP+" becomes "+CUP+"."},
+     {q:"Complete the law: "+st("("+Ai+" "+CUP+" "+Bi+")"+PR)+" = ?", ans:st(Ai+PR+" "+CAP+" "+Bi+PR),
+      bad:[[st(Ai+PR+" "+CUP+" "+Bi+PR),"That is "+regWords(E2.ApuBp.r)+", but ("+Ai+" "+CUP+" "+Bi+")"+PR+" is "+regWords(E2.AuBp.r)+"."],
+           [st(Ai+" "+CAP+" "+Bi),"That is "+regWords(E2.AnB.r)+", with no complement taken."],
+           [st(Ai+" "+CUP+" "+Bi+PR),"That is "+regWords(E2.AuBp2.r)+"."]],
+      note:"Both sides cover "+regWords(E2.AuBp.r)+" alone. The union becomes an intersection."},
+     {q:"Which of these statements is <b>true</b> for every pair of sets?",
+      ans:st("("+Ai+" "+CAP+" "+Bi+")"+PR+" = "+Ai+PR+" "+CUP+" "+Bi+PR),
+      bad:[[st("("+Ai+" "+CAP+" "+Bi+")"+PR+" = "+Ai+PR+" "+CAP+" "+Bi+PR),"Left side "+regWords(E2.AnBp.r)+", right side "+regWords(E2.ApnBp.r)+". Not the same."],
+           [st("("+Ai+" "+CUP+" "+Bi+")"+PR+" = "+Ai+PR+" "+CUP+" "+Bi+PR),"Left side "+regWords(E2.AuBp.r)+", right side "+regWords(E2.ApuBp.r)+"."],
+           [st(Ai+PR+" "+CAP+" "+Bi+" = "+Ai+" "+CAP+" "+Bi+PR),"Left side "+regWords(E2.ApnB.r)+", right side "+regWords(E2.AnBp2.r)+"."]],
+      note:"Both sides cover "+regWords(E2.AnBp.r)+", so the equality holds always."},
+     {q:"Someone claims "+st("("+Ai+" "+CUP+" "+Bi+")"+PR+" = "+Ai+PR+" "+CUP+" "+Bi+PR)+". Which region settles it?",
+      ans:"I", roman:true,
+      bad:[["II","Region II is in neither side, so it cannot separate them."],
+           ["IV","Region IV is in both sides, so it cannot separate them."],
+           ["No single region can settle it","Region I alone does it: it is in one side and not the other, and that is enough to disprove an equality."]],
+      note:"Region I is inside A, so it is not in ("+Ai+" "+CUP+" "+Bi+")"+PR+" \u2014 but it is outside B, so it <i>is</i> in "+Ai+PR+" "+CUP+" "+Bi+PR+". One region in one side and not the other disproves the claim."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, svg:venn2({}), opts:shuffle(distinctOpts(opts).slice(0,4)),
+     wide:!f.roman, roman:!!f.roman};
+ }
+},
+{
+ title:"Regions in three circles",
+ sub:"Same step, eight regions. Take the expression apart from the inside out.",
+ gen:function(){
+   const keys=Object.keys(E3);
+   const key=pick(keys);
+   const others=shuffle(keys.filter(function(k){return sg(E3,k)!==sg(E3,key);})).slice(0,3);
+   const opts=[{label:cap1(regWords(E3[key].r)), correct:true,
+     note:pl(E3,key)+" covers "+regWords(E3[key].r)+"."}]
+     .concat(others.map(function(k){
+       return {label:cap1(regWords(E3[k].r)), note:"That is "+pl(E3,k)+"."};
+     }));
+   return {q:"Which regions represent "+st(nm(E3,key))+"?", svg:venn3({}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Same set, or not",
+ sub:"Two expressions, two region lists, one comparison.",
+ gen:function(){
+   const keys=Object.keys(E3);
+   const same=Math.random()<.5;
+   let a,b;
+   if(same){ const fam=pick(FAM3); const two=shuffle(fam.slice(0)).slice(0,2); a=two[0]; b=two[1]; }
+   else { a=pick(keys); b=pick(keys.filter(function(k){return sg(E3,k)!==sg(E3,a);})); }
+   const d1=diff(E3[a].r,E3[b].r), d2=diff(E3[b].r,E3[a].r);
+   const opts=[
+     {label:"Yes \u2014 they cover exactly the same regions", correct:same,
+      note:same?("Both come out as "+regWords(E3[a].r)+", so the two expressions name the same set for every choice of A, B and C."):("They do not match: "+pl(E3,a)+" is "+regWords(E3[a].r)+" and "+pl(E3,b)+" is "+regWords(E3[b].r)+".")},
+     {label:"No \u2014 they cover different regions", correct:!same,
+      note:!same?("<b>"+pl(E3,a)+"</b> is "+regWords(E3[a].r)+"; <b>"+pl(E3,b)+"</b> is "+regWords(E3[b].r)+". "+(d1.length?(cap1(regWords(d1))+" is in the first and not the second."):(cap1(regWords(d2))+" is in the second and not the first."))):("Both come out as "+regWords(E3[a].r)+", so they do match.")},
+     {label:"Yes, but only when all three sets overlap",
+      note:"The general diagram already allows for every arrangement, so the verdict does not depend on how the sets happen to sit."},
+     {label:"A Venn diagram cannot settle this",
+      note:"It can, and that is the point of the method: matching region lists prove equality for every case at once."}
+   ];
+   return {q:"Are these two expressions the same set?",
+     big:st(nm(E3,a))+"<br>and<br>"+st(nm(E3,b)),
+     svg:venn3({}), opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"The region that settles it",
+ sub:"To disprove an equality you only need one region on one side and not the other.",
+ gen:function(){
+   const keys=Object.keys(E3);
+   let a,b,d,tries=0;
+   do{
+     a=pick(keys); b=pick(keys);
+     d=diff(E3[a].r,E3[b].r);
+     tries++;
+   }while((a===b||d.length!==1)&&tries<400);
+   if(d.length!==1) { a="AuBnC"; b="A3"; d=diff(E3[a].r,E3[b].r); }
+   const w=d[0];
+   const others=shuffle(REG3.filter(function(r){return r!==w;})).slice(0,3);
+   const inA=function(r){return E3[a].r.indexOf(r)>=0;};
+   const inB=function(r){return E3[b].r.indexOf(r)>=0;};
+   const opts=[{label:w, correct:true,
+     note:"Region "+w+" is in "+pl(E3,a)+" ("+regWords(E3[a].r)+") and not in "+pl(E3,b)+" ("+regWords(E3[b].r)+"). One such region is enough."}]
+     .concat(others.map(function(r){
+       const st1=inA(r)?"in":"not in", st2=inB(r)?"in":"not in";
+       return {label:r, note:"Region "+r+" is "+st1+" the first and "+st2+" the second"+((inA(r)===inB(r))?", so it does not separate them.":", so it is in the second and not the first \u2014 the question asked the other way round.")};
+     }));
+   return {q:"Which region is in "+st(nm(E3,a))+" but <b>not</b> in "+st(nm(E3,b))+"?",
+     svg:venn3({}), opts:shuffle(opts), roman:true};
+ }
+},
+{
+ title:"The odd one out",
+ sub:"Three of these name the same set. One does not.",
+ gen:function(){
+   const fam=pick(FAM3);
+   const three=shuffle(fam.slice(0)).slice(0,3);
+   const target=sg(E3,fam[0]);
+   const odd=pick(Object.keys(E3).filter(function(k){return sg(E3,k)!==target;}));
+   const opts=[{label:st(nm(E3,odd)), correct:true,
+     note:"The other three all cover "+regWords(E3[fam[0]].r)+". This one covers "+regWords(E3[odd].r)+"."}]
+     .concat(three.map(function(k){
+       return {label:st(nm(E3,k)), note:"That one does cover "+regWords(E3[k].r)+", the same as two of the others."};
+     }));
+   return {q:"Three of these name the same set. <b>Which one does not?</b>",
+     svg:venn3({}), opts:shuffle(distinctOpts(opts).slice(0,4)), sym:true};
+ }
+},
+{
+ title:"The distributive laws",
+ sub:"The three-set results the region method delivers.",
+ gen:function(){
+   const forms=[
+     {q:"Complete the law: "+st(Ai+" "+CUP+" ("+Bi+" "+CAP+" "+Ci+")")+" = ?",
+      ans:st(nm(E3,"dAuB")),
+      bad:[[st(nm(E3,"AuB_nC")),"That covers "+regWords(E3.AuB_nC.r)+", but the left side covers "+regWords(E3.AuBnC.r)+"."],
+           [st(nm(E3,"dAnB")),"That covers "+regWords(E3.dAnB.r)+" \u2014 it is the other distributive law."],
+           [st(nm(E3,"AuBuC")),"That covers "+regWords(E3.AuBuC.r)+"."]],
+      note:"Both sides cover "+regWords(E3.AuBnC.r)+". A is joined to each piece of the bracket separately."},
+     {q:"Complete the law: "+st(Ai+" "+CAP+" ("+Bi+" "+CUP+" "+Ci+")")+" = ?",
+      ans:st(nm(E3,"dAnB")),
+      bad:[[st(nm(E3,"AnB_uC")),"That covers "+regWords(E3.AnB_uC.r)+", but the left side covers "+regWords(E3.AnBuC.r)+"."],
+           [st(nm(E3,"dAuB")),"That covers "+regWords(E3.dAuB.r)+" \u2014 the other law."],
+           [st(nm(E3,"ABC")),"That covers "+regWords(E3.ABC.r)+" only."]],
+      note:"Both sides cover "+regWords(E3.AnBuC.r)+"."},
+     {q:"Which of these holds for every choice of A, B and C?",
+      ans:st(pl(E3,"AnBuC")+" = "+pl(E3,"dAnB")),
+      bad:[[st(pl(E3,"AuBnC")+" = "+pl(E3,"AuB_nC")),regWords(E3.AuBnC.r)+" against "+regWords(E3.AuB_nC.r)+". Not the same."],
+           [st(pl(E3,"AnBuC")+" = "+pl(E3,"AnB_uC")),regWords(E3.AnBuC.r)+" against "+regWords(E3.AnB_uC.r)+"."],
+           [st(pl(E3,"AuBuCp")+" = "+pl(E3,"ApuBpuCp")),regWords(E3.AuBuCp.r)+" against "+regWords(E3.ApuBpuCp.r)+"."]],
+      note:"Both sides cover "+regWords(E3.AnBuC.r)+", so the equality is a law rather than a coincidence."},
+     {q:"De Morgan's law extended to three sets: "+st("("+Ai+" "+CUP+" "+Bi+" "+CUP+" "+Ci+")"+PR)+" = ?",
+      ans:st(nm(E3,"ApBpCp")),
+      bad:[[st(nm(E3,"ApuBpuCp")),"That covers "+regWords(E3.ApuBpuCp.r)+", but the left side is "+regWords(E3.AuBuCp.r)+" alone."],
+           [st(nm(E3,"ABC")),"That is the centre, not the outside."],
+           [st(nm(E3,"ABCp")),"That covers "+regWords(E3.ABCp.r)+" \u2014 it is the complement of the <i>intersection</i>."]],
+      note:"Being outside the union of all three means being outside each of them, so every union turns into an intersection. Both sides cover "+regWords(E3.AuBuCp.r)+"."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, svg:venn3({}), opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Finish the argument",
+ sub:"Two region lists and a conclusion. Supply whichever piece is missing.",
+ gen:function(){
+   const same=Math.random()<.5;
+   let a,b;
+   if(same){ const fam=pick(FAM3); const two=shuffle(fam.slice(0)).slice(0,2); a=two[0]; b=two[1]; }
+   else { const keys=Object.keys(E3); a=pick(keys); b=pick(keys.filter(function(k){return sg(E3,k)!==sg(E3,a);})); }
+   const blankLine=Math.random()<.5;
+   if(blankLine){
+     const others=shuffle(Object.keys(E3).filter(function(k){return sg(E3,k)!==sg(E3,b);})).slice(0,3);
+     const opts=[{label:cap1(regWords(E3[b].r)), correct:true,
+       note:pl(E3,b)+" covers "+regWords(E3[b].r)+", "+(same?"the same list as the line above, so the two sets are equal.":"which is not the list above, so the two sets are different.")}]
+       .concat(others.map(function(k){return {label:cap1(regWords(E3[k].r)), note:"That is "+pl(E3,k)+"."};}));
+     return {q:"Fill in the missing line of the argument.",
+       proof:"<div>"+pl(E3,a)+" represents "+regWords(E3[a].r)+".</div>"
+            +"<div>"+pl(E3,b)+" represents <span class='blank'></span>.</div>"
+            +"<div>So the two sets are "+(same?"equal":"not equal")+".</div>",
+       svg:venn3({}), opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+   }
+   const d1=diff(E3[a].r,E3[b].r), d2=diff(E3[b].r,E3[a].r);
+   const opts=[
+     {label:"The two sets are equal, for every choice of A, B and C", correct:same,
+      note:same?"Matching region lists cover every possible arrangement of the three sets at once, so this is a proof and not a spot check."
+                :("The lists differ: "+(d1.length?(regWords(d1)+" appears in the first and not the second."):(regWords(d2)+" appears in the second and not the first."))) },
+     {label:"The two sets are not equal", correct:!same,
+      note:!same?("The two lists are different, and "+(d1.length?(regWords(d1)+" is in the first and not the second"):(regWords(d2)+" is in the second and not the first"))+", which is all it takes.")
+                :"The two lists are identical, so the sets are equal."},
+     {label:"The two sets are equal only for certain choices of A, B and C",
+      note:"The general diagram already accounts for every arrangement, so the answer is the same in all of them."},
+     {label:"Nothing follows \u2014 region lists cannot prove set equality",
+      note:"They can. Two sets covering the same regions of a general diagram contain exactly the same elements, whatever the sets are."}
+   ];
+   return {q:"What conclusion follows?",
+     proof:"<div>"+pl(E3,a)+" represents "+regWords(E3[a].r)+".</div>"
+          +"<div>"+pl(E3,b)+" represents "+regWords(E3[b].r)+".</div>"
+          +"<div>So <span class='blank'></span>.</div>",
+     svg:venn3({}), opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"Prove or disprove",
+ sub:"A claim, a verdict, and the region evidence that backs it.",
+ gen:function(){
+   const same=Math.random()<.5;
+   let a,b;
+   if(same){ const fam=pick(FAM3); const two=shuffle(fam.slice(0)).slice(0,2); a=two[0]; b=two[1]; }
+   else { const keys=Object.keys(E3); a=pick(keys); b=pick(keys.filter(function(k){return sg(E3,k)!==sg(E3,a);})); }
+   /* when the claim is true, the "false" option must cite a plausible wrong list
+      rather than printing the same list twice, which would give the answer away */
+   const decoy=pick(Object.keys(E3).filter(function(k){return sg(E3,k)!==sg(E3,a);}));
+   const shownRight=same?E3[decoy].r:E3[b].r;
+   const opts=[
+     {label:"True \u2014 both sides cover "+regWords(E3[a].r), correct:same,
+      note:same?"Identical region lists, so the claim holds for every choice of the three sets."
+                :("The left side covers "+regWords(E3[a].r)+" but the right side covers "+regWords(E3[b].r)+".")},
+     {label:"False \u2014 the left covers "+regWords(E3[a].r)+", the right covers "+regWords(shownRight), correct:!same,
+      note:!same?"Different region lists, and one differing region is enough to sink the claim."
+                :("The verdict and the left-hand list are wrong together: "+pl(E3,b)+" covers "+regWords(E3[b].r)+", not "+regWords(shownRight)+", so both sides match and the claim holds.")},
+     {label:"True, but only when none of the three sets is empty",
+      note:"Whether a region happens to be occupied has no effect on which regions an expression covers."},
+     {label:"Neither \u2014 a general diagram cannot decide a claim like this",
+      note:"It can, and it decides it for every case at once. That is exactly what makes it a proof."}
+   ];
+   return {q:"Prove or disprove the claim.",
+     big:st(nm(E3,a)+" = "+nm(E3,b)),
+     svg:venn3({}), opts:shuffle(opts), wide:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {two:true, a:"AnBp", b:"ApuBp",
+   note:"The worksheet's first check. Both sides come out as regions I, III and IV, so the two expressions name the same set \u2014 for any A and any B, not just for a lucky example."},
+  {two:true, a:"AuBp", b:"ApnBp",
+   note:"The second check. Both sides are region IV alone. Together with the first, these are De Morgan's two laws, and the region lists are the proof of them."},
+  {two:false, a:"AuBnC", b:"dAuB",
+   note:"The same method in three circles. Two very different-looking expressions, one identical list of five regions. This is the distributive law."},
+  {two:false, a:"AuBnC", b:"AuB_nC",
+   note:"Now a claim that fails. Regions I and II are in the left expression and not in the right, so the two are not equal. One region out of place is all it takes."},
+  {two:false, a:"ABCp", b:"ApuBpuCp",
+   note:"De Morgan again, stretched to three sets. Not being in all three is the same as missing from at least one, and both sides cover everything except region V."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  const E=h.two?E2:E3, draw=h.two?venn2:venn3;
+  const ra=E[h.a].r, rb=E[h.b].r;
+  document.getElementById("capL").innerHTML=E[h.a].n;
+  document.getElementById("capR").innerHTML=E[h.b].n;
+  document.getElementById("svgL").innerHTML=draw({shade:ra});
+  document.getElementById("svgR").innerHTML=draw({shade:rb});
+  document.getElementById("regL").innerHTML="covers <b>"+ra.join(", ")+"</b>";
+  document.getElementById("regR").innerHTML="covers <b>"+rb.join(", ")+"</b>";
+  const same=ra.join()===rb.join();
+  const d=same?[]:diff(ra,rb).concat(diff(rb,ra));
+  document.getElementById("verdict").innerHTML= same
+    ? '<span class="badge same">same regions</span> The two expressions name the same set, for every choice of the sets involved.'
+    : '<span class="badge diff">different regions</span> '+cap1(regWords(d))+" separate"+(d.length===1?"s":"")+" them, so the two are not equal.";
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    const E=h.two?E2:E3;
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+E[h.a].n+" = "+E[h.b].n+"?</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.big?'<div class="big">'+q.big+'</div>':'')
+    +(q.proof?'<div class="proof">'+q.proof+'</div>':'')
+    +(q.svg?'<div class="chart">'+q.svg+'</div>':'');
+  const optEl=document.getElementById("options");
+  optEl.style.gridTemplateColumns=q.wide?"1fr":"";
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.sym?" sym":"")+(q.roman?" roman":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
