@@ -1,0 +1,732 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Prime Ladder — finish the parentheses, then flip</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --pr:#8E3B5E;
+    --pr-bg:#F8EAF0;
+    --cA:#0B6E77;
+    --cB:#A66A00;
+    --shade:#8E3B5E;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--pr)}
+  :focus-visible{outline:3px solid var(--pr); outline-offset:2px; border-radius:3px}
+
+  .st{font-family:var(--serif); font-size:1.04em}
+  .st i{font-style:italic}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--pr)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:16px 12px 4px; background:var(--card)}
+  .demo-top svg{display:block; width:100%; height:auto; max-width:600px; margin:0 auto}
+  .readout{display:flex; flex-wrap:wrap; background:var(--rule); border-top:1px solid var(--rule); gap:1px}
+  .readout div{flex:1 1 200px; background:var(--card); padding:12px 16px; font-size:15px}
+  .readout .k{font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:3px}
+  .readout .val{font-family:var(--serif); font-size:17px}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-family:var(--serif); font-size:16px; padding:5px 15px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--pr); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:58px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--pr); background:var(--pr-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--pr)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .q{font-size:17px; max-width:62ch; margin:0 auto 12px; color:#31404F}
+  .stem .big{margin:12px auto 16px; font-family:var(--serif); font-size:clamp(21px,4.6vw,30px); line-height:1.45; max-width:32ch}
+  .chart{margin:0 auto 14px; max-width:600px}
+  .chart svg{display:block; width:100%; height:auto}
+  .twoset{margin:10px auto 16px; max-width:460px; text-align:left; font-family:var(--serif); font-size:clamp(16px,3.2vw,20px); line-height:1.7}
+  .pairbox{margin:10px auto 16px; max-width:460px; border:1px solid var(--rule); border-radius:9px; overflow:hidden; background:var(--paper)}
+  .pairbox div{padding:10px 16px; font-family:var(--serif); font-size:clamp(16px,3.2vw,19px); text-align:left}
+  .pairbox div+div{border-top:1px solid var(--rule)}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 20px 20px}
+  @media (max-width:640px){.options{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt.sym .v{font-family:var(--serif); font-size:21px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>( )′</span> The Prime Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 3 · compound set operations, complements of unions and intersections</p>
+    <h1>Finish the parentheses, then flip.</h1>
+    <p class="lede">A prime outside a bracket applies to whatever the bracket produced, not to the letters inside it. So <b>(A ∪ B)′</b> means build the union first and complement the result. <b>A′ ∪ B</b> means complement A first, then union. Same three symbols, different order, different set — and the order is written right there in the parentheses.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroChart"></div></div>
+      <div class="readout">
+        <div><span class="k">Regions shaded</span><span class="val" id="hRegions"></span></div>
+        <div><span class="k">Result</span><span class="val" id="hResult"></span></div>
+      </div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>A prime does not distribute the way a minus sign does.</b> It is tempting to turn (A ∪ B)′ into A′ ∪ B′ the way you would turn −(x + y) into −x − y. It does not work: the operation flips too. (A ∪ B)′ is A′ <i>∩</i> B′, and (A ∩ B)′ is A′ <i>∪</i> B′. Click the first two buttons above and watch the shading stay put; click the third and watch it move.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rung 1 is only about reading order. Rungs 2–5 compute the two De Morgan pairs and then notice the pattern. Rungs 6–7 handle the mixed forms where one letter is primed and the other is not. Rungs 8–10 work from the diagram and finish with the full table from the lesson.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Wrong answers come from real steps</h3><p>Each distractor is the set you get from complementing at the wrong moment, or from keeping the operation when it should have flipped.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Two rules that keep coming back</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>De Morgan's laws</h3><p>The complement of a union is the intersection of the complements, and the other way round. You will meet the same two rules again in logic and in probability.</p></div>
+      <div class="step"><span class="n">02</span><h3>“Not both” and “neither” differ</h3><p>(A ∩ B)′ says not both. (A ∪ B)′ says neither. In English they blur together; on the diagram they shade completely different areas.</p></div>
+      <div class="step"><span class="n">03</span><h3>The regions do the work</h3><p>Every expression here is a list of regions. Once you can name the regions, the roster is copying, and the shading is coloring in.</p></div>
+    </div>
+    <p class="closing">Read the parentheses first. When a prime crosses a bracket, the operation inside it flips.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Prime Ladder · (A ∪ B)′ = A′ ∩ B′ · (A ∩ B)′ = A′ ∪ B′ · a prime outside a bracket flips the operation inside it</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function st(s){return '<span class="st">'+s+'</span>';}
+const EMP="\u2205", CUP="\u222a", CAP="\u2229", PR="\u2032";
+function rostRaw(a){return a.length?("{"+a.join(", ")+"}"):EMP;}
+function rost(a){return st(rostRaw(a));}
+const LET="abcdefghijklmnopqrstuvwxyz".split("");
+function lets(k){return shuffle(LET.slice(0)).slice(0,k);}
+function numsK(k,lo,hi){const s=[];while(s.length<k){const v=ri(lo,hi); if(s.indexOf(v)<0)s.push(v);}return s;}
+function asc(a){return a.slice(0).sort(function(x,y){return x-y;});}
+function sortLike(useNums,a){return useNums?asc(a):a;}
+
+/* ================= Venn renderer ================= */
+let svgUid=0;
+function vennSVG(o){
+  const uid="v"+(++svgUid);
+  const shade=o.shade||[];
+  let s='<svg viewBox="0 0 600 320" role="img" aria-label="Venn diagram">';
+  s+='<rect x="10" y="10" width="580" height="300" rx="4" fill="none" stroke="var(--ink)" stroke-width="1.3"/>';
+  s+='<text x="26" y="34" font-family="Georgia,serif" font-style="italic" font-size="17" fill="var(--ink)">U</text>';
+  const txt=function(x,y,t,sz,col,it){
+    return '<text x="'+x+'" y="'+y+'" text-anchor="middle" font-family="Georgia,serif" font-size="'+(sz||15)+'"'
+      +(it?' font-style="italic"':'')+' fill="'+(col||"var(--ink)")+'">'+esc(t)+'</text>';
+  };
+  const col=function(cx,cy,items){
+    const n=items.length; if(!n)return "";
+    const sp=23, y0=cy-(n-1)*sp/2;
+    return items.map(function(t,i){return txt(cx,y0+i*sp+5,t,15);}).join("");
+  };
+  const ax=220, bx=330, cy=160, r=100;
+  s+='<defs>'
+    +'<clipPath id="'+uid+'cA"><circle cx="'+ax+'" cy="'+cy+'" r="'+r+'"/></clipPath>'
+    +'<mask id="'+uid+'nB"><rect x="10" y="10" width="580" height="300" fill="#fff"/><circle cx="'+bx+'" cy="'+cy+'" r="'+r+'" fill="#000"/></mask>'
+    +'<mask id="'+uid+'nA"><rect x="10" y="10" width="580" height="300" fill="#fff"/><circle cx="'+ax+'" cy="'+cy+'" r="'+r+'" fill="#000"/></mask>'
+    +'<mask id="'+uid+'nAB"><rect x="10" y="10" width="580" height="300" fill="#fff"/>'
+    +'<circle cx="'+ax+'" cy="'+cy+'" r="'+r+'" fill="#000"/><circle cx="'+bx+'" cy="'+cy+'" r="'+r+'" fill="#000"/></mask>'
+    +'</defs>';
+  const SH='fill="var(--shade)" fill-opacity="0.30"';
+  if(shade.indexOf("IV")>=0) s+='<rect x="10" y="10" width="580" height="300" '+SH+' mask="url(#'+uid+'nAB)"/>';
+  if(shade.indexOf("I")>=0)  s+='<circle cx="'+ax+'" cy="'+cy+'" r="'+r+'" '+SH+' mask="url(#'+uid+'nB)"/>';
+  if(shade.indexOf("III")>=0)s+='<circle cx="'+bx+'" cy="'+cy+'" r="'+r+'" '+SH+' mask="url(#'+uid+'nA)"/>';
+  if(shade.indexOf("II")>=0) s+='<circle cx="'+bx+'" cy="'+cy+'" r="'+r+'" '+SH+' clip-path="url(#'+uid+'cA)"/>';
+  s+='<circle cx="'+ax+'" cy="'+cy+'" r="'+r+'" fill="var(--cA)" fill-opacity="0.11" stroke="var(--cA)" stroke-width="1.6"/>';
+  s+='<circle cx="'+bx+'" cy="'+cy+'" r="'+r+'" fill="var(--cB)" fill-opacity="0.11" stroke="var(--cB)" stroke-width="1.6"/>';
+  s+=txt(165,46,"A",17,"var(--cA)",true);
+  s+=txt(385,46,"B",17,"var(--cB)",true);
+  if(o.roman){
+    s+=txt(175,98,"I",15,"var(--muted)");
+    s+=txt(275,98,"II",15,"var(--muted)");
+    s+=txt(375,98,"III",15,"var(--muted)");
+    s+=txt(510,100,"IV",15,"var(--muted)");
+  }
+  const R=o.regions||{};
+  s+=col(175,168,R.I||[]);
+  s+=col(275,168,R.II||[]);
+  s+=col(375,168,R.III||[]);
+  s+=col(510,168,R.IV||[]);
+  return s+"</svg>";
+}
+
+function makeVenn(o){
+  o=o||{};
+  const useNums=(o.useNums!==undefined)?o.useNums:(Math.random()<.55);
+  const n1=o.n1!==undefined?o.n1:ri(1,3);
+  const n2=o.n2!==undefined?o.n2:ri(1,2);
+  const n3=o.n3!==undefined?o.n3:ri(1,3);
+  const n4=o.n4!==undefined?o.n4:ri(1,3);
+  const total=n1+n2+n3+n4;
+  const pool=useNums?shuffle(numsK(total,1,20)):lets(total);
+  let k=0;
+  const grab=function(m){const out=pool.slice(k,k+m); k+=m; return sortLike(useNums,out);};
+  const I=grab(n1), II=grab(n2), III=grab(n3), IV=grab(n4);
+  return {useNums:useNums, I:I, II:II, III:III, IV:IV,
+    A:sortLike(useNums,I.concat(II)), B:sortLike(useNums,II.concat(III)),
+    U:sortLike(useNums,I.concat(II,III,IV)),
+    regions:{I:I,II:II,III:III,IV:IV}};
+}
+
+/* ============ expressions, each as a list of regions ============ */
+const A="<i>A</i>", B="<i>B</i>";
+const EXPR={
+  "uni":      {n:A+" "+CUP+" "+B,                    r:["I","II","III"]},
+  "uniPr":    {n:"("+A+" "+CUP+" "+B+")"+PR,         r:["IV"]},
+  "int":      {n:A+" "+CAP+" "+B,                    r:["II"]},
+  "intPr":    {n:"("+A+" "+CAP+" "+B+")"+PR,         r:["I","III","IV"]},
+  "ApIntBp":  {n:A+PR+" "+CAP+" "+B+PR,              r:["IV"]},
+  "ApUniBp":  {n:A+PR+" "+CUP+" "+B+PR,              r:["I","III","IV"]},
+  "ApIntB":   {n:A+PR+" "+CAP+" "+B,                 r:["III"]},
+  "AIntBp":   {n:A+" "+CAP+" "+B+PR,                 r:["I"]},
+  "AUniBp":   {n:A+" "+CUP+" "+B+PR,                 r:["I","II","IV"]},
+  "ApUniB":   {n:A+PR+" "+CUP+" "+B,                 r:["II","III","IV"]},
+  "Ap":       {n:A+PR,                               r:["III","IV"]},
+  "Bp":       {n:B+PR,                               r:["I","IV"]}
+};
+function sig(k){return EXPR[k].r.join(",");}
+function nameOf(k){return EXPR[k].n;}
+function plain(k){return EXPR[k].n.replace(/<[^>]+>/g,"");}
+function evalK(v,k){
+  let out=[];
+  EXPR[k].r.forEach(function(rg){ out=out.concat(v[rg]); });
+  return sortLike(v.useNums,out);
+}
+const REGWORDS={
+  "I":"region I","II":"region II","III":"region III","IV":"region IV",
+  "I,II,III":"regions I, II and III","I,III,IV":"regions I, III and IV",
+  "I,II,IV":"regions I, II and IV","II,III,IV":"regions II, III and IV",
+  "III,IV":"regions III and IV","I,IV":"regions I and IV","I,III":"regions I and III",
+  "I,II,III,IV":"all four regions"
+};
+/* one representative per distinct region signature, for the diagram rungs */
+const CANON=["uni","uniPr","int","intPr","ApIntB","AIntBp","AUniBp","ApUniB","Ap","Bp"];
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"What comes first",
+ sub:"Parentheses before primes. A prime with no bracket applies to its own letter only.",
+ gen:function(){
+   const bank=[
+     {e:"("+A+" "+CUP+" "+B+")"+PR,
+      ans:"Build "+A+" "+CUP+" "+B+" first, then complement the whole result",
+      bad:[["Complement "+A+" first, then union with "+B,"That would be written "+A+PR+" "+CUP+" "+B+", with no bracket."],
+           ["Complement both letters, then union them","That would be "+A+PR+" "+CUP+" "+B+PR+", which is a different set."],
+           ["Complement both letters, then intersect them","That is "+A+PR+" "+CAP+" "+B+PR+" \u2014 which happens to give the same answer, but it is not what the expression tells you to do."]],
+      note:"The prime sits outside the bracket, so it applies to whatever the bracket produced."},
+     {e:A+PR+" "+CUP+" "+B,
+      ans:"Complement "+A+" first, then union that with "+B,
+      bad:[["Build "+A+" "+CUP+" "+B+" first, then complement it","That needs a bracket: ("+A+" "+CUP+" "+B+")"+PR+"."],
+           ["Complement both letters, then union them","Only "+A+" carries a prime here. "+B+" is untouched."],
+           ["Complement "+B+" first, then union with "+A,"The prime is attached to "+A+", not to "+B+"."]],
+      note:"With no bracket, the prime applies only to the letter it is attached to."},
+     {e:A+" "+CAP+" "+B+PR,
+      ans:"Complement "+B+" first, then intersect that with "+A,
+      bad:[["Build "+A+" "+CAP+" "+B+" first, then complement it","That needs a bracket: ("+A+" "+CAP+" "+B+")"+PR+"."],
+           ["Complement "+A+" first, then intersect with "+B,"The prime is on "+B+", not on "+A+"."],
+           ["Complement both letters, then intersect them","Only "+B+" carries a prime here."]],
+      note:"The prime is attached to "+B+" alone, so "+A+" goes into the intersection unchanged."},
+     {e:"("+A+" "+CAP+" "+B+")"+PR,
+      ans:"Build "+A+" "+CAP+" "+B+" first, then complement the whole result",
+      bad:[["Complement "+A+" first, then intersect with "+B,"That would be "+A+PR+" "+CAP+" "+B+", with no bracket."],
+           ["Complement both letters, then intersect them","That is "+A+PR+" "+CAP+" "+B+PR+", a different set entirely."],
+           ["Complement both letters, then union them","That is "+A+PR+" "+CUP+" "+B+PR+" \u2014 equal in value, but not what the expression says to do."]],
+      note:"The bracket is finished before the prime outside it is applied."}
+   ];
+   const it=pick(bank);
+   const opts=[{label:it.ans,correct:true,note:it.note}]
+     .concat(it.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:"Which order does this expression tell you to work in?", big:st(it.e),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"(A ∪ B)′",
+ sub:"Union first. Then take everything in U that the union missed.",
+ gen:function(){
+   const v=makeVenn({n4:ri(1,3)});
+   const opts=[
+     {label:rost(evalK(v,"uniPr")), correct:true,
+      note:A+" "+CUP+" "+B+" = "+rostRaw(evalK(v,"uni"))+". Everything in U outside that is "+rostRaw(evalK(v,"uniPr"))+" \u2014 the elements in neither circle."},
+     {label:rost(evalK(v,"uni")), note:"That is "+A+" "+CUP+" "+B+" itself. The prime still has to be applied."},
+     {label:rost(evalK(v,"ApUniBp")), note:"That is "+A+PR+" "+CUP+" "+B+PR+". The prime crossed the bracket but the operation did not flip \u2014 it should become "+CAP+"."},
+     {label:rost(evalK(v,"intPr")), note:"That is ("+A+" "+CAP+" "+B+")"+PR+". Check whether the bracket holds a union or an intersection."},
+     {label:rost(evalK(v,"Ap")), note:"That is "+A+PR+" alone."}
+   ];
+   return {q:"Find "+st("("+A+" "+CUP+" "+B+")"+PR)+".",
+     two:"<i>U</i> = "+rostRaw(v.U)+"<br><i>A</i> = "+rostRaw(v.A)+"<br><i>B</i> = "+rostRaw(v.B),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"A′ ∩ B′",
+ sub:"Both complements first, then keep only what they share.",
+ gen:function(){
+   const v=makeVenn({n4:ri(1,3)});
+   const opts=[
+     {label:rost(evalK(v,"ApIntBp")), correct:true,
+      note:A+PR+" = "+rostRaw(evalK(v,"Ap"))+" and "+B+PR+" = "+rostRaw(evalK(v,"Bp"))+". The elements in both lists are "+rostRaw(evalK(v,"ApIntBp"))+"."},
+     {label:rost(evalK(v,"ApUniBp")), note:"That is "+A+PR+" "+CUP+" "+B+PR+" \u2014 everything in either complement. The question asks for what they share."},
+     {label:rost(evalK(v,"Ap")), note:"That is "+A+PR+" alone. It still has to be intersected with "+B+PR+"."},
+     {label:rost(evalK(v,"Bp")), note:"That is "+B+PR+" alone."},
+     {label:rost(evalK(v,"int")), note:"That is "+A+" "+CAP+" "+B+", with no complements taken at all."}
+   ];
+   return {q:"Find "+st(A+PR+" "+CAP+" "+B+PR)+".",
+     two:"<i>U</i> = "+rostRaw(v.U)+"<br><i>A</i> = "+rostRaw(v.A)+"<br><i>B</i> = "+rostRaw(v.B),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Why those two matched",
+ sub:"The last two rungs kept giving the same answer. That is a law, not a coincidence.",
+ gen:function(){
+   const v=makeVenn({n4:ri(1,3)});
+   const forms=[
+     {q:"Both expressions gave the same answer here. What does that tell you?",
+      pair:"("+A+" "+CUP+" "+B+")"+PR+" = "+rostRaw(evalK(v,"uniPr"))+"<br>"+A+PR+" "+CAP+" "+B+PR+" = "+rostRaw(evalK(v,"ApIntBp")),
+      ans:"They are equal for every pair of sets \u2014 it is one of De Morgan's laws",
+      bad:[["It is a coincidence for these particular sets","Try any sets you like: both expressions name the elements in neither circle, region IV."],
+           ["They match only when A and B overlap","Region IV is the answer either way, overlap or not."],
+           ["They match only when U is finite","The regions argument does not depend on how big U is."]],
+      note:"Being outside the union means being outside A and outside B at the same time. Both expressions shade region IV."},
+     {q:"Which expression is another name for "+st("("+A+" "+CUP+" "+B+")"+PR)+"?",
+      ans:st(A+PR+" "+CAP+" "+B+PR),
+      bad:[[st(A+PR+" "+CUP+" "+B+PR),"That is ("+A+" "+CAP+" "+B+")"+PR+". When a prime crosses the bracket, the operation flips."],
+           [st(A+PR+" "+CAP+" "+B),"That is region III \u2014 the part of B outside A."],
+           [st(A+" "+CAP+" "+B+PR),"That is region I \u2014 the part of A outside B."]],
+      note:"Outside the union means outside A <i>and</i> outside B, so the union becomes an intersection."},
+     {q:"Which expression is another name for "+st("("+A+" "+CAP+" "+B+")"+PR)+"?",
+      ans:st(A+PR+" "+CUP+" "+B+PR),
+      bad:[[st(A+PR+" "+CAP+" "+B+PR),"That is ("+A+" "+CUP+" "+B+")"+PR+", region IV only. Not being in both is weaker than being in neither."],
+           [st(A+PR+" "+CUP+" "+B),"That is regions II, III and IV."],
+           [st(A+" "+CUP+" "+B+PR),"That is regions I, II and IV."]],
+      note:"Not being in both means missing from A <i>or</i> missing from B, so the intersection becomes a union."},
+     {q:"A student writes ("+A+" "+CUP+" "+B+")"+PR+" = "+A+PR+" "+CUP+" "+B+PR+". What went wrong?",
+      ans:"The prime was distributed but the operation was not flipped",
+      bad:[["Nothing \u2014 that is De Morgan's law","De Morgan flips the operation: ("+A+" "+CUP+" "+B+")"+PR+" = "+A+PR+" "+CAP+" "+B+PR+"."],
+           ["The prime should not have been distributed at all","It can be distributed, as long as "+CUP+" becomes "+CAP+"."],
+           ["The two letters should have been swapped","Order is not the issue. The operation between them is."]],
+      note:"("+A+" "+CUP+" "+B+")"+PR+" is region IV; "+A+PR+" "+CUP+" "+B+PR+" is regions I, III and IV. Very different sets."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, pair:f.pair||null,
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"The other pair",
+ sub:"(A ∩ B)′ is “not in both.” It keeps everything except the overlap.",
+ gen:function(){
+   const v=makeVenn({n4:ri(1,3)});
+   const which=Math.random()<.5?"intPr":"ApUniBp";
+   const opts=[
+     {label:rost(evalK(v,which)), correct:true,
+      note:which==="intPr"
+        ? (A+" "+CAP+" "+B+" = "+rostRaw(evalK(v,"int"))+", so everything else in U is "+rostRaw(evalK(v,"intPr"))+" \u2014 regions I, III and IV.")
+        : (A+PR+" = "+rostRaw(evalK(v,"Ap"))+" and "+B+PR+" = "+rostRaw(evalK(v,"Bp"))+". Putting them together gives "+rostRaw(evalK(v,"ApUniBp"))+".")},
+     {label:rost(evalK(v,"uniPr")), note:"That is region IV only, which is ("+A+" "+CUP+" "+B+")"+PR+" \u2014 the elements in <i>neither</i> set. Not being in both is a weaker condition than being in neither."},
+     {label:rost(evalK(v,"int")), note:"That is "+A+" "+CAP+" "+B+" itself, the overlap. The answer is everything but that."},
+     {label:rost(evalK(v,"uni")), note:"That is "+A+" "+CUP+" "+B+"."},
+     {label:rost(evalK(v,"Ap")), note:"That is "+A+PR+" alone."}
+   ];
+   return {q:"Find "+st(nameOf(which))+".",
+     two:"<i>U</i> = "+rostRaw(v.U)+"<br><i>A</i> = "+rostRaw(v.A)+"<br><i>B</i> = "+rostRaw(v.B),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"One region only",
+ sub:"A′ ∩ B and A ∩ B′ each land on a single region. Which one depends on where the prime sits.",
+ gen:function(){
+   const v=makeVenn({n4:ri(1,2)});
+   const which=Math.random()<.5?"ApIntB":"AIntBp";
+   const otherK=which==="ApIntB"?"AIntBp":"ApIntB";
+   const words=which==="ApIntB"
+     ? "not in A and in B, which is the part of circle B outside circle A \u2014 region III"
+     : "in A and not in B, which is the part of circle A outside circle B \u2014 region I";
+   const opts=[
+     {label:rost(evalK(v,which)), correct:true,
+      note:"Those are the elements "+words+"."},
+     {label:rost(evalK(v,otherK)), note:"That is "+plain(otherK)+", the mirror image. Look again at which letter carries the prime."},
+     {label:rost(evalK(v,"int")), note:"That is "+A+" "+CAP+" "+B+", the overlap. A prime on one of the letters pushes the answer out of the overlap."},
+     {label:rost(evalK(v,which==="ApIntB"?"Ap":"Bp")), note:"That is "+plain(which==="ApIntB"?"Ap":"Bp")+" on its own, without the intersection."},
+     {label:rost(evalK(v,"uniPr")), note:"That is region IV, the elements in neither circle."}
+   ];
+   return {q:"Find "+st(nameOf(which))+".",
+     svg:vennSVG({regions:v.regions, roman:true}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Three regions",
+ sub:"A union with one prime in it is generous — it sweeps up region IV as well.",
+ gen:function(){
+   const v=makeVenn({n4:ri(1,2)});
+   const which=Math.random()<.5?"AUniBp":"ApUniB";
+   const otherK=which==="AUniBp"?"ApUniB":"AUniBp";
+   const parts=which==="AUniBp"
+     ? (A+" = "+rostRaw(v.A)+" and "+B+PR+" = "+rostRaw(evalK(v,"Bp"))+", so together they cover regions I, II and IV.")
+     : (A+PR+" = "+rostRaw(evalK(v,"Ap"))+" and "+B+" = "+rostRaw(v.B)+", so together they cover regions II, III and IV.");
+   const opts=[
+     {label:rost(evalK(v,which)), correct:true, note:parts},
+     {label:rost(evalK(v,otherK)), note:"That is "+plain(otherK)+". Check which letter carries the prime."},
+     {label:rost(evalK(v,"uni")), note:"That is "+A+" "+CUP+" "+B+" with no prime at all, so it misses region IV."},
+     {label:rost(evalK(v,which==="AUniBp"?"Bp":"Ap")), note:"That is only the primed half of the union."},
+     {label:rost(evalK(v,"ApUniBp")), note:"That is "+A+PR+" "+CUP+" "+B+PR+", which is regions I, III and IV."}
+   ];
+   return {q:"Find "+st(nameOf(which))+".",
+     svg:vennSVG({regions:v.regions, roman:true}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Name the shaded set",
+ sub:"Read the shading into region numbers, then into notation.",
+ gen:function(){
+   const key=pick(CANON);
+   const others=shuffle(CANON.filter(function(k){return sig(k)!==sig(key);})).slice(0,3);
+   const v=makeVenn({n4:ri(1,2)});
+   const opts=[{label:st(nameOf(key)), correct:true,
+     note:"The shading covers "+REGWORDS[sig(key)]+", which here is "+rostRaw(evalK(v,key))+"."}]
+     .concat(others.map(function(k){
+       return {label:st(nameOf(k)), note:plain(k)+" would shade "+REGWORDS[sig(k)]+", which is not what is shaded."};
+     }));
+   return {q:"Which set does the shading show?",
+     svg:vennSVG({regions:v.regions, roman:true, shade:EXPR[key].r}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), sym:true};
+ }
+},
+{
+ title:"Which regions does it shade",
+ sub:"No elements this time. Translate the notation straight into region numbers.",
+ gen:function(){
+   const key=pick(["uniPr","intPr","ApIntBp","ApUniBp","ApIntB","AIntBp","AUniBp","ApUniB","Ap","Bp","uni","int"]);
+   const sigs=["I","II","III","IV","I,II,III","I,III,IV","I,II,IV","II,III,IV","III,IV","I,IV","I,III","I,II,III,IV"];
+   const target=sig(key);
+   const others=shuffle(sigs.filter(function(s){return s!==target;})).slice(0,3);
+   const why={
+     "I":"the part of A outside B",
+     "II":"the overlap",
+     "III":"the part of B outside A",
+     "IV":"the elements in neither circle",
+     "I,II,III":"everything inside either circle",
+     "I,III,IV":"everything except the overlap",
+     "I,II,IV":"everything except the part of B outside A",
+     "II,III,IV":"everything except the part of A outside B",
+     "III,IV":"everything outside circle A",
+     "I,IV":"everything outside circle B",
+     "I,III":"the elements in exactly one circle",
+     "I,II,III,IV":"all of U"
+   };
+   const opts=[{label:REGWORDS[target].charAt(0).toUpperCase()+REGWORDS[target].slice(1), correct:true,
+     note:plain(key)+" is "+why[target]+", which is "+REGWORDS[target]+"."}]
+     .concat(others.map(function(s){
+       return {label:REGWORDS[s].charAt(0).toUpperCase()+REGWORDS[s].slice(1),
+         note:"That is "+why[s]+", which is not what "+plain(key)+" describes."};
+     }));
+   return {q:"Which regions make up "+st(nameOf(key))+"?",
+     svg:vennSVG({roman:true}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"The whole table",
+ sub:"One diagram, any expression from the lesson, in roster form or as a count.",
+ gen:function(){
+   const v=makeVenn({n4:ri(1,3)});
+   const key=pick(["uni","uniPr","int","intPr","ApIntBp","ApUniBp","ApIntB","AIntBp","AUniBp","ApUniB","Ap","Bp"]);
+   const val=evalK(v,key);
+   if(Math.random()<.3){
+     const wrongKeys=shuffle(CANON.filter(function(k){return sig(k)!==sig(key)&&evalK(v,k).length!==val.length;})).slice(0,3);
+     const opts=[{label:String(val.length), correct:true,
+       note:plain(key)+" is "+REGWORDS[sig(key)]+", holding "+rostRaw(val)+" \u2014 "+val.length+" element"+(val.length===1?"":"s")+"."}]
+       .concat(wrongKeys.map(function(k){
+         return {label:String(evalK(v,k).length), note:"That is n of "+plain(k)+", which is "+REGWORDS[sig(k)]+"."};
+       }));
+     return {q:"Find "+st("<i>n</i>("+nameOf(key)+")")+".",
+       svg:vennSVG({regions:v.regions, roman:true}),
+       opts:shuffle(distinctOpts(opts).slice(0,4))};
+   }
+   const wrongKeys=shuffle(CANON.filter(function(k){return sig(k)!==sig(key);})).slice(0,4);
+   const opts=[{label:rost(val), correct:true,
+     note:plain(key)+" is "+REGWORDS[sig(key)]+", which here holds "+rostRaw(val)+"."}]
+     .concat(wrongKeys.map(function(k){
+       return {label:rost(evalK(v,k)), note:"That is "+plain(k)+" \u2014 "+REGWORDS[sig(k)]+"."};
+     }));
+   return {q:"Find "+st(nameOf(key))+".",
+     svg:vennSVG({regions:v.regions, roman:true}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HV={I:["a","b"],II:["c"],III:["e"],IV:["f","g"]};
+const HERO=[
+  {k:"("+A+" "+CUP+" "+B+")"+PR, key:"uniPr",
+   note:"Build the union first \u2014 a, b, c, e \u2014 then take everything in U that it missed. Only f and g are left, out in region IV."},
+  {k:A+PR+" "+CAP+" "+B+PR, key:"ApIntBp",
+   note:"Different route, identical shading. A\u2032 is {e, f, g} and B\u2032 is {a, b, f, g}; the elements in both are f and g. This is De Morgan's law, not a coincidence."},
+  {k:"("+A+" "+CAP+" "+B+")"+PR, key:"intPr",
+   note:"Now the bracket holds an intersection. A \u2229 B is just c, so everything else in U qualifies \u2014 regions I, III and IV. Compare this with the first button: not being in <i>both</i> is a much weaker condition than being in <i>neither</i>."},
+  {k:A+PR+" "+CUP+" "+B+PR, key:"ApUniBp",
+   note:"Matches the button before it, again by De Morgan. Notice what the pattern is: when the prime crosses the bracket, "+CUP+" turns into "+CAP+" and "+CAP+" turns into "+CUP+"."},
+  {k:A+PR+" "+CAP+" "+B, key:"ApIntB",
+   note:"No bracket here, so each prime applies to its own letter only. Not in A and in B leaves region III on its own."}
+];
+const HVAL={uniPr:["f","g"],ApIntBp:["f","g"],intPr:["a","b","e","f","g"],ApUniBp:["a","b","e","f","g"],ApIntB:["e"]};
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  document.getElementById("heroChart").innerHTML=vennSVG({regions:HV, roman:true, shade:EXPR[h.key].r});
+  document.getElementById("hRegions").innerHTML=EXPR[h.key].r.join(", ");
+  document.getElementById("hResult").innerHTML=rostRaw(HVAL[h.key]);
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.k+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.big?'<div class="big">'+q.big+'</div>':'')
+    +(q.pair?'<div class="pairbox"><div>'+q.pair.replace("<br>","</div><div>")+'</div></div>':'')
+    +(q.svg?'<div class="chart">'+q.svg+'</div>':'')
+    +(q.two?'<div class="twoset">'+q.two+'</div>':'');
+  const optEl=document.getElementById("options");
+  optEl.style.gridTemplateColumns=q.wide?"1fr":"";
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.sym?" sym":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
