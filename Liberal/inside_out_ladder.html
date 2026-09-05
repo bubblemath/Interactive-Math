@@ -1,0 +1,731 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Inside Out Ladder — build the bracket first</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --io:#2E4A6B;
+    --io-bg:#E8EEF5;
+    --cA:#0B6E77;
+    --cB:#A66A00;
+    --cC:#6B4C9A;
+    --shade:#2E4A6B;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--io)}
+  :focus-visible{outline:3px solid var(--io); outline-offset:2px; border-radius:3px}
+
+  .st{font-family:var(--serif); font-size:1.04em}
+  .st i{font-style:italic}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--io)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:16ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:14px 12px 4px; background:var(--card)}
+  .demo-top svg{display:block; width:100%; height:auto; max-width:600px; margin:0 auto}
+  .readout{display:flex; flex-wrap:wrap; background:var(--rule); border-top:1px solid var(--rule); gap:1px}
+  .readout div{flex:1 1 220px; background:var(--card); padding:12px 16px; font-size:15px}
+  .readout .k{font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:3px}
+  .readout .val{font-family:var(--serif); font-size:16px}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-family:var(--serif); font-size:16px; padding:5px 14px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--io); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:64px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--io); background:var(--io-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--io)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .q{font-size:17px; max-width:62ch; margin:0 auto 12px; color:#31404F}
+  .stem .big{margin:12px auto 16px; font-family:var(--serif); font-size:clamp(20px,4.4vw,29px); line-height:1.45; max-width:32ch}
+  .chart{margin:0 auto 14px; max-width:600px}
+  .chart svg{display:block; width:100%; height:auto}
+  .twoset{margin:10px auto 16px; max-width:470px; text-align:left; font-family:var(--serif); font-size:clamp(16px,3.2vw,20px); line-height:1.7}
+  .pairbox{margin:10px auto 16px; max-width:470px; border:1px solid var(--rule); border-radius:9px; overflow:hidden; background:var(--paper)}
+  .pairbox div{padding:10px 16px; font-family:var(--serif); font-size:clamp(16px,3.2vw,19px); text-align:left}
+  .pairbox div+div{border-top:1px solid var(--rule)}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 20px 20px}
+  @media (max-width:640px){.options{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt.sym .v{font-family:var(--serif); font-size:20px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>( )</span> The Inside Out Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 4 · nested set operations, the distributive laws</p>
+    <h1>Build the bracket first.</h1>
+    <p class="lede">Three sets and two operations give you expressions like <b>A ∪ (B ∩ C)</b>. There is no ambiguity about what to do: the parentheses name a set, you build that set, and only then do you use it. Work left to right instead and you will get <b>(A ∪ B) ∩ C</b>, which is a genuinely different answer.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroChart"></div></div>
+      <div class="readout">
+        <div><span class="k">Regions shaded</span><span class="val" id="hRegions"></span></div>
+        <div><span class="k">Result</span><span class="val" id="hResult"></span></div>
+      </div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Two of those buttons shade the same picture and one does not.</b> A ∪ (B ∩ C) and (A ∪ B) ∩ (A ∪ C) always agree — that is the distributive law, and it is the reason your worksheet asks for both back to back. But (A ∪ B) ∩ C, which is what you get by ignoring the parentheses and reading left to right, lands somewhere else entirely. Distributing means giving A to <i>both</i> brackets, not moving the parentheses along.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rung 1 is only about reading order. Rungs 2–5 compute the two distributive pairs and then name the pattern. Rungs 6–7 show what moving a parenthesis costs, and handle a prime inside the bracket. Rungs 8–10 move onto the diagram.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every wrong answer is a real reading</h3><p>The distractors are the sets you get from ignoring the brackets, from swapping the two operations, or from stopping once the bracket is built.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Two laws worth recognizing on sight</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>They look like arithmetic</h3><p>A ∩ (B ∪ C) = (A ∩ B) ∪ (A ∩ C) is exactly the shape of a(b + c) = ab + ac. The difference is that sets distribute both ways round.</p></div>
+      <div class="step"><span class="n">02</span><h3>Region lists settle any dispute</h3><p>Two expressions are the same set when they shade the same regions. That check is mechanical and never guesses.</p></div>
+      <div class="step"><span class="n">03</span><h3>Logic uses the same rules</h3><p>Swap ∪ for “or” and ∩ for “and” and these become the distributive laws of logic, which arrive later this term.</p></div>
+    </div>
+    <p class="closing">Name the bracket, build it, then use it. If you moved a parenthesis, you changed the question.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Inside Out Ladder · A ∪ (B ∩ C) = (A ∪ B) ∩ (A ∪ C) · A ∩ (B ∪ C) = (A ∩ B) ∪ (A ∩ C) · parentheses first, always</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function st(s){return '<span class="st">'+s+'</span>';}
+const EMP="\u2205", CUP="\u222a", CAP="\u2229", PR="\u2032";
+function rostRaw(a){return a.length?("{"+a.join(", ")+"}"):EMP;}
+function rost(a){return st(rostRaw(a));}
+const LET="abcdefghijklmnopqrstuvwxyz".split("");
+function lets(k){return shuffle(LET.slice(0)).slice(0,k);}
+function numsK(k,lo,hi){const s=[];while(s.length<k){const v=ri(lo,hi); if(s.indexOf(v)<0)s.push(v);}return s;}
+function asc(a){return a.slice(0).sort(function(x,y){return x-y;});}
+function sortLike(n,a){return n?asc(a):a.slice(0).sort();}
+
+const REG=["I","II","III","IV","V","VI","VII","VIII"];
+const SLOTCAP={ I:3, II:2, III:3, IV:2, V:2, VI:2, VII:3, VIII:3 };
+const REGMEM={ I:["A"], II:["A","B"], III:["B"], IV:["A","C"], V:["A","B","C"], VI:["B","C"], VII:["C"], VIII:[] };
+const SETREG={ A:["I","II","IV","V"], B:["II","III","V","VI"], C:["IV","V","VI","VII"] };
+
+/* ---- region algebra: every expression is a list of regions ---- */
+function rU(a,b){return REG.filter(function(r){return a.indexOf(r)>=0||b.indexOf(r)>=0;});}
+function rN(a,b){return REG.filter(function(r){return a.indexOf(r)>=0&&b.indexOf(r)>=0;});}
+function rC(a){return REG.filter(function(r){return a.indexOf(r)<0;});}
+const SA=SETREG.A, SB=SETREG.B, SC=SETREG.C;
+const Ai="<i>A</i>", Bi="<i>B</i>", Ci="<i>C</i>";
+
+const EXPR={
+  "AuBnC":   {n:Ai+" "+CUP+" ("+Bi+" "+CAP+" "+Ci+")",                     r:rU(SA,rN(SB,SC))},
+  "dAuB":    {n:"("+Ai+" "+CUP+" "+Bi+") "+CAP+" ("+Ai+" "+CUP+" "+Ci+")", r:rN(rU(SA,SB),rU(SA,SC))},
+  "AuB_nC":  {n:"("+Ai+" "+CUP+" "+Bi+") "+CAP+" "+Ci,                      r:rN(rU(SA,SB),SC)},
+  "AnBuC":   {n:Ai+" "+CAP+" ("+Bi+" "+CUP+" "+Ci+")",                      r:rN(SA,rU(SB,SC))},
+  "dAnB":    {n:"("+Ai+" "+CAP+" "+Bi+") "+CUP+" ("+Ai+" "+CAP+" "+Ci+")",  r:rU(rN(SA,SB),rN(SA,SC))},
+  "AnB_uC":  {n:"("+Ai+" "+CAP+" "+Bi+") "+CUP+" "+Ci,                      r:rU(rN(SA,SB),SC)},
+  "AnBuCp":  {n:Ai+" "+CAP+" ("+Bi+" "+CUP+" "+Ci+PR+")",                   r:rN(SA,rU(SB,rC(SC)))},
+  "AuBnCp":  {n:Ai+" "+CUP+" ("+Bi+" "+CAP+" "+Ci+PR+")",                   r:rU(SA,rN(SB,rC(SC)))},
+  "AnBpuC":  {n:Ai+" "+CAP+" ("+Bi+PR+" "+CUP+" "+Ci+")",                   r:rN(SA,rU(rC(SB),SC))},
+  "ABC":     {n:Ai+" "+CAP+" "+Bi+" "+CAP+" "+Ci,                           r:rN(rN(SA,SB),SC)},
+  "AuBuC":   {n:Ai+" "+CUP+" "+Bi+" "+CUP+" "+Ci,                           r:rU(rU(SA,SB),SC)},
+  "AuBuCp":  {n:"("+Ai+" "+CUP+" "+Bi+" "+CUP+" "+Ci+")"+PR,                r:rC(rU(rU(SA,SB),SC))},
+  "ApBC":    {n:Ai+PR+" "+CAP+" "+Bi+" "+CAP+" "+Ci,                        r:rN(rN(rC(SA),SB),SC)},
+  "ABCp":    {n:Ai+" "+CAP+" "+Bi+" "+CAP+" "+Ci+PR,                        r:rN(rN(SA,SB),rC(SC))},
+  "ABpCp":   {n:Ai+" "+CAP+" "+Bi+PR+" "+CAP+" "+Ci+PR,                     r:rN(rN(SA,rC(SB)),rC(SC))},
+  "BnC":     {n:Bi+" "+CAP+" "+Ci,                                          r:rN(SB,SC)},
+  "AnC":     {n:Ai+" "+CAP+" "+Ci,                                          r:rN(SA,SC)},
+  "AnB":     {n:Ai+" "+CAP+" "+Bi,                                          r:rN(SA,SB)},
+  "AuB":     {n:Ai+" "+CUP+" "+Bi,                                          r:rU(SA,SB)},
+  "A":       {n:Ai,                                                          r:SA},
+  "C":       {n:Ci,                                                          r:SC}
+};
+function nameOf(k){return EXPR[k].n;}
+function plain(k){return EXPR[k].n.replace(/<[^>]+>/g,"");}
+function sig(k){return EXPR[k].r.join(",");}
+function regWords(rs){
+  if(!rs.length) return "no regions at all";
+  if(rs.length===1) return "region "+rs[0];
+  return "regions "+rs.slice(0,-1).join(", ")+" and "+rs[rs.length-1];
+}
+function evalK(v,k){
+  let out=[];
+  EXPR[k].r.forEach(function(rg){ out=out.concat(v[rg]); });
+  return sortLike(v.useNums,out);
+}
+/* one representative per distinct region signature */
+function distinctBySig(keys){
+  const seen={}, out=[];
+  keys.forEach(function(k){ if(!seen[sig(k)]){seen[sig(k)]=1; out.push(k);} });
+  return out;
+}
+
+/* ================= three-circle Venn renderer ================= */
+let svgUid=0;
+const GEO={
+  A:{x:240,y:150,r:100}, B:{x:360,y:150,r:100}, C:{x:300,y:250,r:100},
+  slots:{
+    I:{rx:190,ry:112, ex:190,ey:142},
+    II:{rx:300,ry:104, ex:300,ey:133},
+    III:{rx:410,ry:112, ex:410,ey:142},
+    IV:{rx:228,ry:214, ex:232,ey:236},
+    V:{rx:300,ry:194, ex:300,ey:214},
+    VI:{rx:372,ry:214, ex:368,ey:236},
+    VII:{rx:300,ry:292, ex:300,ey:318},
+    VIII:{rx:538,ry:300, ex:538,ey:328}
+  }
+};
+function vennSVG(o){
+  o=o||{};
+  const uid="w"+(++svgUid);
+  const shade=o.shade||[];
+  const A=GEO.A,B=GEO.B,C=GEO.C;
+  const circ=function(c){return '<circle cx="'+c.x+'" cy="'+c.y+'" r="'+c.r+'"';};
+  let s='<svg viewBox="0 0 600 380" role="img" aria-label="Venn diagram with three sets">';
+  s+='<rect x="10" y="10" width="580" height="360" rx="4" fill="none" stroke="var(--ink)" stroke-width="1.3"/>';
+  s+='<text x="26" y="34" font-family="Georgia,serif" font-style="italic" font-size="17" fill="var(--ink)">U</text>';
+  const RECT='<rect x="10" y="10" width="580" height="360" fill="#fff"/>';
+  const blk=function(c){return circ(c)+' fill="#000"/>';};
+  s+='<defs>'
+    +'<clipPath id="'+uid+'cA">'+circ(A)+'/></clipPath>'
+    +'<clipPath id="'+uid+'cB">'+circ(B)+'/></clipPath>'
+    +'<mask id="'+uid+'nA">'+RECT+blk(A)+'</mask>'
+    +'<mask id="'+uid+'nB">'+RECT+blk(B)+'</mask>'
+    +'<mask id="'+uid+'nC">'+RECT+blk(C)+'</mask>'
+    +'<mask id="'+uid+'nBC">'+RECT+blk(B)+blk(C)+'</mask>'
+    +'<mask id="'+uid+'nAC">'+RECT+blk(A)+blk(C)+'</mask>'
+    +'<mask id="'+uid+'nAB">'+RECT+blk(A)+blk(B)+'</mask>'
+    +'<mask id="'+uid+'nABC">'+RECT+blk(A)+blk(B)+blk(C)+'</mask>'
+    +'</defs>';
+  const F='fill="var(--shade)" fill-opacity="0.32"';
+  const has=function(k){return shade.indexOf(k)>=0;};
+  if(has("VIII")) s+='<rect x="10" y="10" width="580" height="360" '+F+' mask="url(#'+uid+'nABC)"/>';
+  if(has("I"))   s+=circ(A)+' '+F+' mask="url(#'+uid+'nBC)"/>';
+  if(has("III")) s+=circ(B)+' '+F+' mask="url(#'+uid+'nAC)"/>';
+  if(has("VII")) s+=circ(C)+' '+F+' mask="url(#'+uid+'nAB)"/>';
+  if(has("II"))  s+=circ(B)+' '+F+' clip-path="url(#'+uid+'cA)" mask="url(#'+uid+'nC)"/>';
+  if(has("IV"))  s+=circ(C)+' '+F+' clip-path="url(#'+uid+'cA)" mask="url(#'+uid+'nB)"/>';
+  if(has("VI"))  s+=circ(C)+' '+F+' clip-path="url(#'+uid+'cB)" mask="url(#'+uid+'nA)"/>';
+  if(has("V"))   s+='<g clip-path="url(#'+uid+'cA)"><g clip-path="url(#'+uid+'cB)">'+circ(C)+' '+F+'/></g></g>';
+  s+=circ(A)+' fill="var(--cA)" fill-opacity="0.09" stroke="var(--cA)" stroke-width="1.6"/>';
+  s+=circ(B)+' fill="var(--cB)" fill-opacity="0.09" stroke="var(--cB)" stroke-width="1.6"/>';
+  s+=circ(C)+' fill="var(--cC)" fill-opacity="0.09" stroke="var(--cC)" stroke-width="1.6"/>';
+  const txt=function(x,y,t,sz,col,it){
+    return '<text x="'+x+'" y="'+y+'" text-anchor="middle" font-family="Georgia,serif" font-size="'+sz+'"'
+      +(it?' font-style="italic"':'')+' fill="'+col+'">'+esc(t)+'</text>';
+  };
+  s+=txt(178,44,"A",17,"var(--cA)",true);
+  s+=txt(422,44,"B",17,"var(--cB)",true);
+  s+=txt(300,362,"C",17,"var(--cC)",true);
+  const R=o.regions||{};
+  REG.forEach(function(k){
+    const sl=GEO.slots[k];
+    if(o.roman) s+=txt(sl.rx,sl.ry,k,14,"var(--muted)");
+    const items=R[k]||[];
+    if(items.length){
+      const sp=18, y0=sl.ey-(items.length-1)*sp/2;
+      items.forEach(function(t,i){ s+=txt(sl.ex,y0+i*sp+5,t,14,"var(--ink)"); });
+    }
+  });
+  return s+"</svg>";
+}
+
+function makeVenn3(o){
+  o=o||{};
+  const useNums=(o.useNums!==undefined)?o.useNums:(Math.random()<.6);
+  const lo=o.lo!==undefined?o.lo:1, hi=o.hi!==undefined?o.hi:2;
+  const sizes={};
+  REG.forEach(function(k){ sizes[k]=Math.min(ri(lo,hi),SLOTCAP[k]); });
+  if(o.sizes) for(const k in o.sizes) sizes[k]=Math.min(o.sizes[k],SLOTCAP[k]);
+  let total=0; REG.forEach(function(k){total+=sizes[k];});
+  const pool=useNums?shuffle(numsK(total,1,20)):lets(total);
+  let p=0; const regions={};
+  REG.forEach(function(k){ regions[k]=sortLike(useNums,pool.slice(p,p+sizes[k])); p+=sizes[k]; });
+  const from=function(keys){
+    let out=[]; keys.forEach(function(k){out=out.concat(regions[k]);});
+    return sortLike(useNums,out);
+  };
+  const v={useNums:useNums, regions:regions, from:from};
+  REG.forEach(function(k){ v[k]=regions[k]; });
+  v.A=from(SETREG.A); v.B=from(SETREG.B); v.C=from(SETREG.C); v.U=from(REG);
+  return v;
+}
+function rosterLines(v){
+  return "<i>U</i> = "+rostRaw(v.U)+"<br><i>A</i> = "+rostRaw(v.A)
+        +"<br><i>B</i> = "+rostRaw(v.B)+"<br><i>C</i> = "+rostRaw(v.C);
+}
+/* build four options from expression keys with pairwise distinct region signatures */
+function exprOpts(v,correctKey,wrongKeys,noteFor){
+  const used={}; used[sig(correctKey)]=1;
+  const opts=[{label:rost(evalK(v,correctKey)), correct:true, note:noteFor(correctKey)}];
+  wrongKeys.forEach(function(k){
+    if(used[sig(k)])return;
+    used[sig(k)]=1;
+    opts.push({label:rost(evalK(v,k)), note:"That is "+plain(k)+", "+regWords(EXPR[k].r)+"."});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"What comes first",
+ sub:"The parentheses name a set. Build that set before you do anything else with it.",
+ gen:function(){
+   const bank=[
+     {k:"AuBnC", ans:"Build "+Bi+" "+CAP+" "+Ci+" first, then union the result with "+Ai,
+      bad:[["Build "+Ai+" "+CUP+" "+Bi+" first, then intersect with "+Ci,"That is reading left to right and ignoring the brackets. It gives ("+Ai+" "+CUP+" "+Bi+") "+CAP+" "+Ci+", a different set."],
+           ["Build "+Ai+" "+CUP+" "+Bi+" and "+Ai+" "+CUP+" "+Ci+", then intersect them","That happens to give the same answer, by the distributive law \u2014 but it is not what this expression instructs."],
+           ["Build "+Bi+" "+CUP+" "+Ci+" first, then intersect with "+Ai,"Both operations got swapped. Read the symbols as written."]],
+      note:"The bracket holds an intersection, and the union outside it waits until that is finished."},
+     {k:"AuB_nC", ans:"Build "+Ai+" "+CUP+" "+Bi+" first, then intersect the result with "+Ci,
+      bad:[["Build "+Bi+" "+CAP+" "+Ci+" first, then union with "+Ai,"That is "+Ai+" "+CUP+" ("+Bi+" "+CAP+" "+Ci+"). The bracket here is around the union."],
+           ["Build "+Ai+" "+CAP+" "+Ci+" first, then union with "+Bi,"Neither of those is what the expression shows."],
+           ["Intersect all three at once","That would be "+Ai+" "+CAP+" "+Bi+" "+CAP+" "+Ci+", which uses no union at all."]],
+      note:"Whatever sits inside the parentheses is built first, and here that is a union."},
+     {k:"dAuB", ans:"Build both brackets first, then intersect the two results",
+      bad:[["Build "+Ai+" "+CUP+" "+Bi+" first, then union with "+Ci,"There is an intersection between the two brackets, not a union."],
+           ["Build "+Bi+" "+CAP+" "+Ci+" first, then union with "+Ai,"That is the other side of the distributive law. Equal in value, but not what is written here."],
+           ["Intersect "+Bi+" and "+Ci+", then union twice with "+Ai,"Each bracket is a separate union, and the operation joining them is an intersection."]],
+      note:"Two brackets, two sets to build, and then one operation between them."},
+     {k:"AnBuCp", ans:"Complement "+Ci+" first, then build "+Bi+" "+CUP+" "+Ci+PR+", then intersect with "+Ai,
+      bad:[["Build "+Bi+" "+CUP+" "+Ci+" first, then complement it, then intersect with "+Ai,"The prime is on "+Ci+" alone, inside the bracket. It is not applied to the whole union."],
+           ["Build "+Ai+" "+CAP+" "+Bi+" first, then union with "+Ci+PR,"The bracket groups "+Bi+" with "+Ci+PR+", not "+Ai+" with "+Bi+"."],
+           ["Complement "+Ai+" first, then intersect with "+Bi+" "+CUP+" "+Ci,"The prime is attached to "+Ci+", not to "+Ai+"."]],
+      note:"Work outward: the innermost thing is the prime on "+Ci+", then the union, then the intersection."},
+     {k:"AnB_uC", ans:"Build "+Ai+" "+CAP+" "+Bi+" first, then union the result with "+Ci,
+      bad:[["Build "+Bi+" "+CUP+" "+Ci+" first, then intersect with "+Ai,"That is "+Ai+" "+CAP+" ("+Bi+" "+CUP+" "+Ci+"). The bracket is in a different place here."],
+           ["Union all three at once","That would be "+Ai+" "+CUP+" "+Bi+" "+CUP+" "+Ci+", with no intersection."],
+           ["Build "+Ai+" "+CAP+" "+Ci+" first, then union with "+Bi,"The bracket groups "+Ai+" with "+Bi+"."]],
+      note:"The parentheses are around the intersection, so that is the piece you build first."}
+   ];
+   const it=pick(bank);
+   const opts=[{label:it.ans,correct:true,note:it.note}]
+     .concat(it.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:"Which order does this expression tell you to work in?", big:st(nameOf(it.k)),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"A ∪ (B ∩ C)",
+ sub:"Intersect B and C, then add all of A to it.",
+ gen:function(){
+   const v=makeVenn3();
+   const opts=exprOpts(v,"AuBnC",["AuB_nC","BnC","AuBuC","AnBuC","A"],function(){
+     return Bi+" "+CAP+" "+Ci+" = "+rostRaw(evalK(v,"BnC"))+". Adding all of "+Ai+" = "+rostRaw(v.A)+" gives "+rostRaw(evalK(v,"AuBnC"))+".";
+   });
+   return {q:"Find "+st(nameOf("AuBnC"))+".", two:rosterLines(v),
+     opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"(A ∪ B) ∩ (A ∪ C)",
+ sub:"Two brackets to build, then keep only what both results share.",
+ gen:function(){
+   const v=makeVenn3();
+   const opts=exprOpts(v,"dAuB",["AuB","AuBuC","AuB_nC","AnBuC","ABC"],function(){
+     return Ai+" "+CUP+" "+Bi+" = "+rostRaw(evalK(v,"AuB"))+" and "+Ai+" "+CUP+" "+Ci+" = "
+       +rostRaw(v.from(rU(SA,SC)))+". What they share is "+rostRaw(evalK(v,"dAuB"))+".";
+   });
+   return {q:"Find "+st(nameOf("dAuB"))+".", two:rosterLines(v),
+     opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"Why those two matched",
+ sub:"The last two rungs kept agreeing. That is a law, not luck.",
+ gen:function(){
+   const v=makeVenn3();
+   const val=rostRaw(evalK(v,"AuBnC"));
+   const forms=[
+     {q:"Both expressions gave the same answer. What does that tell you?",
+      pair:plain("AuBnC")+" = "+val+"<br>"+plain("dAuB")+" = "+val,
+      ans:"They are equal for every choice of A, B and C \u2014 it is a distributive law",
+      bad:[["It is a coincidence for these particular sets","Check the regions: both expressions shade "+regWords(EXPR.AuBnC.r)+", whatever the sets are."],
+           ["They match only when the three sets overlap","The region argument does not depend on which regions happen to be occupied."],
+           ["They match only because "+Ai+" is the largest set","Nothing here depends on the sizes of the sets."]],
+      note:"Union distributes over intersection: "+plain("AuBnC")+" = "+plain("dAuB")+". Both shade "+regWords(EXPR.AuBnC.r)+"."},
+     {q:"Which expression is another name for "+st(nameOf("AuBnC"))+"?",
+      ans:st(nameOf("dAuB")),
+      bad:[[st(nameOf("AuB_nC")),"That is what you get by ignoring the parentheses. It shades "+regWords(EXPR.AuB_nC.r)+", not "+regWords(EXPR.AuBnC.r)+"."],
+           [st(nameOf("dAnB")),"That is the other distributive law, and it equals "+plain("AnBuC")+"."],
+           [st(nameOf("AuBuC")),"That is everything inside any circle, which is more than "+plain("AuBnC")+"."]],
+      note:"To distribute the union, "+Ai+" has to be joined to each piece of the bracket separately."},
+     {q:"A student writes "+st(nameOf("AuBnC"))+" = "+st(nameOf("AuB_nC"))+". What went wrong?",
+      ans:Ai+" was joined to "+Bi+" only, instead of to both parts of the bracket",
+      bad:[["Nothing \u2014 that is the distributive law","The law gives ("+Ai+" "+CUP+" "+Bi+") "+CAP+" ("+Ai+" "+CUP+" "+Ci+"). "+Ai+" appears twice."],
+           ["The two operations should have been swapped as well","Operations flip when a prime crosses a bracket, not when you distribute."],
+           ["The parentheses should have been removed entirely","Removing them gives yet another set. They have to be rearranged, not dropped."]],
+      note:plain("AuBnC")+" shades "+regWords(EXPR.AuBnC.r)+"; "+plain("AuB_nC")+" shades "+regWords(EXPR.AuB_nC.r)+"."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, pair:f.pair||null,
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"The other way round",
+ sub:"Intersection distributes over union too, with the operations exchanged.",
+ gen:function(){
+   const v=makeVenn3();
+   const which=Math.random()<.5?"AnBuC":"dAnB";
+   const opts=exprOpts(v,which,["AnB_uC","AuBnC","ABC","AuBuC","AnB"],function(k){
+     return k==="AnBuC"
+       ? (Bi+" "+CUP+" "+Ci+" = "+rostRaw(v.from(rU(SB,SC)))+", and keeping only what is also in "+Ai+" leaves "+rostRaw(evalK(v,k))+".")
+       : (Ai+" "+CAP+" "+Bi+" = "+rostRaw(evalK(v,"AnB"))+" and "+Ai+" "+CAP+" "+Ci+" = "+rostRaw(evalK(v,"AnC"))+". Together they make "+rostRaw(evalK(v,k))+".");
+   });
+   return {q:"Find "+st(nameOf(which))+".", two:rosterLines(v),
+     opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"Moving a parenthesis",
+ sub:"Same three letters, same two symbols, brackets somewhere else. Different set.",
+ gen:function(){
+   const v=makeVenn3();
+   const which=Math.random()<.5?"AuB_nC":"AnB_uC";
+   const partner=which==="AuB_nC"?"AuBnC":"AnBuC";
+   const opts=exprOpts(v,which,[partner,"AuBuC","ABC","AnB","C"],function(k){
+     return k==="AuB_nC"
+       ? (Ai+" "+CUP+" "+Bi+" = "+rostRaw(evalK(v,"AuB"))+", and keeping only what is also in "+Ci+" leaves "+rostRaw(evalK(v,k))+". Notice this is <i>not</i> "+plain("AuBnC")+".")
+       : (Ai+" "+CAP+" "+Bi+" = "+rostRaw(evalK(v,"AnB"))+", and adding all of "+Ci+" gives "+rostRaw(evalK(v,k))+". Notice this is <i>not</i> "+plain("AnBuC")+".");
+   });
+   return {q:"Find "+st(nameOf(which))+".", two:rosterLines(v),
+     opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"A prime inside the bracket",
+ sub:"The prime belongs to its own letter. Complement that letter before the bracket is built.",
+ gen:function(){
+   const v=makeVenn3();
+   const which=pick(["AnBuCp","AuBnCp","AnBpuC"]);
+   const inner={AnBuCp:"Cp",AuBnCp:"Cp",AnBpuC:"Bp"}[which];
+   const innerVal=inner==="Cp"?v.from(rC(SC)):v.from(rC(SB));
+   const innerName=inner==="Cp"?(Ci+PR):(Bi+PR);
+   const opts=exprOpts(v,which,["AnBuC","AuBnC","AnB","AuBuC","ABC","AuBuCp"],function(k){
+     return innerName+" = "+rostRaw(innerVal)+" \u2014 everything in U outside that circle. Working outward from there gives "
+       +rostRaw(evalK(v,k))+", which is "+regWords(EXPR[k].r)+".";
+   });
+   return {q:"Find "+st(nameOf(which))+".", two:rosterLines(v),
+     opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"Which regions does it shade",
+ sub:"Translate the expression into region numbers before touching any elements.",
+ gen:function(){
+   const keys=["AuBnC","AuB_nC","AnBuC","AnB_uC","AnBuCp","ABC","AuBuC","AuBuCp","BnC","AnB","AnC","ABCp","ApBC","ABpCp"];
+   const key=pick(keys);
+   const others=shuffle(keys.filter(function(k){return sig(k)!==sig(key);})).slice(0,3);
+   const cap=function(s){return s.charAt(0).toUpperCase()+s.slice(1);};
+   const opts=[{label:cap(regWords(EXPR[key].r)), correct:true,
+     note:plain(key)+" covers "+regWords(EXPR[key].r)+"."}]
+     .concat(others.map(function(k){
+       return {label:cap(regWords(EXPR[k].r)), note:"That is "+plain(k)+"."};
+     }));
+   return {q:"Which regions make up "+st(nameOf(key))+"?",
+     svg:vennSVG({roman:true}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Name the shaded set",
+ sub:"Read the shading into region numbers, then find the expression that matches.",
+ gen:function(){
+   const pool=["AuBnC","AuB_nC","AnBuC","AnB_uC","AnBuCp","ABC","AuBuC","AuBuCp","BnC","AnB","AnC","ABCp","ApBC","ABpCp","A","C"];
+   const key=pick(pool);
+   const others=shuffle(distinctBySig(pool.filter(function(k){return sig(k)!==sig(key);}))).slice(0,3);
+   const v=makeVenn3({lo:0,hi:2,sizes:{V:ri(1,2)}});
+   const opts=[{label:st(nameOf(key)), correct:true,
+     note:"The shading covers "+regWords(EXPR[key].r)+", which here holds "+rostRaw(evalK(v,key))+"."}]
+     .concat(others.map(function(k){
+       return {label:st(nameOf(k)), note:plain(k)+" would shade "+regWords(EXPR[k].r)+"."};
+     }));
+   return {q:"Which set does the shading show?",
+     svg:vennSVG({regions:v.regions, roman:true, shade:EXPR[key].r}),
+     opts:shuffle(opts), sym:true};
+ }
+},
+{
+ title:"From the diagram",
+ sub:"Everything at once: read the regions, build the bracket, finish the expression.",
+ gen:function(){
+   const v=makeVenn3({sizes:{VIII:ri(1,2)}});
+   const keys=["AuBnC","AuB_nC","AnBuC","AnB_uC","AnBuCp","AuBnCp","ABC","AuBuCp","ABCp","ApBC"];
+   const key=pick(keys);
+   const wrongs=shuffle(keys.filter(function(k){return sig(k)!==sig(key);})).slice(0,5);
+   const opts=exprOpts(v,key,wrongs,function(k){
+     return plain(k)+" is "+regWords(EXPR[k].r)+", which on this diagram holds "+rostRaw(evalK(v,k))+".";
+   });
+   return {q:"Find "+st(nameOf(key))+" from the diagram.",
+     svg:vennSVG({regions:v.regions, roman:true}),
+     opts:shuffle(opts), wide:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+/* the worksheet's own sets: U={a..f}, A={a,b,c,d}, B={a,b,d,f}, C={b,c,f} */
+const HV={I:[],II:["a","d"],III:[],IV:["c"],V:["b"],VI:["f"],VII:[],VIII:["e"]};
+const HVEN={useNums:false, regions:HV};
+REG.forEach(function(k){ HVEN[k]=HV[k]; });
+const HERO=[
+  {key:"BnC", note:"Start inside the bracket. B \u2229 C is the part of the B circle that also lies in C \u2014 regions V and VI, holding b and f. Nothing has been done with A yet."},
+  {key:"AuBnC", note:"Now add all of A. The shading grows to cover circle A plus the piece already found, giving {a, b, c, d, f}. This is the worksheet's part (a)."},
+  {key:"dAuB", note:"A completely different route \u2014 two unions built separately, then intersected \u2014 and the shading has not moved. That is the distributive law, and it is why part (b) matches part (a)."},
+  {key:"AuB_nC", note:"Here the parenthesis has moved. Reading left to right instead of respecting the brackets gives regions IV, V and VI only \u2014 {b, c, f}. Compare it with the second button: the same letters and symbols, a different set."},
+  {key:"AnBuCp", note:"The worksheet's part (c). The prime belongs to C alone, so complement C first: everything outside that circle. Then union with B, then intersect with A, leaving {a, b, d}."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  document.getElementById("heroChart").innerHTML=vennSVG({regions:HV, roman:true, shade:EXPR[h.key].r});
+  document.getElementById("hRegions").innerHTML=EXPR[h.key].r.join(", ");
+  document.getElementById("hResult").innerHTML=rostRaw(evalK(HVEN,h.key));
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+nameOf(h.key)+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.big?'<div class="big">'+q.big+'</div>':'')
+    +(q.pair?'<div class="pairbox"><div>'+q.pair.replace("<br>","</div><div>")+'</div></div>':'')
+    +(q.svg?'<div class="chart">'+q.svg+'</div>':'')
+    +(q.two?'<div class="twoset">'+q.two+'</div>':'');
+  const optEl=document.getElementById("options");
+  optEl.style.gridTemplateColumns=q.wide?"1fr":"";
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.sym?" sym":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
