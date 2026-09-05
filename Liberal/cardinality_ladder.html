@@ -1,0 +1,722 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Cardinality Ladder — equal is which, equivalent is how many</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --round:#A66A00;
+    --round-bg:#FCF1DA;
+    --test:#0B6E77;
+    --test-bg:#DEF0F1;
+    --bar:#41586B;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--round)}
+  :focus-visible{outline:3px solid var(--round); outline-offset:2px; border-radius:3px}
+
+  .st{font-family:var(--serif); font-size:1.04em}
+  .st i{font-style:italic}
+  .st b{font-weight:700}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--round)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:16ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .pair{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--rule)}
+  @media (max-width:560px){.pair{grid-template-columns:1fr}}
+  .setcard{background:var(--card); padding:18px}
+  .setcard .nm{font-family:var(--serif); font-style:italic; font-weight:700; font-size:17px; margin-bottom:6px}
+  .setcard .el{font-size:17px; margin-bottom:10px; min-height:52px}
+  .setcard .cn{font-family:var(--serif); font-size:16px; color:var(--round); border-top:1px dotted var(--rule); padding-top:8px}
+  .verdicts{display:flex; gap:0; background:var(--rule); border-top:1px solid var(--rule)}
+  .verdicts div{flex:1; background:var(--card); padding:13px 18px; font-size:15px; display:flex; align-items:center; gap:10px}
+  .verdicts div+div{margin-left:1px}
+  .tag{font-size:13px; font-weight:600; padding:2px 10px; border-radius:20px}
+  .yes{background:var(--right-bg); color:var(--right)}
+  .no{background:var(--wrong-bg); color:var(--wrong)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--round); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--round); background:var(--round-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--round)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(186px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:62ch; margin:0 auto 12px; color:#31404F}
+  .stem .big{margin:12px auto 16px; font-family:var(--serif); font-size:clamp(19px,4vw,26px); line-height:1.55; max-width:36ch}
+  .stem .big i{font-style:italic}
+  .twoset{margin:12px auto 16px; max-width:400px; text-align:left; font-family:var(--serif); font-size:clamp(17px,3.4vw,21px); line-height:1.7}
+  .twoset span{display:block}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 20px 20px}
+  @media (max-width:640px){.options{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>n( )</span> The Cardinality Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 2 · cardinal number, equal sets, equivalent sets, finite and infinite</p>
+    <h1>Equal is which. Equivalent is how many.</h1>
+    <p class="lede">Two sets are <b>equal</b> when they hold exactly the same elements. They are <b>equivalent</b> when they merely hold the same <i>number</i> of elements. Those two words sound like synonyms in ordinary English and they are not. One is about identity, the other is about counting, and everything on this page hangs on keeping them apart.</p>
+
+    <div class="demo">
+      <div class="pair">
+        <div class="setcard"><div class="nm" id="n1"></div><div class="el" id="e1"></div><div class="cn" id="c1"></div></div>
+        <div class="setcard"><div class="nm" id="n2"></div><div class="el" id="e2"></div><div class="cn" id="c2"></div></div>
+      </div>
+      <div class="verdicts">
+        <div>Equal? <span class="tag" id="vEqual"></span></div>
+        <div>Equivalent? <span class="tag" id="vEquiv"></span></div>
+      </div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroResult"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Notice that one combination never appears.</b> Click through all four pairs and you will find sets that are both, sets that are equivalent only, and sets that are neither — but never a pair that is equal without being equivalent. If two sets hold the very same elements, they cannot possibly hold different amounts of them. Equal always drags equivalent along with it. The reverse is not true, and that gap is the whole lesson.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–5 are counting: plain lists, repeated elements, rules you have to decode first, lists with dots in the middle, and the empty set. Rungs 6–8 introduce equal, equivalent, and whether a set can be counted at all. Rungs 9–10 put them together and ask which one implies the other.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every wrong count is a real slip</h3><p>The options are the numbers you get from counting a repeat twice, from including an endpoint that was excluded, or from reporting the largest element instead of how many there are.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Counting is the easy half</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The count is only as good as the roster</h3><p>Almost every wrong cardinal number comes from writing the set out wrong first, not from miscounting what was written.</p></div>
+      <div class="step"><span class="n">02</span><h3>One word does two jobs</h3><p>“The same” means identical elements in one sentence and identical amounts in the next. Mathematics gives the two meanings separate names for exactly that reason.</p></div>
+      <div class="step"><span class="n">03</span><h3>Subsets are next</h3><p>Checking whether one set sits inside another means comparing rosters element by element — the same habit this ladder builds.</p></div>
+    </div>
+    <p class="closing">Write the set out. Count what is actually there. Then decide whether you are being asked about which elements or about how many.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Cardinality Ladder · n(A) counts distinct elements · equal means same elements · equivalent means same count · equal always implies equivalent</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+const X="<i>x</i>", NN="<b><i>N</i></b>", EL="\u2026";
+function st(s){return '<span class="st">'+s+'</span>';}
+function rost(a){return st("{"+a.join(", ")+"}");}
+function rng(a,b){const r=[];for(let i=a;i<=b;i++)r.push(i);return r;}
+function rostEll(a,b){ if(b-a<=4) return rost(rng(a,b));
+  return st("{"+a+", "+(a+1)+", "+(a+2)+", "+EL+", "+(b-1)+", "+b+"}"); }
+function rostInf(a){return st("{"+a+", "+(a+1)+", "+(a+2)+", "+EL+"}");}
+function sbWord(d){return st("{"+X+" | "+X+" is "+d+"}");}
+function sbN(rel){return st("{"+X+" | "+X+" \u2208 "+NN+" and "+rel+"}");}
+function card(name){return st("<i>n</i>("+name+")");}
+const LET="abcdefghijklmnopqrstuvwxyz".split("");
+function nums(k,lo,hi){const s=[];while(s.length<k){const v=ri(lo,hi); if(s.indexOf(v)<0)s.push(v);}return s;}
+function lets(k){return shuffle(LET.slice(0)).slice(0,k);}
+function distinctLetters(w){const o=[];for(let i=0;i<w.length;i++){if(o.indexOf(w[i])<0)o.push(w[i]);}return o;}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Count a roster",
+ sub:"The cardinal number is how many elements there are — not what they are.",
+ gen:function(){
+   const k=ri(3,7);
+   if(Math.random()<.6){
+     let a; do{ a=nums(k,2,30); }while(Math.max.apply(null,a)<=k+1);
+     const mx=Math.max.apply(null,a);
+     const opts=[
+       {label:String(k), correct:true, note:"There are "+k+" elements listed, so the cardinal number is "+k+"."},
+       {label:String(mx), note:"That is the largest element in the set, not how many elements there are."},
+       {label:String(k-1), note:"One short — count again, left to right."},
+       {label:String(k+1), note:"One too many."}
+     ];
+     return {q:"What is "+card("<i>A</i>")+" for "+st("<i>A</i>")+" = "+rost(a)+"?",
+       opts:shuffle(distinctOpts(opts).slice(0,4))};
+   }
+   const words=pick([["Monday","Wednesday","Friday"],["red","blue","green","yellow"],
+     ["March","May","July","September","November"],["north","south","east","west"],
+     ["Spring","Summer","Fall","Winter"],["gold","silver","bronze"]]);
+   const n=words.length;
+   const opts=[
+     {label:String(n), correct:true, note:"There are "+n+" elements listed, so the cardinal number is "+n+"."},
+     {label:String(n-1), note:"One short — count each item between the braces."},
+     {label:String(n+1), note:"One too many — the commas separate elements, they are not elements."},
+     {label:String(n+2), note:"Count the items, not the letters or the punctuation."}
+   ];
+   return {q:"What is "+card("<i>B</i>")+" for "+st("<i>B</i>")+" = "+rost(words)+"?",
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"A repeat counts once",
+ sub:"An element is either in a set or it is not. It cannot be in it twice.",
+ gen:function(){
+   if(Math.random()<.55){
+     const w=pick(["conversation","banana","letter","committee","success","balloon","address","tennessee","bookkeeper","assessment"]);
+     const d=distinctLetters(w), n=d.length;
+     const opts=[
+       {label:String(n), correct:true, note:"<i>"+w+"</i> has "+w.length+" letters but only "+n+" different ones: "+rost(d)+"."},
+       {label:String(w.length), note:"That counts every letter as it appears. A letter used twice is still one element."},
+       {label:String(n-1), note:"One of the distinct letters got missed."},
+       {label:String(n+1), note:"One too many — check for a letter you counted twice."}
+     ];
+     return {q:"How many elements are in the set of letters in the word <b><i>"+w+"</i></b>?",
+       opts:shuffle(distinctOpts(opts).slice(0,4))};
+   }
+   const base=nums(ri(3,5),1,12);
+   const withDup=shuffle(base.concat(base.slice(0,ri(2,3))));
+   const n=base.length;
+   const opts=[
+     {label:String(n), correct:true, note:"Only "+n+" different values appear: "+rost(base.slice(0).sort(function(a,b){return a-b;}))+"."},
+     {label:String(withDup.length), note:"That counts each entry as written. Repeated values are one element, however many times they are listed."},
+     {label:String(n-1), note:"One of the distinct values got missed."},
+     {label:String(n+1), note:"One too many — two of those entries name the same element."}
+   ];
+   return {q:"What is the cardinal number of "+rost(withDup)+"?",
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Decode, then count",
+ sub:"Write the set out first. The count is the easy part; the roster is where it goes wrong.",
+ gen:function(){
+   const forms=[];
+   const k=ri(4,10);
+   forms.push({set:sbN(X+" &lt; "+k), ans:k-1,
+     bad:[[k,"That counts either 0 or "+k+" itself. Neither belongs: naturals start at 1, and &lt; "+k+" stops at "+(k-1)+"."],
+          [k-2,"One short — the set runs 1 through "+(k-1)+"."],
+          [k+1,"Two too many: it starts at 1, not 0, and stops before "+k+"."]],
+     note:"The set is "+rost(rng(1,k-1))+", which has "+(k-1)+" elements."});
+   forms.push({set:sbN(X+" \u2264 "+k), ans:k,
+     bad:[[k-1,"\u2264 keeps "+k+" itself, so the set runs 1 through "+k+"."],
+          [k+1,"That counts 0 as well, but 0 is not a natural number."],
+          [k-2,"Two short — count 1 through "+k+"."]],
+     note:"The set is "+rost(rng(1,k))+", which has "+k+" elements."});
+   const a=ri(3,9), b=a+ri(3,7);
+   forms.push({set:sbN(a+" &lt; "+X+" \u2264 "+b), ans:b-a,
+     bad:[[b-a+1,"That keeps "+a+", but "+a+" &lt; "+X+" leaves it out."],
+          [b-a-1,"That drops "+b+", but "+X+" \u2264 "+b+" keeps it."],
+          [b,"That is the largest element, not how many there are."]],
+     note:"The set is "+rost(rng(a+1,b))+", which has "+(b-a)+" elements."});
+   forms.push({set:sbN(a+" \u2264 "+X+" \u2264 "+b), ans:b-a+1,
+     bad:[[b-a,"Both endpoints are included, so add 1 to the difference."],
+          [b-a+2,"One too many — count "+a+" through "+b+"."],
+          [b,"That is the largest element, not the count."]],
+     note:"The set is "+rost(rng(a,b))+", which has "+(b-a+1)+" elements."});
+   const words=[{d:"a day of the week",n:7,r:"Monday through Sunday"},
+                {d:"a vowel",n:5,r:"a, e, i, o, u"},
+                {d:"a month of the year",n:12,r:"January through December"},
+                {d:"a season",n:4,r:"spring, summer, fall, winter"},
+                {d:"a weekday",n:5,r:"Monday through Friday"}];
+   const w=pick(words);
+   forms.push({set:sbWord(w.d), ans:w.n,
+     bad:[[w.n-1,"One short — the elements are "+w.r+"."],
+          [w.n+1,"One too many — the elements are "+w.r+"."],
+          [w.n+2,"Count them out: "+w.r+"."]],
+     note:"The elements are "+w.r+", so there are "+w.n+"."});
+   const f=pick(forms);
+   const opts=[{label:String(f.ans),correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:String(x[0]),note:x[1]};}));
+   return {q:"What is the cardinal number of this set?", big:f.set,
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Counting across the dots",
+ sub:"The dots hide elements, and the hidden ones still count.",
+ gen:function(){
+   if(Math.random()<.6){
+     const a=ri(3,60), b=a+ri(12,40);
+     const opts=[
+       {label:String(b-a+1), correct:true, note:b+" \u2212 "+a+" + 1 = "+(b-a+1)+". Both ends are elements, so the difference alone is one short."},
+       {label:String(b-a), note:"That is just "+b+" \u2212 "+a+". Counting whole numbers from "+a+" to "+b+" includes both ends, so add 1."},
+       {label:String(b), note:"That is the largest element, not how many there are."},
+       {label:String(b-a+2), note:"One too many. From "+a+" to "+b+" there are "+(b-a+1)+" numbers."}
+     ];
+     return {q:"What is the cardinal number of "+rostEll(a,b)+"?",
+       opts:shuffle(distinctOpts(opts).slice(0,4))};
+   }
+   const s=pick([3,4,5,6,10]), m=ri(6,14), L=s*m;
+   const shown=st("{"+s+", "+(2*s)+", "+(3*s)+", "+EL+", "+(L-s)+", "+L+"}");
+   const opts=[
+     {label:String(m), correct:true, note:"The list counts by "+s+"s up to "+L+", and "+L+" \u00f7 "+s+" = "+m+" elements."},
+     {label:String(L), note:"That is the largest element, not the number of elements."},
+     {label:String(m-1), note:"One short — the first element "+s+" counts too."},
+     {label:String(L-s), note:"That is the second-to-last element, not a count."}
+   ];
+   return {q:"What is the cardinal number of "+shown+"?",
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Counting nothing",
+ sub:"∅ holds no elements. {0} and {∅} each hold one. Those are three different sets.",
+ gen:function(){
+   const forms=[
+     {q:"What is "+card(st("\u2205"))+"?", ans:"0",
+      bad:[["1","\u2205 has nothing inside it, so there is nothing to count."],
+           [st("\u2205"),"The cardinal number is a number. The set is \u2205; its count is 0."],
+           ["It has no cardinal number","\u2205 is a finite set, and its cardinal number is 0."]],
+      note:"The empty set has no elements at all, so its cardinal number is 0."},
+     {q:"What is "+card(st("{0}"))+"?", ans:"1",
+      bad:[["0","{0} is not empty — the number 0 is sitting inside it."],
+           ["2","There is one thing between the braces."],
+           [st("\u2205"),"{0} is not the empty set. It is the set holding the number 0."]],
+      note:"{0} holds exactly one element, the number 0, so its cardinal number is 1."},
+     {q:"What is "+card(st("{\u2205}"))+"?", ans:"1",
+      bad:[["0","The braces are not empty — the empty set is inside them."],
+           ["2","Only one thing sits between the outer braces."],
+           ["It has no cardinal number","It is a finite set with one element."]],
+      note:"An empty box inside a box is still one thing in the outer box."},
+     {q:"Which of these sets has cardinal number <b>0</b>?", ans:st("\u2205"),
+      bad:[[st("{0}"),"One element: the number 0."],
+           [st("{\u2205}"),"One element: the empty set."],
+           [st("{0, 1}"),"Two elements."]],
+      note:"\u2205, also written { }, is the only one here with nothing inside it."},
+     {q:"What is "+card(st("{0, \u2205}"))+"?", ans:"2",
+      bad:[["1","Two different things sit between the braces: the number 0 and the empty set."],
+           ["0","The braces are not empty."],
+           ["3","There are two items in the list."]],
+      note:"Two elements — the number 0 and the empty set are not the same thing."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Equal means the same elements",
+ sub:"Order is irrelevant. Membership is everything.",
+ gen:function(){
+   const k=ri(4,5);
+   const A=lets(k);
+   let same; do{ same=shuffle(A.slice(0)); }while(same.join()===A.join());
+   const fewer=A.slice(0,k-1);
+   const more=A.concat(shuffle(LET.filter(function(c){return A.indexOf(c)<0;})).slice(0,1));
+   const newLet=shuffle(LET.filter(function(c){return A.indexOf(c)<0&&more.indexOf(c)<0;}))[0];
+   const swapped=shuffle(A.slice(0,k-1).concat([newLet]));
+   const opts=[
+     {label:rost(same), correct:true, note:"Same elements, listed in a different order. Order never changes a set, so these two are equal."},
+     {label:rost(fewer), note:"That set is missing <b>"+A[k-1]+"</b>, so it is not equal to "+st("<i>A</i>")+"."},
+     {label:rost(more), note:"That set has an extra element, <b>"+more[k]+"</b>, which is not in "+st("<i>A</i>")+"."},
+     {label:rost(swapped), note:"Same number of elements, but <b>"+A[k-1]+"</b> was replaced by <b>"+newLet+"</b>. That makes it equivalent to "+st("<i>A</i>")+", not equal."}
+   ];
+   return {q:"Let "+st("<i>A</i>")+" = "+rost(A)+".<br>Which of these sets is <b>equal</b> to "+st("<i>A</i>")+"?",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Equivalent means the same count",
+ sub:"Equivalent sets need not share a single element. They only need to match in size.",
+ gen:function(){
+   const k=ri(3,6);
+   const A=lets(k);
+   const same=nums(k,10,99);
+   const less=nums(k-1,10,99);
+   const more=nums(k+1,10,99);
+   const more2=nums(k+2,10,99);
+   const opts=[
+     {label:rost(same), correct:true, note:"Both sets have "+k+" elements, so they are equivalent. They share nothing at all, and that is fine — equivalence only counts."},
+     {label:rost(less), note:"That set has "+(k-1)+" elements. Equivalent sets must match exactly."},
+     {label:rost(more), note:"That set has "+(k+1)+" elements, one more than "+st("<i>A</i>")+"."},
+     {label:rost(more2), note:"That set has "+(k+2)+" elements."}
+   ];
+   return {q:"Let "+st("<i>A</i>")+" = "+rost(A)+".<br>Which of these sets is <b>equivalent</b> to "+st("<i>A</i>")+"?",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Finite or infinite",
+ sub:"A finite set can be counted through to the end. An infinite one cannot.",
+ gen:function(){
+   const k=ri(5,20), a=ri(3,40), b=a+ri(10,30);
+   const FIN=[
+     {s:sbN(X+" &lt; "+k), why:"the naturals below "+k+" stop at "+(k-1)+", so there are "+(k-1)+" of them"},
+     {s:rostEll(a,b), why:"the dots stop at "+b+", so this has "+(b-a+1)+" elements"},
+     {s:sbWord("a day of the week"), why:"there are exactly seven days"},
+     {s:sbWord("a vowel"), why:"there are five vowels"},
+     {s:st("\u2205"), why:"it has 0 elements, and 0 is a perfectly countable number"},
+     {s:sbN(a+" \u2264 "+X+" \u2264 "+b), why:"it runs from "+a+" to "+b+" and stops"}
+   ];
+   const INF=[
+     {s:sbN(X+" &gt; "+k), why:"the natural numbers above "+k+" never run out"},
+     {s:sbN(X+" \u2265 "+k), why:"the natural numbers from "+k+" onward never run out"},
+     {s:rostInf(k), why:"the dots at the end mean the list never stops"},
+     {s:sbWord("a natural number"), why:"the natural numbers go on without end"},
+     {s:sbN(X+" is even"), why:"the even natural numbers never run out"}
+   ];
+   const askInf=Math.random()<.5;
+   if(askInf){
+     const right=pick(INF), wrongs=shuffle(FIN.slice(0)).slice(0,3);
+     const opts=[{label:right.s,correct:true,note:"Infinite — "+right.why+"."}]
+       .concat(wrongs.map(function(w){return {label:w.s,note:"That one is finite: "+w.why+"."};}));
+     return {q:"Which of these sets is <b>infinite</b>?", opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+   }
+   const right=pick(FIN), wrongs=shuffle(INF.slice(0)).slice(0,3);
+   const opts=[{label:right.s,correct:true,note:"Finite — "+right.why+"."}]
+     .concat(wrongs.map(function(w){return {label:w.s,note:"That one is infinite: "+w.why+"."};}));
+   return {q:"Which of these sets is <b>finite</b>?", opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Equal, equivalent, both, or neither",
+ sub:"Check the elements first, then the count. One of these four verdicts can never happen.",
+ gen:function(){
+   const bank=[
+     {A:"<i>A</i>",B:"<i>B</i>",sa:rost([1,2,3,4,5]),sb:rost([0,1,2,3,4]),kind:"equivOnly",
+      why:"Both hold five elements, so they are equivalent. But 5 is in "+st("<i>A</i>")+" and not in "+st("<i>B</i>")+", and 0 is in "+st("<i>B</i>")+" and not in "+st("<i>A</i>")+", so they are not equal."},
+     {A:"<i>C</i>",B:"<i>D</i>",sa:sbN("5 &lt; "+X+" \u2264 8"),sb:sbN("9 &lt; "+X+" \u2264 12"),kind:"equivOnly",
+      why:st("<i>C</i>")+" = "+rost([6,7,8])+" and "+st("<i>D</i>")+" = "+rost([10,11,12])+". Three elements each, so equivalent — but they share none, so not equal."},
+     {A:"<i>E</i>",B:"<i>F</i>",sa:rost(["Monday"]),sb:sbWord("a day of the week whose name begins with M"),kind:"both",
+      why:"Monday is the only day beginning with M, so "+st("<i>F</i>")+" = "+rost(["Monday"])+". Same single element, so equal — and therefore equivalent too."},
+     {A:"<i>R</i>",B:"<i>S</i>",sa:rost(["a","b","c","z"]),sb:rost(["z","a","c","b"]),kind:"both",
+      why:"Exactly the same four letters, written in a different order. Order never matters, so these are equal, and equal sets are always equivalent."},
+     {A:"<i>G</i>",B:"<i>H</i>",sa:rost([2,4,6,8]),sb:rost([2,4,6]),kind:"neither",
+      why:st("<i>G</i>")+" has four elements and "+st("<i>H</i>")+" has three, so they are not equivalent — and a set missing 8 cannot be equal either."},
+     {A:"<i>P</i>",B:"<i>Q</i>",sa:sbN(X+" &lt; 5"),sb:rost([1,2,3,4]),kind:"both",
+      why:st("<i>P</i>")+" = "+rost([1,2,3,4])+", the same four elements as "+st("<i>Q</i>")+". Equal, and so equivalent."},
+     {A:"<i>M</i>",B:"<i>K</i>",sa:sbWord("a vowel"),sb:rost([10,20,30,40,50]),kind:"equivOnly",
+      why:"Five vowels and five numbers. Same count, so equivalent — but nothing in common, so not equal."},
+     {A:"<i>V</i>",B:"<i>W</i>",sa:sbWord("a season"),sb:sbWord("a day of the week"),kind:"neither",
+      why:"Four seasons against seven days. Different counts, so not equivalent, and different things entirely, so not equal."}
+   ];
+   const it=pick(bank);
+   const L={
+     both:"Equal <i>and</i> equivalent",
+     equivOnly:"Equivalent, but not equal",
+     neither:"Neither equal nor equivalent",
+     impossible:"Equal, but not equivalent"
+   };
+   const notes={
+     both:"They do not hold the same elements, so equal is too strong here.",
+     equivOnly:"Check the counts and the elements again before settling on this one.",
+     neither:"At least one of the two relationships does hold here.",
+     impossible:"That combination is impossible for any pair of sets. Equal sets hold the same elements, so they must hold the same number of them."
+   };
+   const keys=["both","equivOnly","neither","impossible"];
+   const opts=keys.map(function(k){
+     return {label:L[k], correct:k===it.kind, note:k===it.kind?it.why:notes[k]};
+   });
+   return {q:"How are these two sets related?",
+     two:st(it.A)+" = "+it.sa+"<br>"+st(it.B)+" = "+it.sb,
+     opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"Which way does it go",
+ sub:"Equal forces equivalent. Equivalent forces nothing.",
+ gen:function(){
+   const EX=rost(["a","b","c"])+" and "+rost([1,2,3]);
+   const T=[
+     {s:"If two sets are equal, they must also be equivalent.",
+      w:"Equal sets hold the same elements, so they cannot hold different amounts of them."},
+     {s:"If "+st("<i>A</i>")+" = "+st("<i>B</i>")+", then "+card("<i>A</i>")+" = "+card("<i>B</i>")+".",
+      w:"That is the same claim in notation: identical sets are counted by the same number."},
+     {s:"Every set is equal to itself.",
+      w:"A set holds exactly the elements it holds, so it matches itself element for element."},
+     {s:"Two sets can be equivalent without being equal.",
+      w:EX+" both have three elements and share none of them."},
+     {s:"Two sets with different cardinal numbers cannot be equal.",
+      w:"If they were equal they would have matching counts, so mismatched counts rule equality out."},
+     {s:"Every set is equivalent to itself.",
+      w:"A set has the same number of elements as itself."},
+     {s:"Two sets that share no elements at all can still be equivalent.",
+      w:EX+" have nothing in common and are still both of size three."}
+   ];
+   const F=[
+     {s:"If two sets are equivalent, they must also be equal.",
+      w:"Matching counts say nothing about which elements are inside. "+EX+" are a counterexample."},
+     {s:"If "+card("<i>A</i>")+" = "+card("<i>B</i>")+", then "+st("<i>A</i>")+" = "+st("<i>B</i>")+".",
+      w:"That runs the implication backwards. "+EX+" have the same cardinal number and are not equal."},
+     {s:"Two sets that share no elements at all cannot be equivalent.",
+      w:EX+" share nothing and both have three elements, so they are equivalent."},
+     {s:"A pair of sets can be equal without being equivalent.",
+      w:"That combination is impossible. Equal sets hold the same elements and so must have the same count."},
+     {s:"Equivalent sets must have at least one element in common.",
+      w:"Equivalence only compares counts. "+EX+" overlap in nothing."},
+     {s:"If two sets have the same elements, they may still have different cardinal numbers.",
+      w:"The same elements can only be counted one way."}
+   ];
+   if(Math.random()<.5){
+     const right=pick(T), wrongs=shuffle(F.slice(0)).slice(0,3);
+     const opts=[{label:right.s,correct:true,note:right.w}]
+       .concat(wrongs.map(function(x){return {label:x.s,note:"That one is false. "+x.w};}));
+     return {q:"Which of these statements is <b>true</b>?", opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+   }
+   const right=pick(F), wrongs=shuffle(T.slice(0)).slice(0,3);
+   const opts=[{label:right.s,correct:true,note:right.w}]
+     .concat(wrongs.map(function(x){return {label:x.s,note:"That one is true. "+x.w};}));
+   return {q:"Which of these statements is <b>false</b>?", opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {k:"R and S", n1:"R", n2:"S", e1:rost(["a","b","c","z"]), e2:rost(["z","a","c","b"]),
+   c1:4, c2:4, eq:true, ev:true,
+   note:"The same four letters in a different order. Order never changes a set, so these are equal — and equal sets always have matching counts."},
+  {k:"R and T", n1:"R", n2:"T", e1:rost(["a","b","c","z"]), e2:rost([17,11,24,90]),
+   c1:4, c2:4, eq:false, ev:true,
+   note:"Four elements each, so they are equivalent. They share nothing whatsoever, so they are nowhere near equal."},
+  {k:"A and B", n1:"A", n2:"B", e1:rost([1,2,3,4,5]), e2:rost([0,1,2,3,4]),
+   c1:5, c2:5, eq:false, ev:true,
+   note:"Nearly the same list, but 5 is only in A and 0 is only in B. One element out of place is enough to break equality; the count is untouched."},
+  {k:"E and G", n1:"E", n2:"G", e1:rost(["Monday"]), e2:rost(["Monday","Friday"]),
+   c1:1, c2:2, eq:false, ev:false,
+   note:"Different elements and different counts, so neither relationship holds. E does sit inside G, but that is a subset question, not this one."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  document.getElementById("n1").innerHTML=h.n1;
+  document.getElementById("n2").innerHTML=h.n2;
+  document.getElementById("e1").innerHTML=h.e1;
+  document.getElementById("e2").innerHTML=h.e2;
+  document.getElementById("c1").innerHTML="<i>n</i>("+h.n1+") = "+h.c1;
+  document.getElementById("c2").innerHTML="<i>n</i>("+h.n2+") = "+h.c2;
+  const ve=document.getElementById("vEqual"), vq=document.getElementById("vEquiv");
+  ve.className="tag "+(h.eq?"yes":"no"); ve.textContent=h.eq?"yes":"no";
+  vq.className="tag "+(h.ev?"yes":"no"); vq.textContent=h.ev?"yes":"no";
+  document.getElementById("heroResult").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.k+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<3&&tries<30);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.big?'<div class="big">'+q.big+'</div>':'')
+    +(q.two?'<div class="twoset">'+q.two+'</div>':'');
+  const optEl=document.getElementById("options");
+  optEl.style.gridTemplateColumns=q.wide?"1fr":"";
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
