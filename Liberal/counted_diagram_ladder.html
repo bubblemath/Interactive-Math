@@ -1,0 +1,739 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Counted Diagram Ladder — each number counts its own region</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --ct:#1F6F5C;
+    --ct-bg:#E4F1EC;
+    --cA:#0B6E77;
+    --cB:#A66A00;
+    --cC:#6B4C9A;
+    --shade:#1F6F5C;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--ct)}
+  :focus-visible{outline:3px solid var(--ct); outline-offset:2px; border-radius:3px}
+
+  .st{font-family:var(--serif); font-size:1.04em}
+  .st i{font-style:italic}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--ct)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:14px 12px 4px; background:var(--card)}
+  .demo-top svg{display:block; width:100%; height:auto; max-width:600px; margin:0 auto}
+  .readout{display:flex; flex-wrap:wrap; background:var(--rule); border-top:1px solid var(--rule); gap:1px}
+  .readout div{flex:1 1 190px; background:var(--card); padding:12px 16px; font-size:15px}
+  .readout .k{font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:3px}
+  .readout .val{font-family:var(--serif); font-size:17px}
+  .readout .big{font-size:22px; color:var(--ct); font-weight:700}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--ct); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:62px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--ct); background:var(--ct-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--ct)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .ask{margin:12px auto 16px; max-width:46ch; font-size:clamp(17px,3.4vw,21px); line-height:1.45; background:var(--ct-bg); border-radius:9px; padding:13px 18px}
+  .stem .ask b{color:var(--ct)}
+  .chart{margin:0 auto 12px; max-width:600px}
+  .chart svg{display:block; width:100%; height:auto}
+  .setup{margin:0 auto 12px; max-width:52ch; font-size:14.5px; color:var(--muted)}
+  .facts{margin:0 auto 14px; max-width:440px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden}
+  .facts div{padding:9px 16px; font-size:15.5px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts b{font-family:var(--serif); font-size:17px}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 20px 20px}
+  @media (max-width:640px){.options{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none}
+  .opt .v{font-family:var(--mono); font-size:18px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>55 | 20 | 70</span> The Counted Diagram Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 5 · reading counts off a completed Venn diagram</p>
+    <h1>Each number counts its own region.</h1>
+    <p class="lede">The 55 inside the classical circle is not how many people listened to classical music. It is how many listened to classical <i>and not</i> jazz. The full count is 55 plus the 20 in the overlap. Every question in a survey problem is a list of regions and then an addition — and almost every wrong answer is a missing region rather than a slip in the arithmetic.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroChart"></div></div>
+      <div class="readout">
+        <div><span class="k">Regions</span><span class="val" id="hReg"></span></div>
+        <div><span class="k">Adds up as</span><span class="val" id="hSum"></span></div>
+        <div><span class="k">Answer</span><span class="val big" id="hAns"></span></div>
+      </div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>The overlap gets counted once, not twice and not zero times.</b> Asked for classical <i>or</i> jazz, the answer is 55 + 20 + 70 = 145 — the 20 belongs, but only once, so adding 75 and 90 to get 165 counts it twice. Asked for classical alone, the answer is 75, not 55. Two opposite errors, both caused by not deciding first which regions the question is asking about.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–4 read the lesson's two-circle music diagram from every angle. Rung 5 runs it backwards, from survey totals to a missing region. Rungs 6–10 do the same work in three circles, ending with any question at all on one diagram.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every wrong number is a real answer</h3><p>The distractors are the correct totals for <i>different</i> questions on the same diagram, so the feedback can tell you which question you answered.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Regions first, arithmetic second</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The regions never overlap</h3><p>That is the whole reason the diagram works. Eight disjoint piles add cleanly, so nothing is ever counted twice by accident.</p></div>
+      <div class="step"><span class="n">02</span><h3>Backwards is the same skill</h3><p>Given a circle total and one of its pieces, subtraction finds the other. That is how a diagram gets filled in from survey results.</p></div>
+      <div class="step"><span class="n">03</span><h3>It is how the numbers get checked</h3><p>If the regions do not add to the number surveyed, something has gone wrong upstream, and the diagram will tell you.</p></div>
+    </div>
+    <p class="closing">Decide which regions the question names. Then add them. In that order, every time.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Counted Diagram Ladder · a circle is the sum of its regions · the overlap counts once · the outside region is still part of the survey</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function cap1(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function commas(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+
+const REG2=["I","II","III","IV"];
+const REG3=["I","II","III","IV","V","VI","VII","VIII"];
+const M2={I:{A:1,B:0},II:{A:1,B:1},III:{A:0,B:1},IV:{A:0,B:0}};
+const M3={I:{A:1,B:0,C:0},II:{A:1,B:1,C:0},III:{A:0,B:1,C:0},IV:{A:1,B:0,C:1},
+          V:{A:1,B:1,C:1},VI:{A:0,B:1,C:1},VII:{A:0,B:0,C:1},VIII:{A:0,B:0,C:0}};
+function sel2(f){return REG2.filter(function(r){return f(M2[r]);});}
+function sel3(f){return REG3.filter(function(r){return f(M3[r]);});}
+function cnt(m){return (m.A?1:0)+(m.B?1:0)+(m.C?1:0);}
+function regWords(rs){
+  if(!rs.length) return "no regions at all";
+  if(rs.length===1) return "region "+rs[0];
+  return "regions "+rs.slice(0,-1).join(", ")+" and "+rs[rs.length-1];
+}
+function sumR(D,rs){let s=0;rs.forEach(function(r){s+=D[r];});return s;}
+function addStr(D,rs){
+  if(rs.length===1) return "the "+commas(D[rs[0]])+" in region "+rs[0];
+  return rs.map(function(r){return commas(D[r]);}).join(" + ")+" = "+commas(sumR(D,rs));
+}
+
+/* ================= contexts ================= */
+const CTX2=[
+  {u:"respondents", v:"listened to", vb:"listen to", A:"classical music", B:"jazz", An:"Classical", Bn:"Jazz"},
+  {u:"students",    v:"studied",     vb:"study",      A:"Spanish",         B:"French", An:"Spanish", Bn:"French"},
+  {u:"customers",   v:"bought",      vb:"buy",        A:"coffee",          B:"tea",    An:"Coffee",  Bn:"Tea"},
+  {u:"adults",      v:"owned",       vb:"own",        A:"a dog",           B:"a cat",  An:"Dog",     Bn:"Cat"},
+  {u:"travelers",   v:"visited",     vb:"visit",      A:"Italy",           B:"Greece", An:"Italy",   Bn:"Greece"}
+];
+const CTX3=[
+  {u:"people",   v:"liked",  A:"comedies", B:"dramas",      C:"science fiction", An:"Comedy", Bn:"Drama", Cn:"Sci-fi"},
+  {u:"students", v:"took",   A:"algebra",  B:"biology",     C:"chemistry",       An:"Algebra",Bn:"Biology",Cn:"Chemistry"},
+  {u:"shoppers", v:"bought", A:"bread",    B:"milk",        C:"eggs",            An:"Bread",  Bn:"Milk",  Cn:"Eggs"},
+  {u:"members",  v:"joined", A:"swimming", B:"tennis",      C:"yoga",            An:"Swim",   Bn:"Tennis",Cn:"Yoga"},
+  {u:"readers",  v:"read",   A:"mysteries",B:"biographies", C:"poetry",          An:"Mystery",Bn:"Biography",Cn:"Poetry"}
+];
+
+/* ================= phrase banks ================= */
+const P2=[
+  {k:"A",       ph:function(c){return c.v+" "+c.A;},                     r:sel2(function(m){return m.A;})},
+  {k:"B",       ph:function(c){return c.v+" "+c.B;},                     r:sel2(function(m){return m.B;})},
+  {k:"both",    ph:function(c){return c.v+" both "+c.A+" and "+c.B;},    r:sel2(function(m){return m.A&&m.B;})},
+  {k:"or",      ph:function(c){return c.v+" "+c.A+" or "+c.B;},          r:sel2(function(m){return m.A||m.B;})},
+  {k:"AnotB",   ph:function(c){return c.v+" "+c.A+" but not "+c.B;},     r:sel2(function(m){return m.A&&!m.B;})},
+  {k:"BnotA",   ph:function(c){return c.v+" "+c.B+" but not "+c.A;},     r:sel2(function(m){return !m.A&&m.B;})},
+  {k:"neither", ph:function(c){return c.v+" neither "+c.A+" nor "+c.B;}, r:sel2(function(m){return !m.A&&!m.B;})},
+  {k:"notA",    ph:function(c){return "did not "+c.vb+" "+c.A;},          r:sel2(function(m){return !m.A;})},
+  {k:"notB",    ph:function(c){return "did not "+c.vb+" "+c.B;},          r:sel2(function(m){return !m.B;})},
+  {k:"all",     ph:function(c){return "were surveyed";},                 r:REG2.slice(0)}
+];
+const P3=[
+  {k:"A",        ph:function(c){return c.v+" "+c.A;},                                r:sel3(function(m){return m.A;})},
+  {k:"B",        ph:function(c){return c.v+" "+c.B;},                                r:sel3(function(m){return m.B;})},
+  {k:"C",        ph:function(c){return c.v+" "+c.C;},                                r:sel3(function(m){return m.C;})},
+  {k:"AB",       ph:function(c){return c.v+" both "+c.A+" and "+c.B;},               r:sel3(function(m){return m.A&&m.B;})},
+  {k:"BC",       ph:function(c){return c.v+" both "+c.B+" and "+c.C;},               r:sel3(function(m){return m.B&&m.C;})},
+  {k:"AC",       ph:function(c){return c.v+" both "+c.A+" and "+c.C;},               r:sel3(function(m){return m.A&&m.C;})},
+  {k:"ABC",      ph:function(c){return c.v+" all three";},                           r:sel3(function(m){return m.A&&m.B&&m.C;})},
+  {k:"AonlyN",   ph:function(c){return c.v+" "+c.A+" but neither "+c.B+" nor "+c.C;}, r:sel3(function(m){return m.A&&!m.B&&!m.C;})},
+  {k:"ConlyN",   ph:function(c){return c.v+" "+c.C+" but neither "+c.A+" nor "+c.B;}, r:sel3(function(m){return !m.A&&!m.B&&m.C;})},
+  {k:"BCnotA",   ph:function(c){return c.v+" "+c.B+" and "+c.C+" but not "+c.A;},     r:sel3(function(m){return !m.A&&m.B&&m.C;})},
+  {k:"ABnotC",   ph:function(c){return c.v+" "+c.A+" and "+c.B+" but not "+c.C;},     r:sel3(function(m){return m.A&&m.B&&!m.C;})},
+  {k:"BorCnotA", ph:function(c){return c.v+" "+c.B+" or "+c.C+" but not "+c.A;},      r:sel3(function(m){return (m.B||m.C)&&!m.A;})},
+  {k:"AorBnotC", ph:function(c){return c.v+" "+c.A+" or "+c.B+" but not "+c.C;},      r:sel3(function(m){return (m.A||m.B)&&!m.C;})},
+  {k:"exactly1", ph:function(c){return c.v+" exactly one of the three";},             r:sel3(function(m){return cnt(m)===1;})},
+  {k:"exactly2", ph:function(c){return c.v+" exactly two of the three";},             r:sel3(function(m){return cnt(m)===2;})},
+  {k:"atleast2", ph:function(c){return c.v+" at least two of the three";},            r:sel3(function(m){return cnt(m)>=2;})},
+  {k:"atleast1", ph:function(c){return c.v+" at least one of the three";},            r:sel3(function(m){return cnt(m)>=1;})},
+  {k:"none",     ph:function(c){return c.v+" none of the three";},                    r:sel3(function(m){return cnt(m)===0;})},
+  {k:"all",      ph:function(c){return "were surveyed";},                             r:REG3.slice(0)}
+];
+function byKey(bank,k){for(let i=0;i<bank.length;i++){if(bank[i].k===k)return bank[i];}return null;}
+function phrase(bank,c,k){const it=byKey(bank,k); return it.alt?it.alt(c):it.ph(c);}
+function ask(bank,c,k){return "How many "+c.u+" <b>"+phrase(bank,c,k)+"</b>?";}
+function setupLine(c,three){
+  return three
+    ? ("A survey asked "+c.u+" which of "+c.A+", "+c.B+" and "+c.C+" they "+c.v+". The diagram shows how many gave each combination of answers.")
+    : ("A survey asked "+c.u+" about "+c.A+" and "+c.B+". The diagram shows how many gave each combination of answers.");
+}
+
+/* ================= renderers with counts ================= */
+let svgUid=0;
+function venn2(o){
+  o=o||{};
+  const uid="t"+(++svgUid), shade=o.shade||[], D=o.counts||null;
+  const ax=220,bx=330,cy=160,r=100;
+  const cc=function(x){return '<circle cx="'+x+'" cy="'+cy+'" r="'+r+'"';};
+  let s='<svg viewBox="0 0 600 320" role="img" aria-label="Venn diagram with two sets and counts">';
+  s+='<rect x="10" y="10" width="580" height="300" rx="4" fill="none" stroke="var(--ink)" stroke-width="1.3"/>';
+  s+='<text x="26" y="36" font-family="Georgia,serif" font-style="italic" font-size="19" fill="var(--ink)">U</text>';
+  const RECT='<rect x="10" y="10" width="580" height="300" fill="#fff"/>';
+  s+='<defs><clipPath id="'+uid+'cA">'+cc(ax)+'/></clipPath>'
+    +'<mask id="'+uid+'nA">'+RECT+cc(ax)+' fill="#000"/></mask>'
+    +'<mask id="'+uid+'nB">'+RECT+cc(bx)+' fill="#000"/></mask>'
+    +'<mask id="'+uid+'nAB">'+RECT+cc(ax)+' fill="#000"/>'+cc(bx)+' fill="#000"/></mask></defs>';
+  const F='fill="var(--shade)" fill-opacity="0.26"';
+  const h=function(k){return shade.indexOf(k)>=0;};
+  if(h("IV")) s+='<rect x="10" y="10" width="580" height="300" '+F+' mask="url(#'+uid+'nAB)"/>';
+  if(h("I"))  s+=cc(ax)+' '+F+' mask="url(#'+uid+'nB)"/>';
+  if(h("III"))s+=cc(bx)+' '+F+' mask="url(#'+uid+'nA)"/>';
+  if(h("II")) s+=cc(bx)+' '+F+' clip-path="url(#'+uid+'cA)"/>';
+  s+=cc(ax)+' fill="var(--cA)" fill-opacity="0.09" stroke="var(--cA)" stroke-width="1.7"/>';
+  s+=cc(bx)+' fill="var(--cB)" fill-opacity="0.09" stroke="var(--cB)" stroke-width="1.7"/>';
+  const T=function(x,y,t,sz,col,it,w){return '<text x="'+x+'" y="'+y+'" text-anchor="middle" font-family="Georgia,serif" font-size="'+sz+'"'+(it?' font-style="italic"':'')+(w?' font-weight="700"':'')+' fill="'+col+'">'+esc(t)+'</text>';};
+  s+=T(150,48,(o.aName||"A"),18,"var(--cA)",true)+T(400,48,(o.bName||"B"),18,"var(--cB)",true);
+  const SL={I:175,II:275,III:375,IV:520};
+  REG2.forEach(function(k){
+    s+=T(SL[k],130,k,14,"var(--muted)");
+    if(D) s+=T(SL[k],174,commas(D[k]),24,"var(--ink)",false,true);
+  });
+  return s+"</svg>";
+}
+const GEO={A:{x:240,y:150,r:100},B:{x:360,y:150,r:100},C:{x:300,y:250,r:100},
+  slots:{
+    I:{rx:190,ry:112, cx:190,cy:147},
+    II:{rx:300,ry:104, cx:300,cy:138},
+    III:{rx:410,ry:112, cx:410,cy:147},
+    IV:{rx:228,ry:212, cx:232,cy:243},
+    V:{rx:300,ry:192, cx:300,cy:222},
+    VI:{rx:372,ry:212, cx:368,cy:243},
+    VII:{rx:300,ry:290, cx:300,cy:322},
+    VIII:{rx:536,ry:296, cx:536,cy:330}
+  }};
+function venn3(o){
+  o=o||{};
+  const uid="h"+(++svgUid), shade=o.shade||[], D=o.counts||null;
+  const A=GEO.A,B=GEO.B,C=GEO.C;
+  const circ=function(c){return '<circle cx="'+c.x+'" cy="'+c.y+'" r="'+c.r+'"';};
+  let s='<svg viewBox="0 0 600 380" role="img" aria-label="Venn diagram with three sets and counts">';
+  s+='<rect x="10" y="10" width="580" height="360" rx="4" fill="none" stroke="var(--ink)" stroke-width="1.3"/>';
+  s+='<text x="26" y="36" font-family="Georgia,serif" font-style="italic" font-size="19" fill="var(--ink)">U</text>';
+  const RECT='<rect x="10" y="10" width="580" height="360" fill="#fff"/>';
+  const blk=function(c){return circ(c)+' fill="#000"/>';};
+  s+='<defs>'
+    +'<clipPath id="'+uid+'cA">'+circ(A)+'/></clipPath>'
+    +'<clipPath id="'+uid+'cB">'+circ(B)+'/></clipPath>'
+    +'<mask id="'+uid+'nA">'+RECT+blk(A)+'</mask>'
+    +'<mask id="'+uid+'nB">'+RECT+blk(B)+'</mask>'
+    +'<mask id="'+uid+'nC">'+RECT+blk(C)+'</mask>'
+    +'<mask id="'+uid+'nBC">'+RECT+blk(B)+blk(C)+'</mask>'
+    +'<mask id="'+uid+'nAC">'+RECT+blk(A)+blk(C)+'</mask>'
+    +'<mask id="'+uid+'nAB">'+RECT+blk(A)+blk(B)+'</mask>'
+    +'<mask id="'+uid+'nABC">'+RECT+blk(A)+blk(B)+blk(C)+'</mask></defs>';
+  const F='fill="var(--shade)" fill-opacity="0.26"';
+  const h=function(k){return shade.indexOf(k)>=0;};
+  if(h("VIII")) s+='<rect x="10" y="10" width="580" height="360" '+F+' mask="url(#'+uid+'nABC)"/>';
+  if(h("I"))   s+=circ(A)+' '+F+' mask="url(#'+uid+'nBC)"/>';
+  if(h("III")) s+=circ(B)+' '+F+' mask="url(#'+uid+'nAC)"/>';
+  if(h("VII")) s+=circ(C)+' '+F+' mask="url(#'+uid+'nAB)"/>';
+  if(h("II"))  s+=circ(B)+' '+F+' clip-path="url(#'+uid+'cA)" mask="url(#'+uid+'nC)"/>';
+  if(h("IV"))  s+=circ(C)+' '+F+' clip-path="url(#'+uid+'cA)" mask="url(#'+uid+'nB)"/>';
+  if(h("VI"))  s+=circ(C)+' '+F+' clip-path="url(#'+uid+'cB)" mask="url(#'+uid+'nA)"/>';
+  if(h("V"))   s+='<g clip-path="url(#'+uid+'cA)"><g clip-path="url(#'+uid+'cB)">'+circ(C)+' '+F+'/></g></g>';
+  s+=circ(A)+' fill="var(--cA)" fill-opacity="0.08" stroke="var(--cA)" stroke-width="1.7"/>';
+  s+=circ(B)+' fill="var(--cB)" fill-opacity="0.08" stroke="var(--cB)" stroke-width="1.7"/>';
+  s+=circ(C)+' fill="var(--cC)" fill-opacity="0.08" stroke="var(--cC)" stroke-width="1.7"/>';
+  const T=function(x,y,t,sz,col,it,w){return '<text x="'+x+'" y="'+y+'" text-anchor="middle" font-family="Georgia,serif" font-size="'+sz+'"'+(it?' font-style="italic"':'')+(w?' font-weight="700"':'')+' fill="'+col+'">'+esc(t)+'</text>';};
+  s+=T(160,44,(o.aName||"A"),17,"var(--cA)",true)+T(440,44,(o.bName||"B"),17,"var(--cB)",true)+T(300,364,(o.cName||"C"),17,"var(--cC)",true);
+  REG3.forEach(function(k){
+    const p=GEO.slots[k];
+    s+=T(p.rx,p.ry,k,13,"var(--muted)");
+    if(D) s+=T(p.cx,p.cy,commas(D[k]),20,"var(--ink)",false,true);
+  });
+  return s+"</svg>";
+}
+
+/* ================= data ================= */
+function counts2(){
+  const D={}; REG2.forEach(function(k){ D[k]=ri(3,19)*5; }); return D;
+}
+function counts3(){
+  const D={}; REG3.forEach(function(k){ D[k]=ri(2,16); }); return D;
+}
+
+/* build four numeric options: distractors are the right answers to other questions */
+function countOpts(bank,c,D,key,poolKeys,extras){
+  const me=byKey(bank,key), ans=sumR(D,me.r);
+  const used={}; used[ans]=1;
+  const opts=[{label:commas(ans), correct:true,
+    note:"\u201c"+cap1(phrase(bank,c,key))+"\u201d is "+regWords(me.r)+", so the count is "+addStr(D,me.r)+"."}];
+  shuffle(poolKeys.slice(0)).forEach(function(k){
+    const it=byKey(bank,k); if(!it||k===key)return;
+    const v=sumR(D,it.r); if(used[v])return; used[v]=1;
+    opts.push({label:commas(v), note:"That is the answer to \u201c"+phrase(bank,c,k)+"\u201d \u2014 "+regWords(it.r)+"."});
+  });
+  (extras||[]).forEach(function(e){ if(used[e.v])return; used[e.v]=1; opts.push({label:commas(e.v),note:e.n}); });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const K2ALL=P2.map(function(p){return p.k;});
+const K3ALL=P3.map(function(p){return p.k;});
+
+const RUNGS=[
+{
+ title:"Read one region",
+ sub:"The number in a region counts the people in that region and nobody else.",
+ gen:function(){
+   const c=pick(CTX2), D=counts2();
+   const key=pick(["both","AnotB","BnotA","neither"]);
+   const opts=countOpts(P2,c,D,key,K2ALL);
+   return {q:ask(P2,c,key), setup:setupLine(c,false),
+     svg:venn2({aName:c.An,bName:c.Bn,counts:D,shade:byKey(P2,key).r}),
+     opts:shuffle(opts)};
+ }
+},
+{
+ title:"A circle is the sum of its regions",
+ sub:"Asked for a whole circle, the overlap has to be added in.",
+ gen:function(){
+   const c=pick(CTX2), D=counts2();
+   const key=pick(["A","B"]);
+   const solo=key==="A"?"I":"III";
+   const opts=countOpts(P2,c,D,key,K2ALL,[
+     {v:D.I+D.II+D.III, n:"That is everyone in either circle \u2014 the answer to \u201c"+phrase(P2,c,"or")+"\u201d."}
+   ]);
+   const o=shuffle(opts);
+   o.forEach(function(x){ if(x.correct) x.note="The circle is made of two regions: the "+commas(D[solo])+" who "+phrase(P2,c,key==="A"?"AnotB":"BnotA")+" plus the "+commas(D.II)+" in the overlap. "+addStr(D,byKey(P2,key).r)+"."; });
+   return {q:ask(P2,c,key), setup:setupLine(c,false),
+     svg:venn2({aName:c.An,bName:c.Bn,counts:D,shade:byKey(P2,key).r}),
+     opts:o};
+ }
+},
+{
+ title:"Or, neither, and the total",
+ sub:"“Or” takes three regions. The total takes all four.",
+ gen:function(){
+   const c=pick(CTX2), D=counts2();
+   const key=pick(["or","neither","all"]);
+   const nA=D.I+D.II, nB=D.II+D.III;
+   const extras=[
+     {v:nA+nB, n:"That is n("+c.An+") + n("+c.Bn+") = "+commas(nA)+" + "+commas(nB)+", which counts the "+commas(D.II)+" in the overlap twice."},
+     {v:D.I+D.II+D.III, n:"That is everyone inside the circles, leaving out the "+commas(D.IV)+" in region IV who were still surveyed."}
+   ];
+   const opts=countOpts(P2,c,D,key,K2ALL,extras);
+   return {q:ask(P2,c,key), setup:setupLine(c,false),
+     svg:venn2({aName:c.An,bName:c.Bn,counts:D,shade:byKey(P2,key).r}),
+     opts:shuffle(opts)};
+ }
+},
+{
+ title:"But not, and did not",
+ sub:"“Did not listen to classical” is bigger than “neither.” It keeps the jazz-only crowd.",
+ gen:function(){
+   const c=pick(CTX2), D=counts2();
+   const key=pick(["AnotB","BnotA","notA","neither"]);
+   const opts=countOpts(P2,c,D,key,K2ALL);
+   return {q:ask(P2,c,key), setup:setupLine(c,false),
+     svg:venn2({aName:c.An,bName:c.Bn,counts:D,shade:byKey(P2,key).r}),
+     opts:shuffle(opts)};
+ }
+},
+{
+ title:"Working backwards from totals",
+ sub:"No diagram. Four survey facts, and a region you have to recover by subtracting.",
+ gen:function(){
+   const B={
+     u:"adults", g1:"Americans", g2:"French adults",
+     q:"agreed with the statement", nq:"disagreed with the statement"
+   };
+   const bank=[B,
+     {u:"customers", g1:"members", g2:"non-members", q:"used the mobile app", nq:"did not use the mobile app"},
+     {u:"students",  g1:"first-year students", g2:"returning students", q:"lived on campus", nq:"lived off campus"},
+     {u:"employees", g1:"managers", g2:"non-managers", q:"attended the training", nq:"skipped the training"}
+   ];
+   const c=pick(bank);
+   const D={I:ri(8,60)*10, II:ri(5,40)*10, III:ri(8,60)*10, IV:ri(4,30)*10};
+   const nU=D.I+D.II+D.III+D.IV, nA=D.I+D.II, nQ=D.II+D.III;
+   const forms=[
+     {q:"How many <b>"+c.g2+" "+c.q+"</b>?", key:"III",
+      note:commas(nQ)+" "+c.q+" in all, and "+commas(D.II)+" of those were "+c.g1+". So "+commas(nQ)+" \u2212 "+commas(D.II)+" = "+commas(D.III)+" were "+c.g2+"."},
+     {q:"How many <b>"+c.g2+" "+c.nq+"</b>?", key:"IV",
+      note:"There were "+commas(nU-nA)+" "+c.g2+" in all ("+commas(nU)+" \u2212 "+commas(nA)+"), and "+commas(D.III)+" of them "+c.q+". So "+commas(nU-nA)+" \u2212 "+commas(D.III)+" = "+commas(D.IV)+"."},
+     {q:"How many <b>"+c.g1+" "+c.nq+"</b>?", key:"I",
+      note:"There were "+commas(nA)+" "+c.g1+", and "+commas(D.II)+" of them "+c.q+". So "+commas(nA)+" \u2212 "+commas(D.II)+" = "+commas(D.I)+"."},
+     {q:"How many "+c.u+" in all <b>"+c.nq+"</b>?", key:"I,IV",
+      note:commas(nU)+" were surveyed and "+commas(nQ)+" "+c.q+". So "+commas(nU)+" \u2212 "+commas(nQ)+" = "+commas(D.I+D.IV)+"."}
+   ];
+   const f=pick(forms);
+   const ansOf={"I":D.I,"III":D.III,"IV":D.IV,"I,IV":D.I+D.IV};
+   const ans=ansOf[f.key];
+   const cands=[
+     {v:D.I, n:"That is the "+c.g1+" who "+c.nq+"."},
+     {v:D.II, n:"That is the "+c.g1+" who "+c.q+" \u2014 the number you were given."},
+     {v:D.III, n:"That is the "+c.g2+" who "+c.q+"."},
+     {v:D.IV, n:"That is the "+c.g2+" who "+c.nq+"."},
+     {v:D.I+D.IV, n:"That is everyone who "+c.nq+", both groups together."},
+     {v:nU-nA, n:"That is the total number of "+c.g2+", before splitting them by answer."},
+     {v:nQ, n:"That is everyone who "+c.q+", both groups together."},
+     {v:nA, n:"That is the total number of "+c.g1+"."}
+   ];
+   const used={}; used[ans]=1;
+   const opts=[{label:commas(ans), correct:true, note:f.note}];
+   shuffle(cands).forEach(function(x){ if(used[x.v])return; used[x.v]=1; opts.push({label:commas(x.v),note:x.n}); });
+   return {q:f.q,
+     facts:"<div>"+commas(nU)+" "+c.u+" were surveyed.</div>"
+          +"<div>"+commas(nQ)+" of them "+c.q+".</div>"
+          +"<div>"+commas(nA)+" were "+c.g1+".</div>"
+          +"<div>"+commas(D.II)+" "+c.g1+" "+c.q+".</div>",
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"A circle in three circles",
+ sub:"Four regions per circle now, and the centre is the one that goes missing.",
+ gen:function(){
+   const c=pick(CTX3), D=counts3();
+   const key=pick(["A","B","C","AB","BC","AC","ABC"]);
+   const opts=countOpts(P3,c,D,key,K3ALL);
+   return {q:ask(P3,c,key), setup:setupLine(c,true),
+     svg:venn3({aName:c.An,bName:c.Bn,cName:c.Cn,counts:D,shade:byKey(P3,key).r}),
+     opts:shuffle(opts)};
+ }
+},
+{
+ title:"But not, but neither",
+ sub:"A “but” at the end of the question cuts the region list right down.",
+ gen:function(){
+   const c=pick(CTX3), D=counts3();
+   const key=pick(["AonlyN","ConlyN","BCnotA","ABnotC","BorCnotA","AorBnotC"]);
+   const opts=countOpts(P3,c,D,key,K3ALL);
+   return {q:ask(P3,c,key), setup:setupLine(c,true),
+     svg:venn3({aName:c.An,bName:c.Bn,cName:c.Cn,counts:D,shade:byKey(P3,key).r}),
+     opts:shuffle(opts)};
+ }
+},
+{
+ title:"Exactly one, exactly two, at least two",
+ sub:"Three phrases, three different region lists. The centre decides two of them.",
+ gen:function(){
+   const c=pick(CTX3), D=counts3();
+   const key=pick(["exactly1","exactly2","atleast2"]);
+   const opts=countOpts(P3,c,D,key,K3ALL);
+   const extra={
+     exactly1:"Exactly one is the three outer crescents: "+addStr(D,byKey(P3,"exactly1").r)+". No lens and no centre.",
+     exactly2:"Exactly two rules out the "+commas(D.V)+" who "+phrase(P3,c,"ABC")+", so it is the three lenses only: "+addStr(D,byKey(P3,"exactly2").r)+".",
+     atleast2:"At least two means two or three, so the centre counts: "+addStr(D,byKey(P3,"atleast2").r)+"."
+   }[key];
+   const o=shuffle(opts);
+   o.forEach(function(x){ if(x.correct) x.note=extra; });
+   return {q:ask(P3,c,key), setup:setupLine(c,true),
+     svg:venn3({aName:c.An,bName:c.Bn,cName:c.Cn,counts:D,shade:byKey(P3,key).r}),
+     opts:o};
+ }
+},
+{
+ title:"At least one, and none",
+ sub:"Everything inside any circle, and everything outside all of them.",
+ gen:function(){
+   const c=pick(CTX3), D=counts3();
+   const key=pick(["atleast1","none","all"]);
+   const nA=sumR(D,byKey(P3,"A").r), nB=sumR(D,byKey(P3,"B").r), nC=sumR(D,byKey(P3,"C").r);
+   const extras=[
+     {v:nA+nB+nC, n:"That is n(A) + n(B) + n(C) = "+commas(nA)+" + "+commas(nB)+" + "+commas(nC)+", which counts the overlaps more than once."}
+   ];
+   const opts=countOpts(P3,c,D,key,K3ALL,extras);
+   return {q:ask(P3,c,key), setup:setupLine(c,true),
+     svg:venn3({aName:c.An,bName:c.Bn,cName:c.Cn,counts:D,shade:byKey(P3,key).r}),
+     opts:shuffle(opts)};
+ }
+},
+{
+ title:"Any question, one diagram",
+ sub:"Every phrasing from the lesson, in any order, on a fresh set of numbers.",
+ gen:function(){
+   const c=pick(CTX3), D=counts3();
+   const key=pick(K3ALL);
+   const opts=countOpts(P3,c,D,key,K3ALL);
+   return {q:ask(P3,c,key), setup:setupLine(c,true),
+     svg:venn3({aName:c.An,bName:c.Bn,cName:c.Cn,counts:D,shade:byKey(P3,key).r}),
+     opts:shuffle(opts)};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HC=CTX2[0];
+const HD={I:55,II:20,III:70,IV:30};
+const HERO=["A","B","both","or","AnotB","BnotA","neither","all"];
+const HNOTE={
+  A:"The circle, not the number printed in it. 55 listened to classical without jazz, and the 20 in the overlap listened to classical too \u2014 so 75 in all. This is the single commonest slip in survey problems.",
+  B:"Same idea on the other side: 70 plus the shared 20 gives 90.",
+  both:"The overlap on its own. This is the one question where a single printed number is the whole answer.",
+  or:"All three regions inside the circles. The 20 belongs, but only once \u2014 adding 75 and 90 would count it twice and give 165.",
+  AnotB:"Now the answer really is just the 55. The words <i>but not</i> strip the overlap back out.",
+  BnotA:"And the mirror image: 70 on its own.",
+  neither:"Outside both circles, and still part of the survey. These 30 answered no to both questions.",
+  all:"Every region added together. 55 + 20 + 70 + 30 = 175 people took part."
+};
+let heroSel=0;
+function drawHero(){
+  const k=HERO[heroSel], it=byKey(P2,k);
+  document.getElementById("heroChart").innerHTML=
+    venn2({aName:HC.An,bName:HC.Bn,counts:HD,shade:it.r});
+  document.getElementById("hReg").innerHTML=it.r.join(", ");
+  document.getElementById("hSum").innerHTML=it.r.length===1?String(HD[it.r[0]]):it.r.map(function(r){return HD[r];}).join(" + ");
+  document.getElementById("hAns").innerHTML=commas(sumR(HD,it.r));
+  document.getElementById("heroNote").innerHTML=HNOTE[k];
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(k,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+cap1(phrase(P2,HC,k))+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.setup?'<p class="setup">'+q.setup+'</p>':'')
+    +(q.facts?'<div class="facts">'+q.facts+'</div>':'')
+    +(q.svg?'<div class="chart">'+q.svg+'</div>':'')
+    +'<div class="ask">'+q.q+'</div>';
+  document.getElementById("options").innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is <b style="display:inline">'+right.label+'</b>. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
