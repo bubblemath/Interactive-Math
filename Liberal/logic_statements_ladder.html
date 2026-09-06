@@ -1,0 +1,767 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Statement Ladder — no truth value, no negation</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --lg:#5B3A8E;
+    --lg-bg:#EFEAF7;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--lg)}
+  :focus-visible{outline:3px solid var(--lg); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--lg)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:16ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .pairgrid{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--rule)}
+  @media (max-width:660px){.pairgrid{grid-template-columns:1fr}}
+  .side{background:var(--card); padding:18px 18px 16px; min-height:150px}
+  .side .lbl{font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
+  .side .sent{font-family:var(--serif); font-size:clamp(16px,3vw,19px); line-height:1.45; margin-bottom:12px}
+  .side .sent.none{color:var(--muted); font-style:italic}
+  .tag{display:inline-block; font-size:12.5px; font-weight:600; padding:2px 11px; border-radius:20px}
+  .t-true{background:var(--right-bg); color:var(--right)}
+  .t-false{background:var(--wrong-bg); color:var(--wrong)}
+  .t-none{background:#ECEFF2; color:var(--muted)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted); max-width:100%}
+  .placebar button:hover{border-color:var(--lg); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:64px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--lg); background:var(--lg-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--lg)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .card{margin:0 auto 16px; max-width:44ch; background:var(--lg-bg); border-radius:10px; padding:16px 20px;
+        font-family:var(--serif); font-size:clamp(17px,3.6vw,21px); line-height:1.45; text-align:left}
+  .card .who{display:block; font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--lg); margin-bottom:5px}
+  .card + .card{margin-top:-6px}
+
+  .options{display:grid; grid-template-columns:1fr; gap:10px; padding:8px 20px 20px}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt.sent .v{font-family:var(--serif); font-size:17px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>~p</span> The Statement Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 6 · statements, negations, and the sentences that are neither</p>
+    <h1>No truth value, no negation.</h1>
+    <p class="lede">Logic works on <b>statements</b> — sentences that are either true or false, and never both. Questions, commands, exclamations and opinions all look like ordinary English, but none of them has a truth value, so none of them can be negated. And when a sentence <i>is</i> a statement, negating it does exactly one thing: it flips that truth value, leaving everything else about the sentence alone.</p>
+
+    <div class="demo">
+      <div class="pairgrid">
+        <div class="side"><div class="lbl">The sentence</div><div class="sent" id="hP"></div><span class="tag" id="hPT"></span></div>
+        <div class="side"><div class="lbl">Its negation</div><div class="sent" id="hN"></div><span class="tag" id="hNT"></span></div>
+      </div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Negating is not the same as writing the opposite.</b> The negation of “The Astros won the World Series in 2017” is “The Astros did <i>not</i> win the World Series in 2017” — not “The Astros lost.” Winning and losing are not the only two possibilities, so both of those could be false at once, and two statements that can both be false are never negations of each other. That single test settles most of this lesson.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–3 sort sentences into statements and everything else, opinions included. Rung 4 sets up the notation. Rungs 5–8 negate: plain statements, statements that already say “not,” and the truth values underneath. Rungs 9–10 test whether you can catch a bad negation and a sentence that has none.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>One test settles most of it</h3><p>Two statements are negations only when exactly one of them is true, in every possible situation. If both could be false, they are not.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Everything after this is built on negation</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Quantifiers are next</h3><p>Negating “all,” “some” and “no” is the same operation, applied to sentences where the wrong answer feels much more natural.</p></div>
+      <div class="step"><span class="n">02</span><h3>De Morgan returns</h3><p>The rules you proved with Venn regions turn into rules about “and,” “or” and “not.” They are the same rules.</p></div>
+      <div class="step"><span class="n">03</span><h3>Truth tables need truth values</h3><p>A sentence with no truth value has no column. Deciding what counts as a statement is the first move, every time.</p></div>
+    </div>
+    <p class="closing">Ask whether it can be true or false. If it can, flip that and change nothing else.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Statement Ladder · a statement is true or false, never both · ~p flips the truth value and nothing else · two statements that can both be false are not negations</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function card(who,txt){return '<div class="card"><span class="who">'+who+'</span>'+txt+'</div>';}
+/* lowercase a leading word only when it was capitalised by sentence position */
+const LCOK=["The","It","There","This","That","A","An","Water","Seven","Every","Some","No"];
+function lc(s){
+  const w=s.split(" ")[0].replace(/[^A-Za-z]/g,"");
+  return LCOK.indexOf(w)>=0 ? (s.charAt(0).toLowerCase()+s.slice(1)) : s;
+}
+function quo(s){return "\u201c"+s.replace(/\.$/,"")+"\u201d";}
+
+/* ================= sentence banks ================= */
+/* kind: statement | question | command | exclamation | opinion */
+const SENT=[
+  {s:"The Astros won the World Series in 2017.", k:"statement"},
+  {s:"Houston is located in Oklahoma.", k:"statement"},
+  {s:"Austin is the capital of Texas.", k:"statement"},
+  {s:"Water boils at 100 degrees Celsius at sea level.", k:"statement"},
+  {s:"There are thirteen months in a year.", k:"statement"},
+  {s:"The Moon orbits the Earth.", k:"statement"},
+  {s:"Texas borders Louisiana.", k:"statement"},
+  {s:"Michael Jordan scored more than 30,000 points in his career.", k:"statement"},
+  {s:"The library closes at nine o'clock.", k:"statement"},
+  {s:"Maria speaks French.", k:"statement"},
+
+  {s:"Is it raining?", k:"question"},
+  {s:"What time does the library close?", k:"question"},
+  {s:"Did you finish the assignment?", k:"question"},
+  {s:"Where did you park the car?", k:"question"},
+  {s:"How many people came?", k:"question"},
+
+  {s:"Think before you speak.", k:"command"},
+  {s:"Close the door.", k:"command"},
+  {s:"Please pass the salt.", k:"command"},
+  {s:"Turn left at the light.", k:"command"},
+  {s:"Read the first chapter tonight.", k:"command"},
+
+  {s:"Fire!", k:"exclamation"},
+  {s:"What a beautiful morning!", k:"exclamation"},
+  {s:"How exciting!", k:"exclamation"},
+  {s:"Watch out!", k:"exclamation"},
+
+  {s:"Michael Jordan was the best basketball player of all time.", k:"opinion"},
+  {s:"Blue is the prettiest color.", k:"opinion"},
+  {s:"Pizza tastes better than pasta.", k:"opinion"},
+  {s:"Autumn is the nicest season of the year.", k:"opinion"},
+  {s:"That movie was boring.", k:"opinion"}
+];
+const KIND={
+  statement:{name:"A statement", why:"It makes a claim that is either true or false."},
+  question:{name:"A question", why:"It asks for information rather than asserting anything, so there is nothing to call true or false."},
+  command:{name:"A command", why:"It tells someone what to do. An instruction is not true or false."},
+  exclamation:{name:"An exclamation", why:"It expresses a reaction. There is no claim in it to be true or false."},
+  opinion:{name:"An opinion", why:"It looks like a claim, but nothing settles it \u2014 two people could disagree forever without either being provably wrong."}
+};
+const YESNO={
+  statement:"Yes \u2014 it is either true or false",
+  question:"No \u2014 it asks something rather than asserting it",
+  command:"No \u2014 it tells someone to do something",
+  exclamation:"No \u2014 it expresses a reaction rather than a claim",
+  opinion:"No \u2014 it is an opinion, and no fact settles whether it is true"
+};
+function ofKind(k){return SENT.filter(function(x){return x.k===k;});}
+
+/* plain statements with their negations */
+const NEG=[
+  {p:"The Astros won the World Series in 2017.", n:"The Astros did not win the World Series in 2017.",
+   bad:[["The Astros lost the World Series in 2017.","Winning and losing are not the only options \u2014 a team that never reached the series did neither. Both sentences could be false at once, so they are not negations."],
+        ["The Astros won the World Series in 2018.","That changes the year, so it is a claim about a different season entirely."],
+        ["The Astros did not play in the World Series in 2017.","That denies more than the original claimed. A team can play and still not win."]]},
+  {p:"Austin is the capital of Texas.", n:"Austin is not the capital of Texas.",
+   bad:[["Houston is the capital of Texas.","That changes the subject. Both sentences are false, and two false sentences can never be negations of each other."],
+        ["Austin is the capital of Oklahoma.","That changes what the sentence is about rather than denying it."],
+        ["Austin is not a city in Texas.","That denies something the original never claimed."]]},
+  {p:"It is raining.", n:"It is not raining.",
+   bad:[["It is sunny.","On a dry overcast day both would be false, so they are not negations."],
+        ["It is snowing.","Both could be false at the same time \u2014 in dry weather neither happens."],
+        ["It might not be raining.","A negation makes a definite claim. A possibility is not a denial."]]},
+  {p:"The light bulb needs replacing.", n:"The light bulb does not need replacing.",
+   bad:[["The light bulb needs cleaning.","That is about something else. Denying one need does not assert another."],
+        ["The light bulb has been replaced.","That is a claim about a past event, not a denial of the original."],
+        ["Nothing in the room needs replacing.","That is far broader than denying this one bulb."]]},
+  {p:"The train arrives at noon.", n:"The train does not arrive at noon.",
+   bad:[["The train arrives at one o'clock.","If the train arrives at three, both sentences are false, so they are not negations."],
+        ["The train is late.","Both could be false \u2014 the train might arrive early."],
+        ["No train arrives at noon.","That denies more than the original, which was about one particular train."]]},
+  {p:"Maria speaks French.", n:"Maria does not speak French.",
+   bad:[["Maria speaks Spanish.","If she speaks only English both are false, so they are not negations."],
+        ["Someone speaks French.","That is about other people, not about Maria."],
+        ["Maria will not speak French.","That is a claim about the future, not a denial of the present one."]]},
+  {p:"The library closes at nine o'clock.", n:"The library does not close at nine o'clock.",
+   bad:[["The library opens at nine o'clock.","Opening and closing are different events. Both sentences could be false."],
+        ["The library closes at ten o'clock.","If it closes at eight, both are false, so they are not negations."],
+        ["The library is never open.","That denies far more than the original."]]},
+  {p:"Texas borders Louisiana.", n:"Texas does not border Louisiana.",
+   bad:[["Louisiana borders Texas.","That says the same thing the original does, not the opposite of it."],
+        ["Texas borders Florida.","That changes which state is being talked about."],
+        ["Texas is not a state.","That denies something the original never claimed."]]}
+];
+/* statements that already contain a "not" */
+const NEG2=[
+  {p:"Houston is not located in Texas.", n:"Houston is located in Texas.",
+   bad:[["Houston is located in Oklahoma.","Denying that Houston sits outside Texas does not place it in any particular other state."],
+        ["Houston is not located in Texas.","That is the original sentence, unchanged. Negating has to change the truth value."],
+        ["Houston is not a city in Texas.","That is a rewording of the original, not its denial."]]},
+  {p:"The package has not arrived.", n:"The package has arrived.",
+   bad:[["The package has not been sent.","That is about a different stage entirely."],
+        ["The package has not arrived.","That is the original sentence, unchanged."],
+        ["The package will arrive tomorrow.","That is a claim about the future, not a denial of the present one."]]},
+  {p:"Maria does not speak French.", n:"Maria speaks French.",
+   bad:[["Maria does not speak Spanish.","That changes the language, not the truth value."],
+        ["Maria does not speak French.","That is the original sentence, unchanged."],
+        ["Nobody speaks French.","That is about everyone, not about Maria."]]},
+  {p:"The store is not open on Sundays.", n:"The store is open on Sundays.",
+   bad:[["The store is not open on Saturdays.","That changes the day rather than denying the claim."],
+        ["The store is never open.","That denies far more than the original said."],
+        ["The store is not open on Sundays.","That is the original sentence, unchanged."]]},
+  {p:"This road does not lead to the lake.", n:"This road leads to the lake.",
+   bad:[["That road leads to the lake.","That is about a different road."],
+        ["This road does not lead to the river.","That changes the destination, not the truth value."],
+        ["This road does not lead to the lake.","That is the original sentence, unchanged."]]},
+  {p:"The report was not finished on time.", n:"The report was finished on time.",
+   bad:[["The report was not started on time.","That is about a different moment in the process."],
+        ["The report was finished late.","Close, but a report that was never finished at all makes both sentences false."],
+        ["The report was not finished on time.","That is the original sentence, unchanged."]]}
+];
+/* statements with a known truth value, for the truth-value rungs */
+const TV=[
+  {s:"Austin is the capital of Texas.", t:true, n:"Austin is not the capital of Texas."},
+  {s:"Houston is located in Oklahoma.", t:false, n:"Houston is not located in Oklahoma."},
+  {s:"The Moon orbits the Earth.", t:true, n:"The Moon does not orbit the Earth."},
+  {s:"There are thirteen months in a year.", t:false, n:"There are not thirteen months in a year."},
+  {s:"Water boils at 100 degrees Celsius at sea level.", t:true, n:"Water does not boil at 100 degrees Celsius at sea level."},
+  {s:"Texas borders Louisiana.", t:true, n:"Texas does not border Louisiana."},
+  {s:"Seven is larger than ten.", t:false, n:"Seven is not larger than ten."}
+];
+/* proposed negations, each broken in exactly one way */
+const CHECK=[
+  {p:"The train arrives at noon.", q:"The train does not arrive at noon.", f:"ok"},
+  {p:"Maria speaks French.", q:"Maria does not speak French.", f:"ok"},
+  {p:"The Moon orbits the Earth.", q:"The Moon does not orbit the Earth.", f:"ok"},
+  {p:"The package has not arrived.", q:"The package has arrived.", f:"ok"},
+  {p:"The Astros won the World Series in 2017.", q:"The Astros lost the World Series in 2017.", f:"contrary"},
+  {p:"It is raining.", q:"It is sunny.", f:"contrary"},
+  {p:"The train arrives at noon.", q:"The train arrives at one o'clock.", f:"contrary"},
+  {p:"Maria speaks French.", q:"Maria speaks Spanish.", f:"contrary"},
+  {p:"Austin is the capital of Texas.", q:"Houston is the capital of Texas.", f:"subject"},
+  {p:"Texas borders Louisiana.", q:"Texas borders Florida.", f:"subject"},
+  {p:"The store is not open on Sundays.", q:"The store is not open on Saturdays.", f:"subject"},
+  {p:"Maria does not speak French.", q:"Maria does not speak Spanish.", f:"subject"},
+  {p:"The package has not arrived.", q:"The package has not arrived.", f:"same"},
+  {p:"Houston is not located in Texas.", q:"Houston is not located in Texas.", f:"same"},
+  {p:"The report was not finished on time.", q:"The report was not finished on time.", f:"same"}
+];
+const FAULT={
+  ok:"That is the correct negation",
+  contrary:"Not a negation \u2014 both sentences could be false at the same time",
+  subject:"Not a negation \u2014 it changes what the sentence is about",
+  same:"Not a negation \u2014 it is the original sentence again"
+};
+const FAULTWHY={
+  ok:"It denies exactly what the original claimed, and nothing else. Whichever one is true, the other is false.",
+  contrary:"There is a situation where neither sentence holds, so they cannot be a statement and its negation \u2014 exactly one of those must always be true.",
+  subject:"A negation keeps the same subject and the same claim, and only denies it. This one swapped something out instead.",
+  same:"Negating has to change the truth value. An identical sentence has the same truth value as the original."
+};
+/* sentences that cannot be negated, with the fake negation someone might write */
+const FAKE=[
+  {s:"Is it raining?", k:"question", f:["Is it not raining?","It is not raining.","Is it raining or not?"]},
+  {s:"Did you finish the assignment?", k:"question", f:["Did you not finish the assignment?","You did not finish the assignment.","Did anyone finish the assignment?"]},
+  {s:"Close the door.", k:"command", f:["Do not close the door.","The door is not closed.","Open the door."]},
+  {s:"Think before you speak.", k:"command", f:["Do not think before you speak.","You do not think before you speak.","Speak before you think."]},
+  {s:"Fire!", k:"exclamation", f:["No fire!","There is no fire.","Not fire!"]},
+  {s:"What a beautiful morning!", k:"exclamation", f:["What an ugly morning!","The morning is not beautiful.","What a morning that is not beautiful!"]},
+  {s:"Blue is the prettiest color.", k:"opinion", f:["Blue is not the prettiest color.","Blue is the ugliest color.","Some other color is the prettiest."]},
+  {s:"Pizza tastes better than pasta.", k:"opinion", f:["Pizza does not taste better than pasta.","Pasta tastes better than pizza.","Pizza and pasta taste the same."]}
+];
+const NONEG="This sentence has no negation, because it is not a statement";
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Statement, or not a statement",
+ sub:"Only sentences that can be true or false get into logic at all.",
+ gen:function(){
+   const it=pick(SENT);
+   const others=shuffle(Object.keys(YESNO).filter(function(k){return k!==it.k;})).slice(0,3);
+   const opts=[{label:YESNO[it.k], correct:true, note:KIND[it.k].why}]
+     .concat(others.map(function(k){
+       return {label:YESNO[k], note:"That would be the verdict for "+KIND[k].name.toLowerCase()+"."};
+     }));
+   return {q:"Is this sentence a <b>statement</b>?", card:card("The sentence",it.s),
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Name the sentence type",
+ sub:"Question, command, exclamation, opinion — or an actual statement.",
+ gen:function(){
+   const it=pick(SENT);
+   const others=shuffle(Object.keys(KIND).filter(function(k){return k!==it.k;})).slice(0,3);
+   const opts=[{label:KIND[it.k].name, correct:true, note:KIND[it.k].why}]
+     .concat(others.map(function(k){return {label:KIND[k].name, note:KIND[k].why};}));
+   return {q:"What kind of sentence is this?", card:card("The sentence",it.s),
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Opinions are not statements",
+ sub:"They assert something, and still nothing settles whether they are true.",
+ gen:function(){
+   const forms=[
+     {t:"why"},{t:"which"},{t:"contrast"}
+   ];
+   const f=pick(forms);
+   if(f.t==="why"){
+     const it=pick(ofKind("opinion"));
+     const opts=[
+       {label:"Nothing settles whether it is true \u2014 two people could disagree forever without either being shown wrong", correct:true,
+        note:"A statement has to be true or false. This sentence has no fact behind it that decides which."},
+       {label:"It is too long to be a statement","note":"Length has nothing to do with it. Very long sentences can be statements and very short ones can fail to be."},
+       {label:"It is about the past, and statements must be about the present","note":"Statements can be about any time at all. \u201cThe Moon orbits the Earth\u201d and \u201cThe Astros won in 2017\u201d are both statements."},
+       {label:"It contains no numbers, so it cannot be checked","note":"Plenty of statements contain no numbers. \u201cTexas borders Louisiana\u201d is one."}
+     ];
+     return {q:"Why is this not a statement?", card:card("The sentence",it.s),
+       opts:shuffle(distinctOpts(opts).slice(0,4))};
+   }
+   if(f.t==="which"){
+     const st=pick(ofKind("statement")), ops=shuffle(ofKind("opinion").slice(0)).slice(0,3);
+     const opts=[{label:st.s, correct:true, note:"This one can be checked, so it is either true or false."}]
+       .concat(ops.map(function(o){return {label:o.s, note:"That is an opinion. Nothing settles whether it is true."};}));
+     return {q:"Which of these is a <b>statement</b> rather than an opinion?",
+       opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+   }
+   const opts=[
+     {label:"Michael Jordan scored more than 30,000 points in his career.", correct:true,
+      note:"A record either shows that or it does not, so this sentence is true or false."},
+     {label:"Michael Jordan was the best basketball player of all time.",
+      note:"There is no agreed measure of \u201cbest,\u201d so nothing settles this one. It is an opinion."},
+     {label:"Michael Jordan was more exciting to watch than anyone since.",
+      note:"\u201cExciting\u201d depends on who is watching. That makes it an opinion."},
+     {label:"Michael Jordan should have retired earlier.",
+      note:"\u201cShould\u201d is a judgement, not a fact that can be checked."}
+   ];
+   return {q:"Both sentences are about the same person. <b>Which one is a statement?</b>",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"Reading the notation",
+ sub:"Lowercase letters stand for statements. The tilde denies one.",
+ gen:function(){
+   const it=pick(NEG);
+   const forms=[
+     {q:"If <b>p</b> stands for the statement below, what does <b>~p</b> say?",
+      cards:card("p",it.p), ans:it.n, bad:it.bad,
+      note:"~p denies exactly what p claimed, and changes nothing else about it."},
+     {q:"How is <b>~p</b> read aloud?", cards:card("p",it.p),
+      ans:"\u201cnot p,\u201d or \u201cIt is not true that p\u201d",
+      bad:[["\u201cp is false\u201d","That describes p's truth value in this situation. ~p is a sentence in its own right, and it has its own truth value."],
+           ["\u201cthe opposite of p\u201d","\u201cOpposite\u201d is loose. The negation denies p exactly, which is narrower than any everyday opposite."],
+           ["\u201cp or not p\u201d","That is a different sentence altogether, and it happens to be true no matter what p says."]],
+      note:"Both readings mean the same thing: whatever p claimed, ~p denies it."},
+     {q:"Which letters are used to stand for statements?",
+      cards:"", ans:"Lowercase letters such as p, q, r and s",
+      bad:[["Capital letters such as A, B and C","Capitals are used for sets. Statements get lowercase letters."],
+           ["Greek letters","Not in this course."],
+           ["Any letter, as long as it is not used twice","The convention is lowercase p, q, r and s."]],
+      note:"p, q, r and s, in that order, are the usual choices."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, card:f.cards, opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"Negate a plain statement",
+ sub:"Deny what it claims. Change nothing else — not the subject, not the time, not the detail.",
+ gen:function(){
+   const it=pick(NEG);
+   const opts=[{label:it.n, correct:true,
+     note:"It denies exactly the original claim. Whichever of the two is true, the other is false."}]
+     .concat(it.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:"What is the <b>negation</b> of this statement?", card:card("p",it.p),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"When it already says “not”",
+ sub:"Negating removes the “not” that is there. It does not pile a second one on top.",
+ gen:function(){
+   const it=pick(NEG2);
+   const opts=[{label:it.n, correct:true,
+     note:"The original denied something; its negation asserts it. One \u201cnot\u201d comes off, and nothing else changes."}]
+     .concat(it.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:"What is the <b>negation</b> of this statement?", card:card("q",it.p),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"Negating flips the truth value",
+ sub:"That is the whole job. A true statement becomes false and a false one becomes true.",
+ gen:function(){
+   const it=pick(TV);
+   const forms=[
+     {q:"This statement is <b>"+(it.t?"true":"false")+"</b>. What is the truth value of its negation?",
+      cards:card("p",it.s), ans:(it.t?"False":"True"),
+      bad:[[(it.t?"True":"False"),"Negating always flips the truth value. It cannot leave it alone."],
+           ["It depends on how the negation is worded","Any correct negation of the same statement has the same truth value. Wording does not change it."],
+           ["Neither \u2014 a negation has no truth value","A negation is itself a statement, so it is true or false like any other."]],
+      note:"~p is "+(it.t?"false":"true")+" here, because p is "+(it.t?"true":"false")+"."},
+     {q:"Is this statement <b>true or false</b>, and what about its negation?",
+      cards:card("p",it.s)+card("~p",it.n),
+      ans:"p is "+(it.t?"true":"false")+" and ~p is "+(it.t?"false":"true"),
+      bad:[["p is "+(it.t?"false":"true")+" and ~p is "+(it.t?"true":"false"),"Check the statement itself again."],
+           ["Both are "+(it.t?"true":"false"),"A statement and its negation can never share a truth value."],
+           ["Both are "+(it.t?"false":"true"),"A statement and its negation can never share a truth value."]],
+      note:"Exactly one of a statement and its negation is true, always."},
+     {q:"Which of these is <b>impossible</b>?", cards:"",
+      ans:"p and ~p are both true",
+      bad:[["p is true and ~p is false","That is the ordinary case when p happens to be true."],
+           ["p is false and ~p is true","That is the ordinary case when p happens to be false."],
+           ["p is a statement about the past","Statements can be about any time."]],
+      note:"A statement is true or false but never both, so it and its negation can never hold together."},
+     {q:"Two sentences are <b>both false</b>. What follows?", cards:"",
+      ans:"They are not a statement and its negation",
+      bad:[["One of them must be the negation of the other","Exactly one of a statement and its negation is true, so they cannot both be false."],
+           ["They must say the same thing","Two different false sentences need have nothing to do with each other."],
+           ["Neither of them is a statement","A false sentence is still a statement. Being false is one of the two allowed values."]],
+      note:"This is the test worth remembering: if both can be false at once, they are not negations."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, card:f.cards, opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Negating twice",
+ sub:"Two denials cancel. ~(~p) says exactly what p said.",
+ gen:function(){
+   const it=pick(NEG);
+   const it2=pick(NEG2);
+   const forms=[
+     {q:"What does <b>~(~p)</b> say?", cards:card("p",it.p), ans:it.p,
+      bad:[[it.n,"That is ~p, after one denial. Denying it again brings you back to p."],
+           ["It is not true that "+lc(it.n),"That is a correct but clumsy way to write it. The plain sentence p says the same thing far more simply."],
+           ["Neither p nor ~p \u2014 it is a third statement","There is no third option. Two flips of a truth value return it to where it started."]],
+      note:"Each negation flips the truth value, so two of them put it back. ~(~p) and p are the same statement."},
+     {q:"This is the negation of a statement that already contained a \u201cnot.\u201d <b>What was the original?</b>",
+      cards:card("~q",it2.n), ans:it2.p,
+      bad:[[it2.n,"That is the sentence shown, not the one it came from."],
+           [it2.bad[0][0],it2.bad[0][1]],
+           ["It cannot be worked out from the negation alone","It can: negate the negation and you are back where you started."]],
+      note:"Negating "+quo(it2.n)+" gives back the original, which said the opposite."},
+     {q:"A statement is <b>false</b>. What is the truth value of its double negation?", cards:"",
+      ans:"False", bad:[["True","One negation makes it true; the second flips it back to false."],
+        ["It cannot be decided","Two flips always return the original value."],
+        ["Neither \u2014 double negations have no truth value","~(~p) is a statement like any other."]],
+      note:"Two flips cancel, so ~(~p) always has the same truth value as p."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, card:f.cards, opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"Is that really the negation",
+ sub:"Three of these faults show up constantly. Say which one you are looking at.",
+ gen:function(){
+   const it=pick(CHECK);
+   const keys=["ok","contrary","subject","same"];
+   const opts=keys.map(function(k){
+     return {label:FAULT[k], correct:k===it.f, note:k===it.f?FAULTWHY[k]:
+       (k==="ok"?"Look again \u2014 something other than the truth value has changed.":
+        "That is a real fault, but not the one here. "+FAULTWHY[k])};
+   });
+   return {q:"Someone offers the second sentence as the negation of the first. <b>Is it?</b>",
+     card:card("The statement",it.p)+card("Offered as its negation",it.q),
+     opts:shuffle(opts)};
+ }
+},
+{
+ title:"Negate it, or explain why you cannot",
+ sub:"Some of these sentences have no negation at all. Spot them before you start writing one.",
+ gen:function(){
+   if(Math.random()<.5){
+     const it=pick(NEG.concat(NEG2));
+     const opts=[{label:it.n, correct:true,
+       note:"It is a statement, so it has a negation \u2014 and this one denies it exactly."}]
+       .concat(it.bad.slice(0,2).map(function(x){return {label:x[0],note:x[1]};}))
+       .concat([{label:NONEG, note:"It is a statement: it makes a claim that is either true or false, so it does have a negation."}]);
+     return {q:"What is the <b>negation</b> of this sentence?", card:card("The sentence",it.p),
+       opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+   }
+   const it=pick(FAKE);
+   const opts=[{label:NONEG, correct:true,
+     note:KIND[it.k].why+" With no truth value there is nothing to flip, so there is no negation to write."}]
+     .concat(it.f.map(function(x){
+       return {label:x, note:"That reads like a denial, but the original was "+KIND[it.k].name.toLowerCase()+", so there was never a truth value to reverse."};
+     }));
+   return {q:"What is the <b>negation</b> of this sentence?", card:card("The sentence",it.s),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {s:"The Astros won the World Series in 2017.", t:true, n:"The Astros did not win the World Series in 2017.",
+   note:"A statement, and a true one. Its negation says the same thing denied, and comes out false. Notice it is not \u201cthe Astros lost\u201d \u2014 that would be a different claim."},
+  {s:"Houston is located in Oklahoma.", t:false, n:"Houston is not located in Oklahoma.",
+   note:"False statements are still statements. Being false is one of the two values allowed, and the negation flips it to true."},
+  {s:"Houston is not located in Texas.", t:false, n:"Houston is located in Texas.",
+   note:"The original already contains a \u201cnot,\u201d so negating it takes that word away rather than adding a second one. This is the case students most often get wrong."},
+  {s:"Is it raining?", t:null, n:null, k:"question",
+   note:"A question asks for information instead of asserting anything, so there is no truth value to flip. \u201cIs it not raining?\u201d is another question, not a negation."},
+  {s:"Think before you speak.", t:null, n:null, k:"command",
+   note:"An instruction is not true or false. \u201cDo not think before you speak\u201d is a different instruction, not a denial."},
+  {s:"Fire!", t:null, n:null, k:"exclamation",
+   note:"An exclamation expresses a reaction. There is no claim inside it to be denied."},
+  {s:"Michael Jordan was the best basketball player of all time.", t:null, n:null, k:"opinion",
+   note:"This one looks like a statement, and that is what makes it the hard case. Nothing settles whether it is true, so it has no truth value and no negation."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  document.getElementById("hP").innerHTML=h.s;
+  document.getElementById("hP").className="sent";
+  const pt=document.getElementById("hPT");
+  if(h.t===null){ pt.className="tag t-none"; pt.textContent="not a statement \u2014 no truth value"; }
+  else { pt.className="tag "+(h.t?"t-true":"t-false"); pt.textContent=h.t?"true":"false"; }
+  const nEl=document.getElementById("hN"), nt=document.getElementById("hNT");
+  if(h.n===null){
+    nEl.innerHTML="There is nothing to negate."; nEl.className="sent none";
+    nt.className="tag t-none"; nt.textContent="no negation";
+  }else{
+    nEl.innerHTML=h.n; nEl.className="sent";
+    nt.className="tag "+(h.t?"t-false":"t-true"); nt.textContent=h.t?"false":"true";
+  }
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  const short=["Astros won","Houston in Oklahoma","Houston is not in Texas","Is it raining?","Think before you speak.","Fire!","Jordan was the best"];
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+short[i]+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'+(q.card||"");
+  document.getElementById("options").innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.sent?" sent":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is \u201c'+right.label+'\u201d. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
