@@ -1,0 +1,817 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Filling In Ladder — start at the centre, subtract outward</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --fi:#6B2737;
+    --fi-bg:#F6E9EC;
+    --cA:#0B6E77;
+    --cB:#A66A00;
+    --cC:#6B4C9A;
+    --shade:#6B2737;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--fi)}
+  :focus-visible{outline:3px solid var(--fi); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--fi)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:14px 12px 4px; background:var(--card)}
+  .demo-top svg{display:block; width:100%; height:auto; max-width:600px; margin:0 auto}
+  .readout{display:flex; flex-wrap:wrap; background:var(--rule); border-top:1px solid var(--rule); gap:1px}
+  .readout div{flex:1 1 230px; background:var(--card); padding:12px 16px; font-size:15px}
+  .readout .k{font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:3px}
+  .readout .val{font-family:var(--serif); font-size:16px; line-height:1.5}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--fi); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:66px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--fi); background:var(--fi-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--fi)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .ask{margin:12px auto 16px; max-width:46ch; font-size:clamp(17px,3.4vw,21px); line-height:1.45; background:var(--fi-bg); border-radius:9px; padding:13px 18px}
+  .stem .ask b{color:var(--fi)}
+  .chart{margin:0 auto 12px; max-width:600px}
+  .chart svg{display:block; width:100%; height:auto}
+  .setup{margin:0 auto 10px; max-width:52ch; font-size:14.5px; color:var(--muted)}
+  .facts{margin:0 auto 14px; max-width:430px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden}
+  .facts div{padding:7px 16px; font-size:15px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts b{font-family:var(--serif); font-size:16.5px; color:var(--fi)}
+
+  .options{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 20px 20px}
+  @media (max-width:640px){.options{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt.num .v{font-family:var(--mono); font-size:18px}
+  .opt.roman .v{font-family:var(--serif); font-size:20px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+  .fillgrid{display:grid; grid-template-columns:repeat(4,auto); gap:2px 12px; font-family:var(--serif); font-size:14.5px; line-height:1.5}
+  .fillgrid b{font-weight:400; color:var(--muted); margin-right:4px}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>13 − 6 = 7</span> The Filling In Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 5 · building a Venn diagram from survey results</p>
+    <h1>Start at the centre, subtract outward.</h1>
+    <p class="lede">A survey never hands you regions. It hands you totals that pile on top of each other: the 13 who liked comedies and dramas already includes the 6 who liked all three. So the centre goes in first, then each lens loses the centre, then each circle loses everything already written inside it. Work in any other order and the numbers you subtract are not yet known.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroChart"></div></div>
+      <div class="readout">
+        <div><span class="k">This step</span><span class="val" id="hStep"></span></div>
+        <div><span class="k">Arithmetic</span><span class="val" id="hWork"></span></div>
+      </div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Writing 13 into the comedy-and-drama lens is the mistake this whole method exists to prevent.</b> That lens is only the people who liked those two and <i>not</i> science fiction, so it holds 13 − 6 = 7. Do that once and everything downstream is wrong: the comedy circle no longer balances, the regions overshoot the number surveyed, and every question you answer afterwards inherits the error.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 set the order and run the easy two-circle case. Rungs 3–6 walk outward one ring at a time: the centre, the lenses, the single regions, the outside. Rungs 7–10 put it together and then test whether you can catch a filling that is wrong, or a survey that could never have happened.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every wrong number is a real slip</h3><p>The distractors come from writing a total in without subtracting, from subtracting the raw pair totals, and from forgetting the centre entirely.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Overlapping totals are everywhere</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Reported figures overlap</h3><p>Real survey summaries almost always report totals that share people. Pulling them apart into disjoint pieces is the skill.</p></div>
+      <div class="step"><span class="n">02</span><h3>The diagram checks itself</h3><p>If the eight regions do not add to the number surveyed, something upstream is wrong, and you can find it.</p></div>
+      <div class="step"><span class="n">03</span><h3>It becomes inclusion–exclusion</h3><p>The subtractions here are the same corrections that appear later as a formula in counting and probability.</p></div>
+    </div>
+    <p class="closing">Centre first. Then each lens minus the centre. Then each circle minus everything already inside it. Then the outside.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Filling In Ladder · a pair total includes the centre · a circle total includes all four of its regions · the eight regions must add to the number surveyed</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function cap1(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+const MINUS=" \u2212 ";
+const REG2=["I","II","III","IV"];
+const REG3=["I","II","III","IV","V","VI","VII","VIII"];
+
+/* ================= contexts ================= */
+const CTX3=[
+  {u:"people",   v:"liked",  A:"comedies", B:"dramas",      C:"science fiction", An:"Comedy", Bn:"Drama", Cn:"Sci-fi"},
+  {u:"students", v:"took",   A:"algebra",  B:"biology",     C:"chemistry",       An:"Algebra",Bn:"Biology",Cn:"Chemistry"},
+  {u:"shoppers", v:"bought", A:"bread",    B:"milk",        C:"eggs",            An:"Bread",  Bn:"Milk",  Cn:"Eggs"},
+  {u:"members",  v:"joined", A:"swimming", B:"tennis",      C:"yoga",            An:"Swim",   Bn:"Tennis",Cn:"Yoga"},
+  {u:"readers",  v:"read",   A:"mysteries",B:"biographies", C:"poetry",          An:"Mystery",Bn:"Biography",Cn:"Poetry"}
+];
+const CTX2=[
+  {u:"respondents", v:"listened to", A:"classical music", B:"jazz", An:"Classical", Bn:"Jazz"},
+  {u:"students",    v:"studied",     A:"Spanish",         B:"French", An:"Spanish", Bn:"French"},
+  {u:"customers",   v:"bought",      A:"coffee",          B:"tea",    An:"Coffee",  Bn:"Tea"},
+  {u:"travelers",   v:"visited",     A:"Italy",           B:"Greece", An:"Italy",   Bn:"Greece"}
+];
+
+/* ================= renderers ================= */
+let svgUid=0;
+function venn2(o){
+  o=o||{};
+  const uid="t"+(++svgUid), D=o.counts||null, unk=o.unknown||null;
+  const ax=220,bx=330,cy=160,r=100;
+  const cc=function(x){return '<circle cx="'+x+'" cy="'+cy+'" r="'+r+'"';};
+  let s='<svg viewBox="0 0 600 320" role="img" aria-label="Venn diagram with two sets">';
+  s+='<rect x="10" y="10" width="580" height="300" rx="4" fill="none" stroke="var(--ink)" stroke-width="1.3"/>';
+  s+='<text x="26" y="36" font-family="Georgia,serif" font-style="italic" font-size="19" fill="var(--ink)">U</text>';
+  s+=cc(ax)+' fill="var(--cA)" fill-opacity="0.09" stroke="var(--cA)" stroke-width="1.7"/>';
+  s+=cc(bx)+' fill="var(--cB)" fill-opacity="0.09" stroke="var(--cB)" stroke-width="1.7"/>';
+  const T=function(x,y,t,sz,col,it,w){return '<text x="'+x+'" y="'+y+'" text-anchor="middle" font-family="Georgia,serif" font-size="'+sz+'"'+(it?' font-style="italic"':'')+(w?' font-weight="700"':'')+' fill="'+col+'">'+esc(t)+'</text>';};
+  s+=T(150,48,(o.aName||"A"),18,"var(--cA)",true)+T(400,48,(o.bName||"B"),18,"var(--cB)",true);
+  const SL={I:175,II:275,III:375,IV:520};
+  REG2.forEach(function(k){
+    s+=T(SL[k],130,k,14,"var(--muted)");
+    if(unk===k) s+=T(SL[k],174,"?",26,"var(--fi)",false,true);
+    else if(D&&D[k]!=null) s+=T(SL[k],174,String(D[k]),24,"var(--ink)",false,true);
+  });
+  return s+"</svg>";
+}
+const GEO={A:{x:240,y:150,r:100},B:{x:360,y:150,r:100},C:{x:300,y:250,r:100},
+  slots:{
+    I:{rx:190,ry:112, cx:190,cy:147},
+    II:{rx:300,ry:104, cx:300,cy:138},
+    III:{rx:410,ry:112, cx:410,cy:147},
+    IV:{rx:228,ry:212, cx:232,cy:243},
+    V:{rx:300,ry:192, cx:300,cy:222},
+    VI:{rx:372,ry:212, cx:368,cy:243},
+    VII:{rx:300,ry:290, cx:300,cy:322},
+    VIII:{rx:536,ry:296, cx:536,cy:330}
+  }};
+function venn3(o){
+  o=o||{};
+  const D=o.counts||null, unk=o.unknown||null, bad=o.bad||null;
+  const A=GEO.A,B=GEO.B,C=GEO.C;
+  const circ=function(c){return '<circle cx="'+c.x+'" cy="'+c.y+'" r="'+c.r+'"';};
+  let s='<svg viewBox="0 0 600 380" role="img" aria-label="Venn diagram with three sets">';
+  s+='<rect x="10" y="10" width="580" height="360" rx="4" fill="none" stroke="var(--ink)" stroke-width="1.3"/>';
+  s+='<text x="26" y="36" font-family="Georgia,serif" font-style="italic" font-size="19" fill="var(--ink)">U</text>';
+  s+=circ(A)+' fill="var(--cA)" fill-opacity="0.08" stroke="var(--cA)" stroke-width="1.7"/>';
+  s+=circ(B)+' fill="var(--cB)" fill-opacity="0.08" stroke="var(--cB)" stroke-width="1.7"/>';
+  s+=circ(C)+' fill="var(--cC)" fill-opacity="0.08" stroke="var(--cC)" stroke-width="1.7"/>';
+  const T=function(x,y,t,sz,col,it,w){return '<text x="'+x+'" y="'+y+'" text-anchor="middle" font-family="Georgia,serif" font-size="'+sz+'"'+(it?' font-style="italic"':'')+(w?' font-weight="700"':'')+' fill="'+col+'">'+esc(t)+'</text>';};
+  s+=T(160,44,(o.aName||"A"),17,"var(--cA)",true)+T(440,44,(o.bName||"B"),17,"var(--cB)",true)+T(300,364,(o.cName||"C"),17,"var(--cC)",true);
+  REG3.forEach(function(k){
+    const p=GEO.slots[k];
+    s+=T(p.rx,p.ry,k,13,"var(--muted)");
+    if(unk===k) s+=T(p.cx,p.cy,"?",23,"var(--fi)",false,true);
+    else if(D&&D[k]!=null) s+=T(p.cx,p.cy,String(D[k]),20,(bad===k?"var(--wrong)":"var(--ink)"),false,true);
+  });
+  return s+"</svg>";
+}
+
+/* ================= survey data ================= */
+function makeSurvey(){
+  const D={V:ri(3,9), II:ri(2,9), IV:ri(2,9), VI:ri(2,9),
+           I:ri(3,14), III:ri(3,14), VII:ri(3,14), VIII:ri(4,18)};
+  return D;
+}
+function tot(D){
+  const inside=D.I+D.II+D.III+D.IV+D.V+D.VI+D.VII;
+  return {nU:inside+D.VIII, inside:inside,
+    nA:D.I+D.II+D.IV+D.V, nB:D.II+D.III+D.V+D.VI, nC:D.IV+D.V+D.VI+D.VII,
+    nAB:D.II+D.V, nAC:D.IV+D.V, nBC:D.VI+D.V, nABC:D.V};
+}
+function factsHTML(c,T,skip){
+  skip=skip||[];
+  const rows=[
+    ["ABC", T.nABC+" "+c.v+" all three."],
+    ["AB",  T.nAB+" "+c.v+" "+c.A+" and "+c.B+"."],
+    ["AC",  T.nAC+" "+c.v+" "+c.A+" and "+c.C+"."],
+    ["BC",  T.nBC+" "+c.v+" "+c.B+" and "+c.C+"."],
+    ["A",   T.nA+" "+c.v+" "+c.A+"."],
+    ["B",   T.nB+" "+c.v+" "+c.B+"."],
+    ["C",   T.nC+" "+c.v+" "+c.C+"."],
+    ["U",   T.nU+" "+c.u+" were surveyed."]
+  ].filter(function(r){return skip.indexOf(r[0])<0;});
+  return rows.map(function(r){return "<div>"+r[1]+"</div>";}).join("");
+}
+/* the three lens regions and the three single regions, with the givens they depend on */
+const LENS={II:{pair:"nAB",sets:["A","B"],other:"C"},
+            IV:{pair:"nAC",sets:["A","C"],other:"B"},
+            VI:{pair:"nBC",sets:["B","C"],other:"A"}};
+const SINGLE={I:{circ:"nA",set:"A",lens:["II","IV"]},
+              III:{circ:"nB",set:"B",lens:["II","VI"]},
+              VII:{circ:"nC",set:"C",lens:["IV","VI"]}};
+
+function numOpts(ans,cands){
+  const used={}; used[ans.v]=1;
+  const opts=[{label:String(ans.v),correct:true,note:ans.n}];
+  shuffle(cands.slice(0)).forEach(function(x){
+    if(x.v<0||used[x.v])return; used[x.v]=1;
+    opts.push({label:String(x.v),note:x.n});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Why the centre goes first",
+ sub:"Every other given already contains it, so nothing else can be worked out until it is placed.",
+ gen:function(){
+   const c=pick(CTX3), D=makeSurvey(), T=tot(D);
+   const forms=[
+     {q:"Which of the survey's numbers can be written straight onto the diagram with no arithmetic at all?",
+      ans:"The "+T.nABC+" who "+c.v+" all three",
+      bad:[["The "+T.nA+" who "+c.v+" "+c.A,"That is the whole circle, which is four regions added together. It cannot go in any single one."],
+           ["The "+T.nAB+" who "+c.v+" "+c.A+" and "+c.B,"That is two regions: the lens and the centre. The centre has to come out of it first."],
+           ["The "+T.nU+" "+c.u+" surveyed","That is all eight regions together."]],
+      note:"\u201cAll three\u201d names exactly one region, the centre, so it is the only figure that needs no subtraction."},
+     {q:"The survey says "+T.nAB+" "+c.v+" "+c.A+" and "+c.B+". How many of those also "+c.v+" "+c.C+"?",
+      ans:String(T.nABC),
+      bad:[[String(T.nAB-T.nABC),"That is how many liked those two and <i>not</i> the third \u2014 what goes in the lens, not what is shared with the centre."],
+           ["0","The two figures overlap. The people who liked all three are inside the "+T.nAB+" as well."],
+           ["Cannot be told from the survey","It can: the "+T.nABC+" who "+c.v+" all three are exactly the ones inside that "+T.nAB+" who also "+c.v+" "+c.C+"."]],
+      note:"Anyone who liked all three certainly liked those two, so they are counted inside the "+T.nAB+"."},
+     {q:"Why does the method say to start at the innermost region and work outward?",
+      ans:"Because every other given includes the centre, so it must be known before anything else can be subtracted",
+      bad:[["Because the centre is always the smallest number","It usually is, but that is not the reason. The reason is that the other totals contain it."],
+           ["Because the outer regions are harder to compute","Each step is a subtraction. The order is forced by which numbers depend on which."],
+           ["Because the diagram is drawn from the middle outward","How it is drawn has nothing to do with it."]],
+      note:"Each ring can only be found once everything inside it is already on the diagram."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, facts:factsHTML(c,T), setup:"A survey of "+c.u+" asked about "+c.A+", "+c.B+" and "+c.C+".",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Two circles first",
+ sub:"With one overlap the whole diagram falls out of three subtractions.",
+ gen:function(){
+   const c=pick(CTX2);
+   const D={I:ri(8,40),II:ri(5,25),III:ri(8,40),IV:ri(5,30)};
+   const nU=D.I+D.II+D.III+D.IV, nA=D.I+D.II, nB=D.II+D.III;
+   const key=pick(["I","III","IV"]);
+   const ansN={
+     I:{v:D.I, n:"The "+c.An+" circle holds "+nA+", and "+D.II+" of them are in the overlap. "+nA+MINUS+D.II+" = "+D.I+"."},
+     III:{v:D.III, n:"The "+c.Bn+" circle holds "+nB+", and "+D.II+" of them are in the overlap. "+nB+MINUS+D.II+" = "+D.III+"."},
+     IV:{v:D.IV, n:"Inside the circles there are "+D.I+" + "+D.II+" + "+D.III+" = "+(D.I+D.II+D.III)+". So "+nU+MINUS+(D.I+D.II+D.III)+" = "+D.IV+" are outside both."}
+   }[key];
+   const cands=[
+     {v:D.I, n:"That is region I, the ones who "+c.v+" "+c.A+" but not "+c.B+"."},
+     {v:D.II, n:"That is the overlap, which the survey gave you directly."},
+     {v:D.III, n:"That is region III, the ones who "+c.v+" "+c.B+" but not "+c.A+"."},
+     {v:D.IV, n:"That is region IV, outside both circles."},
+     {v:nA, n:"That is the whole "+c.An+" circle, before the overlap is taken out."},
+     {v:nB, n:"That is the whole "+c.Bn+" circle."},
+     {v:nU-nA-nB, n:"That subtracts the overlap twice, since it sits in both circle totals. Add it back once."}
+   ];
+   return {q:"What number belongs in <b>region "+key+"</b>?",
+     setup:"A survey asked "+c.u+" about "+c.A+" and "+c.B+".",
+     facts:"<div>"+nU+" "+c.u+" were surveyed.</div><div>"+nA+" "+c.v+" "+c.A+".</div>"
+          +"<div>"+nB+" "+c.v+" "+c.B+".</div><div>"+D.II+" "+c.v+" both.</div>",
+     svg:venn2({aName:c.An,bName:c.Bn,counts:{II:D.II},unknown:key}),
+     opts:shuffle(numOpts(ansN,cands)), num:true};
+ }
+},
+{
+ title:"What a pair total includes",
+ sub:"“Liked A and B” never means “liked A and B only.” It counts the centre as well.",
+ gen:function(){
+   const c=pick(CTX3), D=makeSurvey(), T=tot(D);
+   const k=pick(["II","IV","VI"]), L=LENS[k];
+   const pv=T[L.pair], s1=c[L.sets[0]], s2=c[L.sets[1]], so=c[L.other];
+   const ans={v:pv-T.nABC, n:"The "+pv+" who "+c.v+" "+s1+" and "+s2+" includes the "+T.nABC+" who "+c.v+" all three. "+pv+MINUS+T.nABC+" = "+(pv-T.nABC)+" "+c.v+" those two and not "+so+"."};
+   const cands=[
+     {v:pv, n:"That is the figure straight from the survey, before the "+T.nABC+" at the centre are taken out. It counts people who also "+c.v+" "+so+"."},
+     {v:pv+T.nABC, n:"The centre is already inside that "+pv+", so adding it again counts those people twice."},
+     {v:T.nABC, n:"That is the centre itself, not the lens around it."},
+     {v:T.nA-pv, n:"That mixes a circle total with a pair total. Only the centre comes out of a pair total."},
+     {v:pv-1, n:"Subtract the whole centre, not one person: "+pv+MINUS+T.nABC+"."}
+   ];
+   return {q:"How many "+c.u+" <b>"+c.v+" "+s1+" and "+s2+" but not "+so+"</b>?",
+     setup:"A survey of "+c.u+" asked about "+c.A+", "+c.B+" and "+c.C+".",
+     facts:"<div>"+T.nABC+" "+c.v+" all three.</div><div>"+pv+" "+c.v+" "+s1+" and "+s2+".</div>",
+     svg:venn3({aName:c.An,bName:c.Bn,cName:c.Cn,counts:{V:D.V},unknown:k}),
+     opts:shuffle(numOpts(ans,cands)), num:true};
+ }
+},
+{
+ title:"The three lenses",
+ sub:"Centre already placed. Each lens is its pair total minus that centre.",
+ gen:function(){
+   const c=pick(CTX3), D=makeSurvey(), T=tot(D);
+   const k=pick(["II","IV","VI"]), L=LENS[k];
+   const pv=T[L.pair];
+   const ans={v:D[k], n:pv+MINUS+T.nABC+" = "+D[k]+". Every pair total in a survey carries the centre inside it."};
+   const cands=[
+     {v:pv, n:"That is the pair total with the centre still in it."},
+     {v:T.nAB-T.nABC, n:"That is the "+c.A+"-and-"+c.B+" lens, region II."},
+     {v:T.nAC-T.nABC, n:"That is the "+c.A+"-and-"+c.C+" lens, region IV."},
+     {v:T.nBC-T.nABC, n:"That is the "+c.B+"-and-"+c.C+" lens, region VI."},
+     {v:T.nABC, n:"That is the centre, region V."},
+     {v:pv+T.nABC, n:"The centre is already counted in the pair total; adding it doubles it."}
+   ];
+   return {q:"What number belongs in <b>region "+k+"</b>?",
+     setup:"A survey of "+c.u+" asked about "+c.A+", "+c.B+" and "+c.C+". The centre is already filled in.",
+     facts:factsHTML(c,T,["A","B","C","U"]),
+     svg:venn3({aName:c.An,bName:c.Bn,cName:c.Cn,counts:{V:D.V},unknown:k}),
+     opts:shuffle(numOpts(ans,cands)), num:true};
+ }
+},
+{
+ title:"The three single regions",
+ sub:"A circle total covers four regions. Three are already written in, so subtract all three.",
+ gen:function(){
+   const c=pick(CTX3), D=makeSurvey(), T=tot(D);
+   const k=pick(["I","III","VII"]), S=SINGLE[k];
+   const cv=T[S.circ], l1=S.lens[0], l2=S.lens[1];
+   const partial={V:D.V,II:D.II,IV:D.IV,VI:D.VI};
+   const rawPairs=(S.set==="A")?[T.nAB,T.nAC]:(S.set==="B")?[T.nAB,T.nBC]:[T.nAC,T.nBC];
+   const ans={v:D[k], n:"The "+c[S.set]+" circle holds "+cv+" in all. Already inside it are "+D[l1]+", "+D[l2]+" and the centre "+D.V+". So "+cv+MINUS+D[l1]+MINUS+D[l2]+MINUS+D.V+" = "+D[k]+"."};
+   const cands=[
+     {v:cv-D.V, n:"That takes out the centre only. The two lenses are inside this circle as well."},
+     {v:cv-D[l1]-D[l2], n:"That takes out the two lenses but leaves the centre in."},
+     {v:cv-rawPairs[0]-rawPairs[1], n:"That subtracts the raw pair totals, which each contain the centre \u2014 so the centre came out twice. Use the lens figures already on the diagram."},
+     {v:cv, n:"That is the whole circle, before anything inside it is removed."},
+     {v:cv-D[l1], n:"Only one of the two lenses was taken out."}
+   ];
+   return {q:"What number belongs in <b>region "+k+"</b>?",
+     setup:"A survey of "+c.u+" asked about "+c.A+", "+c.B+" and "+c.C+". The centre and the three lenses are already filled in.",
+     facts:factsHTML(c,T,["ABC","AB","AC","BC","U"]),
+     svg:venn3({aName:c.An,bName:c.Bn,cName:c.Cn,counts:partial,unknown:k}),
+     opts:shuffle(numOpts(ans,cands)), num:true};
+ }
+},
+{
+ title:"The outside region",
+ sub:"Everyone surveyed, minus everyone the circles already account for.",
+ gen:function(){
+   const c=pick(CTX3), D=makeSurvey(), T=tot(D);
+   const partial={}; REG3.forEach(function(r){ if(r!=="VIII") partial[r]=D[r]; });
+   const ans={v:D.VIII, n:"The seven regions inside the circles hold "+T.inside+" between them, and "+T.nU+" were surveyed. "+T.nU+MINUS+T.inside+" = "+D.VIII+"."};
+   const cands=[
+     {v:T.nU-T.nA-T.nB-T.nC, n:"That subtracts the three circle totals, which overlap, so the shared people came out more than once."},
+     {v:T.nU-T.nA, n:"That only removes the "+c.A+" circle."},
+     {v:T.inside, n:"That is everyone inside the circles, which is what you subtract, not the answer."},
+     {v:T.nU, n:"That is everyone surveyed."},
+     {v:T.nU-T.nABC, n:"That only removes the centre."}
+   ];
+   return {q:"What number belongs in <b>region VIII</b>?",
+     setup:"A survey of "+c.u+" asked about "+c.A+", "+c.B+" and "+c.C+". Everything inside the circles is filled in.",
+     facts:"<div>"+T.nU+" "+c.u+" were surveyed.</div>",
+     svg:venn3({aName:c.An,bName:c.Bn,cName:c.Cn,counts:partial,unknown:"VIII"}),
+     opts:shuffle(numOpts(ans,cands)), num:true};
+ }
+},
+{
+ title:"Which given comes next",
+ sub:"Each region depends on one survey fact and on what is already written down.",
+ gen:function(){
+   const c=pick(CTX3), D=makeSurvey(), T=tot(D);
+   const cases=[
+     {k:"V", filled:{}, ans:"The "+T.nABC+" who "+c.v+" all three",
+      why:"The centre is the only region a survey names directly, so it goes in with no arithmetic.",
+      bad:[["The "+T.nAB+" who "+c.v+" "+c.A+" and "+c.B,"That fact fills a lens, and only after the centre is known."],
+           ["The "+T.nA+" who "+c.v+" "+c.A,"A circle total is used last, once the lenses and centre are placed."],
+           ["The "+T.nU+" "+c.u+" surveyed","The total is used at the very end, for the outside region."]]},
+     {k:"II", filled:{V:D.V}, ans:"The "+T.nAB+" who "+c.v+" "+c.A+" and "+c.B,
+      why:"Region II is that pair total minus the centre: "+T.nAB+MINUS+D.V+" = "+D.II+".",
+      bad:[["The "+T.nA+" who "+c.v+" "+c.A,"A circle total covers four regions, and three of them are still empty."],
+           ["The "+T.nBC+" who "+c.v+" "+c.B+" and "+c.C,"That pair total fills region VI, on the other side of the diagram."],
+           ["The "+T.nU+" "+c.u+" surveyed","The total is used at the end."]]},
+     {k:"I", filled:{V:D.V,II:D.II,IV:D.IV,VI:D.VI}, ans:"The "+T.nA+" who "+c.v+" "+c.A,
+      why:"With the centre and both of A's lenses placed, region I is "+T.nA+MINUS+D.II+MINUS+D.IV+MINUS+D.V+" = "+D.I+".",
+      bad:[["The "+T.nAB+" who "+c.v+" "+c.A+" and "+c.B,"That one has already been used, to fill region II."],
+           ["The "+T.nABC+" who "+c.v+" all three","Already placed, at the centre."],
+           ["The "+T.nU+" "+c.u+" surveyed","Still not needed until the outside region."]]},
+     {k:"VIII", filled:(function(){const o={};REG3.forEach(function(r){if(r!=="VIII")o[r]=D[r];});return o;})(),
+      ans:"The "+T.nU+" "+c.u+" surveyed",
+      why:"Everything inside is known, so the outside is "+T.nU+MINUS+T.inside+" = "+D.VIII+".",
+      bad:[["The "+T.nA+" who "+c.v+" "+c.A,"That circle is already fully filled in."],
+           ["The "+T.nABC+" who "+c.v+" all three","Already at the centre."],
+           ["The "+T.nBC+" who "+c.v+" "+c.B+" and "+c.C,"Already used, for region VI."]]}
+   ];
+   const cs=pick(cases);
+   const opts=[{label:cs.ans,correct:true,note:cs.why}]
+     .concat(cs.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:"Which survey fact do you use to fill <b>region "+cs.k+"</b>?",
+     setup:"A survey of "+c.u+" asked about "+c.A+", "+c.B+" and "+c.C+".",
+     facts:factsHTML(c,T),
+     svg:venn3({aName:c.An,bName:c.Bn,cName:c.Cn,counts:cs.filled,unknown:cs.k}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Fill in the whole survey",
+ sub:"Eight regions at once. Three of these fillings break somewhere.",
+ gen:function(){
+   const c=pick(CTX3), D=makeSurvey(), T=tot(D);
+   const show=function(R){
+     return '<div class="fillgrid">'+REG3.map(function(k){
+       return "<span><b>"+k+"</b>"+R[k]+"</span>";
+     }).join("")+"</div>";
+   };
+   const w1={}; REG3.forEach(function(k){w1[k]=D[k];});
+   w1.II=T.nAB; w1.IV=T.nAC; w1.VI=T.nBC;   /* pair totals written straight in */
+   const w2={}; REG3.forEach(function(k){w2[k]=D[k];});
+   w2.I=T.nA-D.V; w2.III=T.nB-D.V; w2.VII=T.nC-D.V;  /* circles minus centre only */
+   const w3={}; REG3.forEach(function(k){w3[k]=D[k];});
+   w3.VIII=T.nU-T.nA;                       /* outside found by removing one circle only */
+   const opts=[
+     {label:show(D), correct:true,
+      note:"Centre "+D.V+"; lenses "+T.nAB+MINUS+D.V+", "+T.nAC+MINUS+D.V+", "+T.nBC+MINUS+D.V+"; singles from the circle totals; outside "+T.nU+MINUS+T.inside+". The eight add to "+T.nU+"."},
+     {label:show(w1), note:"The pair totals were written straight into the lenses without taking the centre out, so those "+D.V+" people are counted twice each."},
+     {label:show(w2), note:"The single regions took out only the centre. The two lenses sit inside each circle as well and must also come out."},
+     {label:show(w3), note:"The outside was found by taking the "+c.A+" circle off the total and stopping. Everyone who "+c.v+" "+c.B+" or "+c.C+" but not "+c.A+" is inside the circles, so they must not be counted outside as well."}
+   ];
+   return {q:"Which filling is correct?",
+     setup:"A survey of "+c.u+" asked about "+c.A+", "+c.B+" and "+c.C+".",
+     facts:factsHTML(c,T),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), wide:true};
+ }
+},
+{
+ title:"Spot the mistake",
+ sub:"One region on this diagram is wrong. The eight will not add to the number surveyed.",
+ gen:function(){
+   const c=pick(CTX3), D=makeSurvey(), T=tot(D);
+   const kinds=[
+     {k:pick(["II","IV","VI"]), how:"pair"},
+     {k:pick(["I","III","VII"]), how:"single"},
+     {k:"VIII", how:"outside"}
+   ];
+   const kd=pick(kinds), k=kd.k;
+   const R={}; REG3.forEach(function(x){R[x]=D[x];});
+   let why;
+   if(kd.how==="pair"){
+     const pv={II:T.nAB,IV:T.nAC,VI:T.nBC}[k];
+     R[k]=pv;
+     why="Region "+k+" shows "+pv+", which is the pair total straight from the survey. It still contains the "+D.V+" at the centre, so the lens should hold "+pv+MINUS+D.V+" = "+D[k]+".";
+   }else if(kd.how==="single"){
+     const cv={I:T.nA,III:T.nB,VII:T.nC}[k];
+     R[k]=cv-D.V;
+     why="Region "+k+" shows "+(cv-D.V)+", which is the circle total with only the centre removed. The two lenses inside that circle have to come out too, leaving "+D[k]+".";
+   }else{
+     R[k]=T.nU-T.nA;
+     why="Region VIII shows "+(T.nU-T.nA)+", which is the total with only the "+c.A+" circle taken off. Everyone who "+c.v+" "+c.B+" or "+c.C+" but not "+c.A+" is still inside the circles. It should be "+T.nU+MINUS+T.inside+" = "+D.VIII+".";
+   }
+   const sum=REG3.reduce(function(a,x){return a+R[x];},0);
+   const others=shuffle(REG3.filter(function(x){return x!==k;})).slice(0,3);
+   const opts=[{label:k,correct:true,note:why+" The eight regions as shown add to "+sum+", not "+T.nU+"."}]
+     .concat(others.map(function(x){
+       return {label:x, note:"Region "+x+" shows "+R[x]+", which is what the survey gives once everything inside it is subtracted. That one is right."};
+     }));
+   return {q:"Exactly one region on this diagram has been filled in wrongly. <b>Which one?</b>",
+     setup:"A survey of "+c.u+" asked about "+c.A+", "+c.B+" and "+c.C+".",
+     facts:factsHTML(c,T),
+     svg:venn3({aName:c.An,bName:c.Bn,cName:c.Cn,counts:R}),
+     opts:shuffle(opts), roman:true};
+ }
+},
+{
+ title:"Could this survey have happened",
+ sub:"Some sets of survey results describe nobody at all. Find the ones that cannot be filled in.",
+ gen:function(){
+   const c=pick(CTX3);
+   let D,T,kind,tries=0,F;
+   do{
+     D=makeSurvey(); T=tot(D);
+     kind=pick(["ok","centre","pair","total"]);
+     F={nABC:T.nABC,nAB:T.nAB,nAC:T.nAC,nBC:T.nBC,nA:T.nA,nB:T.nB,nC:T.nC,nU:T.nU};
+     if(kind==="centre"){
+       const m=Math.min(F.nAB,F.nAC,F.nBC);
+       F.nABC=m+ri(1,3);
+     }else if(kind==="pair"){
+       F.nAB=Math.max(F.nA,F.nB)+ri(1,4);
+     }else if(kind==="total"){
+       F.nU=T.inside-ri(1,6);
+     }
+     /* each broken version must break exactly the one rule it is meant to */
+     const c1=(F.nABC>F.nAB)||(F.nABC>F.nAC)||(F.nABC>F.nBC);
+     const c2=(F.nAB>F.nA)||(F.nAB>F.nB)||(F.nAC>F.nA)||(F.nAC>F.nC)||(F.nBC>F.nB)||(F.nBC>F.nC);
+     const inside=(F.nA+F.nB+F.nC)-(F.nAB+F.nAC+F.nBC)+F.nABC;
+     const c3=inside>F.nU;
+     const fired=(c1?1:0)+(c2?1:0)+(c3?1:0);
+     tries++;
+     if(kind==="ok"&&fired===0)break;
+     if(kind==="centre"&&c1&&!c2&&fired===1)break;
+     if(kind==="pair"&&c2&&!c1&&fired===1)break;
+     if(kind==="total"&&c3&&!c1&&!c2)break;
+   }while(tries<400);
+   const L={
+     ok:"It is consistent \u2014 every region works out to zero or more",
+     centre:"Impossible \u2014 it says more "+c.u+" "+c.v+" all three than "+c.v+" two of them",
+     pair:"Impossible \u2014 it says more "+c.u+" "+c.v+" two of them than "+c.v+" one of those two altogether",
+     total:"Impossible \u2014 the regions would add to more than the number surveyed"
+   };
+   const notes={
+     ok:"Every pair total is at least the centre, every pair total fits inside both of its circles, and the regions add to at most "+F.nU+".",
+     centre:"The "+F.nABC+" who "+c.v+" all three are inside every pair total, so no pair total can be smaller than "+F.nABC+".",
+     pair:"Everyone who "+c.v+" two of them also "+c.v+" each one separately, so a pair total can never exceed either circle total.",
+     total:"Adding the circles and correcting for the overlaps gives "+((F.nA+F.nB+F.nC)-(F.nAB+F.nAC+F.nBC)+F.nABC)+" inside the circles, but only "+F.nU+" were surveyed."
+   };
+   const wrongNote={
+     ok:"At least one of the survey's figures contradicts another, so no diagram can be filled in.",
+     centre:"Check the all-three figure against each pair total \u2014 that particular rule is not broken here.",
+     pair:"Check each pair total against its two circle totals \u2014 that rule holds here.",
+     total:"Work out how many the circles account for and compare with the number surveyed \u2014 that rule holds here."
+   };
+   const keys=["ok","centre","pair","total"];
+   const opts=keys.map(function(kk){
+     return {label:L[kk], correct:kk===kind, note:kk===kind?notes[kk]:wrongNote[kk]};
+   });
+   return {q:"Could a Venn diagram be filled in from these results?",
+     setup:"A survey of "+c.u+" asked about "+c.A+", "+c.B+" and "+c.C+".",
+     facts:"<div>"+F.nABC+" "+c.v+" all three.</div>"
+          +"<div>"+F.nAB+" "+c.v+" "+c.A+" and "+c.B+".</div>"
+          +"<div>"+F.nAC+" "+c.v+" "+c.A+" and "+c.C+".</div>"
+          +"<div>"+F.nBC+" "+c.v+" "+c.B+" and "+c.C+".</div>"
+          +"<div>"+F.nA+" "+c.v+" "+c.A+".</div>"
+          +"<div>"+F.nB+" "+c.v+" "+c.B+".</div>"
+          +"<div>"+F.nC+" "+c.v+" "+c.C+".</div>"
+          +"<div>"+F.nU+" "+c.u+" were surveyed.</div>",
+     opts:shuffle(opts), wide:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HC=CTX3[0];
+const HD={I:9,II:7,III:3,IV:4,V:6,VI:5,VII:10,VIII:16};
+const HSTEPS=[
+  {k:"the givens", counts:{}, step:"Nothing on the diagram yet.",
+   work:"6 all three \u00b7 13 comedy+drama \u00b7 10 comedy+scifi \u00b7 11 drama+scifi \u00b7 26 comedy \u00b7 21 drama \u00b7 25 sci-fi \u00b7 60 surveyed",
+   note:"The worksheet's movie survey. Not one of these eight numbers is a region \u2014 every one of them counts people who are also counted somewhere else."},
+  {k:"1 \u00b7 the centre", counts:{V:6}, step:"Write the all-three figure into region V.",
+   work:"6",
+   note:"The only figure that goes straight on with no arithmetic. Everything else now has something to be subtracted from it."},
+  {k:"2 \u00b7 the lenses", counts:{V:6,II:7,IV:4,VI:5}, step:"Each pair total, minus the centre.",
+   work:"13 \u2212 6 = 7 \u00b7 10 \u2212 6 = 4 \u00b7 11 \u2212 6 = 5",
+   note:"Region II is 7, not 13. The 13 counted the 6 in the middle, and they are already on the diagram."},
+  {k:"3 \u00b7 the singles", counts:{V:6,II:7,IV:4,VI:5,I:9,III:3,VII:10}, step:"Each circle total, minus the three regions already inside it.",
+   work:"26 \u2212 7 \u2212 4 \u2212 6 = 9 \u00b7 21 \u2212 7 \u2212 5 \u2212 6 = 3 \u00b7 25 \u2212 4 \u2212 5 \u2212 6 = 10",
+   note:"Three things come out of each circle now, not one. Subtracting only the centre would leave 20 in region I instead of 9."},
+  {k:"4 \u00b7 the outside", counts:HD, step:"The number surveyed, minus everything inside the circles.",
+   work:"9 + 7 + 3 + 4 + 6 + 5 + 10 = 44, and 60 \u2212 44 = 16",
+   note:"The diagram is complete, and the eight regions add to 60 \u2014 which is the check that the filling is right."},
+  {k:"now answer", counts:HD, step:"Every question the worksheet asks, read straight off.",
+   work:"comedy only 9 \u00b7 drama+scifi not comedy 5 \u00b7 drama or scifi not comedy 18 \u00b7 exactly one 22 \u00b7 at least two 22 \u00b7 none 16",
+   note:"All six answers are now additions of regions. The hard part was the filling in; this part is arithmetic."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HSTEPS[heroSel];
+  document.getElementById("heroChart").innerHTML=
+    venn3({aName:HC.An,bName:HC.Bn,cName:HC.Cn,counts:h.counts});
+  document.getElementById("hStep").innerHTML=h.step;
+  document.getElementById("hWork").innerHTML=h.work;
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HSTEPS.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.k+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.setup?'<p class="setup">'+q.setup+'</p>':'')
+    +(q.facts?'<div class="facts">'+q.facts+'</div>':'')
+    +(q.svg?'<div class="chart">'+q.svg+'</div>':'')
+    +'<div class="ask">'+q.q+'</div>';
+  const optEl=document.getElementById("options");
+  optEl.style.gridTemplateColumns=q.wide?"1fr":"";
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.num?" num":"")+(q.roman?" roman":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is <b style="display:inline">'+right.label+'</b>. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
