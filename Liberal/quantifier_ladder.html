@@ -1,0 +1,673 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Quantifier Ladder — the opposite of all is not none</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --qz:#1D6B8A;
+    --qz-bg:#E5F0F5;
+    --neg:#A8452F;
+    --neg-bg:#FAEBE7;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--qz)}
+  :focus-visible{outline:3px solid var(--qz); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--qz)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .quad{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--rule)}
+  @media (max-width:620px){.quad{grid-template-columns:1fr}}
+  .cell{background:var(--card); padding:16px 18px 14px; text-align:left; font:inherit; cursor:pointer; border:none;
+        border-left:4px solid transparent; transition:background .15s, border-color .15s}
+  .cell:hover{background:#FAFBFC}
+  .cell .form{font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-bottom:6px}
+  .cell .sent{font-family:var(--serif); font-size:clamp(16px,3vw,19px); line-height:1.4; margin-bottom:9px}
+  .cell .role{font-size:12.5px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; visibility:hidden}
+  .cell.sel{border-left-color:var(--qz); background:var(--qz-bg)}
+  .cell.sel .role{visibility:visible; color:var(--qz)}
+  .cell.par{border-left-color:var(--neg); background:var(--neg-bg)}
+  .cell.par .role{visibility:visible; color:var(--neg)}
+  .tag{display:inline-block; font-size:12px; font-weight:600; padding:1px 9px; border-radius:20px; margin-left:8px; vertical-align:2px}
+  .t-true{background:var(--right-bg); color:var(--right)}
+  .t-false{background:var(--wrong-bg); color:var(--wrong)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--qz); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:66px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--neg); background:var(--neg-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--neg)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .card{margin:0 auto 16px; max-width:44ch; background:var(--qz-bg); border-radius:10px; padding:15px 20px;
+        font-family:var(--serif); font-size:clamp(17px,3.6vw,21px); line-height:1.45; text-align:left}
+  .card .who{display:block; font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--qz); margin-bottom:5px}
+  .card.two{background:var(--neg-bg); margin-top:-6px}
+  .card.two .who{color:var(--neg)}
+
+  .options{display:grid; grid-template-columns:1fr; gap:10px; padding:8px 20px 20px}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt.sent .v{font-family:var(--serif); font-size:17px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>∀ ∃</span> The Quantifier Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 6 · all, some and no — and how to negate them</p>
+    <h1>The opposite of “all” is not “none.”</h1>
+    <p class="lede">To deny that all cows are mammals, you do not have to claim that none of them are. One non-mammal cow would be enough. So the negation of <b>All A are B</b> is <b>Some A are not B</b> — and the negations run diagonally across the four forms, never straight down the middle.</p>
+
+    <div class="demo">
+      <div class="quad" id="quad"></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>There is a test that settles this without any theory.</b> Take “All people are doctors” and “No people are doctors.” Both are false. A statement and its negation can never both be false — exactly one of them has to be true — so those two are not negations of each other. Try the same test on “All people are doctors” and “Some people are not doctors,” and you will find that whichever situation you imagine, exactly one of them holds.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–3 name the four forms, pair each with its equivalent wording, and settle what “some” means. Rungs 4–6 negate all four. Rungs 7–8 are the reasoning behind the diagonals. Rungs 9–10 negate the reworded versions and run the whole table.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every wrong option is a real answer</h3><p>The distractors are the other three quantifier forms, so a miss tells you exactly which one you reached for.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>One counterexample is enough</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>That is how claims get disproved</h3><p>To refute “all,” produce one exception. You never have to show the opposite extreme, and trying to is much harder work.</p></div>
+      <div class="step"><span class="n">02</span><h3>Everyday “some” is narrower</h3><p>In conversation “some” hints at “not all.” In logic it only means at least one, and that difference changes answers.</p></div>
+      <div class="step"><span class="n">03</span><h3>The pictures come next</h3><p>Each of the four forms has a Venn diagram, and the diagonal pairs are exactly the ones whose pictures cannot both fit.</p></div>
+    </div>
+    <p class="closing">All and some-not are negations. Some and no are negations. Nothing pairs straight across.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Quantifier Ladder · not-all means at least one exception · “some” means at least one, and does not rule out all · a statement and its negation are never both false</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function card(who,txt,two){return '<div class="card'+(two?" two":"")+'"><span class="who">'+who+'</span>'+txt+'</div>';}
+function quo(s){return "\u201c"+s.replace(/\.$/,"")+"\u201d";}
+
+/* ================= the four forms ================= */
+const FORMS=["all","some","no","somenot"];
+const FORMNAME={all:"All A are B", some:"Some A are B", no:"No A are B", somenot:"Some A are not B"};
+const NEGOF={all:"somenot", somenot:"all", some:"no", no:"some"};
+/* truth of each form for each relationship between A and B */
+const TRUTH={
+  all:{all:true, some:true, no:false, somenot:false},   /* every A is a B */
+  some:{all:false,some:true, no:false, somenot:true },  /* some are, some are not */
+  none:{all:false,some:false,no:true,  somenot:true }   /* no A is a B */
+};
+function relPhrase(e){
+  return {
+    all:"every one of them is "+e.Bs,
+    some:"some of them are "+e.B+" and some are not",
+    none:"none of them is "+e.Bs
+  }[e.rel];
+}
+
+const EX=[
+  {A:"cows",       As:"cow",       B:"mammals",            Bs:"a mammal",             rel:"all"},
+  {A:"trucks",     As:"truck",     B:"vehicles",           Bs:"a vehicle",            rel:"all"},
+  {A:"squares",    As:"square",    B:"rectangles",         Bs:"a rectangle",          rel:"all"},
+  {A:"robins",     As:"robin",     B:"birds",              Bs:"a bird",               rel:"all"},
+  {A:"oaks",       As:"oak",       B:"trees",              Bs:"a tree",               rel:"all"},
+
+  {A:"people",     As:"person",    B:"doctors",            Bs:"a doctor",             rel:"some"},
+  {A:"students",   As:"student",   B:"athletes",           Bs:"an athlete",           rel:"some"},
+  {A:"teachers",   As:"teacher",   B:"parents",            Bs:"a parent",             rel:"some"},
+  {A:"books",      As:"book",      B:"novels",             Bs:"a novel",              rel:"some"},
+  {A:"applicants", As:"applicant", B:"hired",              Bs:"hired",                rel:"some"},
+  {A:"birds",      As:"bird",      B:"swimmers",           Bs:"a swimmer",            rel:"some"},
+
+  {A:"cats",       As:"cat",       B:"reptiles",           Bs:"a reptile",            rel:"none"},
+  {A:"fish",       As:"fish",      B:"mammals",            Bs:"a mammal",             rel:"none"},
+  {A:"triangles",  As:"triangle",  B:"quadrilaterals",     Bs:"a quadrilateral",      rel:"none"},
+  {A:"whales",     As:"whale",     B:"fish",               Bs:"a fish",               rel:"none"},
+  {A:"squares",    As:"square",    B:"circles",            Bs:"a circle",             rel:"none"}
+];
+function ofRel(r){return EX.filter(function(e){return e.rel===r;});}
+
+function txt(f,e){
+  return {
+    all:"All "+e.A+" are "+e.B+".",
+    some:"Some "+e.A+" are "+e.B+".",
+    no:"No "+e.A+" are "+e.B+".",
+    somenot:"Some "+e.A+" are not "+e.B+"."
+  }[f];
+}
+function equiv(f,e){
+  return {
+    all:"There is no "+e.As+" that is not "+e.Bs+".",
+    some:"There is at least one "+e.As+" that is "+e.Bs+".",
+    no:"All "+e.A+" are not "+e.B+".",
+    somenot:"Not all "+e.A+" are "+e.B+"."
+  }[f];
+}
+function altPhrase(f,e){
+  return {
+    all:["All "+e.A+" are "+e.B+".","Every "+e.As+" is "+e.Bs+"."],
+    some:["Some "+e.A+" are "+e.B+"."],
+    no:["No "+e.A+" are "+e.B+".","None of the "+e.A+" are "+e.B+"."],
+    somenot:["Some "+e.A+" are not "+e.B+"."]
+  }[f];
+}
+function tv(f,e){return TRUTH[e.rel][f];}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Which of the four forms",
+ sub:"All, some, no, some-not. Every quantified sentence in this lesson is one of them.",
+ gen:function(){
+   const e=pick(EX), f=pick(FORMS);
+   const sent=pick(altPhrase(f,e));
+   const opts=FORMS.map(function(k){
+     return {label:FORMNAME[k], correct:k===f,
+       note:k===f?("Here A is "+e.A+" and B is "+e.B+", so the sentence has the form "+FORMNAME[f]+".")
+                 :("That form would read "+quo(txt(k,e))+".")};
+   });
+   return {q:"Which of the four quantifier forms is this?", card:card("The statement",sent),
+     opts:shuffle(opts)};
+ }
+},
+{
+ title:"The equivalent wording",
+ sub:"Each form has a second way of saying exactly the same thing.",
+ gen:function(){
+   const e=pick(EX), f=pick(FORMS);
+   const back=Math.random()<.4;
+   if(back){
+     const opts=FORMS.map(function(k){
+       return {label:txt(k,e), correct:k===f,
+         note:k===f?("Both say the same thing: "+quo(equiv(f,e))+" is just another wording of "+quo(txt(f,e))+".")
+                   :("That is the form "+FORMNAME[k]+", whose equivalent wording is "+quo(equiv(k,e))+".")};
+     });
+     return {q:"Which statement says the same thing as this one?", card:card("The statement",equiv(f,e)),
+       opts:shuffle(opts), sent:true};
+   }
+   const opts=FORMS.map(function(k){
+     return {label:equiv(k,e), correct:k===f,
+       note:k===f?("Both say the same thing. Watch the word order \u2014 \u201call ... are not\u201d and \u201cnot all ... are\u201d are different forms entirely.")
+                 :("That is the equivalent of "+FORMNAME[k]+", which reads "+quo(txt(k,e))+".")};
+   });
+   return {q:"Which wording says the same thing as this statement?", card:card("The statement",txt(f,e)),
+     opts:shuffle(opts), sent:true};
+ }
+},
+{
+ title:"“Some” means at least one",
+ sub:"It does not mean “not all.” In logic it sets a floor, not a ceiling.",
+ gen:function(){
+   const eAll=pick(ofRel("all")), eSome=pick(ofRel("some"));
+   const forms=[
+     {q:"Every one of them is. Is "+quo(txt("some",eAll))+" true?",
+      cards:card("What is the case","Every "+eAll.As+" is "+eAll.Bs+"."),
+      ans:"True \u2014 \u201csome\u201d only asks for at least one, and there are plenty",
+      bad:[["False \u2014 \u201csome\u201d means some but not all","That is the everyday hint, not the logical meaning. In logic \u201csome\u201d sets no upper limit."],
+           ["Neither \u2014 the sentence does not apply","It applies perfectly well, and it is true."],
+           ["True, but only because "+eAll.A+" are common","Numbers do not matter beyond one. Even a single example would make it true."]],
+      note:"\u201cSome A are B\u201d means there is at least one. If every one of them qualifies, that is certainly at least one."},
+     {q:"How many "+eSome.A+" have to be "+eSome.Bs+" for "+quo(txt("some",eSome))+" to be true?",
+      cards:"", ans:"One is enough",
+      bad:[["More than half of them","No threshold like that appears anywhere in the definition."],
+           ["At least two","One is the whole requirement \u2014 \u201cthere exists at least one.\u201d"],
+           ["Some but not all of them","That is the everyday reading. The logical one has no upper limit."]],
+      note:"\u201cThere exists at least one\u201d is the equivalent wording, and it says exactly that."},
+     {q:"Does "+quo(txt("some",eSome))+" rule out that <i>all</i> of them are?",
+      cards:"", ans:"No \u2014 it would still be true if all of them were",
+      bad:[["Yes \u2014 \u201csome\u201d implies the rest are not","That is the conversational suggestion, but it is not part of the logical meaning."],
+           ["Only when the group is large","Size has nothing to do with it."],
+           ["Yes, because otherwise you would say \u201call\u201d","You would probably say \u201call,\u201d but saying \u201csome\u201d would not be false."]],
+      note:"\u201cSome\u201d is satisfied by one, by half, or by every last one of them."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, card:f.cards, opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Negating “all”",
+ sub:"One exception is enough to deny it. You do not need the opposite extreme.",
+ gen:function(){
+   const e=pick(EX);
+   const opts=FORMS.map(function(k){
+     return {label:txt(k,e), correct:k==="somenot",
+       note:k==="somenot"
+         ? ("To deny that every "+e.As+" is "+e.Bs+", you only need one that is not. That is exactly what this says.")
+         : (k==="no"
+             ? ("This is the usual wrong answer. It claims far more than a denial needs \u2014 and it can be false at the same time as the original, which negations never are.")
+             : (k==="all" ? "That is the original statement, unchanged."
+                          : "That would still be true in situations where the original is true, so it cannot be its denial."))};
+   });
+   return {q:"What is the <b>negation</b> of this statement?", card:card("The statement",txt("all",e)),
+     opts:shuffle(opts), sent:true};
+ }
+},
+{
+ title:"Negating “some”",
+ sub:"To deny that at least one is, you have to rule out every last one.",
+ gen:function(){
+   const e=pick(EX);
+   const opts=FORMS.map(function(k){
+     return {label:txt(k,e), correct:k==="no",
+       note:k==="no"
+         ? ("\u201cSome\u201d claims at least one. Denying it means there are none at all, which is what this says.")
+         : (k==="somenot"
+             ? ("This is the usual wrong answer. Both it and the original can be true together \u2014 when some are and some are not \u2014 and negations can never both be true.")
+             : (k==="some" ? "That is the original statement, unchanged."
+                           : "That is a stronger claim than the original, not a denial of it."))};
+   });
+   return {q:"What is the <b>negation</b> of this statement?", card:card("The statement",txt("some",e)),
+     opts:shuffle(opts), sent:true};
+ }
+},
+{
+ title:"Negating “no” and “some are not”",
+ sub:"The other two, and they land back on the first two.",
+ gen:function(){
+   const e=pick(EX), f=pick(["no","somenot"]);
+   const ans=NEGOF[f];
+   const opts=FORMS.map(function(k){
+     return {label:txt(k,e), correct:k===ans,
+       note:k===ans
+         ? (f==="no"
+             ? ("To deny that none of them are, you only need one that is. That is \u201csome.\u201d")
+             : ("To deny that there is an exception, you have to say there are none \u2014 that every one of them is. That is \u201call.\u201d"))
+         : (k===f ? "That is the original statement, unchanged."
+                  : "That is one of the other two forms. Check which claim the original actually makes, then deny exactly that.")};
+   });
+   return {q:"What is the <b>negation</b> of this statement?", card:card("The statement",txt(f,e)),
+     opts:shuffle(opts), sent:true};
+ }
+},
+{
+ title:"Why “no” is not the negation of “all”",
+ sub:"There is a situation where both are false, and that settles it.",
+ gen:function(){
+   const e=pick(ofRel("some"));
+   const forms=[
+     {q:"Both of these statements are false. What does that tell you?",
+      cards:card("First",txt("all",e))+card("Second",txt("no",e),true),
+      ans:"They are not negations of each other",
+      bad:[["One of them must really be true after all","Both are false \u2014 among "+e.A+", "+relPhrase(e)+"."],
+           ["They say the same thing","They say opposite extremes. Saying opposite extremes is not the same as being negations."],
+           ["Neither of them is a statement","Both are statements. Being false is one of the two values a statement can have."]],
+      note:"A statement and its negation always have opposite truth values, so they can never both be false. These two can, so neither is the other's negation."},
+     {q:"Why is "+quo(txt("no",e))+" <b>not</b> the negation of "+quo(txt("all",e))+"?",
+      cards:"", ans:"Because both can be false at once, and negations never can",
+      bad:[["Because it uses a different quantifier","Different quantifiers are fine. "+quo(txt("somenot",e))+" uses a different one too, and it <i>is</i> the negation."],
+           ["Because it is a stronger claim, and negations must be weaker","Strength is not the test. The test is whether exactly one of the two must hold."],
+           ["Because \u201cno\u201d cannot be used in a negation","It can \u2014 it is the negation of \u201csome.\u201d"]],
+      note:"Among "+e.A+", "+relPhrase(e)+", so both statements come out false together."},
+     {q:"These two <i>are</i> negations of each other. How can you tell?",
+      cards:card("First",txt("all",e))+card("Second",txt("somenot",e),true),
+      ans:"Whatever the situation, exactly one of them is true",
+      bad:[["They both mention the same two groups","So do all four forms. That is not what makes a pair negations."],
+           ["One of them contains the word \u201cnot\u201d","A \u201cnot\u201d in the sentence is neither necessary nor enough."],
+           ["They are opposite extremes","They are not extremes at all \u2014 \u201csome are not\u201d is a very mild claim. That is precisely why it works."]],
+      note:"If every "+e.As+" is "+e.Bs+", the first is true and the second false. If even one is not, the first is false and the second true. There is no third case."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, card:f.cards, opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Which pair are negations",
+ sub:"The pairings run diagonally. Nothing pairs straight across.",
+ gen:function(){
+   const e=pick(EX);
+   const good=pick([["all","somenot"],["some","no"],["somenot","all"],["no","some"]]);
+   const bads=[["all","no"],["some","somenot"],["all","some"],["no","somenot"]];
+   const why={
+     "all,no":"Both are false whenever some are and some are not, so they cannot be negations.",
+     "some,somenot":"Both are true whenever some are and some are not, so they cannot be negations.",
+     "all,some":"Whenever every one of them is, both are true at once.",
+     "no,somenot":"Whenever none of them is, both are true at once."
+   };
+   const opts=[{label:quo(txt(good[0],e))+" and "+quo(txt(good[1],e)), correct:true,
+     note:"Exactly one of these two holds in every situation, which is what makes them a statement and its negation."}]
+     .concat(shuffle(bads.slice(0)).slice(0,3).map(function(p){
+       const key=p.slice(0).sort().join(",");
+       return {label:quo(txt(p[0],e))+" and "+quo(txt(p[1],e)),
+         note:why[key]||"Those two can share a truth value, so they are not negations."};
+     }));
+   return {q:"Which pair are <b>negations of each other</b>?",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"Negating the reworded version",
+ sub:"Work out which form it is first. Then negate that.",
+ gen:function(){
+   const e=pick(EX), f=pick(FORMS);
+   const ans=NEGOF[f];
+   const opts=FORMS.map(function(k){
+     return {label:txt(k,e), correct:k===ans,
+       note:k===ans
+         ? (quo(equiv(f,e))+" is just another way of saying "+quo(txt(f,e))+", and the negation of that form is "+FORMNAME[ans]+".")
+         : (k===f ? ("That is the same claim the original makes, only worded the usual way \u2014 not its denial.")
+                  : ("That is "+FORMNAME[k]+". First decide which form the sentence is, then negate that form."))};
+   });
+   return {q:"What is the <b>negation</b> of this statement?", card:card("The statement",equiv(f,e)),
+     opts:shuffle(opts), sent:true};
+ }
+},
+{
+ title:"Statement, equivalent, negation",
+ sub:"The whole table, in any order, on any of the four forms.",
+ gen:function(){
+   const e=pick(EX), f=pick(FORMS);
+   const which=pick(["equiv","neg","truth"]);
+   if(which==="equiv"){
+     const opts=FORMS.map(function(k){
+       return {label:equiv(k,e), correct:k===f,
+         note:k===f?"Same claim, second wording.":"That is the equivalent of "+FORMNAME[k]+"."};
+     });
+     return {q:"Give the <b>equivalent statement</b>.", card:card("The statement",txt(f,e)),
+       opts:shuffle(opts), sent:true};
+   }
+   if(which==="neg"){
+     const ans=NEGOF[f];
+     const opts=FORMS.map(function(k){
+       return {label:txt(k,e), correct:k===ans,
+         note:k===ans?("The negation of "+FORMNAME[f]+" is "+FORMNAME[ans]+".")
+                     :(k===f?"That is the original, unchanged."
+                            :"That is "+FORMNAME[k]+", which is not the denial of "+FORMNAME[f]+".")};
+     });
+     return {q:"Give the <b>negation</b>.", card:card("The statement",txt(f,e)),
+       opts:shuffle(opts), sent:true};
+   }
+   const t=tv(f,e), nt=tv(NEGOF[f],e);
+   const opts=[
+     {label:"The statement is "+(t?"true":"false")+" and its negation is "+(nt?"true":"false"), correct:true,
+      note:"Among "+e.A+", "+relPhrase(e)+". A statement and its negation always come out opposite."},
+     {label:"The statement is "+(t?"false":"true")+" and its negation is "+(nt?"false":"true"),
+      note:"Check the statement itself against what is actually the case for "+e.A+"."},
+     {label:"Both are "+(t?"true":"false"),
+      note:"A statement and its negation can never share a truth value."},
+     {label:"Both are "+(t?"false":"true"),
+      note:"A statement and its negation can never share a truth value."}
+   ];
+   return {q:"Take this statement as being about the real world. <b>What are the truth values of it and its negation?</b>",
+     card:card("The statement",txt(f,e))+card("Its negation",txt(NEGOF[f],e),true),
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HEX=[
+  {e:EX[0], lbl:"cows and mammals"},
+  {e:EX[5], lbl:"people and doctors"},
+  {e:EX[11], lbl:"cats and reptiles"}
+];
+let heroEx=0, heroSel="all";
+function drawHero(){
+  const e=HEX[heroEx].e;
+  const par=NEGOF[heroSel];
+  document.getElementById("quad").innerHTML=FORMS.map(function(f){
+    const cls=(f===heroSel?" sel":(f===par?" par":""));
+    const t=tv(f,e);
+    const role=(f===heroSel?"selected":(f===par?"its negation":""));
+    return '<button class="cell'+cls+'" data-f="'+f+'">'
+      +'<div class="form">'+FORMNAME[f]+'</div>'
+      +'<div class="sent">'+txt(f,e)+'<span class="tag '+(t?"t-true":"t-false")+'">'+(t?"true":"false")+'</span></div>'
+      +'<div class="role">'+role+'</div></button>';
+  }).join("");
+  const t1=tv(heroSel,e), t2=tv(par,e);
+  const across={all:"no",no:"all",some:"somenot",somenot:"some"}[heroSel];
+  const ta=tv(across,e);
+  document.getElementById("heroNote").innerHTML=
+    "Selected "+quo(txt(heroSel,e))+" \u2014 "+(t1?"true":"false")+". Its negation is "+quo(txt(par,e))+" \u2014 "+(t2?"true":"false")+", the opposite, as it must be. "
+    +"The form directly across from it, "+quo(txt(across,e))+", is "+(ta?"true":"false")
+    +(ta===t1?" \u2014 the same value, which is exactly why it is not the negation." : ", which happens to be opposite here, but try the other examples and it will not stay that way.");
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroEx));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HEX.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(ev){
+    const b=ev.target.closest("button"); if(!b)return;
+    heroEx=Number(b.dataset.i); drawHero();
+  });
+  document.getElementById("quad").addEventListener("click",function(ev){
+    const b=ev.target.closest(".cell"); if(!b)return;
+    heroSel=b.dataset.f; drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'+(q.card||"");
+  document.getElementById("options").innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.sent?" sent":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is \u201c'+right.label+'\u201d. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
