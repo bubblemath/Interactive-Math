@@ -1,0 +1,792 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cooling Fin Explorer — ChE 319</title>
+<style>
+  :root {
+    --paper:     #F6F8FA;
+    --panel:     #FFFFFF;
+    --ink:       #101823;
+    --ink-soft:  #5A6675;
+    --rule:      #CBD5E1;
+    --rule-soft: #E4EAF1;
+    --navy:      #16305C;
+    --flux:      #0F7A6E;
+    --temp:      #B3202B;
+    --gen:       #6B4EA8;
+    --clad:      #4A6FA5;
+    --focus:     #0F7A6E;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 28px 20px 60px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+
+  .masthead { border-bottom: 2px solid var(--navy); padding-bottom: 14px; }
+  h1 {
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-weight: 600; font-size: clamp(24px, 4vw, 34px); line-height: 1.15;
+    letter-spacing: -0.01em; color: var(--navy); margin: 0 0 6px;
+  }
+  .standfirst { max-width: 70ch; color: var(--ink-soft); font-size: 15px; margin: 0; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--rule); margin: 0 0 22px; flex-wrap: wrap; }
+  .tab {
+    appearance: none; background: none; border: 0; border-bottom: 3px solid transparent;
+    padding: 13px 18px 11px; font: inherit; font-size: 14.5px; color: var(--ink-soft);
+    cursor: pointer; margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] { color: var(--navy); font-weight: 600; border-bottom-color: var(--navy); }
+  .tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
+
+  .lede { max-width: 76ch; margin: 0 0 20px; color: var(--ink-soft); }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .stage { display: grid; grid-template-columns: minmax(0,1fr) 330px; gap: 22px; align-items: start; }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 22px; }
+  @media (max-width: 900px) {
+    .stage { grid-template-columns: 1fr; }
+    .duo { grid-template-columns: 1fr; }
+  }
+
+  .card { background: var(--panel); border: 1px solid var(--rule); }
+  .card > h2 {
+    font-family: Georgia, "Iowan Old Style", serif; font-size: 15px; font-weight: 600;
+    color: var(--navy); margin: 0; padding: 11px 16px 10px; border-bottom: 1px solid var(--rule-soft);
+  }
+  .card .body { padding: 16px; }
+
+  canvas { display: block; width: 100%; height: auto; touch-action: none; cursor: ew-resize; }
+  canvas:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .canvhost { padding: 12px 0 0; }
+  .hint { font-size: 12.5px; color: var(--ink-soft); padding: 4px 16px 10px; }
+
+  .ctl { margin-bottom: 14px; }
+  .ctl:last-child { margin-bottom: 0; }
+  .ctl label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13.5px; margin-bottom: 5px; }
+  .ctl .grouplabel { display: block; font-size: 13.5px; margin-bottom: 5px; }
+  .val { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--navy); }
+  input[type=range] { width: 100%; accent-color: var(--navy); margin: 0; }
+  input[type=range]:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+  .seg { display: flex; flex-wrap: wrap; border: 1px solid var(--rule); }
+  .seg button {
+    flex: 1 1 auto; appearance: none; background: var(--panel); border: 0;
+    border-right: 1px solid var(--rule); padding: 7px 4px; font: inherit; font-size: 11.5px;
+    color: var(--ink-soft); cursor: pointer; white-space: nowrap;
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+  .seg button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+  .divider { height: 1px; background: var(--rule-soft); margin: 15px 0; }
+
+  .eqn { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px;
+         font-variant-numeric: tabular-nums; line-height: 1.9; }
+  .eqn .row { display: flex; justify-content: space-between; gap: 12px; }
+  .eqn .k { color: var(--ink-soft); }
+  .eqn .v { color: var(--ink); font-weight: 600; }
+  .eqn .v.flux { color: var(--flux); }
+  .eqn .v.temp { color: var(--temp); }
+  .eqn .v.big { font-size: 15px; }
+  .fracline { border-top: 1px solid var(--rule); margin: 6px 0; }
+
+  .note { margin-top: 22px; padding: 14px 18px; background: #EFF4F0;
+          border-left: 3px solid var(--flux); max-width: 80ch; font-size: 14.5px; }
+  .note b { color: var(--navy); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--ink-soft); padding: 0 16px 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 16px; height: 3px; border-radius: 2px; }
+  .swatch.box { height: 11px; border-radius: 1px; }
+
+  table.mat { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.mat th { text-align: left; font-weight: 600; font-size: 12px; color: var(--ink-soft);
+                 padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+  table.mat td { padding: 6px 8px; border-bottom: 1px solid var(--rule-soft);
+                 font-variant-numeric: tabular-nums; }
+  table.mat tr.on td { background: #EFF4F0; font-weight: 600; }
+  .bar { height: 9px; background: var(--flux); border-radius: 1px; display: block; }
+  .barwrap { background: var(--rule-soft); border-radius: 1px; }
+
+  .foot { margin-top: 34px; padding-top: 12px; border-top: 1px solid var(--rule);
+          font-size: 12.5px; color: var(--ink-soft); max-width: 80ch; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Cooling Fin Explorer</h1>
+    <p class="standfirst">A fin only works if heat can travel out to its tip faster than the air strips it away. Change the metal, the air, and the shape, and watch that competition play out.</p>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-a" aria-controls="p-a" aria-selected="true">Temperature along the fin</button>
+    <button class="tab" role="tab" id="tab-b" aria-controls="p-b" aria-selected="false">Two ways to get η</button>
+    <button class="tab" role="tab" id="tab-c" aria-controls="p-c" aria-selected="false">Designing a fin</button>
+  </div>
+
+  <!-- ============ PANEL A ============ -->
+  <section id="p-a" role="tabpanel" aria-labelledby="tab-a">
+    <p class="lede">The fin is drawn in side view, coloured by temperature, sitting directly above its own temperature curve — <strong>both share the same horizontal axis</strong>, so the colour you see and the curve below it are the same information twice.</p>
+
+    <div class="stage">
+      <div>
+        <div class="card">
+          <h2>Side view, coloured by temperature</h2>
+          <div class="canvhost"><canvas id="cvA" tabindex="0" aria-label="Side view of the fin coloured by temperature. Arrow keys move the measuring position."></canvas></div>
+          <p class="hint">Drag left or right to move along the fin, or focus it and use ← →</p>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h2>Temperature T(z)</h2>
+          <div id="plotA"></div>
+          <div class="legend">
+            <span><i class="swatch" style="background:var(--temp)"></i>actual fin</span>
+            <span><i class="swatch" style="background:var(--ink-soft)"></i>ideal fin, all at T<sub>w</sub></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <span class="grouplabel" id="aMatL">Fin material</span>
+            <div class="seg" id="aMat" role="group" aria-labelledby="aMatL">
+              <button data-k="400" aria-pressed="false">Copper</button>
+              <button data-k="200" aria-pressed="true">Aluminium</button>
+              <button data-k="50" aria-pressed="false">Steel</button>
+              <button data-k="15" aria-pressed="false">Stainless</button>
+            </div>
+          </div>
+          <div class="ctl">
+            <label for="aK">Conductivity k <span class="val" id="aKv"></span></label>
+            <input type="range" id="aK" min="5" max="420" step="1" value="200">
+          </div>
+          <div class="ctl">
+            <label for="aH">Air coefficient h <span class="val" id="aHv"></span></label>
+            <input type="range" id="aH" min="5" max="200" step="1" value="50">
+          </div>
+          <div class="ctl">
+            <label for="aL">Fin length L <span class="val" id="aLv"></span></label>
+            <input type="range" id="aL" min="5" max="120" step="1" value="30">
+          </div>
+          <div class="ctl">
+            <label for="aB">Half-thickness B <span class="val" id="aBv"></span></label>
+            <input type="range" id="aB" min="0.25" max="5" step="0.05" value="1">
+          </div>
+          <div class="ctl">
+            <label for="aTw">Wall temperature T<sub>w</sub> <span class="val" id="aTwv"></span></label>
+            <input type="range" id="aTw" min="50" max="300" step="1" value="150">
+          </div>
+          <div class="ctl">
+            <label for="aZ">Position along fin z <span class="val" id="aZv"></span></label>
+            <input type="range" id="aZ" min="0" max="120" step="0.25" value="12">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">m = √(h/kB)</span><span class="v" id="aM"></span></div>
+            <div class="row"><span class="k">N = mL</span><span class="v" id="aN"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">T at this z</span><span class="v temp" id="aT"></span></div>
+            <div class="row"><span class="k">tip temperature</span><span class="v temp" id="aTip"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">effectiveness η</span><span class="v flux big" id="aEta"></span></div>
+            <div class="row"><span class="k">heat removed Q</span><span class="v flux" id="aQ"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteA"></p>
+  </section>
+
+  <!-- ============ PANEL B ============ -->
+  <section id="p-b" role="tabpanel" aria-labelledby="tab-b">
+    <p class="lede">The lecture computes η twice — once as an integral over the whole surface, once as a single slope at the base. Each picture below <strong>is</strong> one of those calculations. They use different mathematics and must land on the same number.</p>
+
+    <div class="stage">
+      <div>
+        <div class="card">
+          <h2>Method 1 — η is a ratio of two areas</h2>
+          <div id="plotB1"></div>
+          <div class="legend">
+            <span><i class="swatch box" style="background:#B3202B33;border:1px solid var(--temp)"></i>actual heat lost</span>
+            <span><i class="swatch box" style="background:#FFFFFF;border:1px dashed var(--ink-soft)"></i>ideal fin at T<sub>w</sub></span>
+          </div>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h2>Method 2 — η from the slope at the base</h2>
+          <div id="plotB2"></div>
+          <div class="legend">
+            <span><i class="swatch" style="background:var(--temp)"></i>θ(z)</span>
+            <span><i class="swatch" style="background:var(--flux)"></i>tangent at z = 0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>The two calculations</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="bK">Conductivity k <span class="val" id="bKv"></span></label>
+            <input type="range" id="bK" min="5" max="420" step="1" value="200">
+          </div>
+          <div class="ctl">
+            <label for="bH">Air coefficient h <span class="val" id="bHv"></span></label>
+            <input type="range" id="bH" min="5" max="200" step="1" value="50">
+          </div>
+          <div class="ctl">
+            <label for="bL">Fin length L <span class="val" id="bLv"></span></label>
+            <input type="range" id="bL" min="5" max="120" step="1" value="30">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">shaded area</span><span class="v" id="bA1"></span></div>
+            <div class="row"><span class="k">box area</span><span class="v" id="bA2"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">η, method 1</span><span class="v flux big" id="bE1"></span></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">slope at base</span><span class="v" id="bS"></span></div>
+            <div class="row"><span class="k">heat into base</span><span class="v" id="bQb"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">η, method 2</span><span class="v flux big" id="bE2"></span></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">tanh(N)/N</span><span class="v big" id="bE3"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteB"></p>
+  </section>
+
+  <!-- ============ PANEL C ============ -->
+  <section id="p-c" role="tabpanel" aria-labelledby="tab-c">
+    <p class="lede">Everything about a fin's performance collapses into one dimensionless number, <strong>N = L√(h/kB)</strong>. The left plot is the master curve. The right plot shows the consequence that surprises people: <strong>past a certain length, a longer fin removes no more heat.</strong></p>
+
+    <div class="duo">
+      <div class="card">
+        <h2>The master curve: η = tanh(N)/N</h2>
+        <div id="plotC1"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--flux)"></i>η</span>
+          <span><i class="swatch" style="background:var(--ink-soft)"></i>1/N asymptote</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Heat removed as the fin gets longer</h2>
+        <div id="plotC2"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--temp)"></i>Q(L)</span>
+          <span><i class="swatch" style="background:var(--ink-soft)"></i>ceiling, 2BWk(T<sub>w</sub>−T<sub>a</sub>)m</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage" style="margin-top:22px">
+      <div class="card">
+        <h2>Same fin, different metals</h2>
+        <div class="body"><div id="matTable"></div></div>
+      </div>
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="cH">Air coefficient h <span class="val" id="cHv"></span></label>
+            <input type="range" id="cH" min="5" max="200" step="1" value="50">
+          </div>
+          <div class="ctl">
+            <label for="cL">Fin length L <span class="val" id="cLv"></span></label>
+            <input type="range" id="cL" min="5" max="200" step="1" value="30">
+          </div>
+          <div class="ctl">
+            <label for="cB">Half-thickness B <span class="val" id="cBv"></span></label>
+            <input type="range" id="cB" min="0.25" max="5" step="0.05" value="1">
+          </div>
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">length for 98% of ceiling</span><span class="v flux" id="cLsat"></span></div>
+            <div class="row"><span class="k">your L is</span><span class="v" id="cVerdict"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteC"></p>
+  </section>
+
+  <p class="foot">Companion to the ChE 319 Lecture 4 study guide. Fin width W is fixed at 100 mm and air temperature T<sub>a</sub> at 25 °C. Model assumptions match the lecture: temperature varies along z only, the tip is treated as insulated, and h is constant.</p>
+</div>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
+const MM = 1e-3;
+const W_FIN = 0.10;   // m
+const TA    = 25;     // degC
+
+/* ---------- formatting ---------- */
+function sup(n){
+  const map={"-":"\u207b","0":"\u2070","1":"\u00b9","2":"\u00b2","3":"\u00b3",
+             "4":"\u2074","5":"\u2075","6":"\u2076","7":"\u2077","8":"\u2078","9":"\u2079"};
+  return String(n).split("").map(c=>map[c]||c).join("");
+}
+function fmt(v,d){
+  if(!isFinite(v)) return "\u2014";
+  if(v===0) return "0";
+  const a=Math.abs(v);
+  if(a>=1e5||a<1e-3){ const e=Math.floor(Math.log10(a)); return (v/Math.pow(10,e)).toFixed(d===undefined?2:d)+"\u00d710"+sup(e); }
+  if(a>=100) return v.toFixed(d===undefined?0:d);
+  if(a>=10)  return v.toFixed(d===undefined?1:d);
+  return v.toFixed(d===undefined?2:d);
+}
+function ticks(lo,hi,count){
+  if(!(hi>lo)) return [lo];
+  const raw=(hi-lo)/count, mag=Math.pow(10,Math.floor(Math.log10(raw))), n=raw/mag;
+  const step=(n<1.5?1:n<3?2:n<7?5:10)*mag;
+  const out=[];
+  for(let t=Math.ceil(lo/step)*step;t<=hi+step*1e-9;t+=step) out.push(t);
+  return out;
+}
+
+/* ---------- physics ---------- */
+// k [W/mK], h [W/m2K], L,B in metres
+const mOf  = (k,h,B) => Math.sqrt(h/(k*B));
+const Nof  = (k,h,B,L) => mOf(k,h,B)*L;
+const etaOf= N => N<=1e-9 ? 1 : Math.tanh(N)/N;
+// theta(z) = (Tw-Ta) cosh(m(L-z))/cosh(mL)
+function thetaOf(z,k,h,B,L,dT){
+  const m=mOf(k,h,B);
+  return dT*Math.cosh(m*(L-z))/Math.cosh(m*L);
+}
+const Qideal = (h,L,dT) => 2*W_FIN*L*h*dT;
+const Qactual= (k,h,B,L,dT) => etaOf(Nof(k,h,B,L))*Qideal(h,L,dT);
+// large-L ceiling: 2BWk dT m
+const Qceiling = (k,h,B,dT) => 2*B*W_FIN*k*dT*mOf(k,h,B);
+
+/* ---------- SVG plot ---------- */
+const PW=470, PH=250, PM={l:60,r:16,t:14,b:38};
+function drawPlot(host,cfg){
+  const iw=PW-PM.l-PM.r, ih=PH-PM.t-PM.b, Nn=240;
+  const {x0,x1}=cfg;
+  const data=(cfg.series||[]).map(s=>{
+    const pts=[];
+    for(let i=0;i<=Nn;i++){ const x=x0+(x1-x0)*i/Nn, y=s.f(x); if(isFinite(y)) pts.push([x,y]); }
+    return {...s,pts};
+  });
+  let ylo=Infinity,yhi=-Infinity;
+  data.forEach(s=>s.pts.forEach(p=>{ if(p[1]<ylo)ylo=p[1]; if(p[1]>yhi)yhi=p[1]; }));
+  if(!isFinite(ylo)){ylo=0;yhi=1;}
+  if(cfg.yMin!==undefined) ylo=cfg.yMin;
+  if(cfg.yMax!==undefined) yhi=cfg.yMax;
+  else { const pad=(yhi-ylo)*0.10||1; yhi+=pad; }
+  if(cfg.yMin===undefined && ylo>0) ylo=0;
+  if(yhi===ylo) yhi=ylo+1;
+
+  const X=v=>PM.l+(v-x0)/(x1-x0)*iw;
+  const Y=v=>PM.t+ih-(v-ylo)/(yhi-ylo)*ih;
+
+  let s=`<svg viewBox="0 0 ${PW} ${PH}" width="100%" role="img" aria-label="${cfg.aria||"plot"}" style="display:block">`;
+
+  (cfg.rects||[]).forEach(r=>{
+    s+=`<rect x="${X(r.x0).toFixed(1)}" y="${Y(r.y1).toFixed(1)}" width="${(X(r.x1)-X(r.x0)).toFixed(1)}" height="${Math.abs(Y(r.y0)-Y(r.y1)).toFixed(1)}" fill="${r.fill||"none"}"${r.stroke?` stroke="${r.stroke}"`:""}${r.dash?` stroke-dasharray="${r.dash}"`:""}/>`;
+  });
+
+  // filled area under a curve
+  (cfg.areas||[]).forEach(a=>{
+    let d=`M ${X(x0).toFixed(1)} ${Y(Math.max(ylo,0)).toFixed(1)} `;
+    for(let i=0;i<=Nn;i++){ const x=x0+(x1-x0)*i/Nn; d+=`L ${X(x).toFixed(1)} ${Y(a.f(x)).toFixed(1)} `; }
+    d+=`L ${X(x1).toFixed(1)} ${Y(Math.max(ylo,0)).toFixed(1)} Z`;
+    s+=`<path d="${d}" fill="${a.color}"/>`;
+  });
+
+  ticks(ylo,yhi,4).forEach(t=>{
+    const y=Y(t).toFixed(1);
+    s+=`<line x1="${PM.l}" y1="${y}" x2="${PM.l+iw}" y2="${y}" stroke="#E4EAF1"/>`;
+    s+=`<text x="${PM.l-8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,1)}</text>`;
+  });
+  ticks(x0,x1,5).forEach(t=>{
+    const x=X(t).toFixed(1);
+    s+=`<line x1="${x}" y1="${PM.t+ih}" x2="${x}" y2="${PM.t+ih+4}" stroke="#CBD5E1"/>`;
+    s+=`<text x="${x}" y="${PM.t+ih+17}" text-anchor="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,0)}</text>`;
+  });
+
+  s+=`<line x1="${PM.l}" y1="${PM.t}" x2="${PM.l}" y2="${PM.t+ih}" stroke="#CBD5E1"/>`;
+  s+=`<line x1="${PM.l}" y1="${PM.t+ih}" x2="${PM.l+iw}" y2="${PM.t+ih}" stroke="#CBD5E1"/>`;
+
+  (cfg.segments||[]).forEach(g=>{
+    const a=[X(g.x0),Y(g.y0)], b=[X(g.x1),Y(g.y1)];
+    s+=`<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${g.color}" stroke-width="${g.w||1.8}"${g.dash?` stroke-dasharray="${g.dash}"`:""}/>`;
+  });
+
+  data.forEach(sr=>{
+    let d="",pen=false;
+    sr.pts.forEach(p=>{ d+=(pen?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)+" "; pen=true; });
+    s+=`<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"${sr.dash?` stroke-dasharray="${sr.dash}"`:""}/>`;
+  });
+
+  (cfg.marks||[]).forEach(mk=>{
+    const x=X(mk.x).toFixed(1);
+    s+=`<line x1="${x}" y1="${PM.t}" x2="${x}" y2="${PM.t+ih}" stroke="#9AA7B6" stroke-dasharray="2 3"/>`;
+    if(mk.label) s+=`<text x="${x}" y="${PM.t-3}" text-anchor="middle" font-size="10" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${mk.label}</text>`;
+  });
+
+  if(cfg.cursor!==undefined){
+    const cx=X(cfg.cursor);
+    if(cx>=PM.l-0.5&&cx<=PM.l+iw+0.5){
+      s+=`<line x1="${cx.toFixed(1)}" y1="${PM.t}" x2="${cx.toFixed(1)}" y2="${PM.t+ih}" stroke="#16305C" stroke-width="1.4"/>`;
+      data.forEach(sr=>{
+        const v=sr.f(cfg.cursor);
+        if(isFinite(v)){ const cy=Y(v);
+          if(cy>=PM.t-1&&cy<=PM.t+ih+1)
+            s+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${sr.color}" stroke="#fff" stroke-width="1.6"/>`; }
+      });
+    }
+  }
+  (cfg.dots||[]).forEach(dt=>{
+    s+=`<circle cx="${X(dt.x).toFixed(1)}" cy="${Y(dt.y).toFixed(1)}" r="4.5" fill="${dt.color}" stroke="#fff" stroke-width="1.6"/>`;
+  });
+
+  s+=`<text x="${PM.l+iw/2}" y="${PH-5}" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.xLabel}</text>`;
+  s+=`<text transform="translate(13,${PM.t+ih/2}) rotate(-90)" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.yLabel}</text>`;
+  s+=`</svg>`;
+  host.innerHTML=s;
+}
+
+/* ---------- canvas ---------- */
+function fitCanvas(cv,cssH){
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.parentElement.clientWidth;
+  cv.style.height=cssH+"px";
+  cv.width=Math.max(1,Math.round(w*dpr));
+  cv.height=Math.round(cssH*dpr);
+  const ctx=cv.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h:cssH};
+}
+function tempColor(t){
+  t=clamp(t,0,1);
+  const stops=[[0,[36,66,124]],[0.5,[233,178,72]],[1,[168,34,38]]];
+  let a=stops[0],b=stops[stops.length-1];
+  for(let i=0;i<stops.length-1;i++){ if(t>=stops[i][0]&&t<=stops[i+1][0]){a=stops[i];b=stops[i+1];break;} }
+  const f=(t-a[0])/((b[0]-a[0])||1);
+  const c=a[1].map((v,i)=>Math.round(v+(b[1][i]-v)*f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/* ============ PANEL A ============ */
+const A={k:200,h:50,L:30,B:1,Tw:150,z:12};
+
+function renderA(){
+  A.z=clamp(A.z,0,A.L);
+  $("aZ").max=A.L;
+  $("aKv").textContent=A.k+" W/m\u00b7K";
+  $("aHv").textContent=A.h+" W/m\u00b2\u00b7K";
+  $("aLv").textContent=A.L+" mm";
+  $("aBv").textContent=A.B.toFixed(2)+" mm (fin "+(2*A.B).toFixed(1)+" mm thick)";
+  $("aTwv").textContent=A.Tw+" \u00b0C";
+  $("aZv").textContent=A.z.toFixed(1)+" mm";
+  ["aK","aH","aL","aB","aTw","aZ"].forEach((id,i)=>$(id).value=[A.k,A.h,A.L,A.B,A.Tw,A.z][i]);
+  [...$("aMat").querySelectorAll("button")].forEach(b=>
+    b.setAttribute("aria-pressed", String(Number(b.dataset.k)===A.k)));
+
+  const L=A.L*MM, B=A.B*MM, dT=A.Tw-TA;
+  const m=mOf(A.k,A.h,B), N=m*L, eta=etaOf(N);
+  const T=z=>thetaOf(z*MM,A.k,A.h,B,L,dT)+TA;
+
+  $("aM").textContent=fmt(m,1)+" 1/m";
+  $("aN").textContent=N.toFixed(3);
+  $("aT").textContent=T(A.z).toFixed(1)+" \u00b0C";
+  $("aTip").textContent=T(A.L).toFixed(1)+" \u00b0C";
+  $("aEta").textContent=eta.toFixed(3);
+  $("aQ").textContent=fmt(Qactual(A.k,A.h,B,L,dT),1)+" W";
+
+  // ---- fin drawing, x-aligned with the plot below ----
+  const {ctx,w,h}=fitCanvas($("cvA"),190);
+  ctx.clearRect(0,0,w,h);
+  const fracL=PM.l/PW, fracR=PM.r/PW;
+  const x0=w*fracL, x1=w*(1-fracR), cy=h*0.52;
+  const halfH=Math.min(34, Math.max(7, 34*(A.B/2.5)));
+
+  // wall
+  ctx.fillStyle="#D8DEE7"; ctx.fillRect(x0-26,cy-halfH-30,26,2*halfH+60);
+  ctx.strokeStyle="#9AA7B6"; ctx.lineWidth=1; ctx.strokeRect(x0-26,cy-halfH-30,26,2*halfH+60);
+  ctx.save(); ctx.beginPath(); ctx.rect(x0-26,cy-halfH-30,26,2*halfH+60); ctx.clip();
+  ctx.strokeStyle="#B6C0CD";
+  for(let i=-40;i<120;i+=7){ ctx.beginPath(); ctx.moveTo(x0-26+i,cy-halfH-30); ctx.lineTo(x0-26+i-30,cy+halfH+30); ctx.stroke(); }
+  ctx.restore();
+
+  // fin body in temperature strips
+  const strips=140;
+  for(let i=0;i<strips;i++){
+    const zA=A.L*i/strips, zB=A.L*(i+1)/strips;
+    const t=(T((zA+zB)/2)-TA)/Math.max(dT,1e-9);
+    ctx.fillStyle=tempColor(t);
+    const xa=x0+(x1-x0)*(zA/A.L), xb=x0+(x1-x0)*(zB/A.L);
+    ctx.fillRect(xa,cy-halfH,xb-xa+0.8,2*halfH);
+  }
+  ctx.strokeStyle="#5A6675"; ctx.lineWidth=1.1;
+  ctx.strokeRect(x0,cy-halfH,x1-x0,2*halfH);
+
+  // insulated tip
+  ctx.save();
+  ctx.strokeStyle="#101823"; ctx.lineWidth=2.4;
+  ctx.beginPath(); ctx.moveTo(x1,cy-halfH); ctx.lineTo(x1,cy+halfH); ctx.stroke();
+  ctx.restore();
+
+  // convection arrows off both faces
+  ctx.strokeStyle="#4A6FA5"; ctx.fillStyle="#4A6FA5"; ctx.lineWidth=1.4;
+  const nArr=9;
+  for(let i=0;i<nArr;i++){
+    const zz=A.L*(i+0.5)/nArr;
+    const xx=x0+(x1-x0)*(zz/A.L);
+    const strength=(T(zz)-TA)/Math.max(dT,1e-9);
+    const len=6+16*strength;
+    ctx.globalAlpha=0.30+0.65*strength;
+    [-1,1].forEach(dir=>{
+      const yStart=cy+dir*(halfH+3), yEnd=cy+dir*(halfH+3+len);
+      ctx.beginPath(); ctx.moveTo(xx,yStart); ctx.lineTo(xx,yEnd); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(xx,yEnd+dir*3.5); ctx.lineTo(xx-3,yEnd-dir*1.5); ctx.lineTo(xx+3,yEnd-dir*1.5);
+      ctx.closePath(); ctx.fill();
+    });
+  }
+  ctx.globalAlpha=1;
+
+  // position cursor
+  const xz=x0+(x1-x0)*(A.z/A.L);
+  ctx.strokeStyle="#FFFFFF"; ctx.lineWidth=2.4;
+  ctx.beginPath(); ctx.moveTo(xz,cy-halfH); ctx.lineTo(xz,cy+halfH); ctx.stroke();
+  ctx.strokeStyle="#16305C"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(xz,cy-halfH-6); ctx.lineTo(xz,cy+halfH+6); ctx.stroke();
+
+  ctx.font="11.5px ui-monospace, Menlo, monospace";
+  ctx.textAlign="center"; ctx.fillStyle="#5A6675";
+  ctx.fillText("wall  T\u1d65\u1d65 = "+A.Tw+" \u00b0C", x0-13, cy+halfH+48);
+  ctx.textAlign="right";
+  ctx.fillText("insulated tip", x1-2, cy-halfH-40+6);
+  ctx.textAlign="center";
+  ctx.fillStyle="#4A6FA5";
+  ctx.fillText("heat convected to air (arrow length \u221d local \u0394T)", (x0+x1)/2, h-4);
+
+  // ---- plot ----
+  drawPlot($("plotA"),{
+    x0:0, x1:A.L, cursor:A.z,
+    yMin:TA-(A.Tw-TA)*0.05, yMax:A.Tw+(A.Tw-TA)*0.08,
+    series:[
+      {f:z=>A.Tw, color:"#5A6675", dash:"5 4"},
+      {f:T, color:"#B3202B"}
+    ],
+    xLabel:"distance along fin z  (mm)", yLabel:"T  (\u00b0C)", aria:"Temperature along the fin"
+  });
+
+  const drop=A.Tw-T(A.L);
+  let msg;
+  if(N<0.5) msg="N is small, so the metal moves heat out to the tip far faster than the air can strip it away. The fin is nearly all one temperature and \u03b7 is close to 1 \u2014 you are getting almost everything the surface area can give.";
+  else if(N<2) msg="N is in the middle range. There is a visible temperature drop along the fin, so the far half is working at reduced effectiveness, but none of it is wasted.";
+  else msg="N is large. Look how quickly the colour cools: the outer part of the fin has nearly reached air temperature, so it is contributing almost nothing. Adding length here would be pointless \u2014 switch to a better conductor or a thicker fin instead.";
+  $("noteA").innerHTML="<b>What to notice.</b> The tip runs "+drop.toFixed(0)+
+    " \u00b0C below the wall, and \u03b7 = "+eta.toFixed(3)+". "+msg;
+}
+
+/* ============ PANEL B ============ */
+const B={k:200,h:50,L:30,B:1,Tw:150};
+
+function renderB(){
+  $("bKv").textContent=B.k+" W/m\u00b7K";
+  $("bHv").textContent=B.h+" W/m\u00b2\u00b7K";
+  $("bLv").textContent=B.L+" mm";
+  ["bK","bH","bL"].forEach((id,i)=>$(id).value=[B.k,B.h,B.L][i]);
+
+  const L=B.L*MM, Bm=B.B*MM, dT=B.Tw-TA;
+  const m=mOf(B.k,B.h,Bm), N=m*L, eta=etaOf(N);
+  const th=z=>thetaOf(z*MM,B.k,B.h,Bm,L,dT);          // z in mm -> K
+
+  // Method 1: areas (in K.mm so the numbers match the picture)
+  const areaAct = dT*Math.tanh(N)/m/MM;   // integral of theta dz, in K*mm
+  const areaBox = dT*B.L;                 // K*mm
+  const eta1 = areaAct/areaBox;
+
+  // Method 2: slope at the base
+  const slope = -dT*m*Math.tanh(N);       // K per metre
+  const Qbase = 2*Bm*W_FIN*B.k*dT*m*Math.tanh(N);
+  const eta2 = Qbase/Qideal(B.h,L,dT);
+
+  $("bA1").textContent=fmt(areaAct,0)+" K\u00b7mm";
+  $("bA2").textContent=fmt(areaBox,0)+" K\u00b7mm";
+  $("bE1").textContent=eta1.toFixed(4);
+  $("bS").textContent=fmt(slope*MM,2)+" K/mm";
+  $("bQb").textContent=fmt(Qbase,1)+" W";
+  $("bE2").textContent=eta2.toFixed(4);
+  $("bE3").textContent=eta.toFixed(4);
+
+  drawPlot($("plotB1"),{
+    x0:0, x1:B.L, yMin:0, yMax:dT*1.15,
+    rects:[{x0:0,x1:B.L,y0:0,y1:dT,fill:"none",stroke:"#5A6675",dash:"5 4"}],
+    areas:[{f:th,color:"rgba(179,32,43,0.20)"}],
+    series:[{f:th,color:"#B3202B"},{f:()=>dT,color:"#5A6675",dash:"5 4"}],
+    xLabel:"z  (mm)", yLabel:"\u03b8 = T \u2212 T\u2090  (K)", aria:"Area ratio interpretation of eta"
+  });
+
+  const tangent={x0:0,y0:dT,x1:B.L,y1:dT+slope*(B.L*MM),color:"#0F7A6E",dash:"6 4"};
+  drawPlot($("plotB2"),{
+    x0:0, x1:B.L, yMin:Math.min(0,dT+slope*(B.L*MM))*1.05, yMax:dT*1.15,
+    segments:[tangent],
+    series:[{f:th,color:"#B3202B"}],
+    dots:[{x:0,y:dT,color:"#0F7A6E"}],
+    xLabel:"z  (mm)", yLabel:"\u03b8  (K)", aria:"Tangent at the base"
+  });
+
+  const agree=Math.abs(eta1-eta2)<1e-6;
+  $("noteB").innerHTML="<b>What to notice.</b> On the top plot, \u03b7 is nothing more than <b>the shaded area divided by the dashed box</b> \u2014 the box is the fin it would be if every point sat at the wall temperature. On the bottom plot the same \u03b7 comes from a single slope at z = 0, with the curve never consulted anywhere else. "+
+    (agree?"Both read <b>"+eta1.toFixed(4)+"</b>, and so does tanh(N)/N.":"")+
+    " Drag the sliders and they stay locked together, because at steady state the heat entering the base is exactly the heat leaving the surface.";
+}
+
+/* ============ PANEL C ============ */
+const C={h:50,L:30,B:1,k:200,Tw:150};
+const MATERIALS=[["Copper",400],["Aluminium",200],["Brass",110],["Carbon steel",50],["Stainless",15]];
+
+function renderC(){
+  $("cHv").textContent=C.h+" W/m\u00b2\u00b7K";
+  $("cLv").textContent=C.L+" mm";
+  $("cBv").textContent=C.B.toFixed(2)+" mm";
+  ["cH","cL","cB"].forEach((id,i)=>$(id).value=[C.h,C.L,C.B][i]);
+
+  const Bm=C.B*MM, dT=C.Tw-TA, L=C.L*MM;
+  const m=mOf(C.k,C.h,Bm), N=m*L;
+
+  drawPlot($("plotC1"),{
+    x0:0.02, x1:6, yMin:0, yMax:1.05,
+    series:[
+      {f:x=>1/x, color:"#5A6675", dash:"5 4"},
+      {f:etaOf, color:"#0F7A6E"}
+    ],
+    marks:[{x:clamp(N,0.02,6), label:"your N"}],
+    cursor:clamp(N,0.02,6),
+    xLabel:"N = L\u221a(h/kB)", yLabel:"\u03b7", aria:"Effectiveness against N"
+  });
+
+  const ceiling=Qceiling(C.k,C.h,Bm,dT);
+  const QofL=Lmm=>Qactual(C.k,C.h,Bm,Lmm*MM,dT);
+  drawPlot($("plotC2"),{
+    x0:0, x1:200, yMin:0,
+    series:[
+      {f:()=>ceiling, color:"#5A6675", dash:"5 4"},
+      {f:QofL, color:"#B3202B"}
+    ],
+    marks:[{x:C.L,label:"your L"}],
+    cursor:C.L,
+    xLabel:"fin length L  (mm)", yLabel:"Q  (W)", aria:"Heat removed against fin length"
+  });
+
+  // length that reaches 98% of the ceiling: tanh(N)=0.98 -> N=2.298
+  const Lsat=2.298/m/MM;
+  $("cLsat").textContent=Lsat.toFixed(0)+" mm";
+  const ratio=C.L/Lsat;
+  $("cVerdict").textContent = ratio<0.6 ? "short \u2014 more length pays"
+                            : ratio<1.05 ? "about right"
+                            : "past the point of return";
+
+  // material table
+  let rows='<table class="mat"><tr><th>Metal</th><th style="text-align:right">k</th><th style="text-align:right">N</th><th style="text-align:right">\u03b7</th><th style="text-align:right">Q</th><th style="width:26%">relative Q</th></tr>';
+  const Qs=MATERIALS.map(([,kk])=>Qactual(kk,C.h,Bm,L,dT));
+  const Qmax=Math.max(...Qs);
+  MATERIALS.forEach(([name,kk],i)=>{
+    const NN=Nof(kk,C.h,Bm,L), ee=etaOf(NN), qq=Qs[i];
+    const on = kk===C.k ? ' class="on"' : '';
+    rows+=`<tr${on}><td>${name}</td><td style="text-align:right">${kk}</td><td style="text-align:right">${NN.toFixed(2)}</td><td style="text-align:right">${ee.toFixed(3)}</td><td style="text-align:right">${qq.toFixed(1)} W</td>`+
+          `<td><span class="barwrap" style="display:block"><span class="bar" style="width:${(100*qq/Qmax).toFixed(1)}%"></span></span></td></tr>`;
+  });
+  rows+="</table>";
+  $("matTable").innerHTML=rows;
+
+  const best=Qs[0], worst=Qs[Qs.length-1];
+  $("noteC").innerHTML="<b>What to notice.</b> On the left, \u03b7 hugs 1 while N is small and then collapses onto the 1/N line \u2014 those are the two limits from the Taylor series in the guide. On the right, Q flattens against a ceiling of "+
+    ceiling.toFixed(1)+" W that contains no L at all; beyond roughly "+Lsat.toFixed(0)+
+    " mm you are adding metal that never gets warm. In the table, copper moves "+best.toFixed(1)+
+    " W against stainless steel's "+worst.toFixed(1)+" W from identical geometry.";
+}
+
+/* ============ wiring ============ */
+function bindRange(id,obj,key,after){
+  $(id).addEventListener("input",e=>{ obj[key]=parseFloat(e.target.value); after(); });
+}
+["aK|k","aH|h","aL|L","aB|B","aTw|Tw","aZ|z"].forEach(s=>{
+  const [id,key]=s.split("|"); bindRange(id,A,key,renderA);
+});
+$("aMat").addEventListener("click",e=>{
+  const btn=e.target.closest("button"); if(!btn) return;
+  A.k=Number(btn.dataset.k); renderA();
+});
+["bK|k","bH|h","bL|L"].forEach(s=>{ const [id,key]=s.split("|"); bindRange(id,B,key,renderB); });
+["cH|h","cL|L","cB|B"].forEach(s=>{ const [id,key]=s.split("|"); bindRange(id,C,key,renderC); });
+
+// drag / keys on the fin
+(function(){
+  const cv=$("cvA"); let down=false;
+  const pick=ev=>{
+    const r=cv.getBoundingClientRect();
+    const fracL=PM.l/PW, fracR=PM.r/PW;
+    const x0=r.width*fracL, x1=r.width*(1-fracR);
+    A.z=clamp((ev.clientX-r.left-x0)/(x1-x0)*A.L,0,A.L);
+    renderA();
+  };
+  cv.addEventListener("pointerdown",e=>{down=true;cv.setPointerCapture(e.pointerId);pick(e);});
+  cv.addEventListener("pointermove",e=>{ if(down) pick(e); });
+  cv.addEventListener("pointerup",()=>{down=false;});
+  cv.addEventListener("keydown",e=>{
+    const step=(e.shiftKey?5:1)*A.L/60;
+    if(e.key==="ArrowRight"){A.z=clamp(A.z+step,0,A.L);renderA();e.preventDefault();}
+    if(e.key==="ArrowLeft"){A.z=clamp(A.z-step,0,A.L);renderA();e.preventDefault();}
+  });
+})();
+
+const panels={"tab-a":"p-a","tab-b":"p-b","tab-c":"p-c"};
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    Object.entries(panels).forEach(([tid,pid])=>{
+      const on=tid===t.id;
+      $(tid).setAttribute("aria-selected",String(on));
+      $(pid).hidden=!on;
+    });
+    renderAll();
+  });
+});
+
+function renderAll(){
+  if(!$("p-a").hidden) renderA();
+  if(!$("p-b").hidden) renderB();
+  if(!$("p-c").hidden) renderC();
+}
+let rt;
+window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(renderAll,120);});
+renderAll();
+</script>
+</body>
+</html>
