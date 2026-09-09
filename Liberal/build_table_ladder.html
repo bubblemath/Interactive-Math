@@ -1,0 +1,743 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Build Ladder — innermost first, one column at a time</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --bd:#8A5A2B;
+    --bd-bg:#F6EDE3;
+    --tcol:#1B7A4B;
+    --tcol-bg:#E7F4EC;
+    --fcol:#AF3244;
+    --fcol-bg:#FBEBEE;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--bd)}
+  :focus-visible{outline:3px solid var(--bd); outline-offset:2px; border-radius:3px}
+
+  table.tt{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:15.5px}
+  table.tt th, table.tt td{border:1px solid var(--rule); padding:4px 11px; text-align:center; min-width:34px}
+  table.tt th{background:var(--bd-bg); color:var(--bd); font-weight:700; white-space:nowrap; font-size:15px}
+  table.tt th.base{background:#EDF0F3; color:var(--muted)}
+  table.tt th.new{background:var(--bd); color:#fff}
+  table.tt th i, table.tt td i{font-style:italic}
+  table.tt td.t{background:var(--tcol-bg); color:var(--tcol); font-weight:700}
+  table.tt td.f{background:var(--fcol-bg); color:var(--fcol); font-weight:700}
+  table.tt td.g{color:var(--muted)}
+  table.tt td.ask{background:var(--bd-bg); color:var(--bd); font-weight:700}
+  table.tt tr.hi td{outline:2px solid var(--bd); outline-offset:-2px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--bd)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:18px 14px 16px; background:var(--card); text-align:center; overflow-x:auto}
+  .demo-top .goal{font-family:var(--serif); font-size:clamp(17px,3.4vw,22px); margin-bottom:14px}
+  .demo-top .goal i{font-style:italic}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-family:var(--serif); font-size:15.5px; padding:5px 13px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button i{font-style:italic}
+  .placebar button:hover{border-color:var(--bd); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:66px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--bd); background:var(--bd-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--bd)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 12px; color:#31404F}
+  .stem .q i{font-style:italic}
+  .goal{margin:0 auto 14px; max-width:42ch; background:var(--bd-bg); border-radius:10px; padding:12px 18px;
+        font-family:var(--serif); font-size:clamp(17px,3.5vw,22px); text-align:center}
+  .goal i{font-style:italic}
+  .board{margin:0 auto 14px; overflow-x:auto}
+  .steps{margin:0 auto 14px; max-width:42ch; text-align:left; font-family:var(--serif); font-size:16px;
+         background:var(--paper); border:1px solid var(--rule); border-radius:9px; overflow:hidden}
+  .steps div{padding:7px 16px; display:flex; gap:12px}
+  .steps div+div{border-top:1px solid var(--rule)}
+  .steps .n{color:var(--muted); font-family:var(--sans); font-size:13px; min-width:52px}
+  .steps .blank{display:inline-block; min-width:90px; border-bottom:2.5px solid var(--bd)}
+
+  .options{display:grid; grid-template-columns:1fr; gap:10px; padding:8px 20px 20px}
+  .options.two{grid-template-columns:1fr 1fr}
+  .options.four{grid-template-columns:repeat(4,1fr)}
+  @media (max-width:660px){.options.two{grid-template-columns:1fr} .options.four{grid-template-columns:repeat(2,1fr)}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt .v i{font-style:italic}
+  .opt.col{flex-direction:column; align-items:center; gap:8px; padding:12px 8px}
+  .opt.col .k{align-self:auto}
+  .opt.big .v{font-family:var(--serif); font-size:24px; font-weight:700}
+  .opt.sym .v{font-family:var(--serif); font-size:19px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .fbox i{font-style:italic}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>▦</span> The Build Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 8 · building a truth table column by column</p>
+    <h1>Innermost first, one column at a time.</h1>
+    <p class="lede">Nobody fills in the last column directly. You work outward from the smallest pieces: every bracket gets its own column, every ~ gets its own column, and each new column is built only from columns already sitting on the page. Do that and the final column is one easy step, not one hard one.</p>
+
+    <div class="demo">
+      <div class="demo-top">
+        <div class="goal" id="hGoal"></div>
+        <div id="heroTable"></div>
+      </div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>A column can only be built from columns you already have.</b> That single rule fixes the whole order: <i>p</i> ∨ <i>q</i> and ~<i>p</i> come first because they need only the base columns, the bracket that joins them comes next because it needs those two, and the arrow comes last because it needs the bracket. Skip a step and there is nothing on the page to read from.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 lay out the rows and the base columns. Rungs 3–5 build a negation, an innermost bracket, and then join two finished columns. Rungs 6–10 work a single row, put a build in order, extend to three letters, and hunt a wrong cell.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every wrong column is a real statement</h3><p>The distractors are the columns of statements one edit away — a connective swapped, a ~ moved, the operands reversed.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>The order is the method</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Big statements stop being big</h3><p>A statement with four connectives is four small columns. None of them is harder than the two-letter tables you already know.</p></div>
+      <div class="step"><span class="n">02</span><h3>Mistakes stay findable</h3><p>With every step written down, a wrong final column can be traced back to the column where it went wrong.</p></div>
+      <div class="step"><span class="n">03</span><h3>Eight rows are no harder than four</h3><p>The same columns, twice as tall. Only the base columns change when a third letter appears.</p></div>
+    </div>
+    <p class="closing">Build what the brackets ask for first. Every later column reads only from ones already on the page.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Build Ladder · two letters, four rows · three letters, eight rows · every bracket and every ~ gets its own column · build only from columns you already have</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+const AND="\u2227", OR="\u2228", ARR="\u2192", BI="\u2194";
+const SYM={and:AND, or:OR, imp:ARR, iff:BI};
+const OPS=["and","or","imp","iff"];
+
+/* ================= expressions ================= */
+function isLit(e){return typeof e==="string";}
+function ren(e,top){
+  if(isLit(e)) return "<i>"+e+"</i>";
+  if(e[0]==="not"){
+    const x=e[1];
+    return isLit(x) ? ("~<i>"+x+"</i>") : ("~("+ren(x,true)+")");
+  }
+  const s=ren(e[1],false)+" "+SYM[e[0]]+" "+ren(e[2],false);
+  return top ? s : "("+s+")";
+}
+function plain(e){return ren(e,true).replace(/<[^>]+>/g,"");}
+function ev(e,env){
+  if(isLit(e)) return env[e];
+  if(e[0]==="not") return !ev(e[1],env);
+  const a=ev(e[1],env), b=ev(e[2],env);
+  if(e[0]==="and") return a&&b;
+  if(e[0]==="or")  return a||b;
+  if(e[0]==="imp") return (!a)||b;
+  return a===b;
+}
+/* every compound sub-expression, innermost first, ending with the whole statement */
+function subs(e,out){
+  out=out||[];
+  if(isLit(e)) return out;
+  if(e[0]==="not"){ subs(e[1],out); out.push(e); return out; }
+  subs(e[1],out); subs(e[2],out); out.push(e); return out;
+}
+function letters(e,set){
+  set=set||{};
+  if(isLit(e)){ set[e]=1; return set; }
+  if(e[0]==="not"){ return letters(e[1],set); }
+  letters(e[1],set); letters(e[2],set); return set;
+}
+function nLetters(e){return Object.keys(letters(e)).length;}
+function rowsFor(n){
+  const out=[], L="pqr".slice(0,n).split("");
+  for(let i=0;i<(1<<n);i++){
+    const env={};
+    L.forEach(function(x,j){ env[x] = ((i>>(n-1-j))&1)===0; });
+    out.push(env);
+  }
+  return out;
+}
+function column(e,rs){return rs.map(function(env){return ev(e,env);});}
+function colStr(e,rs){return column(e,rs).map(function(b){return b?"T":"F";}).join("");}
+
+/* one-edit variants, used as distractors */
+function negOf(x){return (!isLit(x)&&x[0]==="not") ? x[1] : ["not",x];}
+function variants(e){
+  const out=[];
+  if(isLit(e)) return out;
+  if(e[0]==="not"){ out.push(e[1]); return out; }
+  OPS.forEach(function(o){ if(o!==e[0]) out.push([o,e[1],e[2]]); });
+  out.push([e[0],e[2],e[1]]);
+  out.push([e[0],negOf(e[1]),e[2]]);
+  out.push([e[0],e[1],negOf(e[2])]);
+  out.push(negOf(e));
+  return out;
+}
+
+/* ================= statement bank ================= */
+const BANK2=[
+  ["or",["not","p"],["not","q"]],
+  ["or",["and","p","q"],["not","q"]],
+  ["imp",["not","p"],["not","q"]],
+  ["imp",["and",["or","p","q"],["not","p"]],"q"],
+  ["and","p",["not","p"]],
+  ["or","p",["not","p"]],
+  ["iff",["or","p","q"],["imp",["not","q"],"p"]],
+  ["and",["not","p"],["or","p","q"]],
+  ["imp","p",["and","q",["not","p"]]],
+  ["iff",["and","p","q"],["not",["or","p","q"]]],
+  ["or",["not",["and","p","q"]],"q"],
+  ["and",["imp","p","q"],["imp","q","p"]]
+];
+const BANK3=[
+  ["or",["and","p","q"],"r"],
+  ["iff","p",["or","q","r"]],
+  ["and",["or","p","q"],["not","r"]],
+  ["imp",["and","p",["not","q"]],"r"],
+  ["or","p",["and",["not","q"],"r"]],
+  ["imp",["or","p","q"],["and","q","r"]]
+];
+function randStmt(three){
+  return three ? pick(BANK3) : pick(BANK2);
+}
+
+/* ================= table renderer ================= */
+function tt(headers,cells,o){
+  o=o||{};
+  const hi=o.hi||[];
+  let s='<table class="tt"><thead><tr>';
+  headers.forEach(function(h){
+    const c=(h&&typeof h==="object")?(h.cls||""):"";
+    const v=(h&&typeof h==="object")?h.v:h;
+    s+='<th class="'+c+'">'+v+"</th>";
+  });
+  s+="</tr></thead><tbody>";
+  cells.forEach(function(row,i){
+    s+='<tr'+(hi.indexOf(i)>=0?' class="hi"':"")+">";
+    row.forEach(function(c){
+      let v,cls;
+      if(c&&typeof c==="object"){ v=c.v; cls=c.cls||""; }
+      else { v=c; cls=(c==="T"?"t":(c==="F"?"f":"g")); }
+      s+='<td class="'+cls+'">'+(v===undefined?"":v)+"</td>";
+    });
+    s+="</tr>";
+  });
+  return s+"</tbody></table>";
+}
+function TF(b){return b?"T":"F";}
+/* a table showing the base letters plus a list of sub-expression columns */
+function board(e,cols,o){
+  o=o||{};
+  const n=nLetters(e), L="pqr".slice(0,n).split("");
+  const rs=rowsFor(n);
+  const heads=L.map(function(x){return {v:"<i>"+x+"</i>",cls:"base"};})
+    .concat(cols.map(function(c,idx){
+      return {v:ren(c,true), cls:(o.newIdx===idx?"new":"")};
+    }));
+  const cells=rs.map(function(env,i){
+    return L.map(function(x){return TF(env[x]);})
+      .concat(cols.map(function(c,idx){
+        if(o.blankIdx!==undefined && idx===o.blankIdx){
+          if(!o.blankRows || o.blankRows.indexOf(i)>=0) return {v:"?",cls:"ask"};
+        }
+        return TF(ev(c,env));
+      }));
+  });
+  return tt(heads,cells,o);
+}
+/* an answer option: the base letters plus one candidate column */
+function mini(e,cand,head){
+  const n=nLetters(e), L="pqr".slice(0,n).split("");
+  const rs=rowsFor(n);
+  const heads=L.map(function(x){return {v:"<i>"+x+"</i>",cls:"base"};}).concat([{v:head||"?",cls:"new"}]);
+  const cells=rs.map(function(env){
+    return L.map(function(x){return TF(env[x]);}).concat([TF(ev(cand,env))]);
+  });
+  return tt(heads,cells);
+}
+/* build four column options: the right one, plus one-edit variants with distinct columns */
+function colOptions(stmt,target,noteFor){
+  const n=nLetters(stmt), rs=rowsFor(n);
+  const seen={}; seen[colStr(target,rs)]=1;
+  const opts=[{label:mini(stmt,target), correct:true, note:noteFor}];
+  shuffle(variants(target)).forEach(function(v){
+    const cs=colStr(v,rs); if(seen[cs])return; seen[cs]=1;
+    opts.push({label:mini(stmt,v), note:"That is the column for "+plain(v)+"."});
+  });
+  if(opts.length<4){
+    shuffle(subs(stmt).concat(["p","q","r"].slice(0,n))).forEach(function(v){
+      const cs=colStr(v,rs); if(seen[cs])return; seen[cs]=1;
+      opts.push({label:mini(stmt,v), note:"That is the column for "+plain(v)+"."});
+    });
+  }
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Rows and base columns",
+ sub:"Before any connective, the table is just every combination of true and false.",
+ gen:function(){
+   const n=pick([2,2,3]);
+   const forms=[
+     {t:"count"},{t:"col"}
+   ];
+   const f=pick(forms);
+   if(f.t==="count"){
+     const opts=[
+       {label:String(1<<n), correct:true, note:"Each of the "+n+" letters is true or false, and "+("2".repeat(1).split("").join(""))+(n===2?" 2 \u00d7 2":" 2 \u00d7 2 \u00d7 2")+" = "+(1<<n)+"."},
+       {label:String(n), note:"That is how many letters there are, not how many rows."},
+       {label:String(n*2), note:"The count doubles with each letter rather than adding two: 2, 4, 8."},
+       {label:String(1<<(n+1)), note:"That would be the number for "+(n+1)+" letters."}
+     ];
+     return {q:"A statement uses <b>"+n+"</b> simple statements. <b>How many rows does its table need?</b>",
+       opts:shuffle(distinctOpts(opts).slice(0,4)), big:true};
+   }
+   const L="pqr".slice(0,n).split("");
+   const which=pick(L);
+   const rs=rowsFor(n);
+   const heads=[{v:"?",cls:"new"}];
+   const mk=function(x){ return tt(heads,rs.map(function(env){return [TF(env[x])];})); };
+   const opts=L.map(function(x){
+     return {label:mk(x), correct:x===which,
+       note:x===which?("In the standard order the <i>"+x+"</i> column runs "+rs.map(function(env){return TF(env[x]);}).join("")+" down the "+(1<<n)+" rows.")
+                     :("That is the <i>"+x+"</i> column, which runs "+rs.map(function(env){return TF(env[x]);}).join("")+".")};
+   });
+   const flipped=rs.map(function(env){return TF(!env[which]);});
+   opts.push({label:tt(heads,flipped.map(function(v){return [v];})),
+     note:"That is ~<i>"+which+"</i>, the opposite of the column asked for."});
+   return {q:"Which is the <b><i>"+which+"</i></b> column in a "+(1<<n)+"-row table?",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), cols:true};
+ }
+},
+{
+ title:"Negate a column you have",
+ sub:"A ~ column is built from one column already on the page, and nothing else.",
+ gen:function(){
+   const stmt=randStmt(false);
+   const inner=pick(subs(stmt).filter(function(s){return s[0]!=="not";}).concat(["p","q"]));
+   const target=["not",inner];
+   const opts=colOptions(stmt,target,
+     "Take the "+plain(inner)+" column and flip every cell. That is all a ~ column ever is.");
+   return {q:"The column for <b>"+ren(inner,true)+"</b> is already built. <b>Which column is "+ren(target,true)+"?</b>",
+     board:board(stmt,[inner]), opts:shuffle(opts), cols:true};
+ }
+},
+{
+ title:"The innermost bracket first",
+ sub:"Find the piece with nothing inside it, and build that one.",
+ gen:function(){
+   const stmt=randStmt(false);
+   const all=subs(stmt);
+   const first=all[0];
+   const opts=colOptions(stmt,first,
+     "This is the innermost piece \u2014 it uses only the base columns, so it can be built straight away.");
+   return {q:"Which column do you build <b>first</b> for this statement?",
+     goal:ren(stmt,true), board:board(stmt,[]), opts:shuffle(opts), cols:true};
+ }
+},
+{
+ title:"Join two finished columns",
+ sub:"The outer connective reads across two columns already on the page.",
+ gen:function(){
+   let stmt,target,tries=0;
+   do{
+     stmt=randStmt(false);
+     const cands=subs(stmt).filter(function(s){return s[0]!=="not" && !isLit(s[1]) && !isLit(s[2]);});
+     target=cands.length?pick(cands):null;
+     tries++;
+   }while(!target&&tries<60);
+   if(!target){ stmt=["iff",["or","p","q"],["imp",["not","q"],"p"]]; target=stmt; }
+   const opts=colOptions(stmt,target,
+     "Read across the "+plain(target[1])+" and "+plain(target[2])+" columns row by row, applying "+SYM[target[0]]+" to each pair.");
+   return {q:"Both inner columns are built. <b>Which column is "+ren(target,true)+"?</b>",
+     board:board(stmt,[target[1],target[2]]), opts:shuffle(opts), cols:true};
+ }
+},
+{
+ title:"The final column",
+ sub:"Everything below it is done. One more step.",
+ gen:function(){
+   const stmt=randStmt(false);
+   const all=subs(stmt);
+   const shown=all.slice(0,all.length-1);
+   const opts=colOptions(stmt,stmt,
+     "Every column it needs is already on the page, so the last step reads across them one row at a time.");
+   return {q:"Which column is <b>"+ren(stmt,true)+"</b>?",
+     board:board(stmt,shown), opts:shuffle(opts), cols:true};
+ }
+},
+{
+ title:"One row at a time",
+ sub:"Take a single row and work outward from the innermost bracket.",
+ gen:function(){
+   const three=Math.random()<.3;
+   const stmt=randStmt(three);
+   const n=nLetters(stmt), rs=rowsFor(n), i=ri(0,rs.length-1);
+   const env=rs[i];
+   const v=ev(stmt,env);
+   const all=subs(stmt);
+   const trail=all.map(function(s){return plain(s)+" is "+TF(ev(s,env));}).join(", then ");
+   const opts=[
+     {label:TF(v), correct:true, note:"Working outward: "+trail+"."},
+     {label:TF(!v), note:"Work the sub-statements out in order before the last connective: "+trail+"."},
+     {label:"It cannot be decided", note:"Every row of every column gets a value once the base letters are fixed."},
+     {label:"It depends on the other rows", note:"Each row is worked out entirely on its own."}
+   ];
+   return {q:"What value does this statement take in the highlighted row?",
+     goal:ren(stmt,true), board:board(stmt,[stmt],{hi:[i],blankIdx:0}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), big:true};
+ }
+},
+{
+ title:"Put the build in order",
+ sub:"Each column can only use columns already above it in the list.",
+ gen:function(){
+   let stmt,all,tries=0;
+   do{ stmt=randStmt(false); all=subs(stmt); tries++; }while(all.length<3&&tries<60);
+   const miss=ri(0,all.length-1);
+   const listed=all.map(function(s,i){
+     return '<div><span class="n">step '+(i+1)+'</span>'
+       +(i===miss?'<span class="blank"></span>':ren(s,true))+'</div>';
+   }).join("");
+   const pool=shuffle(subs(stmt).concat(variants(stmt)).concat(variants(all[0])));
+   const seen={}; seen[plain(all[miss])]=1;
+   const opts=[{label:ren(all[miss],true), correct:true,
+     note:"At that point the columns above it are "+(miss===0?"just the base letters":all.slice(0,miss).map(plain).join(" and "))
+       +", and this is the piece that can be built from them."}];
+   pool.forEach(function(v){
+     const p=plain(v); if(seen[p])return; seen[p]=1;
+     const idx=all.map(plain).indexOf(p);
+     opts.push({label:ren(v,true),
+       note:idx>=0 ? ("That is step "+(idx+1)+" of the build, not step "+(miss+1)+".")
+                   : ("That is not a piece of this statement at all.")});
+   });
+   return {q:"One step is missing from the build order. <b>What goes in the blank?</b>",
+     goal:ren(stmt,true), steps:listed,
+     opts:shuffle(distinctOpts(opts).slice(0,4)), sym:true};
+ }
+},
+{
+ title:"Three letters, eight rows",
+ sub:"Same columns, twice as tall. Only the base columns change.",
+ gen:function(){
+   const stmt=randStmt(true);
+   const all=subs(stmt);
+   const shown=all.slice(0,all.length-1);
+   const opts=colOptions(stmt,stmt,
+     "Eight rows instead of four, and each one is worked out exactly as before \u2014 innermost piece first.");
+   return {q:"Which column is <b>"+ren(stmt,true)+"</b>?",
+     board:board(stmt,shown), opts:shuffle(opts), cols:true, tall:true};
+ }
+},
+{
+ title:"Spot the wrong cell",
+ sub:"One cell in the final column has been filled in wrongly. The rest are right.",
+ gen:function(){
+   let stmt,tries=0;
+   do{ stmt=randStmt(false); tries++; }while(nLetters(stmt)<2&&tries<40);
+   const n=nLetters(stmt), LS="pqr".slice(0,n).split(""), rs=rowsFor(n), bad=ri(0,rs.length-1);
+   const all=subs(stmt), shown=all.slice(0,all.length-1);
+   const heads=LS.map(function(x){return {v:"<i>"+x+"</i>",cls:"base"};})
+     .concat(shown.map(function(c){return {v:ren(c,true)};}))
+     .concat([{v:ren(stmt,true),cls:"new"}]);
+   const cells=rs.map(function(env,i){
+     const base=LS.map(function(x){return TF(env[x]);});
+     const mid=shown.map(function(c){return TF(ev(c,env));});
+     const fin=(i===bad)?TF(!ev(stmt,env)):TF(ev(stmt,env));
+     return base.concat(mid).concat([fin]);
+   });
+   const opts=rs.map(function(env,i){
+     return {label:"Row "+(i+1)+" \u2014 "+LS.map(function(x){return "<i>"+x+"</i> "+TF(env[x]);}).join(", "), correct:i===bad,
+       note:i===bad?("In that row the columns feeding it give "+shown.map(function(c){return plain(c)+" = "+TF(ev(c,env));}).join(", ")
+                     +", so the last column should read "+TF(ev(stmt,env))+", not "+TF(!ev(stmt,env))+".")
+                   :("That row is correct: the final column should read "+TF(ev(stmt,env))+" there, and it does.")};
+   });
+   return {q:"One cell in the last column is wrong. <b>Which row?</b>",
+     goal:ren(stmt,true), board:tt(heads,cells), opts:shuffle(opts), two:true};
+ }
+},
+{
+ title:"Build anything",
+ sub:"Any statement, any step of the build, two letters or three.",
+ gen:function(){
+   const three=Math.random()<.3;
+   const stmt=randStmt(three);
+   const all=subs(stmt);
+   const step=ri(0,all.length-1);
+   const target=all[step];
+   const shown=all.slice(0,step);
+   const opts=colOptions(stmt,target,
+     step===0 ? "The innermost piece, built straight from the base columns."
+              : "Built from "+all.slice(0,step).map(plain).join(" and ")+", which are already on the page.");
+   return {q:"Which column is <b>"+ren(target,true)+"</b>?",
+     goal:ren(stmt,true), board:board(stmt,shown),
+     opts:shuffle(opts), cols:true, tall:three};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HSTMT=["imp",["and",["or","p","q"],["not","p"]],"q"];
+const HALL=subs(HSTMT);
+const HERO=[
+  {n:0, note:"Two letters, so four rows, written in the standard order. Nothing has been worked out yet \u2014 this is every combination of true and false."},
+  {n:1, note:"Step one: the innermost bracket, <i>p</i> \u2228 <i>q</i>. It needs only the two base columns, so it can be built straight away. False in the last row only."},
+  {n:2, note:"Step two: ~<i>p</i>. Also built from a base column alone, so it could have come first \u2014 the order between these two does not matter, only that both come before the next step."},
+  {n:3, note:"Step three: the conjunction of the two columns just built. Read across them row by row: true only where both are true, which happens in row three alone."},
+  {n:4, note:"Step four: the arrow, reading from the bracket column to the <i>q</i> column. False only where the bracket is true and <i>q</i> is false \u2014 and that never happens, so every row comes out true."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  document.getElementById("hGoal").innerHTML=ren(HSTMT,true);
+  document.getElementById("heroTable").innerHTML=
+    board(HSTMT,HALL.slice(0,h.n),{newIdx:h.n-1});
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  const labels=["the rows"].concat(HALL.map(function(s,i){return "step "+(i+1)+": "+ren(s,true);}));
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+labels[i]+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.goal?'<div class="goal">'+q.goal+'</div>':"")
+    +(q.steps?'<div class="steps">'+q.steps+'</div>':"")
+    +(q.board?'<div class="board">'+q.board+'</div>':"");
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.cols?(q.tall?" two":" four"):(q.big?" four":(q.sym||q.two?" two":"")));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.cols?" col":"")+(q.big?" big":"")+(q.sym?" sym":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' '
+      +(q.cols?"The correct column is marked above. ":"The answer is "+right.label+". ")+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
