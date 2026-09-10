@@ -1,0 +1,1180 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Probability Baseball</title>
+<style>
+:root{
+  --paper:#F3F1E7;
+  --sheet:#FBFAF4;
+  --rule:#D8D3C2;
+  --rule-2:#EAE6D9;
+  --ink:#14213D;
+  --ink-soft:#5C6478;
+  --blue:#1F4E9C;
+  --blue-soft:#E4EBF7;
+  --red:#B3221F;
+  --red-soft:#F7E4E3;
+  --turf:#2E6B45;
+  --turf-soft:#E2EFE7;
+  --clay:#A9622F;
+  --gold:#B58B15;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.55;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:900px;margin:0 auto;padding:0 18px 80px}
+
+/* ---------- masthead ---------- */
+.masthead{
+  border-bottom:3px double var(--ink);
+  padding:26px 0 14px;
+  margin-bottom:22px;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;
+}
+.masthead h1{
+  font-family:var(--serif);
+  font-size:clamp(30px,6vw,46px);
+  line-height:1;
+  margin:0;
+  letter-spacing:-.015em;
+}
+.masthead p{margin:6px 0 0;color:var(--ink-soft);font-size:15px;max-width:44ch}
+.crest{flex:0 0 auto}
+
+/* ---------- step rail ---------- */
+.rail{display:flex;gap:0;margin:0 0 26px;border:1px solid var(--rule);background:var(--sheet);overflow:hidden;border-radius:3px}
+.rail div{
+  flex:1;padding:8px 4px;text-align:center;font-size:11.5px;line-height:1.25;
+  color:var(--ink-soft);border-right:1px solid var(--rule-2);background:var(--sheet);
+}
+.rail div:last-child{border-right:0}
+.rail div b{display:block;font-family:var(--mono);font-size:13px;font-weight:700}
+.rail div.done{color:var(--turf);background:var(--turf-soft)}
+.rail div.now{color:#fff;background:var(--blue)}
+.rail div.now b{color:#fff}
+
+/* ---------- panels ---------- */
+.panel{display:none}
+.panel.on{display:block}
+.sheet{
+  background:var(--sheet);
+  border:1px solid var(--rule);
+  border-radius:3px;
+  padding:22px 22px 24px;
+  margin-bottom:20px;
+  background-image:linear-gradient(var(--rule-2) 1px,transparent 1px);
+  background-size:100% 30px;
+  background-position:0 -1px;
+}
+.sheet.plain{background-image:none}
+h2{font-family:var(--serif);font-size:25px;margin:0 0 4px;line-height:1.15}
+h3{font-family:var(--serif);font-size:18px;margin:22px 0 6px}
+.lede{color:var(--ink-soft);margin:0 0 18px;max-width:66ch}
+p{max-width:70ch}
+.note{
+  border-left:3px solid var(--blue);background:var(--blue-soft);
+  padding:10px 14px;margin:16px 0;font-size:14.5px;border-radius:0 3px 3px 0;
+}
+.note.warn{border-left-color:var(--red);background:var(--red-soft)}
+.note.good{border-left-color:var(--turf);background:var(--turf-soft)}
+.note p{margin:0;max-width:none}
+
+/* ---------- buttons ---------- */
+button{font-family:inherit;font-size:15px;cursor:pointer}
+.btn{
+  background:var(--blue);color:#fff;border:1px solid var(--blue);
+  padding:10px 20px;border-radius:3px;font-weight:600;
+}
+.btn:hover:not(:disabled){background:#183E7D}
+.btn:disabled{background:#B9BDC7;border-color:#B9BDC7;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--blue)}
+.btn.ghost:hover:not(:disabled){background:var(--blue-soft)}
+.btn.quiet{background:transparent;color:var(--ink-soft);border-color:var(--rule);font-weight:500}
+.btn.quiet:hover:not(:disabled){background:var(--paper);color:var(--ink)}
+.btn.big{font-size:17px;padding:13px 26px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* ---------- assignment matrix ---------- */
+.assign{width:100%;border-collapse:collapse;font-size:15px;margin-top:6px}
+.assign th{
+  font-weight:600;font-size:12.5px;color:var(--ink-soft);
+  padding:6px 4px;border-bottom:2px solid var(--ink);text-align:center;
+}
+.assign th.sumh{text-align:left;width:88px}
+.assign td{padding:0;border-bottom:1px solid var(--rule-2);text-align:center}
+.assign td.sumcell{
+  text-align:left;font-family:var(--mono);font-weight:700;font-size:17px;padding:4px 6px;
+}
+.cellbtn{
+  width:100%;height:38px;min-width:56px;border:0;background:transparent;color:#C3BEAC;font-size:12px;
+  border-right:1px solid var(--rule-2);
+}
+.cellbtn:hover{background:#EFEDE1}
+.cellbtn.sel{color:#fff;font-weight:700;font-size:14px}
+.cellbtn.sel[data-c="out"]{background:var(--red)}
+.cellbtn.sel[data-c="single"]{background:var(--blue)}
+.cellbtn.sel[data-c="double"]{background:#2F6E86}
+.cellbtn.sel[data-c="triple"]{background:var(--turf)}
+.cellbtn.sel[data-c="homerun"]{background:var(--gold);color:#1E1704}
+.assign tfoot td{
+  font-family:var(--mono);font-size:13px;padding:8px 2px;border-top:2px solid var(--ink);
+  border-bottom:0;color:var(--red);font-weight:700;
+}
+.assign tfoot td.ok{color:var(--turf)}
+.assign tfoot td.sumcell{font-family:var(--sans);font-weight:600;color:var(--ink-soft);font-size:12.5px}
+
+/* ---------- field + scoreboard ---------- */
+.gamegrid{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+@media(max-width:680px){.gamegrid{grid-template-columns:1fr}}
+.board{border:1px solid var(--rule);border-radius:3px;overflow:hidden;background:#fff}
+.board table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:15px;text-align:center}
+.board th{background:var(--ink);color:#fff;font-weight:600;padding:6px 4px;font-size:12px}
+.board td{padding:9px 4px;border-right:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2)}
+.board td.tot{background:var(--paper);font-weight:700}
+.board tr.live td{background:var(--blue-soft)}
+.statusbar{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:14px 0 4px;font-size:14px}
+.outdots{display:inline-flex;gap:5px;vertical-align:middle}
+.outdots i{width:12px;height:12px;border:1.5px solid var(--red);border-radius:50%;display:block}
+.outdots i.on{background:var(--red)}
+.rollout{
+  display:flex;align-items:center;gap:14px;margin:14px 0;min-height:62px;
+  padding:10px 14px;border:1px dashed var(--rule);border-radius:3px;background:#fff;
+}
+.verdict{font-family:var(--serif);font-size:22px;line-height:1.2}
+.verdict small{display:block;font-family:var(--sans);font-size:13px;color:var(--ink-soft);letter-spacing:0}
+.log{
+  margin-top:14px;max-height:170px;overflow-y:auto;border:1px solid var(--rule-2);
+  border-radius:3px;background:#fff;font-family:var(--mono);font-size:12.5px;
+}
+.log div{padding:4px 10px;border-bottom:1px solid var(--rule-2);display:flex;justify-content:space-between;gap:10px}
+.log div:last-child{border-bottom:0}
+.log b{font-weight:700}
+
+/* ---------- 6x6 grid ---------- */
+.tablewrap{overflow-x:auto;margin-top:10px}
+.grid6{border-collapse:collapse;font-family:var(--mono);margin:0 auto}
+.grid6 th,.grid6 td{border:1px solid var(--rule);width:52px;height:44px;text-align:center;padding:0}
+.grid6 th{background:var(--ink);color:#fff;font-size:14px}
+.grid6 th.corner{background:var(--clay);font-family:var(--sans);font-size:11px;font-weight:600}
+.grid6 input{
+  width:100%;height:100%;border:0;background:transparent;text-align:center;
+  font-family:var(--mono);font-size:16px;color:var(--ink);padding:0;
+}
+.grid6 input:focus{background:var(--blue-soft);outline:2px solid var(--blue);outline-offset:-2px}
+.grid6 td.right{background:var(--turf-soft)}
+.grid6 td.right input{color:var(--turf);font-weight:700}
+.grid6 td.wrong{background:var(--red-soft)}
+.grid6 td.wrong input{color:var(--red);font-weight:700}
+
+/* ---------- distribution ---------- */
+.dist{width:100%;border-collapse:collapse;font-size:15px;max-width:560px}
+.dist th{font-size:12.5px;color:var(--ink-soft);font-weight:600;text-align:left;padding:6px 8px;border-bottom:2px solid var(--ink)}
+.dist td{padding:3px 8px;border-bottom:1px solid var(--rule-2);font-family:var(--mono)}
+.dist input{
+  width:64px;padding:5px 6px;font-family:var(--mono);font-size:15px;text-align:center;
+  border:1px solid var(--rule);border-radius:3px;background:#fff;color:var(--ink);
+}
+.dist input:focus{outline:2px solid var(--blue);outline-offset:-1px}
+.dist td.right input{border-color:var(--turf);background:var(--turf-soft);color:var(--turf);font-weight:700}
+.dist td.wrong input{border-color:var(--red);background:var(--red-soft);color:var(--red);font-weight:700}
+.dist .frac,.dist .dec{color:var(--ink-soft);font-size:14px}
+.bars{margin-top:8px}
+.bar{display:flex;align-items:center;gap:10px;margin:3px 0;font-family:var(--mono);font-size:13px}
+.bar span.k{width:26px;text-align:right;font-weight:700}
+.bar span.v{flex:1;background:var(--rule-2);border-radius:2px;overflow:hidden;height:20px}
+.bar span.v i{display:block;height:100%;background:var(--blue)}
+.bar span.n{width:88px;color:var(--ink-soft);font-size:12px}
+
+/* ---------- analyzer ---------- */
+.metrics{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.metric{border:1px solid var(--rule);border-radius:3px;background:#fff;padding:10px 16px;min-width:150px}
+.metric b{display:block;font-family:var(--mono);font-size:24px;line-height:1.15}
+.metric small{color:var(--ink-soft);font-size:12px}
+details.analyzer{border:1px solid var(--rule);border-radius:3px;background:#fff;padding:0;margin-top:18px}
+details.analyzer summary{padding:11px 16px;cursor:pointer;font-weight:600;font-size:14.5px;color:var(--blue)}
+details.analyzer .body{padding:0 16px 16px}
+
+/* ---------- compare ---------- */
+.compare{width:100%;border-collapse:collapse;font-family:var(--mono);text-align:center;font-size:15px}
+.compare th{background:var(--ink);color:#fff;padding:8px 4px;font-size:12px;font-weight:600}
+.compare th.rowh{background:var(--ink)}
+.compare td{padding:10px 4px;border-bottom:1px solid var(--rule-2);border-right:1px solid var(--rule-2)}
+.compare td.rowh{font-family:var(--sans);text-align:left;font-size:14px;font-weight:600;padding-left:12px}
+.compare tr.big td{font-size:22px;font-weight:700;background:var(--paper)}
+.delta{font-family:var(--serif);font-size:30px;margin:18px 0 0}
+textarea{
+  width:100%;min-height:76px;padding:10px;border:1px solid var(--rule);border-radius:3px;
+  font-family:var(--sans);font-size:15px;background:#fff;color:var(--ink);resize:vertical;line-height:1.5;
+}
+textarea:focus{outline:2px solid var(--blue);outline-offset:-1px}
+label.q{display:block;margin:16px 0 5px;font-weight:600;font-size:15px}
+input.tname{
+  padding:9px 12px;border:1px solid var(--rule);border-radius:3px;font-size:16px;
+  font-family:var(--sans);background:#fff;color:var(--ink);width:280px;max-width:100%;
+}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft);margin-top:10px}
+.legend b{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-soft);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.hidden{display:none !important}
+
+@media print{
+  body{background:#fff}
+  .rail,.btnrow,.footer,.no-print{display:none !important}
+  .panel{display:block !important;page-break-before:always}
+  .sheet{background-image:none;border-color:#999}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div>
+    <h1>Probability Baseball</h1>
+    <p>Assign the eleven dice sums to five outcomes, play three innings, then find out what the sample space knew all along.</p>
+  </div>
+  <svg class="crest" width="86" height="86" viewBox="0 0 100 100" aria-hidden="true">
+    <polygon points="50,92 12,54 50,16 88,54" fill="#E9E3D2" stroke="#14213D" stroke-width="2"/>
+    <polygon points="50,80 24,54 50,28 76,54" fill="#A9622F" stroke="#14213D" stroke-width="1.5"/>
+    <polygon points="50,72 32,54 50,36 68,54" fill="#2E6B45" stroke="#14213D" stroke-width="1.5"/>
+    <circle cx="50" cy="54" r="4.5" fill="#FBFAF4" stroke="#14213D" stroke-width="1.5"/>
+  </svg>
+</header>
+
+<nav class="rail" id="rail" aria-label="Activity steps"></nav>
+
+<!-- ============ 1. ASSIGN ROUND ONE ============ -->
+<section class="panel" id="p-assign1">
+  <div class="sheet">
+    <h2>Round 1: make your lineup card</h2>
+    <p class="lede">Two dice, eleven possible sums. Give every sum a job. You have exactly five outs, two singles, two doubles, one triple, and one home run to hand out — no sum gets left blank, and no sum gets two jobs.</p>
+
+    <label class="q" for="tname">Team name</label>
+    <input class="tname" id="tname" placeholder="The Standard Deviations" maxlength="34">
+
+    <h3>Assignment card</h3>
+    <div class="tablewrap"><div id="ac1"></div></div>
+
+    <div class="note">
+      <p><b>Three innings. Three outs an inning</b>, or twelve batters, whichever comes first. Runners move up one base on a single, two on a double, three on a triple, and everybody scores on a home run.</p>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn big" id="go1" disabled>Take the field</button>
+      <button class="btn quiet" id="reset1">Clear card</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. PLAY ROUND ONE ============ -->
+<section class="panel" id="p-play1">
+  <div class="sheet plain">
+    <h2>Round 1 <span id="tname1" style="font-family:var(--sans);font-size:16px;color:var(--ink-soft)"></span></h2>
+    <p class="lede">Roll the dice and see what your card does for you.</p>
+    <div id="game1"></div>
+    <div class="btnrow" id="btns1"></div>
+  </div>
+</section>
+
+<!-- ============ 3. BUILD THE GRID ============ -->
+<section class="panel" id="p-grid">
+  <div class="sheet">
+    <h2>Every roll there is</h2>
+    <p class="lede">Before you argue about whether your card was any good, you need to know what the dice can actually do. There are 36 equally likely ways two dice can land. Fill in the sum for each one.</p>
+    <div class="tablewrap"><div id="grid6"></div></div>
+    <div class="btnrow">
+      <button class="btn" id="checkgrid">Check the grid</button>
+      <button class="btn quiet" id="cleargrid">Clear</button>
+      <span id="gridmsg" style="font-size:14.5px"></span>
+      <button class="btn big hidden" id="gridnext">On to the distribution</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. DISTRIBUTION ============ -->
+<section class="panel" id="p-dist">
+  <div class="sheet">
+    <h2>The probability distribution</h2>
+    <p class="lede">Count how many of the 36 cells give each sum. The counts have to add to 36 — every roll lands somewhere.</p>
+    <table class="dist" id="disttab"></table>
+    <div class="btnrow">
+      <button class="btn" id="checkdist">Check the counts</button>
+      <span id="distmsg" style="font-size:14.5px"></span>
+    </div>
+    <div id="distreveal" class="hidden">
+      <h3>What that looks like</h3>
+      <div class="bars" id="bars"></div>
+      <div class="note good" id="distnote"></div>
+      <div id="cardaudit"></div>
+    </div>
+    <div class="btnrow" id="distnext"></div>
+  </div>
+</section>
+
+<!-- ============ 5. REASSIGN ============ -->
+<section class="panel" id="p-assign2">
+  <div class="sheet">
+    <h2>Round 2: rewrite the card</h2>
+    <p class="lede">Same eleven sums, same five-two-two-one-one budget, same dice. The only thing that changes is what you now know about how often each sum shows up.</p>
+
+    <h3>Assignment card</h3>
+    <div class="tablewrap"><div id="ac2"></div></div>
+
+    <details class="analyzer">
+      <summary>Show strategy analyzer</summary>
+      <div class="body">
+        <p style="font-size:14.5px;color:var(--ink-soft);margin:4px 0 12px">Exact figures for the card as it stands, computed from the sample space — no simulation, no guessing.</p>
+        <div class="metrics" id="an2"></div>
+      </div>
+    </details>
+
+    <div class="note">
+      <p>You will face <b>the exact same 36 rolls</b> you faced in Round 1, inning for inning. Anything that changes in your score is your card, not your luck.</p>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn big" id="go2" disabled>Take the field again</button>
+      <button class="btn quiet" id="copy1">Copy my Round 1 card</button>
+      <button class="btn quiet" id="reset2">Clear card</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. PLAY ROUND TWO ============ -->
+<section class="panel" id="p-play2">
+  <div class="sheet plain">
+    <h2>Round 2 <span id="tname2" style="font-family:var(--sans);font-size:16px;color:var(--ink-soft)"></span></h2>
+    <p class="lede">Same dice, same order. New card.</p>
+    <div id="game2"></div>
+    <div class="btnrow" id="btns2"></div>
+  </div>
+</section>
+
+<!-- ============ 7. COMPARE ============ -->
+<section class="panel" id="p-compare">
+  <div class="sheet plain">
+    <h2>Same dice, different card</h2>
+    <table class="compare" id="cmp"></table>
+    <div class="delta" id="deltaline"></div>
+    <div id="cmpnote"></div>
+
+    <h3>What the sample space said would happen</h3>
+    <p class="lede">Expected runs is the average score your card would produce over an enormous number of three-inning games. One game is a small sample, so your actual scores wobble around these numbers rather than matching them.</p>
+    <div class="metrics" id="expcmp"></div>
+
+    <h3>Write it up</h3>
+    <label class="q" for="q1">Which sums did you move, and why did the distribution tell you to move them?</label>
+    <textarea id="q1"></textarea>
+    <label class="q" for="q2">Suppose your Round 2 score had come out lower than Round 1. Would that mean the second card was worse? Explain using expected runs.</label>
+    <textarea id="q2"></textarea>
+    <label class="q" for="q3">Describe a game outside this classroom where knowing the sample space would give you an edge over someone who does not.</label>
+    <textarea id="q3"></textarea>
+
+    <div class="btnrow no-print">
+      <button class="btn" id="printit">Print or save as PDF</button>
+      <button class="btn quiet" id="restart">Start over with new dice</button>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  <span id="saved">Progress saves in this browser automatically.</span>
+  <span><button class="btn quiet" id="wipe" style="font-size:12px;padding:4px 10px">Erase my saved work</button></span>
+</div>
+
+</div>
+
+<script>
+/* ==================================================================
+   ============ CORE LOGIC — START (stress-tested in Node) ==========
+   ================================================================== */
+
+var CATS = ['out','single','double','triple','homerun'];
+var CAT_LABEL = {out:'Out', single:'Single', double:'Double', triple:'Triple', homerun:'Home run'};
+var CAT_SHORT = {out:'OUT', single:'1B', double:'2B', triple:'3B', homerun:'HR'};
+var QUOTA = {out:5, single:2, double:2, triple:1, homerun:1};
+var ADV = {single:1, double:2, triple:3, homerun:4};
+var SUMS = [2,3,4,5,6,7,8,9,10,11,12];
+var WAYS = {2:1,3:2,4:3,5:4,6:5,7:6,8:5,9:4,10:3,11:2,12:1};
+var MAX_BATTERS = 12;
+var MAX_OUTS = 3;
+var INNINGS = 3;
+
+/* An assignment is valid when every sum 2..12 is used exactly once and
+   each category holds exactly its quota. */
+function assignErrors(a){
+  var counts = {out:0,single:0,double:0,triple:0,homerun:0}, i, s;
+  for(i=0;i<SUMS.length;i++){
+    s = SUMS[i];
+    if(!a[s]) return 'incomplete';
+    counts[a[s]]++;
+  }
+  for(i=0;i<CATS.length;i++){
+    if(counts[CATS[i]] !== QUOTA[CATS[i]]) return 'quota';
+  }
+  return null;
+}
+function assignValid(a){ return assignErrors(a) === null; }
+
+/* Base state is a 3-slot array: index 0 = first, 1 = second, 2 = third.
+   Advancing by n moves every existing runner n bases and drops the
+   batter on base n. Anyone who reaches index 3 or beyond has scored. */
+function advance(bases, n){
+  var nb = [false,false,false], runs = 0, i, p;
+  for(i=0;i<3;i++){
+    if(!bases[i]) continue;
+    p = i + n;
+    if(p >= 3) runs++; else nb[p] = true;
+  }
+  if(n >= 4) runs++; else nb[n-1] = true;
+  return {bases:nb, runs:runs};
+}
+
+/* 36 rolls: 12 per inning, so both rounds meet identical dice
+   inning by inning no matter how fast an inning ended. */
+function makeRolls(rng){
+  var r = [], i;
+  for(i=0;i<INNINGS*MAX_BATTERS;i++){
+    r.push([1+Math.floor(rng()*6), 1+Math.floor(rng()*6)]);
+  }
+  return r;
+}
+
+function newGame(assign, rolls){
+  return {
+    assign:assign, rolls:rolls,
+    inning:0, batter:0, outs:0, bases:[false,false,false],
+    runs:[0,0,0], plays:[], over:false, inningOver:false
+  };
+}
+function inningComplete(g){ return g.outs >= MAX_OUTS || g.batter >= MAX_BATTERS; }
+
+/* Play one batter. Returns the play, or null if the game or inning is
+   already finished. */
+function stepGame(g){
+  if(g.over || g.inningOver) return null;
+  var d = g.rolls[g.inning * MAX_BATTERS + g.batter];
+  var sum = d[0] + d[1];
+  var cat = g.assign[sum];
+  var play = {inning:g.inning, d1:d[0], d2:d[1], sum:sum, cat:cat, runs:0};
+  if(cat === 'out'){
+    g.outs++;
+  } else {
+    var res = advance(g.bases, ADV[cat]);
+    g.bases = res.bases;
+    g.runs[g.inning] += res.runs;
+    play.runs = res.runs;
+  }
+  g.batter++;
+  play.outsAfter = g.outs;
+  play.basesAfter = g.bases.slice();
+  play.inningRuns = g.runs[g.inning];
+  g.plays.push(play);
+  if(inningComplete(g)) g.inningOver = true;
+  return play;
+}
+
+/* Close the inning and set up the next one, or end the game. */
+function nextInning(g){
+  if(!g.inningOver) return false;
+  if(g.inning >= INNINGS - 1){ g.over = true; g.inningOver = false; return false; }
+  g.inning++;
+  g.batter = 0; g.outs = 0; g.bases = [false,false,false];
+  g.inningOver = false;
+  return true;
+}
+function totalRuns(g){ return g.runs[0] + g.runs[1] + g.runs[2]; }
+
+/* Run a whole round without any UI — used for testing. */
+function playOut(assign, rolls){
+  var g = newGame(assign, rolls);
+  while(!g.over){
+    while(!g.inningOver) stepGame(g);
+    if(!nextInning(g)) break;
+  }
+  return g;
+}
+
+/* ---- exact expected runs, by dynamic programming over the sample space ----
+   State: (batters used, outs, which bases are occupied). At most
+   12 x 3 x 8 = 288 states, so this is exact rather than simulated. */
+function catProbs(assign){
+  var p = {out:0,single:0,double:0,triple:0,homerun:0}, i, s;
+  for(i=0;i<SUMS.length;i++){ s = SUMS[i]; p[assign[s]] += WAYS[s]/36; }
+  return p;
+}
+function maskToBases(m){ return [(m&1)>0, (m&2)>0, (m&4)>0]; }
+function basesToMask(b){ return (b[0]?1:0) | (b[1]?2:0) | (b[2]?4:0); }
+
+function expectedRunsPerInning(assign){
+  var p = catProbs(assign);
+  var memo = new Float64Array(MAX_BATTERS * MAX_OUTS * 8);
+  var seen = new Uint8Array(MAX_BATTERS * MAX_OUTS * 8);
+  function f(b, outs, mask){
+    if(b >= MAX_BATTERS || outs >= MAX_OUTS) return 0;
+    var key = (b * MAX_OUTS + outs) * 8 + mask;
+    if(seen[key]) return memo[key];
+    var e = p.out * f(b+1, outs+1, mask);
+    for(var i=1;i<CATS.length;i++){
+      var c = CATS[i];
+      var r = advance(maskToBases(mask), ADV[c]);
+      e += p[c] * (r.runs + f(b+1, outs, basesToMask(r.bases)));
+    }
+    seen[key] = 1; memo[key] = e;
+    return e;
+  }
+  return f(0,0,0);
+}
+function expectedRunsPerGame(assign){ return INNINGS * expectedRunsPerInning(assign); }
+function outWays(assign){
+  var w = 0, i;
+  for(i=0;i<SUMS.length;i++){ if(assign[SUMS[i]] === 'out') w += WAYS[SUMS[i]]; }
+  return w;
+}
+/* Expected bases gained per at-bat — the simplest single number a
+   student can compute by hand from the distribution. */
+function expectedBases(assign){
+  var t = 0, i, s;
+  for(i=0;i<SUMS.length;i++){
+    s = SUMS[i];
+    if(assign[s] !== 'out') t += (WAYS[s]/36) * ADV[assign[s]];
+  }
+  return t;
+}
+
+/* ==================================================================
+   ============ CORE LOGIC — END ====================================
+   ================================================================== */
+
+if(typeof module !== 'undefined' && module.exports){
+  module.exports = {CATS,QUOTA,ADV,SUMS,WAYS,MAX_BATTERS,MAX_OUTS,INNINGS,
+    assignErrors,assignValid,advance,makeRolls,newGame,stepGame,nextInning,
+    totalRuns,playOut,catProbs,expectedRunsPerInning,expectedRunsPerGame,
+    outWays,expectedBases,inningComplete};
+}
+</script>
+
+<script>
+/* ================== UI ================== */
+(function(){
+if(typeof document === 'undefined') return;
+
+var KEY = 'probBaseballV1';
+var STEPS = ['p-assign1','p-play1','p-grid','p-dist','p-assign2','p-play2','p-compare'];
+var RAIL = [
+  {n:'1', t:'Lineup card'}, {n:'2', t:'Round 1'}, {n:'3', t:'36 rolls'},
+  {n:'4', t:'Distribution'}, {n:'5', t:'New card'}, {n:'6', t:'Round 2'}, {n:'7', t:'Compare'}
+];
+
+var S = {
+  step:0, team:'', rolls:null,
+  a1:{}, a2:{},
+  r1:null, r2:null,
+  grid:{}, gridOK:false,
+  dist:{}, distOK:false,
+  p1:0, o1:false, p2:0, o2:false,
+  q1:'', q2:'', q3:''
+};
+var G = {1:null, 2:null};
+
+function save(){
+  try{
+    if(G[1]){ S.p1 = G[1].plays.length; S.o1 = G[1].over; }
+    if(G[2]){ S.p2 = G[2].plays.length; S.o2 = G[2].over; }
+    localStorage.setItem(KEY, JSON.stringify({
+      step:S.step, team:S.team, rolls:S.rolls, a1:S.a1, a2:S.a2,
+      r1:S.r1, r2:S.r2, grid:S.grid, gridOK:S.gridOK,
+      p1:S.p1, o1:S.o1, p2:S.p2, o2:S.o2,
+      dist:S.dist, distOK:S.distOK, q1:S.q1, q2:S.q2, q3:S.q3
+    }));
+  }catch(e){}
+}
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(!raw) return false;
+    var o = JSON.parse(raw);
+    if(!o || !o.rolls) return false;
+    for(var k in o){ if(o.hasOwnProperty(k)) S[k] = o[k]; }
+    return true;
+  }catch(e){ return false; }
+}
+
+function $(id){ return document.getElementById(id); }
+function el(tag, cls, txt){
+  var n = document.createElement(tag);
+  if(cls) n.className = cls;
+  if(txt !== undefined) n.textContent = txt;
+  return n;
+}
+
+/* ---------- navigation ---------- */
+function drawRail(){
+  var r = $('rail'); r.innerHTML = '';
+  for(var i=0;i<RAIL.length;i++){
+    var d = el('div', i < S.step ? 'done' : (i === S.step ? 'now' : ''));
+    d.appendChild(el('b', null, RAIL[i].n));
+    d.appendChild(document.createTextNode(RAIL[i].t));
+    r.appendChild(d);
+  }
+}
+function goto(i){
+  S.step = i;
+  for(var k=0;k<STEPS.length;k++) $(STEPS[k]).classList.toggle('on', k === i);
+  drawRail();
+  window.scrollTo({top:0, behavior:'smooth'});
+  save();
+}
+
+/* ---------- dice svg ---------- */
+var PIPS = {
+  1:[[.5,.5]], 2:[[.28,.28],[.72,.72]], 3:[[.28,.28],[.5,.5],[.72,.72]],
+  4:[[.28,.28],[.72,.28],[.28,.72],[.72,.72]],
+  5:[[.28,.28],[.72,.28],[.5,.5],[.28,.72],[.72,.72]],
+  6:[[.28,.26],[.72,.26],[.28,.5],[.72,.5],[.28,.74],[.72,.74]]
+};
+function die(v, size){
+  size = size || 46;
+  var s = '<svg width="'+size+'" height="'+size+'" viewBox="0 0 100 100" role="img" aria-label="die showing '+v+'">';
+  s += '<rect x="3" y="3" width="94" height="94" rx="14" fill="#FBFAF4" stroke="#14213D" stroke-width="4"/>';
+  var p = PIPS[v] || [];
+  for(var i=0;i<p.length;i++) s += '<circle cx="'+(p[i][0]*100)+'" cy="'+(p[i][1]*100)+'" r="9" fill="#14213D"/>';
+  return s + '</svg>';
+}
+
+/* ---------- diamond ---------- */
+function diamond(bases){
+  var pt = [[150,150],[85,90],[20,150]]; /* 1st, 2nd, 3rd */
+  var s = '<svg viewBox="0 0 170 200" width="100%" style="max-width:250px" role="img" aria-label="base diagram">';
+  s += '<polygon points="85,180 150,150 85,90 20,150" fill="#EDE7D6" stroke="#C9C2AC" stroke-width="2"/>';
+  s += '<polygon points="85,168 132,146 85,102 38,146" fill="#A9622F" opacity=".22"/>';
+  s += '<path d="M85,180 L150,150 M150,150 L85,90 M85,90 L20,150 M20,150 L85,180" stroke="#FBFAF4" stroke-width="3" fill="none"/>';
+  for(var i=0;i<3;i++){
+    var f = bases[i] ? '#1F4E9C' : '#FBFAF4';
+    s += '<rect x="'+(pt[i][0]-9)+'" y="'+(pt[i][1]-9)+'" width="18" height="18" transform="rotate(45 '+pt[i][0]+' '+pt[i][1]+')" fill="'+f+'" stroke="#14213D" stroke-width="2"/>';
+  }
+  s += '<polygon points="85,172 79,180 79,188 91,188 91,180" fill="#FBFAF4" stroke="#14213D" stroke-width="2"/>';
+  s += '</svg>';
+  return s;
+}
+
+/* ---------- assignment card ---------- */
+function buildCard(hostId, which){
+  var host = $(hostId);
+  host.innerHTML = '';
+  var a = which === 1 ? S.a1 : S.a2;
+  var t = el('table','assign');
+
+  var thead = el('thead'), hr = el('tr');
+  hr.appendChild(el('th','sumh','Sum'));
+  for(var i=0;i<CATS.length;i++) hr.appendChild(el('th', null, CAT_LABEL[CATS[i]]));
+  thead.appendChild(hr); t.appendChild(thead);
+
+  var tb = el('tbody');
+  for(var r=0;r<SUMS.length;r++){
+    (function(sum){
+      var tr = el('tr');
+      var sc = el('td','sumcell', String(sum));
+      sc.appendChild(el('span', null, ''));
+      tr.appendChild(sc);
+      for(var c=0;c<CATS.length;c++){
+        (function(cat){
+          var td = el('td');
+          var b = el('button','cellbtn', CAT_SHORT[cat]);
+          b.setAttribute('data-c', cat);
+          b.setAttribute('aria-label', 'Assign sum ' + sum + ' to ' + CAT_LABEL[cat]);
+          if(a[sum] === cat) b.classList.add('sel');
+          b.setAttribute('aria-pressed', a[sum] === cat ? 'true' : 'false');
+          b.onclick = function(){
+            if(a[sum] === cat) delete a[sum]; else a[sum] = cat;
+            buildCard(hostId, which);
+            save();
+          };
+          td.appendChild(b);
+          tr.appendChild(td);
+        })(CATS[c]);
+      }
+      tb.appendChild(tr);
+    })(SUMS[r]);
+  }
+  t.appendChild(tb);
+
+  var counts = {out:0,single:0,double:0,triple:0,homerun:0};
+  for(var s2 in a){ if(a.hasOwnProperty(s2)) counts[a[s2]]++; }
+  var tf = el('tfoot'), fr = el('tr');
+  fr.appendChild(el('td','sumcell','Used / needed'));
+  for(var c2=0;c2<CATS.length;c2++){
+    var cat2 = CATS[c2];
+    var td2 = el('td', counts[cat2] === QUOTA[cat2] ? 'ok' : '', counts[cat2] + ' / ' + QUOTA[cat2]);
+    fr.appendChild(td2);
+  }
+  tf.appendChild(fr); t.appendChild(tf);
+  host.appendChild(t);
+
+  var ok = assignValid(a);
+  if(which === 1){
+    $('go1').disabled = !ok;
+  } else {
+    $('go2').disabled = !ok;
+    drawAnalyzer(a, ok);
+  }
+}
+
+function drawAnalyzer(a, ok){
+  var h = $('an2'); h.innerHTML = '';
+  if(!ok){
+    h.appendChild(el('p', null, 'Finish the card and the numbers appear here.'));
+    return;
+  }
+  var ow = outWays(a);
+  h.appendChild(metric((ow/36*100).toFixed(1) + '%', 'Chance any batter is out (' + ow + ' of 36)'));
+  h.appendChild(metric(expectedBases(a).toFixed(3), 'Expected bases per at-bat'));
+  h.appendChild(metric(expectedRunsPerGame(a).toFixed(2), 'Expected runs per 3-inning game'));
+}
+function metric(big, small){
+  var d = el('div','metric');
+  d.appendChild(el('b', null, big));
+  d.appendChild(el('small', null, small));
+  return d;
+}
+
+/* ---------- gameplay ---------- */
+function renderGame(which){
+  var g = G[which];
+  var host = $('game' + which);
+  host.innerHTML = '';
+
+  var grid = el('div','gamegrid');
+
+  /* left: field + current roll */
+  var left = el('div');
+  var dwrap = el('div');
+  dwrap.innerHTML = diamond(g.bases);
+  left.appendChild(dwrap);
+
+  var status = el('div','statusbar');
+  var oi = el('span'); oi.innerHTML = 'Outs <span class="outdots">' +
+    '<i class="' + (g.outs>0?'on':'') + '"></i><i class="' + (g.outs>1?'on':'') + '"></i><i class="' + (g.outs>2?'on':'') + '"></i></span>';
+  status.appendChild(oi);
+  status.appendChild(el('span', null, 'Batters ' + g.batter + ' / ' + MAX_BATTERS));
+  status.appendChild(el('span', null, 'Inning ' + (g.inning + 1)));
+  left.appendChild(status);
+
+  var ro = el('div','rollout');
+  var last = g.plays.length ? g.plays[g.plays.length - 1] : null;
+  if(last && last.inning !== g.inning) last = null;
+  if(last){
+    var dd = el('div');
+    dd.innerHTML = die(last.d1) + ' ' + die(last.d2);
+    ro.appendChild(dd);
+    var v = el('div','verdict');
+    v.textContent = CAT_LABEL[last.cat] + (last.runs ? '  +' + last.runs : '');
+    v.appendChild(el('small', null, 'Sum of ' + last.sum));
+    ro.appendChild(v);
+  } else {
+    ro.appendChild(el('div', null, g.inning > 0 ? 'Top of inning ' + (g.inning+1) + '. Press Roll.' : 'Press Roll to start the inning.'));
+  }
+  left.appendChild(ro);
+  grid.appendChild(left);
+
+  /* right: scoreboard + log */
+  var right = el('div');
+  var board = el('div','board');
+  var bt = '<table><thead><tr><th></th><th>1</th><th>2</th><th>3</th><th>R</th></tr></thead><tbody><tr class="' +
+    (g.over ? '' : 'live') + '"><td style="font-family:var(--sans);font-size:12px;text-align:left;padding-left:8px">' +
+    (S.team ? escapeHtml(S.team) : 'Your team') + '</td>';
+  for(var i=0;i<3;i++){
+    var shown = (i < g.inning || g.over) ? g.runs[i] : (i === g.inning ? g.runs[i] : '–');
+    bt += '<td>' + shown + '</td>';
+  }
+  bt += '<td class="tot">' + totalRuns(g) + '</td></tr></tbody></table>';
+  board.innerHTML = bt;
+  right.appendChild(board);
+
+  var log = el('div','log');
+  for(var p=g.plays.length-1; p>=0; p--){
+    var pl = g.plays[p];
+    var row = el('div');
+    row.appendChild(el('span', null, 'In ' + (pl.inning+1) + ' · ' + pl.d1 + '+' + pl.d2 + ' = ' + pl.sum));
+    var rr = el('b', null, CAT_SHORT[pl.cat] + (pl.runs ? '  ' + pl.runs + ' run' + (pl.runs>1?'s':'') : ''));
+    rr.style.color = pl.cat === 'out' ? 'var(--red)' : (pl.runs ? 'var(--turf)' : 'var(--ink)');
+    row.appendChild(rr);
+    log.appendChild(row);
+  }
+  if(!g.plays.length) log.appendChild(el('div', null, 'No plays yet.'));
+  right.appendChild(log);
+  grid.appendChild(right);
+
+  host.appendChild(grid);
+  renderGameButtons(which);
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function renderGameButtons(which){
+  var g = G[which];
+  var host = $('btns' + which);
+  host.innerHTML = '';
+  if(g.over){
+    var msg = el('span', null, 'Final: ' + totalRuns(g) + ' run' + (totalRuns(g)===1?'':'s') + '.');
+    msg.style.fontSize = '15px';
+    var nxt = el('button','btn big', which === 1 ? 'Now build the sample space' : 'See the comparison');
+    nxt.onclick = function(){
+      if(which === 1){ S.r1 = snapshot(g); goto(2); }
+      else { S.r2 = snapshot(g); buildCompare(); goto(6); }
+      save();
+    };
+    host.appendChild(nxt);
+    host.appendChild(msg);
+    return;
+  }
+  if(g.inningOver){
+    var why = g.outs >= MAX_OUTS ? 'Three outs.' : 'Twelve batters — inning capped.';
+    var b = el('button','btn big', g.inning >= INNINGS-1 ? 'End the game' : 'Start inning ' + (g.inning + 2));
+    b.onclick = function(){
+      if(!nextInning(g)) g.over = true;
+      renderGame(which); save();
+    };
+    host.appendChild(b);
+    var w = el('span', null, why + ' ' + g.runs[g.inning] + ' run' + (g.runs[g.inning]===1?'':'s') + ' this inning.');
+    w.style.fontSize = '15px';
+    host.appendChild(w);
+    return;
+  }
+  var roll = el('button','btn big','Roll');
+  roll.onclick = function(){ stepGame(g); renderGame(which); save(); };
+  host.appendChild(roll);
+  var fast = el('button','btn ghost','Finish this inning');
+  fast.onclick = function(){ while(!g.inningOver && !g.over) stepGame(g); renderGame(which); save(); };
+  host.appendChild(fast);
+}
+
+function restoreGame(assign, rolls, n, over){
+  var g = newGame(assign, rolls);
+  while(g.plays.length < n && !g.over){
+    if(g.inningOver && !nextInning(g)){ g.over = true; break; }
+    stepGame(g);
+  }
+  if(over){ g.over = true; g.inningOver = false; }
+  return g;
+}
+function snapshot(g){
+  return {runs:g.runs.slice(), total:totalRuns(g), plays:g.plays.length,
+          assign:JSON.parse(JSON.stringify(g.assign))};
+}
+
+/* ---------- 6x6 grid ---------- */
+function buildGrid(){
+  var host = $('grid6'); host.innerHTML = '';
+  var t = el('table','grid6');
+  var head = el('thead'), hr = el('tr');
+  var corner = el('th','corner'); corner.innerHTML = 'Die 2 →<br>Die 1 ↓';
+  hr.appendChild(corner);
+  for(var c=1;c<=6;c++) hr.appendChild(el('th', null, String(c)));
+  head.appendChild(hr); t.appendChild(head);
+  var tb = el('tbody');
+  for(var r=1;r<=6;r++){
+    var tr = el('tr');
+    tr.appendChild(el('th', null, String(r)));
+    for(var c2=1;c2<=6;c2++){
+      (function(rr,cc){
+        var td = el('td');
+        var inp = document.createElement('input');
+        inp.type = 'text'; inp.inputMode = 'numeric'; inp.maxLength = 2;
+        inp.setAttribute('aria-label','Sum for die 1 = ' + rr + ', die 2 = ' + cc);
+        inp.value = S.grid[rr+'-'+cc] || '';
+        inp.oninput = function(){
+          this.value = this.value.replace(/[^0-9]/g,'');
+          S.grid[rr+'-'+cc] = this.value;
+          td.className = '';
+          /* advance on 2 digits, or on any single digit that cannot start a
+             10/11/12 — a rule based on what was typed, never on the answer */
+          if(this.value.length >= 2 || (this.value.length === 1 && this.value !== '1')) focusNext(rr,cc);
+          save();
+        };
+        td.appendChild(inp);
+        tr.appendChild(td);
+      })(r,c2);
+    }
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb);
+  host.appendChild(t);
+}
+function focusNext(r,c){
+  var n = (r-1)*6 + c; /* 1-based index of current cell */
+  if(n >= 36) return;
+  var inputs = $('grid6').querySelectorAll('input');
+  if(inputs[n]) inputs[n].focus();
+}
+function checkGrid(){
+  var inputs = $('grid6').querySelectorAll('input');
+  var right = 0, i = 0;
+  for(var r=1;r<=6;r++){
+    for(var c=1;c<=6;c++){
+      var inp = inputs[i], td = inp.parentNode;
+      var v = parseInt(inp.value, 10);
+      if(v === r + c){ td.className = 'right'; right++; }
+      else if(inp.value !== ''){ td.className = 'wrong'; }
+      else { td.className = ''; }
+      i++;
+    }
+  }
+  S.gridOK = (right === 36);
+  var m = $('gridmsg');
+  m.textContent = right + ' of 36 correct.' + (S.gridOK ? ' Every roll accounted for.' : ' Fix the red cells.');
+  m.style.color = S.gridOK ? 'var(--turf)' : 'var(--red)';
+  var nx = $('gridnext');
+  if(S.gridOK){ buildDist(); nx.classList.remove('hidden'); } else { nx.classList.add('hidden'); }
+  save();
+}
+
+/* ---------- distribution ---------- */
+function buildDist(){
+  var t = $('disttab'); t.innerHTML = '';
+  var head = el('thead'), hr = el('tr');
+  ['Sum','Ways out of 36','Probability','Decimal'].forEach(function(h){ hr.appendChild(el('th', null, h)); });
+  head.appendChild(hr); t.appendChild(head);
+  var tb = el('tbody');
+  for(var i=0;i<SUMS.length;i++){
+    (function(s){
+      var tr = el('tr');
+      tr.appendChild(el('td', null, String(s)));
+      var td = el('td');
+      var inp = document.createElement('input');
+      inp.type = 'text'; inp.inputMode = 'numeric'; inp.maxLength = 2;
+      inp.setAttribute('aria-label','Number of ways to roll a sum of ' + s);
+      inp.value = S.dist[s] || '';
+      inp.oninput = function(){
+        this.value = this.value.replace(/[^0-9]/g,'');
+        S.dist[s] = this.value; td.className = ''; save();
+      };
+      td.appendChild(inp);
+      tr.appendChild(td);
+      tr.appendChild(el('td','frac','—'));
+      tr.appendChild(el('td','dec','—'));
+      tb.appendChild(tr);
+    })(SUMS[i]);
+  }
+  t.appendChild(tb);
+  var tf = el('tfoot'), fr = el('tr');
+  fr.appendChild(el('th', null, 'Total'));
+  fr.appendChild(el('th', null, '36'));
+  fr.appendChild(el('th', null, '1'));
+  fr.appendChild(el('th', null, '1.0000'));
+  tf.appendChild(fr); t.appendChild(tf);
+  if(S.distOK) checkDist(true);
+}
+function checkDist(silent){
+  var rows = $('disttab').querySelectorAll('tbody tr');
+  var right = 0;
+  for(var i=0;i<SUMS.length;i++){
+    var s = SUMS[i], tds = rows[i].querySelectorAll('td');
+    var v = parseInt(tds[1].querySelector('input').value, 10);
+    if(v === WAYS[s]){
+      tds[1].className = 'right'; right++;
+      tds[2].textContent = WAYS[s] + '/36';
+      tds[3].textContent = (WAYS[s]/36).toFixed(4);
+      tds[2].className = 'frac'; tds[3].className = 'dec';
+    } else {
+      tds[1].className = tds[1].querySelector('input').value === '' ? '' : 'wrong';
+      tds[2].textContent = '—'; tds[3].textContent = '—';
+    }
+  }
+  S.distOK = (right === SUMS.length);
+  var m = $('distmsg');
+  m.textContent = right + ' of 11 correct.' + (S.distOK ? '' : ' The counts must total 36.');
+  m.style.color = S.distOK ? 'var(--turf)' : 'var(--red)';
+  if(S.distOK) revealDist();
+  if(!silent) save();
+}
+function revealDist(){
+  $('distreveal').classList.remove('hidden');
+  var b = $('bars'); b.innerHTML = '';
+  for(var i=0;i<SUMS.length;i++){
+    var s = SUMS[i];
+    var row = el('div','bar');
+    row.appendChild(el('span','k', String(s)));
+    var v = el('span','v');
+    var fill = el('i'); fill.style.width = (WAYS[s]/6*100) + '%';
+    if(s === 7) fill.style.background = 'var(--gold)';
+    v.appendChild(fill); row.appendChild(v);
+    row.appendChild(el('span','n', WAYS[s] + '/36 = ' + (WAYS[s]/36).toFixed(4)));
+    b.appendChild(row);
+  }
+  $('distnote').innerHTML = '<p>A sum of <b>7</b> turns up six times in 36 rolls — six times as often as a 2 or a 12. The eleven sums are not interchangeable, and a card that treats them as if they were is giving away runs.</p>';
+  auditCard1();
+  var nx = $('distnext'); nx.innerHTML = '';
+  var btn = el('button','btn big','Rewrite my lineup card');
+  btn.onclick = function(){ buildCard('ac2', 2); goto(4); };
+  nx.appendChild(btn);
+}
+function auditCard1(){
+  var h = $('cardaudit'); h.innerHTML = '';
+  if(!assignValid(S.a1)) return;
+  h.appendChild(el('h3', null, 'What your Round 1 card was worth'));
+  var p = el('p','lede','These come straight from the distribution above — no dice needed.');
+  h.appendChild(p);
+  var m = el('div','metrics');
+  var ow = outWays(S.a1);
+  m.appendChild(metric((ow/36*100).toFixed(1) + '%', 'Chance any batter is out (' + ow + ' of 36)'));
+  m.appendChild(metric(expectedBases(S.a1).toFixed(3), 'Expected bases per at-bat'));
+  m.appendChild(metric(expectedRunsPerGame(S.a1).toFixed(2), 'Expected runs per 3-inning game'));
+  h.appendChild(m);
+  var hrSum = null, i;
+  for(i=0;i<SUMS.length;i++){ if(S.a1[SUMS[i]] === 'homerun') hrSum = SUMS[i]; }
+  var tip = el('div','note');
+  tip.innerHTML = '<p>Your home run sat on <b>' + hrSum + '</b>, which comes up ' + WAYS[hrSum] +
+    ' time' + (WAYS[hrSum]===1?'':'s') + ' in 36. Your five outs covered ' + ow +
+    ' of the 36 rolls. Ask yourself which five sums you would rather have spent those outs on.</p>';
+  h.appendChild(tip);
+}
+
+/* ---------- comparison ---------- */
+function buildCompare(){
+  var t = $('cmp'); t.innerHTML = '';
+  var head = el('thead'), hr = el('tr');
+  ['','Inning 1','Inning 2','Inning 3','Total'].forEach(function(h,i){
+    hr.appendChild(el('th', i===0 ? 'rowh' : '', h));
+  });
+  head.appendChild(hr); t.appendChild(head);
+  var tb = el('tbody');
+  [['Round 1', S.r1], ['Round 2', S.r2]].forEach(function(pair){
+    var tr = el('tr'); tr.className = 'big';
+    tr.appendChild(el('td','rowh', pair[0]));
+    for(var i=0;i<3;i++) tr.appendChild(el('td', null, String(pair[1].runs[i])));
+    tr.appendChild(el('td', null, String(pair[1].total)));
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+
+  var d = S.r2.total - S.r1.total;
+  var line = $('deltaline');
+  if(d > 0){ line.textContent = '+' + d + ' runs with the second card.'; line.style.color = 'var(--turf)'; }
+  else if(d < 0){ line.textContent = d + ' runs with the second card.'; line.style.color = 'var(--red)'; }
+  else { line.textContent = 'Dead even — same score both times.'; line.style.color = 'var(--ink)'; }
+
+  var e1 = expectedRunsPerGame(S.r1.assign), e2 = expectedRunsPerGame(S.r2.assign);
+  var note = $('cmpnote'); note.innerHTML = '';
+  var n = el('div', 'note' + (e2 > e1 ? ' good' : (e2 < e1 ? ' warn' : '')));
+  if(e2 > e1){
+    n.innerHTML = '<p>Your second card is genuinely stronger: it is worth <b>' + (e2-e1).toFixed(2) +
+      ' more expected runs</b> per three innings. Whether this one game happened to reward that is a separate question.</p>';
+  } else if(e2 < e1){
+    n.innerHTML = '<p>The second card is worth <b>' + (e1-e2).toFixed(2) +
+      ' fewer expected runs</b> per three innings than your first. Go back and look at where the outs landed.</p>';
+  } else {
+    n.innerHTML = '<p>Both cards carry the same expected runs, so any difference in score came entirely from the dice.</p>';
+  }
+  note.appendChild(n);
+
+  var ec = $('expcmp'); ec.innerHTML = '';
+  ec.appendChild(metric(e1.toFixed(2), 'Round 1 card, expected runs per game'));
+  ec.appendChild(metric(e2.toFixed(2), 'Round 2 card, expected runs per game'));
+  ec.appendChild(metric((outWays(S.r1.assign)/36*100).toFixed(1) + '%', 'Round 1 out rate'));
+  ec.appendChild(metric((outWays(S.r2.assign)/36*100).toFixed(1) + '%', 'Round 2 out rate'));
+}
+
+/* ---------- wiring ---------- */
+function rng(){ return Math.random(); }
+
+function startFresh(){
+  S.rolls = makeRolls(rng);
+  S.a1 = {}; S.a2 = {}; S.r1 = null; S.r2 = null;
+  S.grid = {}; S.gridOK = false; S.dist = {}; S.distOK = false;
+  S.q1 = S.q2 = S.q3 = '';
+  S.p1 = 0; S.o1 = false; S.p2 = 0; S.o2 = false;
+  G[1] = null; G[2] = null;
+  buildCard('ac1', 1); buildCard('ac2', 2); buildGrid(); buildDist();
+  goto(0);
+}
+
+function boot(){
+  drawRail();
+  var had = load();
+  if(!had || !S.rolls) S.rolls = makeRolls(rng);
+
+  $('tname').value = S.team || '';
+  $('tname').oninput = function(){
+    S.team = this.value;
+    $('tname1').textContent = S.team ? '· ' + S.team : '';
+    $('tname2').textContent = $('tname1').textContent;
+    save();
+  };
+  $('tname1').textContent = S.team ? '· ' + S.team : '';
+  $('tname2').textContent = $('tname1').textContent;
+
+  buildCard('ac1', 1);
+  buildCard('ac2', 2);
+  buildGrid();
+  buildDist();
+
+  $('go1').onclick = function(){
+    G[1] = newGame(S.a1, S.rolls); S.p1 = 0; S.o1 = false;
+    renderGame(1); goto(1);
+  };
+  $('reset1').onclick = function(){ S.a1 = {}; buildCard('ac1',1); save(); };
+  $('reset2').onclick = function(){ S.a2 = {}; buildCard('ac2',2); save(); };
+  $('copy1').onclick = function(){
+    S.a2 = JSON.parse(JSON.stringify(S.a1)); buildCard('ac2',2); save();
+  };
+  $('go2').onclick = function(){
+    G[2] = newGame(S.a2, S.rolls); S.p2 = 0; S.o2 = false;
+    renderGame(2); goto(5);
+  };
+  $('checkgrid').onclick = function(){ checkGrid(); };
+  $('gridnext').onclick = function(){ buildDist(); goto(3); };
+  $('cleargrid').onclick = function(){ S.grid = {}; S.gridOK = false; buildGrid(); $('gridmsg').textContent=''; save(); };
+  $('checkdist').onclick = function(){ checkDist(); };
+  $('printit').onclick = function(){ window.print(); };
+  $('restart').onclick = function(){
+    if(confirm('Start over with a brand new set of dice rolls?')) startFresh();
+  };
+  $('wipe').onclick = function(){
+    if(confirm('Erase everything saved in this browser?')){
+      try{ localStorage.removeItem(KEY); }catch(e){}
+      location.reload();
+    }
+  };
+  ['q1','q2','q3'].forEach(function(q){
+    $(q).value = S[q] || '';
+    $(q).oninput = function(){ S[q] = this.value; save(); };
+  });
+
+  /* rebuild whatever step the student left off on */
+  if(S.step === 1 && assignValid(S.a1)){ G[1] = restoreGame(S.a1, S.rolls, S.p1||0, S.o1); renderGame(1); }
+  if(S.step === 5 && assignValid(S.a2)){ G[2] = restoreGame(S.a2, S.rolls, S.p2||0, S.o2); renderGame(2); }
+  if(S.gridOK) checkGrid();
+  if(S.distOK) checkDist(true);
+  if(S.step === 6 && S.r1 && S.r2) buildCompare();
+
+  var step = S.step;
+  if(step === 1 && !G[1]) step = 0;
+  if(step === 5 && !G[2]) step = 4;
+  if(step === 6 && !(S.r1 && S.r2)) step = 4;
+  goto(step);
+}
+boot();
+})();
+</script>
+</body>
+</html>
