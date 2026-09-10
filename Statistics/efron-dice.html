@@ -1,0 +1,916 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Four Dice</title>
+<style>
+:root{
+  --paper:#F3F1E7;
+  --sheet:#FBFAF4;
+  --rule:#D8D3C2;
+  --rule-2:#EAE6D9;
+  --ink:#14213D;
+  --ink-soft:#5C6478;
+  --blue:#1F4E9C;
+  --blue-soft:#E4EBF7;
+  --red:#B3221F;
+  --red-soft:#F7E4E3;
+  --turf:#2E6B45;
+  --turf-soft:#E2EFE7;
+  --gold:#B58B15;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
+.wrap{max-width:900px;margin:0 auto;padding:0 18px 80px}
+
+.masthead{border-bottom:3px double var(--ink);padding:26px 0 14px;margin-bottom:22px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.masthead h1{font-family:var(--serif);font-size:clamp(30px,6vw,46px);line-height:1;margin:0;letter-spacing:-.015em}
+.masthead p{margin:6px 0 0;color:var(--ink-soft);font-size:15px;max-width:46ch}
+.crest{display:flex;gap:6px;flex:0 0 auto}
+
+.rail{display:flex;margin:0 0 26px;border:1px solid var(--rule);background:var(--sheet);overflow:hidden;border-radius:3px}
+.rail div{flex:1;padding:8px 4px;text-align:center;font-size:11.5px;line-height:1.25;color:var(--ink-soft);border-right:1px solid var(--rule-2)}
+.rail div:last-child{border-right:0}
+.rail div b{display:block;font-family:var(--mono);font-size:13px;font-weight:700}
+.rail div.done{color:var(--turf);background:var(--turf-soft)}
+.rail div.now{color:#fff;background:var(--blue)}
+.rail div.now b{color:#fff}
+
+.panel{display:none}
+.panel.on{display:block}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:3px;padding:22px 22px 24px;margin-bottom:20px}
+h2{font-family:var(--serif);font-size:25px;margin:0 0 4px;line-height:1.15}
+h3{font-family:var(--serif);font-size:18px;margin:24px 0 6px}
+.lede{color:var(--ink-soft);margin:0 0 18px;max-width:66ch}
+p{max-width:70ch}
+.note{border-left:3px solid var(--blue);background:var(--blue-soft);padding:10px 14px;margin:16px 0;font-size:14.5px;border-radius:0 3px 3px 0}
+.note.warn{border-left-color:var(--red);background:var(--red-soft)}
+.note.good{border-left-color:var(--turf);background:var(--turf-soft)}
+.note p{margin:0;max-width:none}
+
+button{font-family:inherit;font-size:15px;cursor:pointer}
+.btn{background:var(--blue);color:#fff;border:1px solid var(--blue);padding:10px 20px;border-radius:3px;font-weight:600}
+.btn:hover:not(:disabled){background:#183E7D}
+.btn:disabled{background:#B9BDC7;border-color:#B9BDC7;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--blue)}
+.btn.ghost:hover:not(:disabled){background:var(--blue-soft)}
+.btn.quiet{background:transparent;color:var(--ink-soft);border-color:var(--rule);font-weight:500}
+.btn.quiet:hover:not(:disabled){background:var(--paper);color:var(--ink)}
+.btn.big{font-size:17px;padding:13px 26px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.hidden{display:none !important}
+
+/* ---- dice ---- */
+.dieface{display:inline-flex;align-items:center;justify-content:center;border-radius:9px;font-family:var(--mono);font-weight:700;color:#fff;border:2px solid rgba(0,0,0,.28)}
+.diepick{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:8px}
+@media(max-width:620px){.diepick{grid-template-columns:repeat(2,1fr)}}
+.diecard{background:#fff;border:2px solid var(--rule);border-radius:5px;padding:12px 10px;text-align:center;cursor:pointer;font-family:inherit}
+.diecard:hover{border-color:var(--ink)}
+.diecard.sel{border-width:3px;padding:11px 9px}
+.diecard .nm{font-family:var(--serif);font-size:17px;margin-bottom:8px;display:block}
+.diecard .faces{display:flex;gap:3px;justify-content:center;flex-wrap:wrap}
+.diecard .sub{display:block;margin-top:8px;font-size:12px;color:var(--ink-soft)}
+.diecard[disabled]{opacity:.4;cursor:not-allowed}
+
+/* ---- duel ---- */
+.duel{display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin:18px 0;padding:16px;border:1px solid var(--rule);border-radius:4px;background:#fff}
+@media(max-width:560px){.duel{grid-template-columns:1fr;text-align:center}}
+.duelside{text-align:center}
+.duelside .who{font-family:var(--serif);font-size:16px;margin-bottom:8px}
+.duelside .tally{font-family:var(--mono);font-size:38px;font-weight:700;line-height:1}
+.vs{font-family:var(--serif);font-size:15px;color:var(--ink-soft);text-align:center}
+.rolltrack{display:flex;flex-wrap:wrap;gap:3px;margin-top:14px}
+.rolltrack i{width:11px;height:11px;border-radius:2px;display:block;background:var(--rule)}
+.progress{font-size:13px;color:var(--ink-soft);margin-top:8px;font-family:var(--mono)}
+
+/* ---- record ---- */
+.rec{width:100%;border-collapse:collapse;font-size:15px}
+.rec th{font-size:12.5px;color:var(--ink-soft);font-weight:600;text-align:left;padding:6px 8px;border-bottom:2px solid var(--ink)}
+.rec td{padding:8px;border-bottom:1px solid var(--rule-2);font-family:var(--mono);font-size:14px}
+.rec td.res-w{color:var(--turf);font-weight:700}
+.rec td.res-l{color:var(--red);font-weight:700}
+
+/* ---- 6x6 grid ---- */
+.tablewrap{overflow-x:auto}
+.g6{border-collapse:collapse;margin:10px auto 0;font-family:var(--mono)}
+.g6 th,.g6 td{border:1px solid var(--rule);width:50px;height:44px;text-align:center;padding:0}
+.g6 th{font-size:15px;color:#fff}
+.g6 th.corner{background:var(--ink);font-family:var(--sans);font-size:10.5px;font-weight:600;line-height:1.2;padding:2px}
+.g6 td button{width:100%;height:100%;border:0;background:transparent;font-family:var(--mono);font-size:15px;font-weight:700;color:var(--ink-soft)}
+.g6 td button:hover{background:#F0EEE2}
+.g6 td.w1 button{color:#fff}
+.g6 td.w2 button{color:#fff}
+.g6 td.bad{outline:3px solid var(--red);outline-offset:-3px}
+.gridnav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.gridnav button{border:1px solid var(--rule);background:#fff;border-radius:3px;padding:6px 12px;font-size:13.5px;color:var(--ink-soft)}
+.gridnav button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.gridnav button.ok{border-color:var(--turf);color:var(--turf)}
+.gridnav button.ok.on{background:var(--turf);color:#fff}
+
+/* ---- tournament table ---- */
+.tt{border-collapse:collapse;font-family:var(--mono);font-size:14px;margin-top:10px}
+.tt th,.tt td{border:1px solid var(--rule);padding:9px 10px;text-align:center;min-width:78px}
+.tt th{background:var(--ink);color:#fff;font-size:12px}
+.tt th.rowh{text-align:right}
+.tt td.hi{background:var(--turf-soft);color:var(--turf);font-weight:700}
+.tt td.lo{background:var(--red-soft);color:var(--red)}
+.tt td.ev{background:var(--paper)}
+.tt td.self{background:#E6E3D8;color:var(--ink-soft)}
+
+.metrics{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.metric{border:1px solid var(--rule);border-radius:3px;background:#fff;padding:10px 16px;min-width:150px}
+.metric b{display:block;font-family:var(--mono);font-size:24px;line-height:1.15}
+.metric small{color:var(--ink-soft);font-size:12px}
+
+textarea{width:100%;min-height:76px;padding:10px;border:1px solid var(--rule);border-radius:3px;font-family:var(--sans);font-size:15px;background:#fff;color:var(--ink);resize:vertical;line-height:1.5}
+textarea:focus{outline:2px solid var(--blue);outline-offset:-1px}
+label.q{display:block;margin:16px 0 5px;font-weight:600;font-size:15px}
+.footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-soft);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+
+@media print{
+  body{background:#fff}
+  .rail,.btnrow,.footer,.no-print,.gridnav{display:none !important}
+  .panel{display:block !important;page-break-before:always}
+  .sheet{border-color:#999}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div>
+    <h1>The Four Dice</h1>
+    <p>You pick a die first. I pick second. Then we roll, and I keep winning — until you work out what I know about the sample space.</p>
+  </div>
+  <div class="crest" id="crest"></div>
+</header>
+
+<nav class="rail" id="rail" aria-label="Activity steps"></nav>
+
+<!-- 1. CHALLENGE -->
+<section class="panel" id="p-challenge">
+  <div class="sheet">
+    <h2>Pick your die</h2>
+    <p class="lede">Four dice, none of them ordinary. Look at the faces, choose the one you think is strongest, and I will choose mine afterwards. We each roll 21 times and whoever wins more rolls takes the duel.</p>
+    <div class="diepick" id="pick1"></div>
+    <div id="duel1area"></div>
+    <div class="btnrow" id="btns1"></div>
+    <h3 class="hidden" id="rec1h">Your record so far</h3>
+    <table class="rec hidden" id="rec1"></table>
+  </div>
+</section>
+
+<!-- 2. WHAT'S GOING ON -->
+<section class="panel" id="p-think">
+  <div class="sheet">
+    <h2>That should not keep happening</h2>
+    <p class="lede">You had first pick of all four dice, which normally means you get the best one. Before you look at any mathematics, write down what you think is going on.</p>
+    <div class="metrics" id="ph1metrics"></div>
+    <label class="q" for="hunch">Your hunch: why does choosing first seem to be a disadvantage here?</label>
+    <textarea id="hunch"></textarea>
+    <div class="note">
+      <p>Every duel you played was 21 rolls of two dice against each other. Each of those rolls is one cell of a sample space you have not looked at yet. Time to look at it.</p>
+    </div>
+    <div class="btnrow"><button class="btn big" id="tothegrid">Build the sample space</button></div>
+  </div>
+</section>
+
+<!-- 3. GRIDS -->
+<section class="panel" id="p-grids">
+  <div class="sheet">
+    <h2>Who wins each of the 36 rolls?</h2>
+    <p class="lede">Two dice, six faces each, 36 equally likely pairings — the same grid you built for the baseball activity, but instead of writing a sum in each cell you decide which die wins it. Click a cell to flip the winner.</p>
+    <div class="gridnav" id="gridnav"></div>
+    <div id="gridhost"></div>
+    <div class="btnrow" id="gridbtns"></div>
+    <div id="gridmsg" style="font-size:14.5px;margin-top:10px"></div>
+    <div id="blocknote"></div>
+  </div>
+</section>
+
+<!-- 4. THE CYCLE -->
+<section class="panel" id="p-cycle">
+  <div class="sheet">
+    <h2>Beats does not mean what you assumed</h2>
+    <p class="lede">You counted four matchups and got the same answer every time. Put them in order and the reason I could never lose becomes visible.</p>
+    <div id="cyclehost" style="text-align:center"></div>
+    <h3>Every matchup, out of 36 cells</h3>
+    <p class="lede">Read a row against a column: the number is how many of the 36 pairings the row die wins.</p>
+    <div class="tablewrap"><table class="tt" id="tt"></table></div>
+    <div class="note good">
+      <p>Whichever die you pick, one of the other three beats it 24 cells to 12. There is no strongest die, so first pick is worth nothing — it just tells your opponent which die to take.</p>
+    </div>
+    <div id="diagnote"></div>
+    <div class="btnrow"><button class="btn big" id="toturn">Now let me pick second</button></div>
+  </div>
+</section>
+
+<!-- 5. TURN THE TABLES -->
+<section class="panel" id="p-turn">
+  <div class="sheet">
+    <h2>Your turn to choose second</h2>
+    <p class="lede">Four duels. I show my die first; you answer it. Same 21 rolls, same dice, opposite seat at the table.</p>
+    <div id="turnhost"></div>
+    <div class="btnrow" id="btns2"></div>
+    <h3 class="hidden" id="rec2h">Duels from this side of the table</h3>
+    <table class="rec hidden" id="rec2"></table>
+  </div>
+</section>
+
+<!-- 6. COMPARE -->
+<section class="panel" id="p-done">
+  <div class="sheet">
+    <h2>What the sample space was worth</h2>
+    <div class="metrics" id="finalmetrics"></div>
+    <div id="finalnote"></div>
+
+    <h3>Write it up</h3>
+    <label class="q" for="q1">In ordinary life, if A beats B and B beats C, we expect A to beat C. Show with numbers from the table that this fails here, and name the pair that breaks it.</label>
+    <textarea id="q1"></textarea>
+    <label class="q" for="q2">Two of the six matchups are not part of the cycle. Find them in the table and say what makes them different.</label>
+    <textarea id="q2"></textarea>
+    <label class="q" for="q3">You lost duels while holding a 2/3 advantage, and won some while holding none. What does that say about judging a strategy by one short run of results?</label>
+    <textarea id="q3"></textarea>
+    <label class="q" for="q4">Compare this to Probability Baseball. In both, the sample space gave an edge — but the edge worked differently. How?</label>
+    <textarea id="q4"></textarea>
+
+    <div class="btnrow no-print">
+      <button class="btn" id="printit">Print or save as PDF</button>
+      <button class="btn quiet" id="restart">Start over</button>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  <span>Progress saves in this browser automatically.</span>
+  <span><button class="btn quiet" id="wipe" style="font-size:12px;padding:4px 10px">Erase my saved work</button></span>
+</div>
+</div>
+
+<script>
+/* ==================================================================
+   ============ CORE LOGIC — START (stress-tested in Node) ==========
+   ================================================================== */
+
+/* Efron's four dice. The faces are the whole trick: each die carries at
+   most two distinct values, arranged so that "beats" runs in a circle. */
+var DICE = {
+  A:{key:'A', name:'Crimson', faces:[4,4,4,4,0,0], color:'#B3221F'},
+  B:{key:'B', name:'Cobalt',  faces:[3,3,3,3,3,3], color:'#1F4E9C'},
+  C:{key:'C', name:'Amber',   faces:[6,6,2,2,2,2], color:'#B58B15'},
+  D:{key:'D', name:'Forest',  faces:[5,5,5,1,1,1], color:'#2E6B45'}
+};
+var KEYS = ['A','B','C','D'];
+var CYCLE = [['A','B'],['B','C'],['C','D'],['D','A']];  /* row die beats col die */
+var DUEL_ROLLS = 21;   /* odd, so a duel can never end level */
+
+/* Count how many of the 36 equally likely pairings each die wins. */
+function tally(x, y){
+  var w = 0, l = 0, t = 0, i, j;
+  for(i=0;i<6;i++){
+    for(j=0;j<6;j++){
+      var a = DICE[x].faces[i], b = DICE[y].faces[j];
+      if(a > b) w++; else if(a < b) l++; else t++;
+    }
+  }
+  return {win:w, lose:l, tie:t};
+}
+function winProb(x, y){ return tally(x,y).win / 36; }
+
+/* The truth table the student is trying to reproduce: 1 means the row
+   die takes that cell, 2 means the column die does. */
+function gridTruth(x, y){
+  var g = [], i, j;
+  for(i=0;i<6;i++){
+    g.push([]);
+    for(j=0;j<6;j++){
+      g[i].push(DICE[x].faces[i] > DICE[y].faces[j] ? 1 : 2);
+    }
+  }
+  return g;
+}
+
+/* Given the die someone else has committed to, which die answers it best? */
+function bestCounter(y){
+  var best = null, bp = -1, i;
+  for(i=0;i<KEYS.length;i++){
+    if(KEYS[i] === y) continue;
+    var p = winProb(KEYS[i], y);
+    if(p > bp){ bp = p; best = KEYS[i]; }
+  }
+  return best;
+}
+
+function newDuel(mine, theirs){
+  return {mine:mine, theirs:theirs, rolls:[], me:0, them:0, done:false};
+}
+function duelStep(d, rng){
+  if(d.done) return null;
+  var a = DICE[d.mine].faces[Math.floor(rng()*6)];
+  var b = DICE[d.theirs].faces[Math.floor(rng()*6)];
+  var r = {a:a, b:b, mine:a > b};
+  if(a > b) d.me++; else d.them++;
+  d.rolls.push(r);
+  if(d.rolls.length >= DUEL_ROLLS) d.done = true;
+  return r;
+}
+function duelWon(d){ return d.me > d.them; }
+
+function shuffle(arr, rng){
+  var a = arr.slice(), i, j, t;
+  for(i=a.length-1;i>0;i--){
+    j = Math.floor(rng()*(i+1));
+    t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+/* ==================================================================
+   ============ CORE LOGIC — END ====================================
+   ================================================================== */
+</script>
+
+<script>
+(function(){
+if(typeof document === 'undefined') return;
+
+var KEY = 'efronDiceV1';
+var STEPS = ['p-challenge','p-think','p-grids','p-cycle','p-turn','p-done'];
+var RAIL = [
+  {n:'1',t:'The challenge'},{n:'2',t:'Your hunch'},{n:'3',t:'36 cells'},
+  {n:'4',t:'The cycle'},{n:'5',t:'Pick second'},{n:'6',t:'Write-up'}
+];
+var MIN_DUELS = 3;
+
+var S = {
+  step:0, ph1:[], ph2:[], grids:{}, gridsOK:{}, curGrid:0,
+  turnOrder:null, hunch:'', q1:'', q2:'', q3:'', q4:''
+};
+var live1 = null, live2 = null, pick1 = null, pick2 = null;
+
+function $(id){ return document.getElementById(id); }
+function el(t,c,x){ var n=document.createElement(t); if(c)n.className=c; if(x!==undefined)n.textContent=x; return n; }
+function rng(){ return Math.random(); }
+
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
+}
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(!raw) return;
+    var o = JSON.parse(raw);
+    for(var k in o) if(o.hasOwnProperty(k)) S[k] = o[k];
+  }catch(e){}
+}
+
+/* ---------- rendering pieces ---------- */
+function faceEl(dk, v, size){
+  size = size || 30;
+  var d = el('span','dieface', String(v));
+  d.style.width = size+'px'; d.style.height = size+'px';
+  d.style.fontSize = Math.round(size*0.5)+'px';
+  d.style.background = DICE[dk].color;
+  return d;
+}
+function facesRow(dk, size){
+  var w = el('span','faces');
+  for(var i=0;i<6;i++) w.appendChild(faceEl(dk, DICE[dk].faces[i], size));
+  return w;
+}
+function drawCrest(){
+  var c = $('crest'); c.innerHTML = '';
+  for(var i=0;i<KEYS.length;i++){
+    var k = KEYS[i];
+    var f = faceEl(k, DICE[k].faces[0], 34);
+    f.style.transform = 'rotate(' + (i*7 - 10) + 'deg)';
+    c.appendChild(f);
+  }
+}
+function drawRail(){
+  var r = $('rail'); r.innerHTML = '';
+  for(var i=0;i<RAIL.length;i++){
+    var d = el('div', i<S.step ? 'done' : (i===S.step ? 'now' : ''));
+    d.appendChild(el('b',null,RAIL[i].n));
+    d.appendChild(document.createTextNode(RAIL[i].t));
+    r.appendChild(d);
+  }
+}
+function goto(i){
+  S.step = i;
+  for(var k=0;k<STEPS.length;k++) $(STEPS[k]).classList.toggle('on', k===i);
+  drawRail();
+  window.scrollTo({top:0,behavior:'smooth'});
+  save();
+}
+function metric(b,s){
+  var d = el('div','metric'); d.appendChild(el('b',null,b)); d.appendChild(el('small',null,s)); return d;
+}
+
+/* ---------- step 1: the challenge ---------- */
+function drawPick1(){
+  var h = $('pick1'); h.innerHTML = '';
+  for(var i=0;i<KEYS.length;i++){
+    (function(k){
+      var b = el('button','diecard' + (pick1===k ? ' sel' : ''));
+      b.style.borderColor = pick1===k ? DICE[k].color : '';
+      var nm = el('span','nm', DICE[k].name); nm.style.color = DICE[k].color;
+      b.appendChild(nm);
+      b.appendChild(facesRow(k, 26));
+      b.appendChild(el('span','sub','Take this one'));
+      b.disabled = !!(live1 && !live1.done);
+      b.onclick = function(){ pick1 = k; startDuel1(); };
+      h.appendChild(b);
+    })(KEYS[i]);
+  }
+}
+function startDuel1(){
+  live1 = newDuel(bestCounter(pick1), pick1);   /* I am the counter; the student holds pick1 */
+  drawPick1(); drawDuel1();
+}
+function drawDuel1(){
+  var h = $('duel1area'); h.innerHTML = '';
+  if(!live1){ $('btns1').innerHTML=''; drawRecord(1); return; }
+  h.appendChild(duelBox(live1.theirs, live1.mine, live1.them, live1.me, live1, true));
+  var b = $('btns1'); b.innerHTML = '';
+  if(!live1.done){
+    var one = el('button','btn big','Roll once');
+    one.onclick = function(){ duelStep(live1, rng); drawDuel1(); };
+    b.appendChild(one);
+    var all = el('button','btn ghost','Roll out the duel');
+    all.onclick = function(){ while(!live1.done) duelStep(live1, rng); drawDuel1(); };
+    b.appendChild(all);
+  } else {
+    var won = live1.them > live1.me;   /* "them" is the student's side here */
+    var msg = el('span', null, won ? 'You took that one.' : 'I took that one.');
+    msg.style.fontSize = '15px';
+    msg.style.color = won ? 'var(--turf)' : 'var(--red)';
+    var again = el('button','btn big','Try a different die');
+    again.onclick = function(){
+      S.ph1.push({mine:live1.theirs, theirs:live1.mine, my:live1.them, their:live1.me, won:won});
+      live1 = null; pick1 = null; save(); drawPick1(); drawDuel1();
+    };
+    b.appendChild(again); b.appendChild(msg);
+  }
+  drawRecord(1);
+}
+/* studentKey/oppKey with their running scores; flag = student is on the left */
+function duelBox(studentKey, oppKey, sScore, oScore, d){
+  var box = el('div','duel');
+  var L = el('div','duelside');
+  L.appendChild(el('div','who','You — ' + DICE[studentKey].name));
+  var lt = el('div','tally', String(sScore)); lt.style.color = DICE[studentKey].color;
+  L.appendChild(lt);
+  L.appendChild(facesRow(studentKey, 22));
+  box.appendChild(L);
+
+  var mid = el('div','vs');
+  mid.appendChild(el('div',null,'rolls'));
+  mid.appendChild(el('div',null, d.rolls.length + ' / ' + DUEL_ROLLS));
+  if(d.rolls.length){
+    var last = d.rolls[d.rolls.length-1];
+    var lw = el('div'); lw.style.marginTop='8px';
+    lw.appendChild(faceEl(studentKey, last.b, 30));
+    lw.appendChild(document.createTextNode(' '));
+    lw.appendChild(faceEl(oppKey, last.a, 30));
+    mid.appendChild(lw);
+  }
+  box.appendChild(mid);
+
+  var R = el('div','duelside');
+  R.appendChild(el('div','who','Me — ' + DICE[oppKey].name));
+  var rt = el('div','tally', String(oScore)); rt.style.color = DICE[oppKey].color;
+  R.appendChild(rt);
+  R.appendChild(facesRow(oppKey, 22));
+  box.appendChild(R);
+
+  var track = el('div','rolltrack');
+  for(var i=0;i<DUEL_ROLLS;i++){
+    var s = el('i');
+    if(i < d.rolls.length){
+      s.style.background = d.rolls[i].mine ? DICE[oppKey].color : DICE[studentKey].color;
+    }
+    track.appendChild(s);
+  }
+  var wrapT = el('div'); wrapT.style.gridColumn = '1 / -1';
+  wrapT.appendChild(track);
+  box.appendChild(wrapT);
+  return box;
+}
+
+function drawRecord(which){
+  var list = which===1 ? S.ph1 : S.ph2;
+  var t = $('rec'+which), h = $('rec'+which+'h');
+  if(!list.length){ t.classList.add('hidden'); h.classList.add('hidden'); return; }
+  t.classList.remove('hidden'); h.classList.remove('hidden');
+  t.innerHTML = '';
+  var head = el('thead'), hr = el('tr');
+  ['Duel','You held','I held','Rolls won','Result'].forEach(function(x){ hr.appendChild(el('th',null,x)); });
+  head.appendChild(hr); t.appendChild(head);
+  var tb = el('tbody');
+  for(var i=0;i<list.length;i++){
+    var r = list[i], tr = el('tr');
+    tr.appendChild(el('td',null,String(i+1)));
+    var c1 = el('td',null,DICE[r.mine].name); c1.style.color = DICE[r.mine].color;
+    tr.appendChild(c1);
+    var c2 = el('td',null,DICE[r.theirs].name); c2.style.color = DICE[r.theirs].color;
+    tr.appendChild(c2);
+    tr.appendChild(el('td',null, r.my + ' – ' + r.their));
+    tr.appendChild(el('td', r.won?'res-w':'res-l', r.won?'You won':'You lost'));
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb);
+
+  if(which===1 && S.ph1.length >= MIN_DUELS && !live1){
+    {
+      var b = $('btns1');
+      var nx = el('button','btn big','I have seen enough');
+      nx.onclick = function(){ drawThink(); goto(1); };
+      b.appendChild(nx);
+    }
+  }
+}
+
+/* ---------- step 2 ---------- */
+function drawThink(){
+  var m = $('ph1metrics'); m.innerHTML = '';
+  var w = S.ph1.filter(function(r){ return r.won; }).length;
+  var rollsWon = S.ph1.reduce(function(a,r){ return a + r.my; }, 0);
+  var rollsTot = S.ph1.reduce(function(a,r){ return a + r.my + r.their; }, 0);
+  m.appendChild(metric(w + ' of ' + S.ph1.length, 'Duels you won with first pick'));
+  m.appendChild(metric(rollsTot ? (rollsWon/rollsTot*100).toFixed(1)+'%' : '—', 'Individual rolls you won'));
+  m.appendChild(metric('33.3%', 'What the sample space says you should win'));
+}
+
+/* ---------- step 3: grids ---------- */
+function gridKey(i){ return CYCLE[i][0] + CYCLE[i][1]; }
+function drawGridNav(){
+  var n = $('gridnav'); n.innerHTML = '';
+  for(var i=0;i<CYCLE.length;i++){
+    (function(idx){
+      var k = gridKey(idx);
+      var b = el('button', (S.curGrid===idx ? 'on ' : '') + (S.gridsOK[k] ? 'ok' : ''));
+      b.textContent = DICE[CYCLE[idx][0]].name + ' vs ' + DICE[CYCLE[idx][1]].name + (S.gridsOK[k] ? '  ✓' : '');
+      b.onclick = function(){ S.curGrid = idx; drawGridNav(); drawGrid(); save(); };
+      n.appendChild(b);
+    })(i);
+  }
+}
+function drawGrid(){
+  var idx = S.curGrid, x = CYCLE[idx][0], y = CYCLE[idx][1], k = gridKey(idx);
+  if(!S.grids[k]) S.grids[k] = [0,0,0,0,0,0].map(function(){ return [0,0,0,0,0,0]; });
+  var g = S.grids[k];
+  var host = $('gridhost'); host.innerHTML = '';
+
+  var cap = el('p','lede');
+  cap.innerHTML = 'Rows are <b style="color:'+DICE[x].color+'">'+DICE[x].name+'</b>. Columns are <b style="color:'+
+    DICE[y].color+'">'+DICE[y].name+'</b>. Click each cell until it shows the die that wins that roll.';
+  host.appendChild(cap);
+
+  var wrap = el('div','tablewrap');
+  var t = el('table','g6');
+  var head = el('thead'), hr = el('tr');
+  var corner = el('th','corner');
+  corner.innerHTML = DICE[y].name + ' →<br>' + DICE[x].name + ' ↓';
+  hr.appendChild(corner);
+  for(var j=0;j<6;j++){
+    var th = el('th', null, String(DICE[y].faces[j]));
+    th.style.background = DICE[y].color;
+    hr.appendChild(th);
+  }
+  head.appendChild(hr); t.appendChild(head);
+
+  var tb = el('tbody');
+  for(var i=0;i<6;i++){
+    (function(r){
+      var tr = el('tr');
+      var rh = el('th', null, String(DICE[x].faces[r]));
+      rh.style.background = DICE[x].color;
+      tr.appendChild(rh);
+      for(var c=0;c<6;c++){
+        (function(cc){
+          var td = el('td');
+          var b = el('button');
+          var v = g[r][cc];
+          if(v===1){ td.className = 'w1'; td.style.background = DICE[x].color; b.textContent = DICE[x].name.charAt(0); }
+          else if(v===2){ td.className = 'w2'; td.style.background = DICE[y].color; b.textContent = DICE[y].name.charAt(0); }
+          else { b.textContent = '·'; }
+          b.setAttribute('aria-label', DICE[x].name+' '+DICE[x].faces[r]+' against '+DICE[y].name+' '+DICE[y].faces[cc]+
+            (v===0 ? ', unmarked' : ', winner ' + (v===1?DICE[x].name:DICE[y].name)));
+          b.onclick = function(){
+            g[r][cc] = g[r][cc] === 1 ? 2 : 1;
+            S.gridsOK[k] = false;
+            drawGrid(); save();
+          };
+          td.appendChild(b);
+          tr.appendChild(td);
+        })(c);
+      }
+      tb.appendChild(tr);
+    })(i);
+  }
+  t.appendChild(tb);
+  wrap.appendChild(t);
+  host.appendChild(wrap);
+
+  var bb = $('gridbtns'); bb.innerHTML = '';
+  var chk = el('button','btn','Check this grid');
+  chk.onclick = function(){ checkGrid(idx); };
+  bb.appendChild(chk);
+  var clr = el('button','btn quiet','Clear');
+  clr.onclick = function(){
+    S.grids[k] = [0,0,0,0,0,0].map(function(){ return [0,0,0,0,0,0]; });
+    S.gridsOK[k] = false; drawGrid(); $('gridmsg').textContent=''; save();
+  };
+  bb.appendChild(clr);
+  if(allGridsDone()){
+    var nx = el('button','btn big','Put the four together');
+    nx.id = 'gridnextbtn';
+    nx.onclick = function(){ drawCycle(); drawTT(); goto(3); };
+    bb.appendChild(nx);
+  }
+  $('gridmsg').textContent = '';
+  $('blocknote').innerHTML = '';
+}
+function allGridsDone(){
+  for(var i=0;i<CYCLE.length;i++) if(!S.gridsOK[gridKey(i)]) return false;
+  return true;
+}
+function checkGrid(idx){
+  var x = CYCLE[idx][0], y = CYCLE[idx][1], k = gridKey(idx);
+  var truth = gridTruth(x,y), g = S.grids[k];
+  var right = 0, blank = 0, tds = $('gridhost').querySelectorAll('tbody td');
+  for(var i=0;i<6;i++){
+    for(var j=0;j<6;j++){
+      var td = tds[i*6+j];
+      td.classList.remove('bad');
+      if(g[i][j] === 0){ blank++; }
+      else if(g[i][j] === truth[i][j]){ right++; }
+      else { td.classList.add('bad'); }
+    }
+  }
+  var m = $('gridmsg');
+  if(blank){
+    m.textContent = blank + ' cell' + (blank===1?'':'s') + ' still unmarked.';
+    m.style.color = 'var(--ink-soft)';
+    S.gridsOK[k] = false;
+  } else if(right === 36){
+    var w = tally(x,y);
+    m.innerHTML = '<b style="color:var(--turf)">All 36 correct.</b> ' + DICE[x].name + ' takes ' + w.win +
+      ' of the 36 cells — that is ' + w.win + '/36 = ' + (w.win/36).toFixed(4) + ', or two rolls in every three.';
+    m.style.color = 'var(--ink)';
+    S.gridsOK[k] = true;
+    if(idx === 0) showBlockNote(x,y);
+  } else {
+    m.textContent = right + ' of 36 correct. The outlined cells have the wrong winner.';
+    m.style.color = 'var(--red)';
+    S.gridsOK[k] = false;
+  }
+  drawGridNav();
+  if(allGridsDone()){
+    var bb = $('gridbtns');
+    if(!$('gridnextbtn')){
+      var nx = el('button','btn big','Put the four together');
+      nx.id = 'gridnextbtn';
+      nx.onclick = function(){ drawCycle(); drawTT(); goto(3); };
+      bb.appendChild(nx);
+    }
+  }
+  save();
+}
+function showBlockNote(x,y){
+  var h = $('blocknote'); h.innerHTML = '';
+  var d = el('div','note');
+  var fx = distinct(DICE[x].faces), fy = distinct(DICE[y].faces);
+  d.innerHTML = '<p>Notice you did not really make 36 independent decisions. ' + DICE[x].name +
+    ' shows only ' + fx.length + ' distinct value' + (fx.length===1?'':'s') + ' and ' + DICE[y].name + ' shows ' +
+    fy.length + ', so the grid is built from ' + (fx.length*fy.length) +
+    ' blocks of identical cells. Grouping equally likely outcomes into blocks is often how a large sample space becomes a small calculation.</p>';
+  h.appendChild(d);
+}
+function distinct(a){
+  var o = [], i;
+  for(i=0;i<a.length;i++) if(o.indexOf(a[i]) < 0) o.push(a[i]);
+  return o;
+}
+
+/* ---------- step 4: cycle + table ---------- */
+function drawCycle(){
+  var host = $('cyclehost');
+  var P = {A:[210,58], B:[362,210], C:[210,362], D:[58,210]};
+  var s = '<svg viewBox="0 0 420 420" width="100%" style="max-width:420px" role="img" aria-label="Diagram of which die beats which">';
+  s += '<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">' +
+       '<path d="M0,0 L10,5 L0,10 z" fill="#14213D"/></marker>' +
+       '<marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">' +
+       '<path d="M0,0 L10,5 L0,10 z" fill="#8B90A0"/></marker></defs>';
+
+  /* the four cycle arrows, drawn as arcs that bulge away from the centre */
+  for(var i=0;i<CYCLE.length;i++){
+    var a = P[CYCLE[i][0]], b = P[CYCLE[i][1]];
+    var dx = b[0]-a[0], dy = b[1]-a[1], L = Math.sqrt(dx*dx+dy*dy);
+    var ux = dx/L, uy = dy/L;
+    var sx = a[0]+ux*46, sy = a[1]+uy*46, ex = b[0]-ux*54, ey = b[1]-uy*54;
+    var mx = (sx+ex)/2, my = (sy+ey)/2;
+    var ox = mx-210, oy = my-210, OL = Math.sqrt(ox*ox+oy*oy) || 1;
+    var cx = mx + ox/OL*34, cy = my + oy/OL*34;
+    s += '<path d="M'+sx+','+sy+' Q'+cx+','+cy+' '+ex+','+ey+'" fill="none" stroke="#14213D" stroke-width="2.5" marker-end="url(#ah)"/>';
+    s += '<text x="'+(mx + ox/OL*54)+'" y="'+(my + oy/OL*54)+'" font-family="ui-monospace,monospace" font-size="14" font-weight="700" fill="#14213D" text-anchor="middle">24/36</text>';
+  }
+  /* the two matchups that sit outside the cycle */
+  s += '<path d="M'+P.C[0]+','+(P.C[1]-46)+' L'+P.A[0]+','+(P.A[1]+50)+'" stroke="#8B90A0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ah2)"/>';
+  s += '<text x="222" y="206" font-family="ui-monospace,monospace" font-size="12.5" fill="#5C6478">20/36</text>';
+  s += '<line x1="'+(P.D[0]+46)+'" y1="'+P.D[1]+'" x2="'+(P.B[0]-46)+'" y2="'+P.B[1]+'" stroke="#8B90A0" stroke-width="2" stroke-dasharray="6 5"/>';
+  s += '<text x="210" y="232" font-family="ui-monospace,monospace" font-size="12.5" fill="#5C6478" text-anchor="middle">18–18</text>';
+
+  for(var k in P){
+    if(!P.hasOwnProperty(k)) continue;
+    s += '<circle cx="'+P[k][0]+'" cy="'+P[k][1]+'" r="40" fill="'+DICE[k].color+'" stroke="#14213D" stroke-width="2.5"/>';
+    s += '<text x="'+P[k][0]+'" y="'+(P[k][1]+5)+'" font-family="Georgia,serif" font-size="15" fill="#fff" text-anchor="middle">'+DICE[k].name+'</text>';
+    s += '<text x="'+P[k][0]+'" y="'+(P[k][1]+22)+'" font-family="ui-monospace,monospace" font-size="11.5" fill="#fff" opacity=".85" text-anchor="middle">'+
+         distinct(DICE[k].faces).join(' · ')+'</text>';
+  }
+  s += '</svg>';
+  host.innerHTML = s;
+}
+function drawTT(){
+  var t = $('tt'); t.innerHTML = '';
+  var head = el('thead'), hr = el('tr');
+  hr.appendChild(el('th',null,''));
+  for(var j=0;j<KEYS.length;j++){
+    var th = el('th',null,DICE[KEYS[j]].name);
+    th.style.background = DICE[KEYS[j]].color;
+    hr.appendChild(th);
+  }
+  head.appendChild(hr); t.appendChild(head);
+  var tb = el('tbody');
+  for(var i=0;i<KEYS.length;i++){
+    var tr = el('tr');
+    var rh = el('th','rowh',DICE[KEYS[i]].name);
+    rh.style.background = DICE[KEYS[i]].color;
+    tr.appendChild(rh);
+    for(var j2=0;j2<KEYS.length;j2++){
+      if(i===j2){ tr.appendChild(el('td','self','—')); continue; }
+      var w = tally(KEYS[i],KEYS[j2]).win;
+      var cls = w > 18 ? 'hi' : (w < 18 ? 'lo' : 'ev');
+      tr.appendChild(el('td',cls, w + '/36'));
+    }
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb);
+
+  var dn = $('diagnote'); dn.innerHTML = '';
+  var d = el('div','note');
+  d.innerHTML = '<p>The two dashed matchups are the ones that break the pattern. ' +
+    DICE.C.name + ' beats ' + DICE.A.name + ' 20 cells to 16 — a real edge, but a much thinner one than 24 to 12. ' +
+    DICE.B.name + ' and ' + DICE.D.name + ' split 18–18, a genuine coin flip. So the circle is not a tidy ranking hiding in disguise; the six matchups really do behave differently.</p>';
+  dn.appendChild(d);
+}
+
+/* ---------- step 5: pick second ---------- */
+function drawTurn(){
+  var host = $('turnhost'); host.innerHTML = '';
+  var b = $('btns2'); b.innerHTML = '';
+  if(!S.turnOrder){ S.turnOrder = shuffle(KEYS, rng); save(); }
+  var round = S.ph2.length;
+
+  if(round >= 4 && !live2){
+    var done = el('div','note good');
+    done.innerHTML = '<p>Four duels played from the second seat. Time to compare the two halves of the afternoon.</p>';
+    host.appendChild(done);
+    var nx = el('button','btn big','See how the two halves compare');
+    nx.onclick = function(){ drawFinal(); goto(5); };
+    b.appendChild(nx);
+    drawRecord(2);
+    return;
+  }
+
+  var opp = S.turnOrder[round];
+  var intro = el('p','lede');
+  intro.innerHTML = 'Duel ' + (round+1) + ' of 4. I am taking <b style="color:'+DICE[opp].color+'">' +
+    DICE[opp].name + '</b>. Choose the die that answers it.';
+  host.appendChild(intro);
+
+  if(!live2){
+    var picker = el('div','diepick');
+    for(var i=0;i<KEYS.length;i++){
+      (function(k){
+        var card = el('button','diecard');
+        var nm = el('span','nm', DICE[k].name); nm.style.color = DICE[k].color;
+        card.appendChild(nm);
+        card.appendChild(facesRow(k,26));
+        card.appendChild(el('span','sub', k===opp ? 'Taken by me' : 'Take this one'));
+        card.disabled = (k === opp);
+        card.onclick = function(){ pick2 = k; live2 = newDuel(opp, k); drawTurn(); };
+        picker.appendChild(card);
+      })(KEYS[i]);
+    }
+    host.appendChild(picker);
+    drawRecord(2);
+    return;
+  }
+
+  /* live2.mine is my die (opp), live2.theirs is the student's */
+  host.appendChild(duelBox(live2.theirs, live2.mine, live2.them, live2.me, live2));
+  var p = winProb(live2.theirs, live2.mine);
+  var pn = el('div','note' + (p > 0.5 ? ' good' : (p < 0.5 ? ' warn' : '')));
+  pn.innerHTML = '<p>Your ' + DICE[live2.theirs].name + ' against my ' + DICE[live2.mine].name + ' is ' +
+    tally(live2.theirs, live2.mine).win + '/36 = ' + (p*100).toFixed(1) + '% per roll.' +
+    (p > 0.5 ? ' That is the counter.' : (p === 0.5 ? ' That is a coin flip — there was a better answer.' : ' There was a better answer on the table.')) + '</p>';
+  host.appendChild(pn);
+
+  if(!live2.done){
+    var one = el('button','btn big','Roll once');
+    one.onclick = function(){ duelStep(live2, rng); drawTurn(); };
+    b.appendChild(one);
+    var all = el('button','btn ghost','Roll out the duel');
+    all.onclick = function(){ while(!live2.done) duelStep(live2, rng); drawTurn(); };
+    b.appendChild(all);
+  } else {
+    var won = live2.them > live2.me;
+    var nx2 = el('button','btn big', round >= 3 ? 'Finish' : 'Next duel');
+    nx2.onclick = function(){
+      S.ph2.push({mine:live2.theirs, theirs:live2.mine, my:live2.them, their:live2.me, won:won,
+                  p:winProb(live2.theirs, live2.mine)});
+      live2 = null; pick2 = null; save(); drawTurn();
+    };
+    b.appendChild(nx2);
+    var msg = el('span',null, won ? 'You took that one.' : 'I took that one.');
+    msg.style.fontSize='15px';
+    msg.style.color = won ? 'var(--turf)' : 'var(--red)';
+    b.appendChild(msg);
+  }
+  drawRecord(2);
+}
+
+/* ---------- step 6 ---------- */
+function drawFinal(){
+  var m = $('finalmetrics'); m.innerHTML = '';
+  var w1 = S.ph1.filter(function(r){return r.won;}).length;
+  var w2 = S.ph2.filter(function(r){return r.won;}).length;
+  var r1w = S.ph1.reduce(function(a,r){return a+r.my;},0), r1t = S.ph1.reduce(function(a,r){return a+r.my+r.their;},0);
+  var r2w = S.ph2.reduce(function(a,r){return a+r.my;},0), r2t = S.ph2.reduce(function(a,r){return a+r.my+r.their;},0);
+  m.appendChild(metric(w1 + ' / ' + S.ph1.length, 'Duels won choosing first'));
+  m.appendChild(metric(w2 + ' / ' + S.ph2.length, 'Duels won choosing second'));
+  m.appendChild(metric(r1t ? (r1w/r1t*100).toFixed(1)+'%' : '—', 'Rolls won choosing first'));
+  m.appendChild(metric(r2t ? (r2w/r2t*100).toFixed(1)+'%' : '—', 'Rolls won choosing second'));
+
+  var picked = S.ph2.filter(function(r){ return r.p > 0.5; }).length;
+  var n = $('finalnote'); n.innerHTML = '';
+  var d = el('div','note' + (picked === S.ph2.length ? ' good' : ''));
+  d.innerHTML = '<p>You found the 2/3 counter in <b>' + picked + ' of ' + S.ph2.length +
+    '</b> duels. Nothing about the dice changed between the two halves — the faces, the rolls, and the 36 cells were the same all afternoon. ' +
+    'The only thing that changed is that you had read the sample space, and that moved you from a 1-in-3 chance per roll to a 2-in-3 chance.</p>';
+  n.appendChild(d);
+}
+
+/* ---------- wiring ---------- */
+function startFresh(){
+  S.step=0; S.ph1=[]; S.ph2=[]; S.grids={}; S.gridsOK={}; S.curGrid=0;
+  S.turnOrder=null; S.hunch=''; S.q1=S.q2=S.q3=S.q4='';
+  live1=live2=pick1=pick2=null;
+  drawPick1(); drawDuel1(); drawGridNav(); drawGrid(); goto(0);
+}
+function boot(){
+  load(); drawCrest(); drawRail();
+  drawPick1(); drawDuel1();
+  drawGridNav(); drawGrid();
+  drawThink();
+  if(allGridsDone()){ drawCycle(); drawTT(); }
+  drawTurn();
+  if(S.ph1.length && S.ph2.length) drawFinal();
+
+  $('tothegrid').onclick = function(){ drawGridNav(); drawGrid(); goto(2); };
+  $('toturn').onclick = function(){ drawTurn(); goto(4); };
+  $('printit').onclick = function(){ window.print(); };
+  $('restart').onclick = function(){ if(confirm('Start the whole activity over?')) startFresh(); };
+  $('wipe').onclick = function(){
+    if(confirm('Erase everything saved in this browser?')){
+      try{ localStorage.removeItem(KEY); }catch(e){}
+      location.reload();
+    }
+  };
+  ['hunch','q1','q2','q3','q4'].forEach(function(q){
+    $(q).value = S[q] || '';
+    $(q).oninput = function(){ S[q] = this.value; save(); };
+  });
+
+  var step = S.step;
+  if(step >= 1 && S.ph1.length < MIN_DUELS) step = 0;
+  if(step >= 3 && !allGridsDone()) step = 2;
+  if(step >= 5 && S.ph2.length < 4) step = 4;
+  goto(step);
+}
+boot();
+})();
+</script>
+</body>
+</html>
