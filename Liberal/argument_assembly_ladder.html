@@ -1,0 +1,774 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Assembly Ladder — premises joined by “and”, the whole thing one conditional</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --ag:#7A5230;
+    --ag-bg:#F5EDE5;
+    --prem:#0B6E77;
+    --prem-bg:#DEF0F1;
+    --conc:#A0522D;
+    --conc-bg:#FAEDE4;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--ag)}
+  :focus-visible{outline:3px solid var(--ag); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--ag)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:18ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:20px 16px 18px; background:var(--card); overflow-x:auto}
+  .arg{max-width:620px; margin:0 auto}
+  .arg .row{display:flex; gap:14px; align-items:flex-start; padding:10px 14px; border-radius:8px; margin-bottom:6px}
+  .arg .row.p1,.arg .row.p2{background:var(--prem-bg)}
+  .arg .row.cc{background:var(--conc-bg)}
+  .arg .nm{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; min-width:92px; padding-top:3px; color:var(--prem)}
+  .arg .row.cc .nm{color:var(--conc)}
+  .arg .sen{font-family:var(--serif); font-size:clamp(15px,3vw,18px); line-height:1.4; flex:1}
+  .arg .sym{font-family:var(--serif); font-size:clamp(15px,3vw,19px); min-width:104px; text-align:right; color:var(--ag); font-weight:700}
+  .arg .sym i{font-style:italic}
+  .assembled{margin-top:14px; text-align:center; font-family:var(--serif); font-size:clamp(18px,3.8vw,26px); color:var(--ag)}
+  .assembled i{font-style:italic}
+  .keybox{max-width:620px; margin:0 auto 12px; font-family:var(--serif); font-size:15px; color:var(--muted); text-align:center}
+  .keybox b{color:var(--ink); font-weight:400}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--ag); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:68px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--ag); background:var(--ag-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--ag)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 12px; color:#31404F}
+  .stem .q i{font-style:italic}
+  .argbox{max-width:560px; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; overflow:hidden; background:var(--paper)}
+  .argbox div{padding:9px 16px; font-family:var(--serif); font-size:16.5px; display:flex; gap:12px}
+  .argbox div+div{border-top:1px solid var(--rule)}
+  .argbox .nm{font-family:var(--sans); font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); min-width:86px; padding-top:3px}
+  .argbox .cc{background:var(--conc-bg)}
+  .argbox .cc .nm{color:var(--conc)}
+  .key{max-width:44ch; margin:0 auto 14px; text-align:left; font-family:var(--serif); font-size:15px; background:var(--ag-bg); border-radius:8px; padding:10px 16px; line-height:1.6}
+  .key span{display:block}
+  .key i{font-style:italic}
+
+  .options{display:grid; grid-template-columns:1fr; gap:10px; padding:8px 20px 20px}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:620px){.options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt .v i{font-style:italic}
+  .opt.sym .v{font-family:var(--serif); font-size:20px}
+  .opt.sent .v{font-family:var(--serif); font-size:16.5px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .fbox i{font-style:italic}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>[P₁ ∧ P₂] → C</span> The Assembly Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 10 · turning an argument into a single symbolic statement</p>
+    <h1>Premises joined by “and”, the whole thing one conditional.</h1>
+    <p class="lede">An argument is not three separate statements to be handled one at a time. To test it you build <b>one</b> statement: all the premises joined by <b>∧</b>, that whole group as the antecedent, and the conclusion as the consequent. Everything the rest of this lesson does starts from that single formula.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>The arrow goes in once, at the very end.</b> Premises are things you are granting, so they pile up with “and” — never with “or”, and never with an arrow between them. Only the step from the granted premises to the conclusion gets an arrow, and it points from the whole group to the conclusion. Writing the conclusion first, or joining a premise directly to it, produces a formula that tests something the argument never claimed.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 find the parts and fix the letters. Rungs 3–5 translate each line on its own. Rung 6 assembles them. Rungs 7–10 handle a premise that already says “not”, catch bad assemblies, and stretch to three letters.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>No validity yet</h3><p>This ladder only translates. Whether the argument is any good is the next ladder's job, and it needs this formula first.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>One formula, then everything else</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The table needs a single statement</h3><p>A truth table has one final column. Three separate lines give you nothing to put in it.</p></div>
+      <div class="step"><span class="n">02</span><h3>The shape encodes the claim</h3><p>“If all of this is granted, then that follows” is exactly what an argument asserts, and the formula says it literally.</p></div>
+      <div class="step"><span class="n">03</span><h3>Standard forms become visible</h3><p>Once written symbolically, an argument can be matched against the named forms and judged on sight.</p></div>
+    </div>
+    <p class="closing">Every premise with an “and”. All of them in a bracket. One arrow to the conclusion.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Assembly Ladder · premises joined by ∧ · the group becomes the antecedent · the conclusion becomes the consequent · [P₁ ∧ P₂] → C</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function quo(s){return "\u201c"+s.replace(/\.$/,"")+"\u201d";}
+const AND="\u2227", OR="\u2228", ARR="\u2192";
+const SYM={and:AND, or:OR, imp:ARR};
+
+/* ================= expressions ================= */
+function isLit(e){return typeof e==="string";}
+function ren(e,top){
+  if(isLit(e)) return "<i>"+e+"</i>";
+  if(e[0]==="not"){
+    const x=e[1];
+    return isLit(x) ? ("~<i>"+x+"</i>") : ("~("+ren(x,true)+")");
+  }
+  const s=ren(e[1],false)+" "+SYM[e[0]]+" "+ren(e[2],false);
+  return top ? s : "("+s+")";
+}
+/* the worksheet's bracket style: [ ... ] around the premise group */
+function renB(e){
+  if(!isLit(e)&&e[0]==="imp"&&!isLit(e[1])&&(e[1][0]==="and"||e[1][0]==="or")){
+    return "["+ren(e[1],true)+"] "+ARR+" "+ren(e[2],false);
+  }
+  return ren(e,true);
+}
+function plain(e){return renB(e).replace(/<[^>]+>/g,"");}
+function ev(e,env){
+  if(isLit(e)) return env[e];
+  if(e[0]==="not") return !ev(e[1],env);
+  const a=ev(e[1],env), b=ev(e[2],env);
+  if(e[0]==="and") return a&&b;
+  if(e[0]==="or")  return a||b;
+  return (!a)||b;
+}
+function letters(e,set){
+  set=set||{};
+  if(isLit(e)){ set[e]=1; return set; }
+  if(e[0]==="not") return letters(e[1],set);
+  letters(e[1],set); letters(e[2],set); return set;
+}
+function nLetters(e){return Object.keys(letters(e)).length;}
+function rowsFor(n){
+  const out=[], L="pqr".slice(0,n).split("");
+  for(let i=0;i<(1<<n);i++){
+    const env={};
+    L.forEach(function(x,j){ env[x]=((i>>(n-1-j))&1)===0; });
+    out.push(env);
+  }
+  return out;
+}
+function colStr(e,n){
+  return rowsFor(n||Math.max(nLetters(e),2)).map(function(env){return ev(e,env)?"T":"F";}).join("");
+}
+
+/* ================= standard argument forms ================= */
+const FORMS={
+  direct:   {prem:[["imp","p","q"],"p"],                    con:"q"},
+  contra:   {prem:[["imp","p","q"],["not","q"]],            con:["not","p"]},
+  disj1:    {prem:[["or","p","q"],["not","p"]],             con:"q"},
+  disj2:    {prem:[["or","p","q"],["not","q"]],             con:"p"},
+  conv:     {prem:[["imp","p","q"],"q"],                    con:"p"},
+  inv:      {prem:[["imp","p","q"],["not","p"]],            con:["not","q"]},
+  misdisj1: {prem:[["or","p","q"],"p"],                     con:["not","q"]},
+  misdisj2: {prem:[["or","p","q"],"q"],                     con:["not","p"]},
+  trans:    {prem:[["imp","p","q"],["imp","q","r"]],        con:["imp","p","r"], three:true},
+  transC:   {prem:[["imp","p","q"],["imp","q","r"]],        con:["imp",["not","r"],["not","p"]], three:true},
+  mistrans: {prem:[["imp","p","q"],["imp","q","r"]],        con:["imp","r","p"], three:true}
+};
+const F2=["direct","contra","disj1","disj2","conv","inv","misdisj1","misdisj2"];
+const F3=["trans","transC","mistrans"];
+function assembled(f){return ["imp",["and",f.prem[0],f.prem[1]],f.con];}
+
+/* ================= clause banks ================= */
+const CTX2=[
+  {p:"I study for three hours", np:"I do not study for three hours",
+   q:"I fail the exam",         nq:"I do not fail the exam"},
+  {p:"it is cold outside",      np:"it is not cold outside",
+   q:"my car starts",           nq:"my car does not start"},
+  {p:"Cole plays in the game",  np:"Cole does not play in the game",
+   q:"the Astros win the game", nq:"the Astros do not win the game"},
+  {p:"I eat well",              np:"I do not eat well",
+   q:"I am overweight",         nq:"I am not overweight"},
+  {p:"it rains",                np:"it does not rain",
+   q:"I stay home",             nq:"I do not stay home"},
+  {p:"I eat",                   np:"I do not eat",
+   q:"I have a mouth",          nq:"I do not have a mouth"},
+  {p:"the alarm sounds",        np:"the alarm does not sound",
+   q:"the door is locked",      nq:"the door is not locked"},
+  {p:"you have a ticket",       np:"you do not have a ticket",
+   q:"you may enter",           nq:"you may not enter"}
+];
+/* contexts where a letter already stands for a negative statement */
+const NCTX=[
+  {p:"it is cold outside",      np:"it is not cold outside",
+   q:"my car will not start",   nq:"my car will start", neg:"q"},
+  {p:"the plant is not watered",np:"the plant is watered",
+   q:"the plant wilts",         nq:"the plant does not wilt", neg:"p"},
+  {p:"she is not on the list",  np:"she is on the list",
+   q:"she is turned away",      nq:"she is not turned away", neg:"p"},
+  {p:"I sleep badly",           np:"I do not sleep badly",
+   q:"I cannot concentrate",    nq:"I can concentrate", neg:"q"}
+];
+const CTX3=[
+  {p:"I eat",            np:"I do not eat",
+   q:"I have energy",    nq:"I do not have energy",
+   r:"I can run",        nr:"I cannot run"},
+  {p:"it rains",         np:"it does not rain",
+   q:"the field floods", nq:"the field does not flood",
+   r:"the game is cancelled", nr:"the game is not cancelled"},
+  {p:"you study",        np:"you do not study",
+   q:"you understand the material", nq:"you do not understand the material",
+   r:"you pass",         nr:"you do not pass"},
+  {p:"the alarm sounds", np:"the alarm does not sound",
+   q:"the guard wakes",  nq:"the guard does not wake",
+   r:"the police are called", nr:"the police are not called"}
+];
+
+/* ================= English rendering ================= */
+function engE(e,c){
+  if(isLit(e)) return c[e];
+  if(e[0]==="not") return c["n"+e[1]];
+  if(e[0]==="or")  return engE(e[1],c)+" or "+engE(e[2],c);
+  if(e[0]==="and") return engE(e[1],c)+" and "+engE(e[2],c);
+  return "if "+engE(e[1],c)+", then "+engE(e[2],c);
+}
+function premLine(e,c){return cap(engE(e,c))+".";}
+function concLine(e,c){return "Therefore, "+engE(e,c)+".";}
+function argBox(f,c,o){
+  o=o||{};
+  const rows=[
+    ["Premise 1", premLine(f.prem[0],c), o.sym?ren(f.prem[0],true):""],
+    ["Premise 2", premLine(f.prem[1],c), o.sym?ren(f.prem[1],true):""],
+    ["Conclusion", concLine(f.con,c),    o.sym?ren(f.con,true):""]
+  ];
+  return '<div class="argbox">'+rows.map(function(r,i){
+    return '<div'+(i===2?' class="cc"':'')+'><span class="nm">'+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+function keyBox(c,three){
+  return '<div class="key"><span><i>p</i>: '+cap(c.p)+'.</span><span><i>q</i>: '+cap(c.q)+'.</span>'
+    +(three?'<span><i>r</i>: '+cap(c.r)+'.</span>':'')+'</div>';
+}
+
+/* ================= assembly shapes ================= */
+function shapes(f){
+  const P1=f.prem[0], P2=f.prem[1], C=f.con;
+  return {
+    ok:    ["imp",["and",P1,P2],C],
+    andAll:["and",["and",P1,P2],C],
+    orPrem:["imp",["or",P1,P2],C],
+    rev:   ["imp",C,["and",P1,P2]],
+    chain: ["and",P1,["imp",P2,C]]
+  };
+}
+const SHAPEWHY={
+  andAll:"That joins the conclusion on with \u2227 as though it were a third premise. The conclusion has to sit on the far side of an arrow.",
+  orPrem:"The premises are joined with "+OR+". An argument grants both of them, so they need "+AND+".",
+  rev:"The arrow points the wrong way. An argument runs from the granted premises to the conclusion.",
+  chain:"Only the second premise has been linked to the conclusion. Both premises belong inside the bracket."
+};
+function shapeOptions(f,note){
+  const S=shapes(f), n=Math.max(nLetters(S.ok),2);
+  /* key on the truth column alone: a shape that happens to be equivalent to the
+     right answer is not a wrong answer, whatever it looks like on the page */
+  const seen={}; seen[colStr(S.ok,n)]=1;
+  const opts=[{label:renB(S.ok), correct:true, note:note}];
+  shuffle(["andAll","orPrem","rev","chain"]).forEach(function(k){
+    const key=colStr(S[k],n);
+    if(seen[key])return; seen[key]=1;
+    opts.push({label:renB(S[k]), note:SHAPEWHY[k]});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= per-line option builders ================= */
+function litOptions(target,pool,note,c){
+  const seen={}; seen[ren(target,true)]=1;
+  const opts=[{label:ren(target,true), correct:true, note:note}];
+  shuffle(pool).forEach(function(e){
+    const k=ren(e,true); if(seen[k])return; seen[k]=1;
+    opts.push({label:k, note:"That is "+quo(cap(engE(e,c)))+"."});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Premises and conclusion",
+ sub:"Two things granted, one thing claimed to follow.",
+ gen:function(){
+   const k=pick(F2), f=FORMS[k], c=pick(CTX2);
+   const forms=[
+     {q:"<b>Which line is the conclusion?</b>", ans:concLine(f.con,c),
+      bad:[[premLine(f.prem[0],c),"That is a premise \u2014 something the argument grants without arguing for it."],
+        [premLine(f.prem[1],c),"Also a premise."],
+        ["All three lines together","The conclusion is one line. The other two support it."]],
+      note:"\u201cTherefore\u201d marks the conclusion. Everything above it is granted."},
+     {q:"<b>How many premises does this argument have?</b>", ans:"2",
+      bad:[["1","Two lines come before the conclusion, and both are granted."],
+        ["3","The third line is the conclusion, not a premise."],
+        ["0","An argument with no premises would be asserting its conclusion out of nothing."]],
+      note:"Two granted statements, and one conclusion drawn from them."},
+     {q:"<b>What does a premise do in an argument?</b>",
+      ans:"It is granted without argument, and the conclusion is supposed to follow from it",
+      bad:[["It is what the argument is trying to prove","That is the conclusion."],
+        ["It must be a true statement","Premises are assumed true for the sake of the test. Whether they really are is a separate question."],
+        ["It must be a conditional","Premises can be any statement at all."]],
+      note:"Testing an argument means asking what follows if the premises are granted."}
+   ];
+   const fm=pick(forms);
+   const opts=[{label:fm.ans,correct:true,note:fm.note}]
+     .concat(fm.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:fm.q, arg:argBox(f,c), opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"Fixing the letters",
+ sub:"One letter per simple statement, and never for a negative or a compound.",
+ gen:function(){
+   const k=pick(F2), f=FORMS[k], c=pick(CTX2);
+   const which=pick(["p","q"]);
+   const opts=[
+     {label:cap(c[which])+".", correct:true,
+      note:"A letter stands for a simple statement, written positively. Negatives get a ~ on that same letter."},
+     {label:cap(c["n"+which])+".",
+      note:"That is the denial of <i>"+which+"</i>, which is written ~<i>"+which+"</i> rather than given its own letter."},
+     {label:cap(c[which==="p"?"q":"p"])+".",
+      note:"That is the other letter."},
+     {label:premLine(f.prem[0],c),
+      note:"That is a whole premise, built from both letters. Letters stand for the simple parts."}
+   ];
+   return {q:"In this argument, <b>what does <i>"+which+"</i> stand for?</b>",
+     arg:argBox(f,c), opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"Premise 1 in symbols",
+ sub:"The first granted statement, on its own.",
+ gen:function(){
+   const k=pick(F2), f=FORMS[k], c=pick(CTX2);
+   const P1=f.prem[0];
+   const pool=[["imp","p","q"],["imp","q","p"],["or","p","q"],["and","p","q"],
+     ["imp",["not","p"],["not","q"]],["or",["not","p"],"q"]];
+   return {q:"Write <b>premise 1</b> in symbols.", key:c, arg:argBox(f,c),
+     opts:shuffle(litOptions(P1,pool,
+       P1[0]==="imp"?"An if\u2013then between the two letters, in the order the sentence puts them."
+                    :"An \u201cor\u201d between the two letters.",c)),
+     sym:true, two:true};
+ }
+},
+{
+ title:"Premise 2 in symbols",
+ sub:"Usually a single letter, sometimes with a ~ on it.",
+ gen:function(){
+   const k=pick(F2), f=FORMS[k], c=pick(CTX2);
+   const P2=f.prem[1];
+   const pool=["p","q",["not","p"],["not","q"]];
+   return {q:"Write <b>premise 2</b> in symbols.", key:c, arg:argBox(f,c),
+     opts:shuffle(litOptions(P2,pool,
+       "The second premise names one of the two statements"+(P2[0]==="not"?", denied.":", asserted."),c)),
+     sym:true, two:true};
+ }
+},
+{
+ title:"The conclusion in symbols",
+ sub:"Drop the “therefore” and translate what is left.",
+ gen:function(){
+   const k=pick(F2), f=FORMS[k], c=pick(CTX2);
+   const C=f.con;
+   const pool=["p","q",["not","p"],["not","q"]];
+   return {q:"Write the <b>conclusion</b> in symbols.", key:c, arg:argBox(f,c),
+     opts:shuffle(litOptions(C,pool,
+       "\u201cTherefore\u201d is not part of the statement \u2014 it only marks which line is the conclusion.",c)),
+     sym:true, two:true};
+ }
+},
+{
+ title:"Assemble the argument",
+ sub:"Premises inside a bracket joined by ∧, then one arrow to the conclusion.",
+ gen:function(){
+   const k=pick(F2), f=FORMS[k], c=pick(CTX2);
+   return {q:"The three lines are translated. <b>How do they go together?</b>",
+     key:c, arg:argBox(f,c,{sym:true}),
+     opts:shuffle(shapeOptions(f,
+       "Both premises inside the bracket joined by "+AND+", and one arrow from that whole group to the conclusion.")),
+     sym:true};
+ }
+},
+{
+ title:"When a letter is already negative",
+ sub:"If q stands for a “not” sentence, then ~q takes the “not” back out.",
+ gen:function(){
+   const c=pick(NCTX);
+   const k=pick(F2), f=FORMS[k];
+   const askWhole=Math.random()<.45;
+   if(askWhole){
+     return {q:"Write the whole argument as <b>one symbolic statement</b>.",
+       key:c, arg:argBox(f,c),
+       opts:shuffle(shapeOptions(f,
+         "The letters are fixed by the key, whatever the sentences look like. <i>"+c.neg+"</i> already carries a \u201cnot,\u201d so ~<i>"+c.neg+"</i> is the version without it.")),
+       sym:true};
+   }
+   const which=pick([0,1,2]);
+   const target=which===0?f.prem[0]:(which===1?f.prem[1]:f.con);
+   const name=which===0?"premise 1":(which===1?"premise 2":"the conclusion");
+   const pool=["p","q",["not","p"],["not","q"],["imp","p","q"],["imp","q","p"],["or","p","q"]];
+   return {q:"Write <b>"+name+"</b> in symbols.", key:c, arg:argBox(f,c),
+     opts:shuffle(litOptions(target,pool,
+       "Read it against the key, not against the words. Here <i>"+c.neg+"</i> is "+quo(cap(c[c.neg]))
+       +", so a sentence saying that <i>is</i> <i>"+c.neg+"</i>, and ~<i>"+c.neg+"</i> is "+quo(cap(c["n"+c.neg]))+".",c)),
+     sym:true, two:true};
+ }
+},
+{
+ title:"Spot the wrong assembly",
+ sub:"Someone offers a formula. Say whether it works, and if not, what slipped.",
+ gen:function(){
+   const k=pick(F2), f=FORMS[k], c=pick(CTX2);
+   const S=shapes(f);
+   const kind=pick(["ok","andAll","orPrem","rev"]);
+   const L={
+     ok:"It is correct",
+     andAll:"The conclusion was joined on as if it were a premise",
+     orPrem:"The premises were joined with the wrong connective",
+     rev:"The arrow points the wrong way"
+   };
+   const notes={
+     ok:"Both premises inside the bracket with "+AND+", one arrow out to the conclusion.",
+     andAll:SHAPEWHY.andAll+" It should be "+plain(S.ok)+".",
+     orPrem:SHAPEWHY.orPrem+" It should be "+plain(S.ok)+".",
+     rev:SHAPEWHY.rev+" It should be "+plain(S.ok)+"."
+   };
+   const wrongNotes={
+     ok:"Compare it against the shape [premise "+AND+" premise] "+ARR+" conclusion \u2014 something does not match.",
+     andAll:"The conclusion is on the far side of an arrow here, which is right.",
+     orPrem:"The premises are joined with "+AND+" here, which is right.",
+     rev:"The arrow runs from the premises to the conclusion here, which is right."
+   };
+   const opts=["ok","andAll","orPrem","rev"].map(function(x){
+     return {label:L[x], correct:x===kind, note:x===kind?notes[x]:wrongNotes[x]};
+   });
+   return {q:"Is this the argument written correctly?", key:c, arg:argBox(f,c),
+     offered:renB(S[kind]), opts:shuffle(opts)};
+ }
+},
+{
+ title:"Three letters",
+ sub:"Two conditionals as premises, and a conditional as the conclusion.",
+ gen:function(){
+   const k=pick(F3), f=FORMS[k], c=pick(CTX3);
+   if(Math.random()<.45){
+     const target=pick([f.prem[0],f.prem[1],f.con]);
+     const pool=[["imp","p","q"],["imp","q","r"],["imp","p","r"],["imp","r","p"],
+       ["imp",["not","r"],["not","p"]],["imp",["not","p"],["not","r"]],["imp","q","p"]];
+     const name=(target===f.prem[0])?"premise 1":((target===f.prem[1])?"premise 2":"the conclusion");
+     return {q:"Write <b>"+name+"</b> in symbols.", key:c, three:true, arg:argBox(f,c),
+       opts:shuffle(litOptions(target,pool,"Take the two clauses in the order the sentence gives them.",c)),
+       sym:true, two:true};
+   }
+   return {q:"Write the whole argument as <b>one symbolic statement</b>.",
+     key:c, three:true, arg:argBox(f,c,{sym:true}),
+     opts:shuffle(shapeOptions(f,
+       "Three letters changes nothing about the shape: both premises in the bracket with "+AND+", one arrow to the conclusion.")),
+     sym:true};
+ }
+},
+{
+ title:"Any argument, all the way",
+ sub:"Two letters or three, any line, or the whole formula.",
+ gen:function(){
+   const three=Math.random()<.3;
+   const k=pick(three?F3:F2), f=FORMS[k];
+   const c=pick(three?CTX3:(Math.random()<.25?NCTX:CTX2));
+   if(Math.random()<.55){
+     return {q:"Write the whole argument as <b>one symbolic statement</b>.",
+       key:c, three:three, arg:argBox(f,c,{sym:true}),
+       opts:shuffle(shapeOptions(f,
+         "Premises inside the bracket joined by "+AND+", then one arrow to the conclusion.")),
+       sym:true};
+   }
+   const which=pick([0,1,2]);
+   const target=which===0?f.prem[0]:(which===1?f.prem[1]:f.con);
+   const name=which===0?"premise 1":(which===1?"premise 2":"the conclusion");
+   const pool=three
+     ? [["imp","p","q"],["imp","q","r"],["imp","p","r"],["imp","r","p"],["imp",["not","r"],["not","p"]],["imp","q","p"]]
+     : ["p","q",["not","p"],["not","q"],["imp","p","q"],["imp","q","p"],["or","p","q"]];
+   return {q:"Write <b>"+name+"</b> in symbols.", key:c, three:three, arg:argBox(f,c),
+     opts:shuffle(litOptions(target,pool,"Read it straight off the key, in the order the sentence gives.",c)),
+     sym:true, two:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HC=CTX2[0], HF=FORMS.disj1;
+const HC2=CTX2[2], HF2=FORMS.contra;
+const HERO=[
+  {f:HF, c:HC, step:0,
+   note:"Your worksheet's first argument. Two premises granted, and a conclusion drawn from them \u2014 the word \u201ctherefore\u201d is the only thing marking which is which."},
+  {f:HF, c:HC, step:1,
+   note:"Step one: fix the letters. Two simple statements, both written positively. \u201cI do not study for three hours\u201d does not get its own letter \u2014 it is ~<i>p</i>."},
+  {f:HF, c:HC, step:2,
+   note:"Step two: translate each line on its own. Premise 1 is a disjunction, premise 2 is a single negated letter, and the conclusion is a bare letter."},
+  {f:HF, c:HC, step:3,
+   note:"Step three: the premises go inside one bracket, joined by "+AND+". An argument grants both of them, so it is never "+OR+" and never an arrow."},
+  {f:HF, c:HC, step:4,
+   note:"Step four: one arrow, from the whole bracket to the conclusion. That single statement is what the next ladder builds a truth table for."},
+  {f:HF2, c:HC2, step:4,
+   note:"The Cole and Astros argument from your worksheet, assembled the same way. Different premises, different letters, identical shape."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel], f=h.f, c=h.c, S=shapes(f);
+  let html="";
+  if(h.step>=1) html+='<div class="keybox"><b><i>p</i>: '+cap(c.p)+'.</b> &nbsp;&nbsp; <b><i>q</i>: '+cap(c.q)+'.</b></div>';
+  const rows=[
+    ["Premise 1","p1",premLine(f.prem[0],c),ren(f.prem[0],true)],
+    ["Premise 2","p2",premLine(f.prem[1],c),ren(f.prem[1],true)],
+    ["Conclusion","cc",concLine(f.con,c),ren(f.con,true)]
+  ];
+  html+='<div class="arg">'+rows.map(function(r){
+    return '<div class="row '+r[1]+'"><span class="nm">'+r[0]+"</span>"
+      +'<span class="sen">'+r[2]+"</span>"
+      +(h.step>=2?'<span class="sym">'+r[3]+"</span>":"")+"</div>";
+  }).join("")+"</div>";
+  if(h.step===3) html+='<div class="assembled">['+ren(["and",f.prem[0],f.prem[1]],true)+"]</div>";
+  if(h.step>=4) html+='<div class="assembled">'+renB(S.ok)+"</div>";
+  document.getElementById("heroBody").innerHTML=html;
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  const lbl=["the parts","step 1: the letters","step 2: each line","step 3: join the premises","step 4: one arrow","a second argument"];
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+lbl[i]+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.key?keyBox(q.key,q.three):"")
+    +(q.arg||"")
+    +(q.offered?'<div class="assembled" style="margin:6px auto 14px">'+q.offered+"</div>":"");
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.two?" two":"");
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.sym?" sym":"")+(q.sent?" sent":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
