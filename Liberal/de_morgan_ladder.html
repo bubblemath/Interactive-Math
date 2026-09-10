@@ -1,0 +1,789 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Crossing Ladder — moving a ~ across a bracket flips the connective</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --dm:#0E6B5C;
+    --dm-bg:#E2F1EE;
+    --tcol:#1B7A4B;
+    --tcol-bg:#E7F4EC;
+    --fcol:#AF3244;
+    --fcol-bg:#FBEBEE;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--dm)}
+  :focus-visible{outline:3px solid var(--dm); outline-offset:2px; border-radius:3px}
+
+  table.tt{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:15px}
+  table.tt th, table.tt td{border:1px solid var(--rule); padding:4px 10px; text-align:center; min-width:32px}
+  table.tt th{background:var(--dm-bg); color:var(--dm); font-weight:700; white-space:nowrap; font-size:14.5px}
+  table.tt th.base{background:#EDF0F3; color:var(--muted)}
+  table.tt th.key{background:var(--dm); color:#fff}
+  table.tt th i, table.tt td i{font-style:italic}
+  table.tt td.t{background:var(--tcol-bg); color:var(--tcol); font-weight:700}
+  table.tt td.f{background:var(--fcol-bg); color:var(--fcol); font-weight:700}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--dm)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:20px 14px 18px; background:var(--card); overflow-x:auto; text-align:center}
+  .law{font-family:var(--serif); font-size:clamp(19px,4vw,27px); margin-bottom:16px}
+  .law i{font-style:italic}
+  .law .op{color:var(--dm); font-weight:700}
+  .pair{max-width:560px; margin:0 auto; text-align:left}
+  .pair .line{display:flex; gap:12px; align-items:flex-start; padding:11px 14px; border-radius:8px; margin-bottom:7px}
+  .pair .line.orig{background:#EDF0F3}
+  .pair .line.eqv{background:var(--dm-bg)}
+  .pair .line.bad{background:var(--wrong-bg)}
+  .pair .nm{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; min-width:100px; padding-top:3px; color:var(--muted)}
+  .pair .line.eqv .nm{color:var(--dm)}
+  .pair .line.bad .nm{color:var(--wrong)}
+  .pair .sen{font-family:var(--serif); font-size:clamp(15px,3vw,18px); line-height:1.42; flex:1}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--dm); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:68px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--dm); background:var(--dm-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--dm)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .stem .q i{font-style:italic}
+  .card{margin:0 auto 14px; max-width:46ch; background:var(--dm-bg); border-radius:10px; padding:14px 20px;
+        font-family:var(--serif); font-size:clamp(16px,3.3vw,20px); line-height:1.45; text-align:left}
+  .card .who{display:block; font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--dm); margin-bottom:5px}
+  .card i{font-style:italic}
+  .card.mid{text-align:center}
+  .card.two{margin-top:-4px; background:#EDF0F3}
+  .card.two .who{color:var(--muted)}
+  .board{margin:0 auto 14px; overflow-x:auto}
+
+  .options{display:grid; grid-template-columns:1fr; gap:10px; padding:8px 20px 20px}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:620px){.options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt .v i{font-style:italic}
+  .opt.sym .v{font-family:var(--serif); font-size:20px}
+  .opt.sent .v{font-family:var(--serif); font-size:16.5px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .fbox i{font-style:italic}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>~( ∧ ) → ∨</span> The Crossing Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 9 · De Morgan's laws in logic</p>
+    <h1>Crossing the bracket flips the connective.</h1>
+    <p class="lede">When a <b>~</b> moves inside a bracket, it lands on both parts — and the connective between them changes. An <b>and</b> becomes an <b>or</b>, and an <b>or</b> becomes an <b>and</b>. Distributing the negation while leaving the connective alone is the single commonest error, and it produces a statement that is not equivalent to anything you started with.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>You have already proved this once.</b> In the set lessons, (A ∩ B)′ = A′ ∪ B′ and (A ∪ B)′ = A′ ∩ B′ — the complement of an intersection is the union of the complements. Swap ∩ for ∧, ∪ for ∨, and the complement mark for ~, and you have the logic version word for word. Same law, second notation.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 prove both laws from the table. Rungs 3–4 apply them in symbols and in English. Rungs 5–7 handle parts that already carry a ~, name the flip-forgetting error, and line the laws up against their set-theory twins. Rungs 8–10 run the law backwards and combine it with the conditional rule.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>The unflipped version is always there</h3><p>Every rung offers the answer you get by negating both parts and leaving the connective alone.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>One rule, two notations, and a lot of use</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Negations get pushed inward</h3><p>Between this and the conditional rule, any negation can be driven all the way down onto the individual letters.</p></div>
+      <div class="step"><span class="n">02</span><h3>It shows up in code and in search</h3><p>NOT (A AND B) becomes NOT A OR NOT B in any query language, and getting it backwards changes what you find.</p></div>
+      <div class="step"><span class="n">03</span><h3>Everyday speech gets it wrong</h3><p>“It's not both cheap and fast” means one of them fails, not that both do. The flip is what the sentence actually says.</p></div>
+    </div>
+    <p class="closing">The ~ lands on both parts. The connective in between turns into the other one.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Crossing Ladder · ~(p ∧ q) ≡ ~p ∨ ~q · ~(p ∨ q) ≡ ~p ∧ ~q · the same law as (A ∩ B)′ = A′ ∪ B′</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function card(who,txt,cls){return '<div class="card'+(cls?" "+cls:"")+'"><span class="who">'+who+'</span>'+txt+'</div>';}
+function quo(s){return "\u201c"+s.replace(/\.$/,"")+"\u201d";}
+const AND="\u2227", OR="\u2228", ARR="\u2192", EQV="\u2261";
+const SYM={and:AND, or:OR, imp:ARR};
+const WORD={and:"and", or:"or"};
+
+/* ================= expressions ================= */
+function isLit(e){return typeof e==="string";}
+function ren(e,top){
+  if(isLit(e)) return "<i>"+e+"</i>";
+  if(e[0]==="not"){
+    const x=e[1];
+    return isLit(x) ? ("~<i>"+x+"</i>") : ("~("+ren(x,true)+")");
+  }
+  const s=ren(e[1],false)+" "+SYM[e[0]]+" "+ren(e[2],false);
+  return top ? s : "("+s+")";
+}
+function plain(e){return ren(e,true).replace(/<[^>]+>/g,"");}
+function ev(e,env){
+  if(isLit(e)) return env[e];
+  if(e[0]==="not") return !ev(e[1],env);
+  const a=ev(e[1],env), b=ev(e[2],env);
+  if(e[0]==="and") return a&&b;
+  if(e[0]==="or")  return a||b;
+  return (!a)||b;
+}
+function letters(e,set){
+  set=set||{};
+  if(isLit(e)){ set[e]=1; return set; }
+  if(e[0]==="not") return letters(e[1],set);
+  letters(e[1],set); letters(e[2],set); return set;
+}
+function nLetters(e){return Object.keys(letters(e)).length;}
+function rowsFor(n){
+  const out=[], L="pqr".slice(0,n).split("");
+  for(let i=0;i<(1<<n);i++){
+    const env={};
+    L.forEach(function(x,j){ env[x]=((i>>(n-1-j))&1)===0; });
+    out.push(env);
+  }
+  return out;
+}
+function colStr(e,n){
+  return rowsFor(n||nLetters(e)).map(function(env){return ev(e,env)?"T":"F";}).join("");
+}
+/* a ~ that cancels rather than stacking */
+function nt(x){ return (!isLit(x)&&x[0]==="not") ? x[1] : ["not",x]; }
+/* the negation of e, pushed all the way inward */
+function push(e){
+  if(isLit(e)) return ["not",e];
+  if(e[0]==="not") return e[1];
+  if(e[0]==="and") return ["or",  push(e[1]), push(e[2])];
+  if(e[0]==="or")  return ["and", push(e[1]), push(e[2])];
+  return ["and", e[1], push(e[2])];          /* ~(A -> B) is A and ~B */
+}
+function flipOp(o){return o==="and"?"or":"and";}
+
+/* ================= sentence bank ================= */
+const SENT=[
+  {p:"Houston is a city", np:"Houston is not a city",
+   q:"Texas is a city",   nq:"Texas is not a city"},
+  {p:"this course covers logic", np:"this course does not cover logic",
+   q:"this course covers basket weaving", nq:"this course does not cover basket weaving"},
+  {p:"she is happy", np:"she is not happy",
+   q:"she is wealthy", nq:"she is not wealthy"},
+  {p:"the door is locked", np:"the door is not locked",
+   q:"the alarm is set",   nq:"the alarm is not set"},
+  {p:"I passed the test", np:"I did not pass the test",
+   q:"I got an A",        nq:"I did not get an A"},
+  {p:"the report is finished", np:"the report is not finished",
+   q:"the report is accurate",  nq:"the report is not accurate"},
+  {p:"it is raining", np:"it is not raining",
+   q:"it is cold",    nq:"it is not cold"},
+  {p:"you have a ticket", np:"you do not have a ticket",
+   q:"you are on the list", nq:"you are not on the list"}
+];
+function cl(e,t){return {p:e.p,"~p":e.np,q:e.q,"~q":e.nq}[t];}
+/* "It is not true that p and q." */
+function engOuter(e,op){return "It is not true that "+e.p+" "+WORD[op]+" "+e.q+".";}
+/* "Not p or not q." */
+function engInner(e,op,a,b){return cap(cl(e,a))+" "+WORD[op]+" "+cl(e,b)+".";}
+
+/* ================= table ================= */
+function tt(headers,cells){
+  let s='<table class="tt"><thead><tr>';
+  headers.forEach(function(h){
+    const c=(h&&typeof h==="object")?(h.cls||""):"";
+    const v=(h&&typeof h==="object")?h.v:h;
+    s+='<th class="'+c+'">'+v+"</th>";
+  });
+  s+="</tr></thead><tbody>";
+  cells.forEach(function(row){
+    s+="<tr>";
+    row.forEach(function(c){ s+='<td class="'+(c==="T"?"t":"f")+'">'+c+"</td>"; });
+    s+="</tr>";
+  });
+  return s+"</tbody></table>";
+}
+function lawBoard(op){
+  const inner=[op,"p","q"];
+  const left=["not",inner];
+  const right=[flipOp(op),["not","p"],["not","q"]];
+  const cols=[inner,left,["not","p"],["not","q"],right];
+  const heads=[{v:"<i>p</i>",cls:"base"},{v:"<i>q</i>",cls:"base"}]
+    .concat(cols.map(function(c,i){
+      return {v:ren(c,true), cls:(i===1||i===4)?"key":""};
+    }));
+  const cells=rowsFor(2).map(function(env){
+    return [env.p?"T":"F", env.q?"T":"F"]
+      .concat(cols.map(function(c){return ev(c,env)?"T":"F";}));
+  });
+  return tt(heads,cells);
+}
+
+/* ================= symbolic options ================= */
+function symOptions(target,cands,note){
+  const n=Math.max(nLetters(target),2);
+  const seen={}; seen[colStr(target,n)+"|"+plain(target)]=1;
+  const opts=[{label:ren(target,true), correct:true, note:note}];
+  shuffle(cands).forEach(function(c){
+    const k=colStr(c.e,n)+"|"+plain(c.e);
+    if(seen[k])return; seen[k]=1;
+    opts.push({label:ren(c.e,true), note:c.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"The first law, by table",
+ sub:"~(p ∧ q) against ~p ∨ ~q, column by column.",
+ gen:function(){
+   const forms=[
+     {q:"Compare the two shaded columns. <b>What do they show?</b>",
+      ans:"~(<i>p</i> "+AND+" <i>q</i>) and ~<i>p</i> "+OR+" ~<i>q</i> are equivalent",
+      bad:[["They are negations of each other","Negations disagree in every row. These agree in every row."],
+        ["~(<i>p</i> "+AND+" <i>q</i>) is a tautology","Its column has an F in the first row."],
+        ["Nothing follows from two matching columns","Matching in every row is exactly what equivalence means."]],
+      note:"Both columns read "+colStr(["not",["and","p","q"]],2)+", so the two statements are true in exactly the same situations."},
+     {q:"<b>What is ~(<i>p</i> "+AND+" <i>q</i>) equivalent to?</b>",
+      ans:"~<i>p</i> "+OR+" ~<i>q</i>",
+      bad:[["~<i>p</i> "+AND+" ~<i>q</i>","That is the unflipped version, and its column reads "+colStr(["and",["not","p"],["not","q"]],2)+" rather than "+colStr(["not",["and","p","q"]],2)+"."],
+        ["<i>p</i> "+OR+" <i>q</i>","Neither part has been negated."],
+        ["~<i>p</i> "+AND+" <i>q</i>","Only one part has been negated, and the connective has not flipped."]],
+      note:"The ~ lands on both parts and the "+AND+" becomes an "+OR+"."},
+     {q:"In which row is ~(<i>p</i> "+AND+" <i>q</i>) <b>false</b>?",
+      ans:"Only where <i>p</i> and <i>q</i> are both true",
+      bad:[["Only where both are false","<i>p</i> "+AND+" <i>q</i> is false there, so its negation is true."],
+        ["In every row where either one is false","Those are exactly the rows where the negation is true."],
+        ["In no row at all","It is false in one row out of four."]],
+      note:"<i>p</i> "+AND+" <i>q</i> is true in that row alone, so its denial is false there alone \u2014 which matches ~<i>p</i> "+OR+" ~<i>q</i> needing at least one part to hold."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, board:lawBoard("and"), opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"The second law",
+ sub:"~(p ∨ q) against ~p ∧ ~q. Same idea, other direction.",
+ gen:function(){
+   const forms=[
+     {q:"<b>What is ~(<i>p</i> "+OR+" <i>q</i>) equivalent to?</b>",
+      ans:"~<i>p</i> "+AND+" ~<i>q</i>",
+      bad:[["~<i>p</i> "+OR+" ~<i>q</i>","That leaves the connective alone. Its column reads "+colStr(["or",["not","p"],["not","q"]],2)+" and the answer needs "+colStr(["not",["or","p","q"]],2)+"."],
+        ["<i>p</i> "+AND+" <i>q</i>","Neither part has been negated."],
+        ["~<i>p</i> "+OR+" <i>q</i>","Only one part negated, and no flip."]],
+      note:"Denying that either one holds means denying both of them."},
+     {q:"To deny that at least one of two things happened, <b>what must you claim?</b>",
+      ans:"That neither of them happened",
+      bad:[["That at least one of them did not happen","That is the denial of \u201cboth happened,\u201d not of \u201cat least one happened.\u201d"],
+        ["That exactly one of them happened","That is a third statement altogether."],
+        ["That both of them happened","That is the opposite direction entirely."]],
+      note:"Which is ~<i>p</i> "+AND+" ~<i>q</i> \u2014 the "+OR+" has become an "+AND+"."},
+     {q:"Compare the two shaded columns. <b>What do they show?</b>",
+      ans:"~(<i>p</i> "+OR+" <i>q</i>) and ~<i>p</i> "+AND+" ~<i>q</i> are equivalent",
+      bad:[["They are negations of each other","They agree in every row, which is equivalence rather than negation."],
+        ["~(<i>p</i> "+OR+" <i>q</i>) is a self-contradiction","It is true in the last row."],
+        ["The two columns agree in three rows out of four","They agree in all four."]],
+      note:"Both read "+colStr(["not",["or","p","q"]],2)+" down the four rows."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, board:lawBoard("or"), opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Apply it in symbols",
+ sub:"Move the ~ inside, negate both parts, flip the connective.",
+ gen:function(){
+   const op=pick(["and","or"]);
+   const a=pick(["p","~p"]), b=pick(["q","~q"]);
+   const A=(a==="p")?"p":["not","p"], B=(b==="q")?"q":["not","q"];
+   const src=["not",[op,A,B]];
+   const target=[flipOp(op), nt(A), nt(B)];
+   const cands=[
+     {e:[op, nt(A), nt(B)], w:"Both parts were negated, but the "+SYM[op]+" was left alone. Crossing the bracket has to flip it."},
+     {e:[flipOp(op), A, B], w:"The connective flipped but neither part was negated. The ~ has to land on both."},
+     {e:[flipOp(op), nt(A), B], w:"Only the first part was negated. The ~ distributes over both."},
+     {e:[flipOp(op), A, nt(B)], w:"Only the second part was negated."},
+     {e:[op, A, B], w:"That is the statement inside the bracket, with the ~ simply dropped."}
+   ];
+   return {q:"Which statement is <b>equivalent</b> to this one?",
+     card:card("The statement",'<span style="font-size:1.15em">'+ren(src,true)+"</span>","mid"),
+     opts:shuffle(symOptions(target,cands,
+       "The ~ lands on both parts and the "+SYM[op]+" becomes "+SYM[flipOp(op)]+".")),
+     sym:true, two:true};
+ }
+},
+{
+ title:"Apply it in English",
+ sub:"“It is not true that A and B” becomes “not A or not B.”",
+ gen:function(){
+   const e=pick(SENT), op=pick(["and","or"]);
+   const fl=flipOp(op);
+   const opts=[
+     {label:engInner(e,fl,"~p","~q"), correct:true,
+      note:"Both clauses are denied, and the "+WORD[op]+" becomes "+WORD[fl]+"."},
+     {label:engInner(e,op,"~p","~q"),
+      note:"Both clauses are denied, but the connective was left as "+WORD[op]+". Crossing the bracket flips it to "+WORD[fl]+"."},
+     {label:engInner(e,fl,"p","q"),
+      note:"The connective flipped, but neither clause was denied."},
+     {label:engInner(e,fl,"~p","q"),
+      note:"Only the first clause was denied. The denial applies to both."}
+   ];
+   return {q:"Which statement is <b>equivalent</b> to this one?",
+     card:card("The statement",engOuter(e,op)),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"When a part already has a ~",
+ sub:"The second ~ cancels the first. Two denials leave the clause as it was.",
+ gen:function(){
+   const op=pick(["and","or"]);
+   const which=pick(["first","second","both"]);
+   const A=(which==="second")?"p":["not","p"];
+   const B=(which==="first")?"q":["not","q"];
+   const src=["not",[op,A,B]];
+   const target=[flipOp(op), nt(A), nt(B)];
+   const cands=[
+     {e:[op, nt(A), nt(B)], w:"The cancelling was done correctly, but the connective was not flipped."},
+     /* a stacked ~(~p) is not a WRONG answer, only an unsimplified one — it is
+        logically equivalent to the correct option, so it cannot be a distractor */
+     {e:[flipOp(op), A, B], w:"The connective flipped but the parts were left untouched."},
+     {e:[flipOp(op), nt(A), B], w:"Only the first part was handled."},
+     {e:[flipOp(op), A, nt(B)], w:"Only the second part was handled."}
+   ];
+   return {q:"Which statement is <b>equivalent</b> to this one?",
+     card:card("The statement",'<span style="font-size:1.15em">'+ren(src,true)+"</span>","mid"),
+     opts:shuffle(symOptions(target,cands,
+       "Each part gets a ~, and where one was already there the two cancel. The "+SYM[op]+" still flips to "+SYM[flipOp(op)]+".")),
+     sym:true, two:true};
+ }
+},
+{
+ title:"Spot the missing flip",
+ sub:"Someone distributed the ~ and left the connective where it was.",
+ gen:function(){
+   const e=pick(SENT), op=pick(["and","or"]);
+   const fl=flipOp(op);
+   const kind=pick(["ok","noflip","onepart","noneg"]);
+   const prop={
+     ok:engInner(e,fl,"~p","~q"),
+     noflip:engInner(e,op,"~p","~q"),
+     onepart:engInner(e,fl,"~p","q"),
+     noneg:engInner(e,fl,"p","q")
+   }[kind];
+   const L={
+     ok:"It is correct",
+     noflip:"The connective was not flipped",
+     onepart:"The ~ was applied to only one clause",
+     noneg:"Neither clause was negated"
+   };
+   const notes={
+     ok:"Both clauses denied, and "+WORD[op]+" turned into "+WORD[fl]+".",
+     noflip:"Both clauses were denied correctly, but the "+WORD[op]+" should have become "+WORD[fl]+". The answer is "+quo(engInner(e,fl,"~p","~q"))+".",
+     onepart:"A ~ crossing a bracket lands on everything inside it, not just the first part. The answer is "+quo(engInner(e,fl,"~p","~q"))+".",
+     noneg:"The connective was flipped but the clauses were left as they stood. The answer is "+quo(engInner(e,fl,"~p","~q"))+"."
+   };
+   const wrongNotes={
+     ok:"Check it piece by piece against the law \u2014 something does not match.",
+     noflip:"The connective here is the one the law calls for.",
+     onepart:"Both clauses carry their ~ correctly here.",
+     noneg:"Both clauses have been negated here."
+   };
+   const opts=["ok","noflip","onepart","noneg"].map(function(k){
+     return {label:L[k], correct:k===kind, note:k===kind?notes[k]:wrongNotes[k]};
+   });
+   return {q:"Is this a correct use of De Morgan's law?",
+     card:card("The statement",engOuter(e,op))+card("Offered as equivalent",prop,"two"),
+     opts:shuffle(opts)};
+ }
+},
+{
+ title:"The set-theory twin",
+ sub:"You proved this once already, with regions instead of rows.",
+ gen:function(){
+   const forms=[
+     {q:"Which set law is the twin of <b>~(<i>p</i> "+AND+" <i>q</i>) "+EQV+" ~<i>p</i> "+OR+" ~<i>q</i></b>?",
+      ans:"(A \u2229 B)\u2032 = A\u2032 \u222a B\u2032",
+      bad:[["(A \u222a B)\u2032 = A\u2032 \u2229 B\u2032","That is the twin of the other law, the one starting from "+OR+"."],
+        ["(A \u2229 B)\u2032 = A\u2032 \u2229 B\u2032","No flip \u2014 and the set version flips just as the logic version does."],
+        ["A \u2229 B = B \u2229 A","That is commutativity, which has nothing to do with complements."]],
+      note:AND+" matches \u2229, "+OR+" matches \u222a, and ~ matches the complement mark."},
+     {q:"Which set law is the twin of <b>~(<i>p</i> "+OR+" <i>q</i>) "+EQV+" ~<i>p</i> "+AND+" ~<i>q</i></b>?",
+      ans:"(A \u222a B)\u2032 = A\u2032 \u2229 B\u2032",
+      bad:[["(A \u2229 B)\u2032 = A\u2032 \u222a B\u2032","That is the twin of the other law."],
+        ["(A \u222a B)\u2032 = A\u2032 \u222a B\u2032","The connective has to change on crossing, in both notations."],
+        ["A \u222a B = B \u222a A","Commutativity, not De Morgan."]],
+      note:"Union becomes intersection under a complement, exactly as "+OR+" becomes "+AND+" under a ~."},
+     {q:"<b>What plays the part of ~ in the set version?</b>",
+      ans:"The complement mark",
+      bad:[["The intersection sign","That plays the part of "+AND+"."],
+        ["The union sign","That plays the part of "+OR+"."],
+        ["The subset sign","Nothing in De Morgan's laws involves subsets."]],
+      note:"Complement is to a set what negation is to a statement: everything the original does not cover."},
+     {q:"In the set version the law was proved by checking every region of a Venn diagram. <b>What replaces a region here?</b>",
+      ans:"A row of the truth table",
+      bad:[["A column of the truth table","A column is one statement across all cases. A region is one case."],
+        ["A connective","Connectives are what the law is about, not what it is checked against."],
+        ["A letter","Letters are the ingredients, not the cases."]],
+      note:"Both proofs work the same way: check every possible case, and if the two sides agree in all of them the law holds."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Run it backwards",
+ sub:"Given the spread-out form, put the ~ back outside a bracket.",
+ gen:function(){
+   const op=pick(["and","or"]);
+   const src=[op,["not","p"],["not","q"]];
+   const target=["not",[flipOp(op),"p","q"]];
+   const cands=[
+     {e:["not",[op,"p","q"]], w:"The connective inside the bracket must be the other one. Pulling the ~ out flips it back."},
+     {e:["not",[flipOp(op),["not","p"],["not","q"]]], w:"The ~ marks were kept inside as well as pulled outside, which negates everything twice."},
+     {e:[flipOp(op),"p","q"], w:"The negations have simply been dropped rather than collected."},
+     {e:["not",[flipOp(op),["not","p"],"q"]], w:"One ~ was left behind inside the bracket."}
+   ];
+   return {q:"Which statement is <b>equivalent</b> to this one?",
+     card:card("The statement",'<span style="font-size:1.15em">'+ren(src,true)+"</span>","mid"),
+     opts:shuffle(symOptions(target,cands,
+       "Collecting the two ~ marks into one outside the bracket turns the "+SYM[op]+" back into "+SYM[flipOp(op)]+".")),
+     sym:true, two:true};
+ }
+},
+{
+ title:"Two rules at once",
+ sub:"Push the ~ all the way in, until every one of them sits on a single letter.",
+ gen:function(){
+   const op=pick(["and","or"]);
+   const side=pick([0,1]);
+   const cond=["imp","p","q"];
+   const other=pick(["r",["not","r"]]);
+   const inner=side===0?[op,cond,other]:[op,other,cond];
+   const src=["not",inner];
+   const target=push(inner);
+   const halfDone=side===0
+     ? [flipOp(op), ["not",cond], nt(other)]
+     : [flipOp(op), nt(other), ["not",cond]];
+   const noFlip=side===0
+     ? [op, push(cond), nt(other)]
+     : [op, nt(other), push(cond)];
+   const badCond=side===0
+     ? [flipOp(op), ["imp","p",["not","q"]], nt(other)]
+     : [flipOp(op), nt(other), ["imp","p",["not","q"]]];
+   const cands=[
+     {e:halfDone, w:"De Morgan was applied correctly and this does say the right thing \u2014 but it stops halfway. A ~ is still sitting in front of a bracket, and ~(<i>p</i> "+ARR+" <i>q</i>) becomes <i>p</i> "+AND+" ~<i>q</i>."},
+     {e:noFlip, w:"The conditional was negated correctly, but the outer connective was not flipped."},
+     {e:badCond, w:"The conditional was negated by putting a ~ on its second part, which leaves it a conditional. It has to become a conjunction."},
+     {e:[flipOp(op), cond, nt(other)], w:"The conditional was left entirely alone."}
+   ];
+   return {q:"Rewrite this so the negation is <b>pushed all the way in</b>, with every ~ sitting on a single letter.",
+     card:card("The statement",'<span style="font-size:1.15em">'+ren(src,true)+"</span>","mid"),
+     opts:shuffle(symOptions(target,cands,
+       "First De Morgan turns the outer "+SYM[op]+" into "+SYM[flipOp(op)]+" and puts a ~ on each side. Then ~(<i>p</i> "+ARR+" <i>q</i>) becomes <i>p</i> "+AND+" ~<i>q</i>, leaving no ~ in front of a bracket.")),
+     sym:true};
+ }
+},
+{
+ title:"Either law, either notation",
+ sub:"Symbols and sentences, forwards and backwards, all mixed.",
+ gen:function(){
+   const mode=pick(["sym","eng","back","two"]);
+   if(mode==="eng"){ return RUNGS[3].gen(); }
+   if(mode==="back"){ return RUNGS[7].gen(); }
+   if(mode==="two"){ return RUNGS[8].gen(); }
+   return RUNGS[2].gen();
+ }
+}
+];
+
+/* ================= hero ================= */
+function lawLine(op){
+  return "~(<i>p</i> <span class='op'>"+SYM[op]+"</span> <i>q</i>) &nbsp;"+EQV+"&nbsp; ~<i>p</i> <span class='op'>"+SYM[flipOp(op)]+"</span> ~<i>q</i>";
+}
+const HE=SENT[0], HE2=SENT[1];
+const HERO=[
+  {law:"and",
+   note:"Both shaded columns read "+colStr(["not",["and","p","q"]],2)+". The ~ has landed on each part separately and the "+AND+" has become an "+OR+" \u2014 which is what the matching columns prove."},
+  {law:"or",
+   note:"The second law, proved the same way. Both shaded columns read "+colStr(["not",["or","p","q"]],2)+", and this time the "+OR+" turns into an "+AND+"."},
+  {eng:HE, op:"and",
+   note:"Your worksheet's first example. Denying that both are cities does not mean denying both \u2014 it means at least one of them fails, which is why the \u201cand\u201d turns into an \u201cor.\u201d"},
+  {eng:HE2, op:"or",
+   note:"The second example. Here it runs the other way: denying that the course covers either subject means denying both of them, so the \u201cor\u201d turns into an \u201cand.\u201d"},
+  {trap:true, eng:HE, op:"and",
+   note:"The middle line is what most people write. It says both cities fail, which is a far stronger claim than the original made \u2014 the original only rules out their being cities together."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let html="";
+  if(h.law){
+    html='<div class="law">'+lawLine(h.law)+"</div>"+lawBoard(h.law);
+  }else if(h.trap){
+    const e=h.eng, op=h.op, fl=flipOp(op);
+    html='<div class="pair">'
+      +'<div class="line orig"><span class="nm">Statement</span><span class="sen">'+engOuter(e,op)+"</span></div>"
+      +'<div class="line bad"><span class="nm">Not this</span><span class="sen">'+engInner(e,op,"~p","~q")+"</span></div>"
+      +'<div class="line eqv"><span class="nm">Equivalent</span><span class="sen">'+engInner(e,fl,"~p","~q")+"</span></div></div>";
+  }else{
+    const e=h.eng, fl=flipOp(h.op);
+    html='<div class="law">'+lawLine(h.op)+"</div>"
+      +'<div class="pair">'
+      +'<div class="line orig"><span class="nm">Statement</span><span class="sen">'+engOuter(e,h.op)+"</span></div>"
+      +'<div class="line eqv"><span class="nm">Equivalent</span><span class="sen">'+engInner(e,fl,"~p","~q")+"</span></div></div>";
+  }
+  document.getElementById("heroBody").innerHTML=html;
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  const lbl=["~(p "+AND+" q)","~(p "+OR+" q)","Houston and Texas","logic or basket weaving","the usual mistake"];
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+lbl[i]+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.card||"")+(q.board?'<div class="board">'+q.board+'</div>':"");
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.two?" two":"");
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.sym?" sym":"")+(q.sent?" sent":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
