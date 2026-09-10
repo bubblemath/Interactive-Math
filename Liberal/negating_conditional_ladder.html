@@ -1,0 +1,761 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Broken Promise Ladder — the negation of a conditional is not a conditional</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --bp:#5C4C99;
+    --bp-bg:#ECEAF7;
+    --tcol:#1B7A4B;
+    --tcol-bg:#E7F4EC;
+    --fcol:#AF3244;
+    --fcol-bg:#FBEBEE;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--bp)}
+  :focus-visible{outline:3px solid var(--bp); outline-offset:2px; border-radius:3px}
+
+  table.tt{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:15.5px}
+  table.tt th, table.tt td{border:1px solid var(--rule); padding:4px 12px; text-align:center; min-width:36px}
+  table.tt th{background:var(--bp-bg); color:var(--bp); font-weight:700; white-space:nowrap; font-size:15px}
+  table.tt th.base{background:#EDF0F3; color:var(--muted)}
+  table.tt th i, table.tt td i{font-style:italic}
+  table.tt td.t{background:var(--tcol-bg); color:var(--tcol); font-weight:700}
+  table.tt td.f{background:var(--fcol-bg); color:var(--fcol); font-weight:700}
+  table.tt tr.hi td{outline:2px solid var(--bp); outline-offset:-2px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--bp)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:20px 16px 18px; background:var(--card); overflow-x:auto; text-align:center}
+  .pair{max-width:560px; margin:0 auto; text-align:left}
+  .pair .line{display:flex; gap:12px; align-items:flex-start; padding:11px 14px; border-radius:8px; margin-bottom:7px}
+  .pair .line.orig{background:#EDF0F3}
+  .pair .line.negn{background:var(--bp-bg)}
+  .pair .line.bad{background:var(--wrong-bg)}
+  .pair .nm{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; min-width:96px; padding-top:3px; color:var(--muted)}
+  .pair .line.negn .nm{color:var(--bp)}
+  .pair .line.bad .nm{color:var(--wrong)}
+  .pair .sen{font-family:var(--serif); font-size:clamp(15px,3vw,18.5px); line-height:1.42; flex:1}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--bp); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:68px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--bp); background:var(--bp-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--bp)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .stem .q i{font-style:italic}
+  .card{margin:0 auto 14px; max-width:46ch; background:var(--bp-bg); border-radius:10px; padding:14px 20px;
+        font-family:var(--serif); font-size:clamp(16px,3.3vw,20px); line-height:1.45; text-align:left}
+  .card .who{display:block; font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--bp); margin-bottom:5px}
+  .card i{font-style:italic}
+  .card.two{margin-top:-4px; background:#EDF0F3}
+  .card.two .who{color:var(--muted)}
+  .board{margin:0 auto 14px; overflow-x:auto}
+
+  .options{display:grid; grid-template-columns:1fr; gap:10px; padding:8px 20px 20px}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:600px){.options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt .v i{font-style:italic}
+  .opt.sym .v{font-family:var(--serif); font-size:21px}
+  .opt.sent .v{font-family:var(--serif); font-size:16.5px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .fbox i{font-style:italic}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>~(p → q) ≡ p ∧ ~q</span> The Broken Promise Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 9 · negating a conditional statement</p>
+    <h1>The negation of a conditional is not a conditional.</h1>
+    <p class="lede">A conditional makes a promise, and there is exactly one way to break it: the first part happens and the second one does not. So denying <b>p → q</b> means <i>asserting</i> that very situation — <b>p ∧ ~q</b>. The answer is an <b>and</b> statement, and no arrangement of “not” inside an if–then can ever do the job.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Here is why no conditional can be the answer.</b> Every conditional is automatically true whenever its first part is false. So “If you build it, they will not come” is true in the very rows where “If you build it, they will come” is also true — namely the ones where you don't build it. Two statements that are true together cannot be negations of each other. The denial has to <i>claim</i> that you built it, and only an <b>and</b> statement does that.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 prove the rule from the table. Rungs 3–4 apply it in symbols and in English. Rungs 5–6 settle why every conditional-shaped answer fails. Rungs 7–10 handle parts that already say “not,” negate the variations, and diagnose bad attempts.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>A conditional is always on offer</h3><p>Every rung includes at least one if–then answer, because that is the shape people reach for first.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Denying a promise means pointing at the breach</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>It is how claims get refuted</h3><p>To disprove “if you do this, that follows,” you produce the one case where the first happened and the second did not.</p></div>
+      <div class="step"><span class="n">02</span><h3>The shape changes</h3><p>A conditional negates into a conjunction. That surprises people, and it is worth expecting rather than rediscovering.</p></div>
+      <div class="step"><span class="n">03</span><h3>De Morgan is next</h3><p>Crossing a bracket flips a connective there too. This rule is the same idea one step earlier.</p></div>
+    </div>
+    <p class="closing">Assert the first part. Deny the second. Join them with “and.”</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Broken Promise Ladder · ~(p → q) ≡ p ∧ ~q · a conditional fails in one row only · the denial asserts that row</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function card(who,txt,two){return '<div class="card'+(two?" two":"")+'"><span class="who">'+who+'</span>'+txt+'</div>';}
+function quo(s){return "\u201c"+s.replace(/\.$/,"")+"\u201d";}
+const AND="\u2227", OR="\u2228", ARR="\u2192";
+
+/* ================= literals and symbolic forms ================= */
+function L(t){return t.charAt(0)==="~" ? "~<i>"+t.slice(1)+"</i>" : "<i>"+t+"</i>";}
+function flip(t){return t.charAt(0)==="~"?t.slice(1):"~"+t;}
+function condSym(a,b){return L(a)+" "+ARR+" "+L(b);}
+function conjSym(a,b){return L(a)+" "+AND+" "+L(b);}
+function disjSym(a,b){return L(a)+" "+OR+" "+L(b);}
+function plain(h){return h.replace(/<[^>]+>/g,"");}
+/* the rule: ~(A -> B) is A and not-B */
+function negOf(a,b){return [a,flip(b)];}
+
+/* ================= truth values ================= */
+const ROWS=[[true,true],[true,false],[false,true],[false,false]];
+function imp(a,b){return (!a)||b;}
+function colCond(){return ROWS.map(function(r){return imp(r[0],r[1]);});}
+function colNeg(){return ROWS.map(function(r){return r[0]&&!r[1];});}
+function TF(b){return b?"T":"F";}
+
+/* ================= sentence banks ================= */
+const SENT=[
+  {p:"you build it", np:"you do not build it", q:"they will come", nq:"they will not come"},
+  {p:"he is wearing headphones", np:"he is not wearing headphones", q:"he is listening to music", nq:"he is not listening to music"},
+  {p:"it floods in Houston", np:"it does not flood in Houston", q:"school will be cancelled", nq:"school will not be cancelled"},
+  {p:"you study", np:"you do not study", q:"you pass", nq:"you do not pass"},
+  {p:"it rains", np:"it does not rain", q:"the game is cancelled", nq:"the game is not cancelled"},
+  {p:"she is happy", np:"she is not happy", q:"she is wealthy", nq:"she is not wealthy"},
+  {p:"the alarm sounds", np:"the alarm does not sound", q:"the door is locked", nq:"the door is not locked"},
+  {p:"you live in Houston", np:"you do not live in Houston", q:"you live in Texas", nq:"you do not live in Texas"}
+];
+/* conditionals where one part already contains a "not" */
+const NSENT=[
+  {p:"the plant is not watered", np:"the plant is watered", q:"the plant wilts", nq:"the plant does not wilt"},
+  {p:"you do not study", np:"you study", q:"you fail the course", nq:"you do not fail the course"},
+  {p:"the door is locked", np:"the door is not locked", q:"the alarm does not sound", nq:"the alarm sounds"},
+  {p:"she is not on the list", np:"she is on the list", q:"she cannot enter", nq:"she can enter"},
+  {p:"the light is on", np:"the light is not on", q:"nobody is home", nq:"somebody is home"}
+];
+function flipC(e,c){
+  if(c===e.p) return e.np;
+  if(c===e.np) return e.p;
+  if(c===e.q) return e.nq;
+  if(c===e.nq) return e.q;
+  return c;
+}
+function engCond(e){return "If "+e.p+", then "+e.q+".";}
+function engNeg(e){return cap(e.p)+" and "+e.nq+".";}
+/* the wrong English shapes, each with the reason it fails */
+function engBad(e){
+  return [
+    {t:"If "+e.p+", then "+e.nq+".",
+     w:"That is still a conditional. It is true whenever "+quo(e.p)+" fails \u2014 exactly the situations where the original is true too, so the two are not negations."},
+    {t:"If "+e.np+", then "+e.nq+".",
+     w:"That is the inverse of the original, not its denial. It is also still a conditional."},
+    {t:"If "+e.nq+", then "+e.np+".",
+     w:"That is the contrapositive, which is equivalent to the original rather than opposite to it."},
+    {t:cap(e.np)+" and "+e.q+".",
+     w:"The negation belongs on the second part, not the first. This asserts the opposite of what is needed on both sides."},
+    {t:cap(e.p)+" or "+e.nq+".",
+     w:"Wrong connective. The denial has to assert both things at once, not offer a choice between them."},
+    {t:cap(e.np)+" and "+e.nq+".",
+     w:"The first part must be asserted, not denied. A conditional is broken by "+quo(e.p)+" actually happening."}
+  ];
+}
+
+/* ================= table ================= */
+function tt(headers,cells,o){
+  o=o||{}; const hi=o.hi||[];
+  let s='<table class="tt"><thead><tr>';
+  headers.forEach(function(h){
+    const c=(h&&typeof h==="object")?(h.cls||""):"";
+    const v=(h&&typeof h==="object")?h.v:h;
+    s+='<th class="'+c+'">'+v+"</th>";
+  });
+  s+="</tr></thead><tbody>";
+  cells.forEach(function(row,i){
+    s+='<tr'+(hi.indexOf(i)>=0?' class="hi"':"")+">";
+    row.forEach(function(c){ s+='<td class="'+(c==="T"?"t":"f")+'">'+c+"</td>"; });
+    s+="</tr>";
+  });
+  return s+"</tbody></table>";
+}
+function proofBoard(o){
+  const heads=[{v:"<i>p</i>",cls:"base"},{v:"<i>q</i>",cls:"base"},
+    {v:"<i>p</i> "+ARR+" <i>q</i>"},{v:"~<i>q</i>"},{v:"<i>p</i> "+AND+" ~<i>q</i>"}];
+  const cells=ROWS.map(function(r){
+    return [TF(r[0]),TF(r[1]),TF(imp(r[0],r[1])),TF(!r[1]),TF(r[0]&&!r[1])];
+  });
+  return tt(heads,cells,o);
+}
+
+/* ================= symbolic option builder ================= */
+function symOptions(a,b){
+  const ans=negOf(a,b);
+  const seen={}; seen[conjSym(ans[0],ans[1])]=1;
+  const opts=[{label:conjSym(ans[0],ans[1]), correct:true,
+    note:"Assert the first part exactly as it stands, deny the second, and join them with "+AND+"."}];
+  const cands=[
+    {l:condSym(a,flip(b)), w:"Still a conditional. Any conditional is true whenever its first part fails, so it agrees with the original in those rows instead of opposing it."},
+    {l:condSym(flip(a),flip(b)), w:"That is the inverse of the original, and it is still an if\u2013then."},
+    {l:condSym(flip(b),flip(a)), w:"That is the contrapositive, which is equivalent to the original rather than its denial."},
+    {l:conjSym(flip(a),b), w:"The ~ belongs on the second part. This one has it on the first."},
+    {l:conjSym(flip(a),flip(b)), w:"Both parts have been denied. Only the second should be."},
+    {l:disjSym(a,flip(b)), w:"Wrong connective \u2014 the denial asserts both parts together, not one or the other."},
+    {l:condSym(b,a), w:"That is the converse, which says something different again."}
+  ];
+  shuffle(cands).forEach(function(c){
+    if(seen[c.l])return; seen[c.l]=1;
+    opts.push({label:c.l, note:c.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Two opposite columns",
+ sub:"Build p → q and p ∧ ~q side by side and compare them row by row.",
+ gen:function(){
+   const c=colCond(), n=colNeg();
+   const forms=[
+     {q:"Compare the last two columns. <b>What is the relationship?</b>",
+      ans:"They are opposite in every row",
+      bad:[["They are the same in every row","Read them again \u2014 where one is T the other is F, in all four rows."],
+        ["They agree in three rows out of four","They agree in none of the four."],
+        ["They agree only in the first row","The first row has T against F, which is a disagreement like the rest."]],
+      note:"<i>p</i> "+ARR+" <i>q</i> reads "+c.map(TF).join("")+" and <i>p</i> "+AND+" ~<i>q</i> reads "+n.map(TF).join("")+". Every row disagrees."},
+     {q:"Two statements are opposite in every row. <b>What does that make them?</b>",
+      ans:"Negations of each other",
+      bad:[["Equivalent statements","Equivalent means they agree in every row, which is the reverse of what happens here."],
+        ["Both tautologies","Neither is. Each has some T's and some F's."],
+        ["Unrelated","Being opposite in every row is the strongest possible relationship between two statements."]],
+      note:"Exactly one of them holds in every situation, which is precisely what a statement and its negation do."},
+     {q:"<b>In which row is <i>p</i> "+ARR+" <i>q</i> false?</b>",
+      ans:"The row where <i>p</i> is T and <i>q</i> is F",
+      bad:[["The row where both are F","A conditional with a false first part is automatically true."],
+        ["The row where <i>p</i> is F and <i>q</i> is T","Also automatically true, for the same reason."],
+        ["The row where both are T","The promise is kept there."]],
+      note:"One row out of four, and it is the row where <i>p</i> "+AND+" ~<i>q</i> is the one that comes out true."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, board:proofBoard(), opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"The rule itself",
+ sub:"~(p → q) ≡ p ∧ ~q. One line, and everything else follows from it.",
+ gen:function(){
+   const forms=[
+     {q:"<b>What is ~(<i>p</i> "+ARR+" <i>q</i>) equivalent to?</b>",
+      ans:"<i>p</i> "+AND+" ~<i>q</i>",
+      bad:[["<i>p</i> "+ARR+" ~<i>q</i>","Still a conditional, and a conditional can never be the denial of another conditional over the same parts."],
+        ["~<i>p</i> "+AND+" <i>q</i>","The negation goes on the second part, not the first."],
+        ["~<i>p</i> "+ARR+" ~<i>q</i>","That is the inverse of the original."]],
+      note:"The denial asserts the first part and denies the second."},
+     {q:"The negation of a conditional is <b>what kind of statement</b>?",
+      ans:"A conjunction",
+      bad:[["Another conditional","No conditional can work: every conditional is true whenever its first part fails, so it never opposes the original in those rows."],
+        ["A disjunction","A disjunction would allow either part to carry it. The denial has to assert both things together."],
+        ["A biconditional","Nothing in the rule introduces a second direction."]],
+      note:"Denying a conditional means asserting the one situation that breaks it, and that takes an \u201cand.\u201d"},
+     {q:"In ~(<i>p</i> "+ARR+" <i>q</i>) \u2261 <i>p</i> "+AND+" ~<i>q</i>, <b>what happens to the first part?</b>",
+      ans:"It is asserted, exactly as it stood",
+      bad:[["It is negated","Only the second part gets a ~. The first is claimed to have happened."],
+        ["It is moved to the end","The order does not change."],
+        ["It disappears","Without it the statement would say nothing about when the failure occurs."]],
+      note:"Breaking a promise requires the condition to have been met, so the first part is asserted rather than denied."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   const isSym=f.q.indexOf("equivalent to")>0;
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4)), sym:isSym, two:isSym};
+ }
+},
+{
+ title:"Negate it in symbols",
+ sub:"Apply the rule to whatever two literals appear.",
+ gen:function(){
+   const a=pick(["p","~p"]), b=pick(["q","~q"]);
+   const opts=symOptions(a,b);
+   return {q:"What is the <b>negation</b> of this statement?",
+     card:card("The statement",'<span style="font-size:1.15em">'+condSym(a,b)+"</span>"),
+     opts:shuffle(opts), sym:true, two:true};
+ }
+},
+{
+ title:"Negate it in English",
+ sub:"Assert the first clause, deny the second, and join them with “and.”",
+ gen:function(){
+   const e=pick(SENT);
+   const opts=[{label:engNeg(e), correct:true,
+     note:"The first clause is asserted word for word, the second is denied, and \u201cand\u201d joins them."}]
+     .concat(shuffle(engBad(e)).slice(0,3).map(function(x){return {label:x.t,note:x.w};}));
+   return {q:"What is the <b>negation</b> of this statement?",
+     card:card("The statement",engCond(e)), opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"Why no if–then can work",
+ sub:"Every conditional is true whenever its first part fails. That kills all of them at once.",
+ gen:function(){
+   const e=pick(SENT);
+   const forms=[
+     {q:"Someone offers "+quo("If "+e.p+", then "+e.nq)+" as the negation. <b>What is wrong with it?</b>",
+      ans:"It is still a conditional, so it is true whenever "+quo(e.p)+" fails \u2014 and so is the original",
+      bad:[["Nothing \u2014 it is correct","Two statements that are true together cannot be negations. These both hold whenever the first clause fails."],
+        ["It negates the wrong clause","The clause is right; the shape is wrong. No if\u2013then can be the answer."],
+        ["It is too long","Length has nothing to do with it."]],
+      note:"A statement and its negation must disagree in every row. These two agree in half of them."},
+     {q:"<b>Why can no conditional be the negation of a conditional?</b>",
+      ans:"Because both would be automatically true whenever the first part fails",
+      bad:[["Because conditionals cannot be negated at all","They can. The negation just is not itself a conditional."],
+        ["Because the arrow only points one way","Direction is not the issue \u2014 even the converse and the contrapositive fail as negations."],
+        ["Because a negation must always be shorter","Length is irrelevant."]],
+      note:"That shared behaviour in the false-first-part rows is what rules out every if\u2013then answer at once."},
+     {q:"The negation must be <b>false</b> in the two rows where "+quo(e.p)+" fails. <b>Why?</b>",
+      ans:"Because the original is true in those rows, and a negation must disagree everywhere",
+      bad:[["Because those rows do not matter","Every row counts. A verdict is a claim about the whole column."],
+        ["Because the second clause is false there","The second clause can be either in those rows. The first clause is what settles it."],
+        ["Because a conjunction is false by default","Nothing is false by default. It is false there because the first clause fails."]],
+      note:"That requirement is exactly what "+quo(cap(e.p))+" being asserted delivers."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, card:card("The statement",engCond(e)),
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"The one row that breaks it",
+ sub:"A conditional fails in exactly one situation, and the negation names it.",
+ gen:function(){
+   const e=pick(SENT);
+   const forms=[
+     {q:"<b>What would show this statement to be false?</b>",
+      ans:cap(e.p)+", and "+e.nq+".",
+      bad:[[cap(e.np)+", and "+e.q+".","That is a case the statement never spoke about. A conditional says nothing when its first part fails."],
+        [cap(e.np)+", and "+e.nq+".","Again the first clause fails, so the statement is not challenged."],
+        [cap(e.p)+", and "+e.q+".","That is the promise being kept, which supports the statement rather than refuting it."]],
+      note:"One case refutes a conditional: the first clause holds and the second does not."},
+     {q:"Someone says "+quo(cap(e.np))+". <b>Does that refute the statement?</b>",
+      ans:"No \u2014 the statement makes no claim when its first clause fails",
+      bad:[["Yes \u2014 it shows the conditional does not apply","Not applying is not the same as being false. The conditional comes out true in that case."],
+        ["Yes \u2014 the second clause must then fail too","The statement says nothing about what happens then."],
+        ["It cannot be decided","It can: those rows make the conditional true."]],
+      note:"That is why the negation has to assert the first clause rather than deny it."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, card:card("The statement",engCond(e)),
+     board:proofBoard({hi:[1]}), opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"When a clause already says “not”",
+ sub:"The rule does not change. The first clause is copied, the second is flipped.",
+ gen:function(){
+   const e=pick(NSENT);
+   const opts=[{label:engNeg(e), correct:true,
+     note:"The first clause is copied across untouched, whatever it says, and only the second one flips."}]
+     .concat(shuffle(engBad(e)).slice(0,3).map(function(x){return {label:x.t,note:x.w};}));
+   return {q:"What is the <b>negation</b> of this statement?",
+     card:card("The statement",engCond(e)), opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"Negate a variation",
+ sub:"Converse, inverse and contrapositive are conditionals too, and the same rule applies.",
+ gen:function(){
+   const e=pick(SENT);
+   const V={
+     conv:  {name:"converse",       parts:[e.q,e.p]},
+     inv:   {name:"inverse",        parts:[e.np,e.nq]},
+     contra:{name:"contrapositive", parts:[e.nq,e.np]}
+   };
+   const k=pick(["conv","inv","contra"]);
+   const v=V[k];
+   const A=v.parts[0], B=v.parts[1], nA=flipC(e,A), nB=flipC(e,B);
+   const sent="If "+A+", then "+B+".";
+   const ans=cap(A)+" and "+nB+".";
+   const seen={}; seen[ans]=1;
+   const opts=[{label:ans, correct:true,
+     note:"The "+v.name+" is a conditional like any other, so its denial asserts its first clause and denies its second."
+       +(k==="contra"?" It is equivalent to the negation of the original \u2014 as it must be, since the contrapositive is equivalent to the original.":"")}];
+   const cands=[
+     {t:"If "+A+", then "+nB+".",  w:"Still a conditional, so it cannot be a negation of one."},
+     {t:"If "+nA+", then "+nB+".", w:"That is the inverse of the "+v.name+", and it is still an if\u2013then."},
+     {t:cap(nA)+" and "+B+".",     w:"The negation is on the wrong clause. The first clause of the "+v.name+" must be asserted."},
+     {t:cap(nA)+" and "+nB+".",    w:"Both clauses have been denied. Only the second one should be."},
+     {t:cap(A)+" and "+B+".",      w:"Neither clause has been denied, so this describes the promise being kept rather than broken."}
+   ];
+   /* the negation of the original is not usable here: for the converse and the
+      inverse it is a re-ordering of the nA-and-B candidate, and for the
+      contrapositive it is a re-ordering of the correct answer itself */
+   shuffle(cands).forEach(function(c){ if(seen[c.t])return; seen[c.t]=1; opts.push({label:c.t,note:c.w}); });
+   return {q:"What is the <b>negation</b> of the "+v.name+"?",
+     card:card("The original",engCond(e))+card("Its "+v.name,sent,true),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"Spot the wrong negation",
+ sub:"Someone offers a denial. Say whether it works, and if not, what went wrong.",
+ gen:function(){
+   const e=pick(Math.random()<.3?NSENT:SENT);
+   const kind=pick(["ok","cond","first","conn"]);
+   const prop={
+     ok:engNeg(e),
+     cond:"If "+e.p+", then "+e.nq+".",
+     first:cap(e.np)+" and "+e.q+".",
+     conn:cap(e.p)+" or "+e.nq+"."
+   }[kind];
+   const L4={
+     ok:"It is correct",
+     cond:"It is still a conditional, so it cannot be a negation",
+     first:"The negation is on the wrong clause",
+     conn:"The wrong connective was used"
+   };
+   const notes={
+     ok:"The first clause is asserted, the second denied, joined by \u201cand.\u201d",
+     cond:"Every conditional is true whenever its first clause fails, so it agrees with the original in those rows instead of opposing it. The answer is "+quo(engNeg(e))+".",
+     first:"The first clause must be asserted and the second denied. This does the opposite on both. The answer is "+quo(engNeg(e))+".",
+     conn:"\u201cOr\u201d lets either half carry the statement. A denial has to assert both at once. The answer is "+quo(engNeg(e))+"."
+   };
+   const wrongNotes={
+     ok:"Compare it with the rule: assert the first clause, deny the second, join with \u201cand.\u201d Something here does not match.",
+     cond:"This one is not an if\u2013then, so that is not the fault.",
+     first:"The clauses carry their negations correctly here.",
+     conn:"The connective here is the right one."
+   };
+   const opts=["ok","cond","first","conn"].map(function(k){
+     return {label:L4[k], correct:k===kind, note:k===kind?notes[k]:wrongNotes[k]};
+   });
+   return {q:"Is this a correct negation?",
+     card:card("The statement",engCond(e))+card("Offered as its negation",prop,true),
+     opts:shuffle(opts)};
+ }
+},
+{
+ title:"Anything, either way",
+ sub:"Symbols and sentences, plain clauses and negative ones, all mixed.",
+ gen:function(){
+   const mode=pick(["sym","eng","negeng","back"]);
+   if(mode==="sym"){
+     const a=pick(["p","~p"]), b=pick(["q","~q"]);
+     return {q:"What is the <b>negation</b> of this statement?",
+       card:card("The statement",'<span style="font-size:1.15em">'+condSym(a,b)+"</span>"),
+       opts:shuffle(symOptions(a,b)), sym:true, two:true};
+   }
+   if(mode==="back"){
+     const a=pick(["p","~p"]), b=pick(["q","~q"]);
+     const n=negOf(a,b);
+     const seen={}; seen[condSym(a,b)]=1;
+     const opts=[{label:condSym(a,b), correct:true,
+       note:"Reading the rule backwards: a conjunction "+plain(conjSym(n[0],n[1]))+" is the denial of the conditional whose first part is "+plain(L(a))+" and whose second is "+plain(L(b))+"."}];
+     [{l:condSym(b,a),w:"That is the converse of the right answer."},
+      {l:condSym(flip(a),b),w:"The first part has been negated, and it should be copied across unchanged."},
+      {l:condSym(a,flip(b)),w:"The second part is already flipped in the conjunction; flipping it again undoes the rule."},
+      {l:condSym(flip(b),flip(a)),w:"That is the contrapositive of the right answer."}
+     ].forEach(function(c){ if(seen[c.l])return; seen[c.l]=1; opts.push({label:c.l,note:c.w}); });
+     return {q:"This conjunction is the negation of a conditional. <b>Which conditional?</b>",
+       card:card("The negation",'<span style="font-size:1.15em">'+conjSym(n[0],n[1])+"</span>"),
+       opts:shuffle(distinctOpts(opts).slice(0,4)), sym:true, two:true};
+   }
+   const e=pick(mode==="negeng"?NSENT:SENT);
+   const opts=[{label:engNeg(e), correct:true,
+     note:"Assert the first clause, deny the second, join with \u201cand.\u201d"}]
+     .concat(shuffle(engBad(e)).slice(0,3).map(function(x){return {label:x.t,note:x.w};}));
+   return {q:"What is the <b>negation</b> of this statement?",
+     card:card("The statement",engCond(e)), opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {table:true, lbl:"the truth table",
+   note:"Your worksheet's table. The <i>p</i> "+ARR+" <i>q</i> column reads TFTT and the <i>p</i> "+AND+" ~<i>q</i> column reads FTFF \u2014 opposite in all four rows, which is exactly what makes one the negation of the other."},
+  {e:SENT[0], lbl:"if you build it",
+   note:"The first clause comes across untouched and the second is denied. Nothing about the sentence stays conditional \u2014 the \u201cif\u201d is gone entirely."},
+  {e:SENT[1], lbl:"headphones and music",
+   note:"Same shape again. To deny that headphones mean music, you point at the person wearing them and not listening."},
+  {e:SENT[2], lbl:"flooding and school",
+   note:"And once more. The denial is a claim that both things happened together: the flood came and school stayed open."},
+  {bad:true, e:SENT[0], lbl:"three tempting wrong answers",
+   note:"All three keep the if\u2013then shape or move the \u201cnot\u201d to the wrong clause. The first is the one almost everybody writes, and it fails because it is true on every day you do not build anything \u2014 just like the original."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  if(h.table){
+    document.getElementById("heroBody").innerHTML=proofBoard({hi:[1]});
+  }else if(h.bad){
+    const e=h.e, bads=engBad(e);
+    document.getElementById("heroBody").innerHTML='<div class="pair">'
+      +'<div class="line orig"><span class="nm">Statement</span><span class="sen">'+engCond(e)+"</span></div>"
+      +[bads[0],bads[1],bads[3]].map(function(b){
+        return '<div class="line bad"><span class="nm">Not this</span><span class="sen">'+b.t+"</span></div>";
+      }).join("")
+      +'<div class="line negn"><span class="nm">The negation</span><span class="sen">'+engNeg(e)+"</span></div></div>";
+  }else{
+    const e=h.e;
+    document.getElementById("heroBody").innerHTML='<div class="pair">'
+      +'<div class="line orig"><span class="nm">Statement</span><span class="sen">'+engCond(e)+"</span></div>"
+      +'<div class="line negn"><span class="nm">Its negation</span><span class="sen">'+engNeg(e)+"</span></div></div>";
+  }
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.card||"")+(q.board?'<div class="board">'+q.board+'</div>':"");
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.two?" two":"");
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.sym?" sym":"")+(q.sent?" sent":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is \u201c'+right.label+'\u201d. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
