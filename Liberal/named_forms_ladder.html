@@ -1,0 +1,790 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Named Forms Ladder — recognise the shape and skip the table</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --nf:#7A3E6B;
+    --nf-bg:#F4EAF2;
+    --ok:#1B7A4B;
+    --ok-bg:#E7F4EC;
+    --no:#AF3244;
+    --no-bg:#FBEBEE;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--nf)}
+  :focus-visible{outline:3px solid var(--nf); outline-offset:2px; border-radius:3px}
+
+  .stack{display:inline-block; font-family:var(--serif); font-size:19px; line-height:1.5; text-align:left; min-width:118px}
+  .stack .ln{padding:1px 10px}
+  .stack .ln i{font-style:italic}
+  .stack .ln.diff{background:var(--nf-bg); border-radius:4px; font-weight:700; color:var(--nf)}
+  .stack .ln.con{border-top:1.5px solid var(--ink); margin-top:4px; padding-top:4px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--nf)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:20px 16px 18px; background:var(--card); overflow-x:auto}
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:680px; margin:0 auto}
+  @media (max-width:620px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:14px 16px; text-align:center}
+  .pane.good{background:var(--ok-bg)}
+  .pane.bad{background:var(--no-bg)}
+  .pane .ttl{font-size:12.5px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:10px}
+  .pane.good .ttl{color:var(--ok)} .pane.bad .ttl{color:var(--no)}
+  .pane .eg{font-family:var(--serif); font-size:14.5px; line-height:1.45; margin-top:12px; text-align:left; color:#3B4956}
+  .octo{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; max-width:760px; margin:0 auto}
+  @media (max-width:760px){.octo{grid-template-columns:repeat(2,1fr)}}
+  .octo .pane{padding:11px 8px}
+  .octo .pane .ttl{font-size:11px; min-height:26px}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--nf); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:70px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--nf); background:var(--nf-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--nf)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 12px; color:#31404F}
+  .stem .q i{font-style:italic}
+  .stembox{display:inline-block; border:1px solid var(--rule); border-radius:10px; background:var(--paper); padding:14px 22px; margin:0 auto 14px}
+  .argbox{max-width:540px; margin:0 auto 12px; text-align:left; border:1px solid var(--rule); border-radius:9px; overflow:hidden; background:var(--paper)}
+  .argbox div{padding:8px 15px; font-family:var(--serif); font-size:16px; display:flex; gap:12px}
+  .argbox div+div{border-top:1px solid var(--rule)}
+  .argbox .nm{font-family:var(--sans); font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); min-width:84px; padding-top:3px}
+  .argbox .cc{background:var(--nf-bg)}
+  .argbox .cc .nm{color:var(--nf)}
+
+  .options{display:grid; grid-template-columns:1fr; gap:10px; padding:8px 20px 20px}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:640px){.options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt .v i{font-style:italic}
+  .opt.stk{justify-content:flex-start; align-items:flex-start}
+  .opt.sent .v{font-family:var(--serif); font-size:16.5px}
+  .opt.sym .v{font-family:var(--serif); font-size:19px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .fbox i{font-style:italic}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>∴</span> The Named Forms Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 10 · the four valid forms and the four fallacies</p>
+    <h1>Recognise the shape and skip the table.</h1>
+    <p class="lede">Almost every argument in this course is one of eight standard shapes, and each valid one has a fallacy sitting right beside it that differs by a single line. Once you can tell the pairs apart on sight, you no longer need to build anything — the name carries the verdict.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Each fallacy is its valid partner with one line changed.</b> Direct reasoning affirms the <i>first</i> part of the conditional; the fallacy of the converse affirms the second. Contrapositive reasoning denies the <i>second</i>; the fallacy of the inverse denies the first. Disjunctive reasoning <i>denies</i> one side; its misuse affirms one. In every pair the two arguments look almost identical on the page, which is exactly why the wrong one is persuasive.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rung 1 names all eight. Rungs 2–5 take the pairs one at a time, valid against fallacy. Rung 6 asks which second premise would rescue an argument. Rung 7 explains why “or” lets its misuse through. Rungs 8–10 judge on sight, in symbols and in English.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>The partner is always offered</h3><p>Whichever form is asked about, its lookalike appears among the options, because that is the one it gets confused with.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Eight shapes, and you are done</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>No table required</h3><p>Your worksheet says it outright: identify the standard form and the verdict follows without building anything.</p></div>
+      <div class="step"><span class="n">02</span><h3>The fallacies have names for a reason</h3><p>They are common enough in ordinary argument to be worth recognising the moment someone uses one on you.</p></div>
+      <div class="step"><span class="n">03</span><h3>The table is still the backstop</h3><p>Anything that does not match a named shape can always be settled the long way.</p></div>
+    </div>
+    <p class="closing">Affirm the first part or deny the second, and you are safe. The other two ways round are the fallacies.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Named Forms Ladder · direct · contrapositive · disjunctive · transitive — and the four fallacies that shadow them</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function quo(s){return "\u201c"+s.replace(/\.$/,"")+"\u201d";}
+const AND="\u2227", OR="\u2228", ARR="\u2192", THF="\u2234";
+const SYM={and:AND, or:OR, imp:ARR};
+
+/* ================= expressions ================= */
+function isLit(e){return typeof e==="string";}
+function ren(e,top){
+  if(isLit(e)) return "<i>"+e+"</i>";
+  if(e[0]==="not"){
+    const x=e[1];
+    return isLit(x) ? ("~<i>"+x+"</i>") : ("~("+ren(x,true)+")");
+  }
+  const s=ren(e[1],false)+" "+SYM[e[0]]+" "+ren(e[2],false);
+  return top ? s : "("+s+")";
+}
+function plain(e){return ren(e,true).replace(/<[^>]+>/g,"");}
+function ev(e,env){
+  if(isLit(e)) return env[e];
+  if(e[0]==="not") return !ev(e[1],env);
+  const a=ev(e[1],env), b=ev(e[2],env);
+  if(e[0]==="and") return a&&b;
+  if(e[0]==="or")  return a||b;
+  return (!a)||b;
+}
+function rowsFor(n){
+  const out=[], L="pqr".slice(0,n).split("");
+  for(let i=0;i<(1<<n);i++){
+    const env={};
+    L.forEach(function(x,j){ env[x]=((i>>(n-1-j))&1)===0; });
+    out.push(env);
+  }
+  return out;
+}
+
+/* ================= the eight standard forms ================= */
+const FORMS={
+  direct:   {name:"Direct Reasoning", valid:true,  partner:"conv", diff:1,
+             prem:[["imp","p","q"],"p"], con:"q",
+             gist:"the conditional, plus its first part affirmed"},
+  contra:   {name:"Contrapositive Reasoning", valid:true, partner:"inv", diff:1,
+             prem:[["imp","p","q"],["not","q"]], con:["not","p"],
+             gist:"the conditional, plus its second part denied"},
+  disj1:    {name:"Disjunctive Reasoning", valid:true, partner:"misdisj1", diff:1,
+             prem:[["or","p","q"],["not","p"]], con:"q",
+             gist:"an \u201cor\u201d, plus one side denied"},
+  disj2:    {name:"Disjunctive Reasoning", valid:true, partner:"misdisj2", diff:1,
+             prem:[["or","p","q"],["not","q"]], con:"p",
+             gist:"an \u201cor\u201d, plus one side denied"},
+  trans:    {name:"Transitive Reasoning", valid:true, partner:"mistrans", diff:2, three:true,
+             prem:[["imp","p","q"],["imp","q","r"]], con:["imp","p","r"],
+             gist:"two conditionals chained, concluded in the same direction"},
+  transC:   {name:"Transitive Reasoning", valid:true, partner:"mistransI", diff:2, three:true,
+             prem:[["imp","p","q"],["imp","q","r"]], con:["imp",["not","r"],["not","p"]],
+             gist:"two conditionals chained, concluded as a contrapositive"},
+  conv:     {name:"Fallacy of the Converse", valid:false, partner:"direct", diff:1,
+             prem:[["imp","p","q"],"q"], con:"p",
+             gist:"the conditional, plus its second part affirmed"},
+  inv:      {name:"Fallacy of the Inverse", valid:false, partner:"contra", diff:1,
+             prem:[["imp","p","q"],["not","p"]], con:["not","q"],
+             gist:"the conditional, plus its first part denied"},
+  misdisj1: {name:"Misuse of Disjunctive Reasoning", valid:false, partner:"disj1", diff:1,
+             prem:[["or","p","q"],"p"], con:["not","q"],
+             gist:"an \u201cor\u201d, plus one side affirmed"},
+  misdisj2: {name:"Misuse of Disjunctive Reasoning", valid:false, partner:"disj2", diff:1,
+             prem:[["or","p","q"],"q"], con:["not","p"],
+             gist:"an \u201cor\u201d, plus one side affirmed"},
+  mistrans: {name:"Misuse of Transitive Reasoning", valid:false, partner:"trans", diff:2, three:true,
+             prem:[["imp","p","q"],["imp","q","r"]], con:["imp","r","p"],
+             gist:"two conditionals chained, concluded backwards"},
+  mistransI:{name:"Misuse of Transitive Reasoning", valid:false, partner:"transC", diff:2, three:true,
+             prem:[["imp","p","q"],["imp","q","r"]], con:["imp",["not","p"],["not","r"]],
+             gist:"two conditionals chained, concluded as an inverse"}
+};
+const ALL=Object.keys(FORMS);
+const NAMES=["Direct Reasoning","Contrapositive Reasoning","Disjunctive Reasoning","Transitive Reasoning",
+  "Fallacy of the Converse","Fallacy of the Inverse","Misuse of Disjunctive Reasoning","Misuse of Transitive Reasoning"];
+const NAMEWHY={
+  "Direct Reasoning":"the conditional plus its first part affirmed, concluding the second",
+  "Contrapositive Reasoning":"the conditional plus its second part denied, concluding the first denied",
+  "Disjunctive Reasoning":"an \u201cor\u201d plus one side denied, concluding the other",
+  "Transitive Reasoning":"two conditionals chained, concluding from the first part to the last",
+  "Fallacy of the Converse":"the conditional plus its second part affirmed \u2014 which does not force the first",
+  "Fallacy of the Inverse":"the conditional plus its first part denied \u2014 which says nothing about the second",
+  "Misuse of Disjunctive Reasoning":"an \u201cor\u201d plus one side affirmed \u2014 which does not rule the other out",
+  "Misuse of Transitive Reasoning":"two conditionals chained, but concluded in a direction they do not support"
+};
+function nOf(f){return f.three?3:2;}
+function assembled(f){return ["imp",["and",f.prem[0],f.prem[1]],f.con];}
+function isValid(f){return rowsFor(nOf(f)).every(function(env){return ev(assembled(f),env);});}
+
+/* ================= stack renderer ================= */
+function stack(f,o){
+  o=o||{};
+  const lines=[
+    {t:ren(f.prem[0],true), d:o.diff===0},
+    {t:ren(f.prem[1],true), d:o.diff===1},
+    {t:THF+" "+ren(f.con,true), c:true, d:o.diff===2}
+  ];
+  return '<div class="stack">'+lines.map(function(l){
+    return '<div class="ln'+(l.c?" con":"")+(l.d?" diff":"")+'">'+l.t+"</div>";
+  }).join("")+"</div>";
+}
+
+/* ================= clause banks ================= */
+const CTX2=[
+  {p:"I study for three hours", np:"I do not study for three hours",
+   q:"I fail the exam",         nq:"I do not fail the exam"},
+  {p:"it is cold outside",      np:"it is not cold outside",
+   q:"my car starts",           nq:"my car does not start"},
+  {p:"Cole plays in the game",  np:"Cole does not play in the game",
+   q:"the Astros win the game", nq:"the Astros do not win the game"},
+  {p:"I eat well",              np:"I do not eat well",
+   q:"I am overweight",         nq:"I am not overweight"},
+  {p:"it rains",                np:"it does not rain",
+   q:"I stay home",             nq:"I do not stay home"},
+  {p:"I eat",                   np:"I do not eat",
+   q:"I have a mouth",          nq:"I do not have a mouth"},
+  {p:"the alarm sounds",        np:"the alarm does not sound",
+   q:"the door is locked",      nq:"the door is not locked"},
+  {p:"you have a ticket",       np:"you do not have a ticket",
+   q:"you may enter",           nq:"you may not enter"}
+];
+const CTX3=[
+  {p:"I eat",            np:"I do not eat",
+   q:"I have energy",    nq:"I do not have energy",
+   r:"I can run",        nr:"I cannot run"},
+  {p:"it rains",         np:"it does not rain",
+   q:"the field floods", nq:"the field does not flood",
+   r:"the game is cancelled", nr:"the game is not cancelled"},
+  {p:"you study",        np:"you do not study",
+   q:"you understand the material", nq:"you do not understand the material",
+   r:"you pass",         nr:"you do not pass"},
+  {p:"the alarm sounds", np:"the alarm does not sound",
+   q:"the guard wakes",  nq:"the guard does not wake",
+   r:"the police are called", nr:"the police are not called"}
+];
+const EATDRINK={p:"I eat", np:"I do not eat", q:"I drink", nq:"I do not drink"};
+function engE(e,c){
+  if(isLit(e)) return c[e];
+  if(e[0]==="not") return c["n"+e[1]];
+  if(e[0]==="or")  return engE(e[1],c)+" or "+engE(e[2],c);
+  if(e[0]==="and") return engE(e[1],c)+" and "+engE(e[2],c);
+  return "if "+engE(e[1],c)+", then "+engE(e[2],c);
+}
+function premLine(e,c){return cap(engE(e,c))+".";}
+function concLine(e,c){return "Therefore, "+engE(e,c)+".";}
+function argBox(f,c){
+  const rows=[["Premise 1",premLine(f.prem[0],c)],["Premise 2",premLine(f.prem[1],c)],["Conclusion",concLine(f.con,c)]];
+  return '<div class="argbox">'+rows.map(function(r,i){
+    return '<div'+(i===2?' class="cc"':'')+'><span class="nm">'+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+
+/* ================= name options ================= */
+function nameOptions(k,note){
+  const f=FORMS[k], want=f.name, part=FORMS[f.partner].name;
+  const seen={}; seen[want]=1;
+  const opts=[{label:want, correct:true, note:note||("That is "+NAMEWHY[want]+".")}];
+  if(!seen[part]){ seen[part]=1;
+    opts.push({label:part, note:"That is the lookalike \u2014 "+NAMEWHY[part]+". It differs from this one by a single line."}); }
+  shuffle(NAMES.slice(0)).forEach(function(n){
+    if(seen[n])return; seen[n]=1;
+    opts.push({label:n, note:"That is "+NAMEWHY[n]+"."});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Name the form",
+ sub:"Eight shapes in all. Four hold up and four do not.",
+ gen:function(){
+   const k=pick(ALL);
+   return {q:"What is this argument form called?", stem:stack(FORMS[k]),
+     opts:shuffle(nameOptions(k)), sent:true};
+ }
+},
+{
+ title:"Direct, or the converse fallacy",
+ sub:"Both start with p → q. The difference is which part the second premise affirms.",
+ gen:function(){
+   const k=pick(["direct","conv"]);
+   const forms=[
+     {t:"name"},{t:"verdict"},{t:"which"}
+   ];
+   const fm=pick(forms);
+   if(fm.t==="name"){
+     return {q:"What is this argument form called?", stem:stack(FORMS[k],{diff:1}),
+       opts:shuffle(nameOptions(k,k==="direct"
+         ? "The second premise affirms <i>p</i>, the first part of the conditional. That forces <i>q</i>."
+         : "The second premise affirms <i>q</i>, the second part. That does not force <i>p</i> \u2014 <i>q</i> could have come about some other way.")),
+       sent:true};
+   }
+   if(fm.t==="verdict"){
+     const v=FORMS[k].valid;
+     return {q:"Is this argument <b>valid</b>, or a <b>fallacy</b>?", stem:stack(FORMS[k],{diff:1}),
+       opts:shuffle([
+         {label:"Valid \u2014 it is direct reasoning", correct:v,
+          note:v?"Affirming the first part of a conditional forces the second.":"The second premise affirms <i>q</i>, not <i>p</i>, so this is the fallacy of the converse."},
+         {label:"A fallacy \u2014 it is the fallacy of the converse", correct:!v,
+          note:!v?"Affirming <i>q</i> does not force <i>p</i>. The conditional only runs one way.":"The second premise affirms <i>p</i>, which is direct reasoning and perfectly valid."},
+         {label:"Valid \u2014 it is contrapositive reasoning",
+          note:"Contrapositive reasoning denies the second part. Nothing is denied here."},
+         {label:"A fallacy \u2014 it is the fallacy of the inverse",
+          note:"The fallacy of the inverse denies the first part. Nothing is denied here."}
+       ])};
+   }
+   return {q:"Given <i>p</i> "+ARR+" <i>q</i> as a premise, <b>which second premise lets you conclude <i>q</i> validly</b>?",
+     opts:shuffle([
+       {label:"<i>p</i>", correct:true, note:"Affirming the first part forces the second. That is direct reasoning."},
+       {label:"<i>q</i>", note:"That affirms what you are trying to conclude, and concluding <i>p</i> from it is the fallacy of the converse."},
+       {label:"~<i>p</i>", note:"Denying the first part tells you nothing about the second \u2014 that is the fallacy of the inverse."},
+       {label:"~<i>q</i>", note:"Denying the second part lets you conclude ~<i>p</i>, not <i>q</i>."}
+     ]), sym:true, two:true};
+ }
+},
+{
+ title:"Contrapositive, or the inverse fallacy",
+ sub:"Both start with p → q and a denial. The difference is which part gets denied.",
+ gen:function(){
+   const k=pick(["contra","inv"]);
+   if(Math.random()<.5){
+     return {q:"What is this argument form called?", stem:stack(FORMS[k],{diff:1}),
+       opts:shuffle(nameOptions(k,k==="contra"
+         ? "The second premise denies <i>q</i>, the second part. If <i>q</i> had to follow from <i>p</i> and it did not happen, <i>p</i> cannot have happened either."
+         : "The second premise denies <i>p</i>, the first part. The conditional says nothing at all about what happens when <i>p</i> fails.")),
+       sent:true};
+   }
+   const v=FORMS[k].valid;
+   return {q:"Is this argument <b>valid</b>, or a <b>fallacy</b>?", stem:stack(FORMS[k],{diff:1}),
+     opts:shuffle([
+       {label:"Valid \u2014 it is contrapositive reasoning", correct:v,
+        note:v?"Denying the second part forces the first to be denied too.":"The second premise denies <i>p</i>, which is the fallacy of the inverse."},
+       {label:"A fallacy \u2014 it is the fallacy of the inverse", correct:!v,
+        note:!v?"Denying <i>p</i> leaves <i>q</i> completely open. The conditional only promises something when <i>p</i> holds.":"The second premise denies <i>q</i>, which is contrapositive reasoning and valid."},
+       {label:"Valid \u2014 it is direct reasoning",
+        note:"Direct reasoning affirms the first part. This premise denies something."},
+       {label:"A fallacy \u2014 it is the fallacy of the converse",
+        note:"The fallacy of the converse affirms the second part. This premise denies something."}
+     ])};
+ }
+},
+{
+ title:"Disjunctive reasoning, and its misuse",
+ sub:"An “or” premise. Denying one side works; affirming one side does not.",
+ gen:function(){
+   const k=pick(["disj1","disj2","misdisj1","misdisj2"]);
+   if(Math.random()<.5){
+     return {q:"What is this argument form called?", stem:stack(FORMS[k],{diff:1}),
+       opts:shuffle(nameOptions(k,FORMS[k].valid
+         ? "One side of the \u201cor\u201d is denied, so the other has to carry it. That is disjunctive reasoning."
+         : "One side of the \u201cor\u201d is affirmed, and the conclusion denies the other. Nothing in \u201cor\u201d rules out both being true.")),
+       sent:true};
+   }
+   const v=FORMS[k].valid;
+   return {q:"Is this argument <b>valid</b>, or a <b>fallacy</b>?", stem:stack(FORMS[k],{diff:1}),
+     opts:shuffle([
+       {label:"Valid \u2014 it is disjunctive reasoning", correct:v,
+        note:v?"At least one side must hold, and one has been ruled out, so the other stands.":"The second premise affirms a side rather than denying one, which is the misuse."},
+       {label:"A fallacy \u2014 it is a misuse of disjunctive reasoning", correct:!v,
+        note:!v?"\u201cOr\u201d means at least one, not exactly one. Both sides can hold at once, so affirming one rules out nothing.":"The second premise denies a side, which is disjunctive reasoning and valid."},
+       {label:"Valid \u2014 it is direct reasoning",
+        note:"Direct reasoning needs a conditional as its first premise. This one is an \u201cor\u201d."},
+       {label:"A fallacy \u2014 it is the fallacy of the converse",
+        note:"That fallacy also needs a conditional. This first premise is an \u201cor\u201d."}
+     ])};
+ }
+},
+{
+ title:"Transitive reasoning, and its misuse",
+ sub:"Two conditionals chained. The valid conclusions run one way only.",
+ gen:function(){
+   const k=pick(["trans","transC","mistrans","mistransI"]);
+   if(Math.random()<.5){
+     return {q:"What is this argument form called?", stem:stack(FORMS[k],{diff:2}),
+       opts:shuffle(nameOptions(k,FORMS[k].valid
+         ? "The chain runs <i>p</i> to <i>q</i> to <i>r</i>, and the conclusion follows it \u2014 either straight through, or as its contrapositive."
+         : "The premises chain <i>p</i> to <i>q</i> to <i>r</i>, but the conclusion runs the other way, which the chain never licenses.")),
+       sent:true};
+   }
+   return {q:"From <i>p</i> "+ARR+" <i>q</i> and <i>q</i> "+ARR+" <i>r</i>, <b>which conclusion is valid</b>?",
+     opts:shuffle([
+       {label:"~<i>r</i> "+ARR+" ~<i>p</i>", correct:true,
+        note:"The chain gives <i>p</i> "+ARR+" <i>r</i>, and this is its contrapositive, which is always equivalent to it."},
+       {label:"<i>r</i> "+ARR+" <i>p</i>",
+        note:"That is the converse of what the chain gives. Two conditionals pointing forward do not license running them backwards."},
+       {label:"~<i>p</i> "+ARR+" ~<i>r</i>",
+        note:"That is the inverse of what the chain gives, and equally unlicensed."},
+       {label:"<i>q</i> "+ARR+" <i>p</i>",
+        note:"That reverses the first premise on its own, which nothing here supports."}
+     ]), sym:true, two:true};
+ }
+},
+{
+ title:"Which second premise saves it",
+ sub:"The conditional is given. Choose the premise that makes the conclusion follow.",
+ gen:function(){
+   const want=pick(["q","~p"]);
+   if(want==="q"){
+     return {q:"Premise 1 is <i>p</i> "+ARR+" <i>q</i> and the conclusion is <i>q</i>. <b>Which second premise makes this valid?</b>",
+       opts:shuffle([
+         {label:"<i>p</i>", correct:true, note:"Direct reasoning: affirm the first part and the second follows."},
+         {label:"<i>q</i>", note:"That is the conclusion itself. An argument cannot grant what it is trying to show."},
+         {label:"~<i>p</i>", note:"Denying the first part leaves the second open \u2014 the fallacy of the inverse."},
+         {label:"~<i>q</i>", note:"That contradicts the conclusion outright."}
+       ]), sym:true, two:true};
+   }
+   return {q:"Premise 1 is <i>p</i> "+ARR+" <i>q</i> and the conclusion is ~<i>p</i>. <b>Which second premise makes this valid?</b>",
+     opts:shuffle([
+       {label:"~<i>q</i>", correct:true, note:"Contrapositive reasoning: deny the second part and the first must be denied too."},
+       {label:"<i>q</i>", note:"Affirming the second part gives the fallacy of the converse, and it points at <i>p</i> rather than ~<i>p</i>."},
+       {label:"<i>p</i>", note:"That contradicts the conclusion outright."},
+       {label:"~<i>p</i>", note:"That is the conclusion itself, which cannot also be a premise."}
+     ]), sym:true, two:true};
+ }
+},
+{
+ title:"Why “or” lets the misuse through",
+ sub:"Everything turns on “or” meaning at least one, not exactly one.",
+ gen:function(){
+   const c=EATDRINK;
+   const forms=[
+     {q:"<b>Why is this a fallacy?</b>", arg:true, f:"misdisj1",
+      ans:"Because \u201cor\u201d allows both to be true, so eating rules nothing out about drinking",
+      bad:[["Because the premises contradict each other","They do not. Eating is perfectly consistent with the \u201cor\u201d premise."],
+        ["Because the conclusion is false","It may well be true. The problem is that the premises do not force it."],
+        ["Because \u201cor\u201d needs a conditional to work with","\u201cOr\u201d works fine as a premise. It is the second premise that is wrong here."]],
+      note:"Disjunctive reasoning needs one side <i>denied</i>. Affirming one side leaves the other exactly where it was."},
+     {q:"What would have to change to make this argument valid?", arg:true, f:"misdisj1",
+      ans:"The second premise would have to <i>deny</i> one side instead of affirming it",
+      bad:[["The first premise would have to use \u201cand\u201d","With \u201cand\u201d both sides are already granted, and there is nothing left to conclude."],
+        ["The conclusion would have to be a conditional","The shape of the conclusion is not the problem."],
+        ["Nothing \u2014 it is already valid","There is a case where both hold, which makes both premises true and the conclusion false."]],
+      note:"Deny one side and the other has to carry the \u201cor\u201d. That is the valid form."},
+     {q:"In logic, <b>what does \u201c<i>p</i> or <i>q</i>\u201d claim?</b>",
+      ans:"At least one of them holds, and possibly both",
+      bad:[["Exactly one of them holds","That is the everyday reading, and it is not the logical one. It is also what makes the misuse look valid."],
+        ["Both of them hold","That would be \u201cand\u201d."],
+        ["Neither of them has to hold","Then the premise would be saying nothing at all."]],
+      note:"Because both can hold, affirming one side never rules the other out."}
+   ];
+   const fm=pick(forms);
+   const opts=[{label:fm.ans,correct:true,note:fm.note}]
+     .concat(fm.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:fm.q, arg:fm.arg?argBox(FORMS[fm.f],c):null,
+     opts:shuffle(distinctOpts(opts).slice(0,4)), sent:true};
+ }
+},
+{
+ title:"Valid or fallacy, on sight",
+ sub:"No table. Match the shape and read the verdict off the name.",
+ gen:function(){
+   const k=pick(ALL), f=FORMS[k];
+   return {q:"Is this argument <b>valid</b>, or a <b>fallacy</b>?", stem:stack(f),
+     opts:shuffle([
+       {label:"Valid", correct:f.valid,
+        note:f.valid?("This is "+f.name.toLowerCase()+" \u2014 "+NAMEWHY[f.name]+".")
+                    :("This is "+f.name.toLowerCase()+", which is not valid: "+NAMEWHY[f.name]+".")},
+       {label:"A fallacy", correct:!f.valid,
+        note:!f.valid?("This is "+f.name.toLowerCase()+" \u2014 "+NAMEWHY[f.name]+".")
+                     :("This is "+f.name.toLowerCase()+", which is valid: "+NAMEWHY[f.name]+".")},
+       {label:"Valid, but only if the premises are true",
+        note:"Validity never depends on whether the premises are true. It asks what would follow if they were."},
+       {label:"It cannot be decided without a truth table",
+        note:"It can. That is the whole point of learning the named forms \u2014 the shape carries the verdict."}
+     ])};
+ }
+},
+{
+ title:"Name it from the English",
+ sub:"No symbols given. Find the shape underneath the sentences.",
+ gen:function(){
+   const three=Math.random()<.28;
+   const k=pick(three?["trans","transC","mistrans","mistransI"]:["direct","contra","disj1","disj2","conv","inv","misdisj1","misdisj2"]);
+   const c=pick(three?CTX3:CTX2);
+   return {q:"Which standard form is this argument?", arg:argBox(FORMS[k],c),
+     opts:shuffle(nameOptions(k)), sent:true};
+ }
+},
+{
+ title:"Anything, any notation",
+ sub:"Symbols or sentences, name or verdict, all eight forms.",
+ gen:function(){
+   const mode=pick(["name","verdict","engName","engVerdict"]);
+   const three=Math.random()<.28;
+   const k=pick(three?["trans","transC","mistrans","mistransI"]:["direct","contra","disj1","disj2","conv","inv","misdisj1","misdisj2"]);
+   const f=FORMS[k], c=pick(three?CTX3:CTX2);
+   if(mode==="name")  return {q:"What is this argument form called?", stem:stack(f), opts:shuffle(nameOptions(k)), sent:true};
+   if(mode==="engName") return {q:"Which standard form is this argument?", arg:argBox(f,c), opts:shuffle(nameOptions(k)), sent:true};
+   const body=(mode==="verdict")?{stem:stack(f)}:{arg:argBox(f,c)};
+   const o={q:"Is this argument <b>valid</b>, or a <b>fallacy</b>?",
+     opts:shuffle([
+       {label:"Valid", correct:f.valid, note:(f.valid?"This is ":"No \u2014 this is ")+f.name.toLowerCase()+", "+NAMEWHY[f.name]+"."},
+       {label:"A fallacy", correct:!f.valid, note:(!f.valid?"This is ":"No \u2014 this is ")+f.name.toLowerCase()+", "+NAMEWHY[f.name]+"."},
+       {label:"Valid, but only if the premises are true",
+        note:"Validity is about the form. It never turns on whether the premises hold."},
+       {label:"It cannot be decided without a truth table",
+        note:"The shape settles it. That is what the named forms are for."}
+     ])};
+   if(body.stem)o.stem=body.stem; else o.arg=body.arg;
+   return o;
+ }
+}
+];
+
+/* ================= hero ================= */
+const HPAIRS=[
+  {good:"direct", bad:"conv", lbl:"direct vs converse", c:CTX2[5],
+   note:"Both premises start the same way. Direct reasoning affirms <i>p</i>, the first part, and gets <i>q</i>. The fallacy affirms <i>q</i>, the second part, and claims <i>p</i> \u2014 but <i>q</i> could have come about some other way entirely."},
+  {good:"contra", bad:"inv", lbl:"contrapositive vs inverse", c:CTX2[5],
+   note:"Both deny something. Contrapositive reasoning denies <i>q</i>, the second part: if <i>q</i> had to follow and it did not happen, <i>p</i> cannot have happened. The fallacy denies <i>p</i> instead, and the conditional simply never said what happens when <i>p</i> fails."},
+  {good:"disj1", bad:"misdisj1", lbl:"disjunctive vs its misuse", c:EATDRINK,
+   note:"Deny one side of an \u201cor\u201d and the other has to carry it. Affirm one side and nothing follows \u2014 because \u201cor\u201d means at least one, so you might be eating and drinking both."},
+  {good:"trans", bad:"mistrans", lbl:"transitive vs its misuse", c:CTX3[0],
+   note:"Here the premises are identical and only the conclusion differs. The chain runs from <i>p</i> through <i>q</i> to <i>r</i>, so <i>p</i> "+ARR+" <i>r</i> follows. Running it backwards does not."},
+  {all:true, lbl:"all eight",
+   note:"Four valid forms along the top, and directly beneath each one the fallacy that shadows it. Every pair differs by a single line, which is why the fallacies are worth knowing by name."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HPAIRS[heroSel];
+  let html="";
+  if(h.all){
+    const order=[["direct","Direct"],["contra","Contrapositive"],["disj1","Disjunctive"],["trans","Transitive"],
+      ["conv","Fallacy of the Converse"],["inv","Fallacy of the Inverse"],["misdisj1","Misuse of Disjunctive"],["mistrans","Misuse of Transitive"]];
+    html='<div class="octo">'+order.map(function(o,i){
+      const f=FORMS[o[0]];
+      return '<div class="pane '+(f.valid?"good":"bad")+'"><div class="ttl">'+o[1]+"</div>"+stack(f)+"</div>";
+    }).join("")+"</div>";
+  }else{
+    const g=FORMS[h.good], b=FORMS[h.bad];
+    html='<div class="duo">'
+      +'<div class="pane good"><div class="ttl">'+g.name+"</div>"+stack(g,{diff:g.diff})
+        +'<div class="eg">'+premLine(g.prem[0],h.c)+" "+premLine(g.prem[1],h.c)+" "+concLine(g.con,h.c)+"</div></div>"
+      +'<div class="pane bad"><div class="ttl">'+b.name+"</div>"+stack(b,{diff:b.diff})
+        +'<div class="eg">'+premLine(b.prem[0],h.c)+" "+premLine(b.prem[1],h.c)+" "+concLine(b.con,h.c)+"</div></div>"
+      +"</div>";
+  }
+  document.getElementById("heroBody").innerHTML=html;
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HPAIRS.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.stem?'<div class="stembox">'+q.stem+"</div>":"")
+    +(q.arg||"");
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.two?" two":"");
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.sym?" sym":"")+(q.sent?" sent":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
