@@ -56,15 +56,21 @@ body{
 
 /* ---------- step rail ---------- */
 .rail{display:flex;gap:0;margin:0 0 26px;border:1px solid var(--rule);background:var(--sheet);overflow:hidden;border-radius:3px}
-.rail div{
+.rail > *{
   flex:1;padding:8px 4px;text-align:center;font-size:11.5px;line-height:1.25;
-  color:var(--ink-soft);border-right:1px solid var(--rule-2);background:var(--sheet);
+  color:var(--ink-soft);border:0;border-right:1px solid var(--rule-2);background:var(--sheet);
+  font-family:var(--sans);
 }
-.rail div:last-child{border-right:0}
-.rail div b{display:block;font-family:var(--mono);font-size:13px;font-weight:700}
-.rail div.done{color:var(--turf);background:var(--turf-soft)}
-.rail div.now{color:#fff;background:var(--blue)}
-.rail div.now b{color:#fff}
+.rail > *:last-child{border-right:0}
+.rail > * b{display:block;font-family:var(--mono);font-size:13px;font-weight:700}
+.rail > *.done{color:var(--turf);background:var(--turf-soft)}
+.rail > *.now{color:#fff;background:var(--blue)}
+.rail > *.now b{color:#fff}
+.rail div{opacity:.5;cursor:default}            /* steps not yet reached */
+.rail button{cursor:pointer}
+.rail button:hover{background:#EEEBDE}
+.rail button.done:hover{background:#CFE5D9}
+.rail button.now:hover{background:#183E7D}
 
 /* ---------- panels ---------- */
 .panel{display:none}
@@ -274,6 +280,8 @@ input.tname{
       <p><b>Three innings. Three outs an inning</b>, or twelve batters, whichever comes first. Runners move up one base on a single, two on a double, three on a triple, and everybody scores on a home run.</p>
     </div>
 
+    <div id="lock1"></div>
+
     <div class="btnrow">
       <button class="btn big" id="go1" disabled>Take the field</button>
       <button class="btn quiet" id="reset1">Clear card</button>
@@ -346,6 +354,8 @@ input.tname{
     <div class="note">
       <p>You will face <b>the exact same 36 rolls</b> you faced in Round 1, inning for inning. Anything that changes in your score is your card, not your luck.</p>
     </div>
+
+    <div id="lock2"></div>
 
     <div class="btnrow">
       <button class="btn big" id="go2" disabled>Take the field again</button>
@@ -587,7 +597,7 @@ var S = {
   r1:null, r2:null,
   grid:{}, gridOK:false,
   dist:{}, distOK:false,
-  p1:0, o1:false, p2:0, o2:false,
+  p1:0, o1:false, p2:0, o2:false, maxStep:0,
   q1:'', q2:'', q3:''
 };
 var G = {1:null, 2:null};
@@ -599,7 +609,7 @@ function save(){
     localStorage.setItem(KEY, JSON.stringify({
       step:S.step, team:S.team, rolls:S.rolls, a1:S.a1, a2:S.a2,
       r1:S.r1, r2:S.r2, grid:S.grid, gridOK:S.gridOK,
-      p1:S.p1, o1:S.o1, p2:S.p2, o2:S.o2,
+      p1:S.p1, o1:S.o1, p2:S.p2, o2:S.o2, maxStep:S.maxStep,
       dist:S.dist, distOK:S.distOK, q1:S.q1, q2:S.q2, q3:S.q3
     }));
   }catch(e){}
@@ -627,14 +637,48 @@ function el(tag, cls, txt){
 function drawRail(){
   var r = $('rail'); r.innerHTML = '';
   for(var i=0;i<RAIL.length;i++){
-    var d = el('div', i < S.step ? 'done' : (i === S.step ? 'now' : ''));
-    d.appendChild(el('b', null, RAIL[i].n));
-    d.appendChild(document.createTextNode(RAIL[i].t));
-    r.appendChild(d);
+    (function(k){
+      var reached = k <= S.maxStep;
+      var cls = k < S.step ? 'done' : (k === S.step ? 'now' : '');
+      /* a step you have reached is a button you can go back to; one you
+         have not is an inert div, so the rail also shows what is left */
+      var d = document.createElement(reached ? 'button' : 'div');
+      d.className = cls;
+      if(reached){
+        d.type = 'button';
+        d.setAttribute('aria-label', 'Step ' + RAIL[k].n + ', ' + RAIL[k].t);
+        if(k === S.step) d.setAttribute('aria-current', 'step');
+        d.onclick = function(){ navTo(k); };
+      }
+      d.appendChild(el('b', null, RAIL[k].n));
+      d.appendChild(document.createTextNode(RAIL[k].t));
+      r.appendChild(d);
+    })(i);
   }
+}
+
+/* Rebuild whatever a step needs before showing it. Steps keep their work in
+   S, so going back is always a re-render, never a reset. */
+function navTo(i){
+  if(i > S.maxStep) return;
+  if(i === 0) buildCard('ac1', 1);
+  if(i === 1){
+    if(!G[1] && assignValid(S.a1)) G[1] = restoreGame(S.a1, S.rolls, S.p1 || 0, S.o1);
+    if(G[1]) renderGame(1);
+  }
+  if(i === 2){ buildGrid(); if(S.gridOK) checkGrid(); }
+  if(i === 3){ buildDist(); if(S.distOK) checkDist(true); }
+  if(i === 4) buildCard('ac2', 2);
+  if(i === 5){
+    if(!G[2] && assignValid(S.a2)) G[2] = restoreGame(S.a2, S.rolls, S.p2 || 0, S.o2);
+    if(G[2]) renderGame(2);
+  }
+  if(i === 6 && S.r1 && S.r2) buildCompare();
+  goto(i);
 }
 function goto(i){
   S.step = i;
+  if(i > S.maxStep) S.maxStep = i;
   for(var k=0;k<STEPS.length;k++) $(STEPS[k]).classList.toggle('on', k === i);
   drawRail();
   window.scrollTo({top:0, behavior:'smooth'});
@@ -678,6 +722,9 @@ function buildCard(hostId, which){
   var host = $(hostId);
   host.innerHTML = '';
   var a = which === 1 ? S.a1 : S.a2;
+  /* once a round has been played its card is frozen: editing it afterwards
+     would leave the recorded score attached to a card that no longer exists */
+  var locked = which === 1 ? !!S.r1 : !!S.r2;
   var t = el('table','assign');
 
   var thead = el('thead'), hr = el('tr');
@@ -700,6 +747,7 @@ function buildCard(hostId, which){
           b.setAttribute('aria-label', 'Assign sum ' + sum + ' to ' + CAT_LABEL[cat]);
           if(a[sum] === cat) b.classList.add('sel');
           b.setAttribute('aria-pressed', a[sum] === cat ? 'true' : 'false');
+          b.disabled = locked;
           b.onclick = function(){
             if(a[sum] === cat) delete a[sum]; else a[sum] = cat;
             buildCard(hostId, which);
@@ -728,11 +776,50 @@ function buildCard(hostId, which){
 
   var ok = assignValid(a);
   if(which === 1){
-    $('go1').disabled = !ok;
+    $('go1').disabled = !ok || locked;
+    $('go1').classList.toggle('hidden', locked);
+    $('reset1').classList.toggle('hidden', locked);
   } else {
-    $('go2').disabled = !ok;
+    $('go2').disabled = !ok || locked;
+    $('go2').classList.toggle('hidden', locked);
+    $('reset2').classList.toggle('hidden', locked);
+    $('copy1').classList.toggle('hidden', locked);
     drawAnalyzer(a, ok);
   }
+  drawLock(which, locked);
+}
+
+function drawLock(which, locked){
+  var h = $('lock' + which);
+  h.innerHTML = '';
+  if(!locked) return;
+  var d = el('div','note warn');
+  var txt = which === 1
+    ? 'Round 1 has been played, so this card is locked — the score on the comparison page belongs to it. You can still read it, and the analyzer figures for it are on the distribution page.'
+    : 'Round 2 has been played, so this card is locked. Open the analyzer below to see what it was worth.';
+  d.innerHTML = '<p>' + txt + '</p>';
+  h.appendChild(d);
+  var b = el('button','btn quiet', which === 1 ? 'Unlock and replay Round 1' : 'Unlock and replay Round 2');
+  b.style.marginTop = '4px';
+  b.onclick = function(){
+    if(which === 1){
+      if(!confirm('Replaying Round 1 clears Round 2 and the comparison as well. Continue?')) return;
+      S.r1 = null; S.r2 = null;
+      S.p1 = 0; S.o1 = false; S.p2 = 0; S.o2 = false;
+      G[1] = null; G[2] = null;
+      S.maxStep = 0;
+      buildCard('ac1', 1); buildCard('ac2', 2);
+      goto(0);
+    } else {
+      if(!confirm('Replaying Round 2 clears the comparison. Continue?')) return;
+      S.r2 = null; S.p2 = 0; S.o2 = false; G[2] = null;
+      S.maxStep = 4;
+      buildCard('ac2', 2);
+      goto(4);
+    }
+    save();
+  };
+  h.appendChild(b);
 }
 
 function drawAnalyzer(a, ok){
@@ -1102,16 +1189,38 @@ function startFresh(){
   S.a1 = {}; S.a2 = {}; S.r1 = null; S.r2 = null;
   S.grid = {}; S.gridOK = false; S.dist = {}; S.distOK = false;
   S.q1 = S.q2 = S.q3 = '';
-  S.p1 = 0; S.o1 = false; S.p2 = 0; S.o2 = false;
+  S.p1 = 0; S.o1 = false; S.p2 = 0; S.o2 = false; S.maxStep = 0;
   G[1] = null; G[2] = null;
   buildCard('ac1', 1); buildCard('ac2', 2); buildGrid(); buildDist();
   goto(0);
 }
 
+/* Each step is gated by the work the previous one produces. Trim a restored
+   rail down to what the saved data can actually support, so a corrupted or
+   hand-edited save can never open a page with nothing to show. */
+function clampRail(){
+  if(typeof S.step !== 'number' || S.step < 0) S.step = 0;
+  if(typeof S.maxStep !== 'number' || S.maxStep < 0) S.maxStep = 0;
+  /* a save written before the rail existed has no maxStep, so take the step
+     they were on as the floor */
+  S.maxStep = Math.max(S.maxStep, S.step);
+  S.maxStep = Math.min(S.maxStep, STEPS.length - 1);
+  /* each gate lowers the ceiling to the last step whose work actually exists */
+  if(!assignValid(S.a1))  S.maxStep = Math.min(S.maxStep, 0);
+  if(!S.r1)               S.maxStep = Math.min(S.maxStep, 1);
+  if(!S.gridOK)           S.maxStep = Math.min(S.maxStep, 2);
+  if(!S.distOK)           S.maxStep = Math.min(S.maxStep, 3);
+  if(!assignValid(S.a2))  S.maxStep = Math.min(S.maxStep, 4);
+  if(!S.r2)               S.maxStep = Math.min(S.maxStep, 5);
+  /* and never open a panel the rail no longer reaches */
+  S.step = Math.min(S.step, S.maxStep);
+}
+
 function boot(){
-  drawRail();
   var had = load();
   if(!had || !S.rolls) S.rolls = makeRolls(rng);
+  clampRail();
+  drawRail();
 
   $('tname').value = S.team || '';
   $('tname').oninput = function(){
@@ -1163,6 +1272,7 @@ function boot(){
   /* rebuild whatever step the student left off on */
   if(S.step === 1 && assignValid(S.a1)){ G[1] = restoreGame(S.a1, S.rolls, S.p1||0, S.o1); renderGame(1); }
   if(S.step === 5 && assignValid(S.a2)){ G[2] = restoreGame(S.a2, S.rolls, S.p2||0, S.o2); renderGame(2); }
+  if(S.step === 6 && !(S.r1 && S.r2)) S.step = Math.min(4, S.maxStep);
   if(S.gridOK) checkGrid();
   if(S.distOK) checkDist(true);
   if(S.step === 6 && S.r1 && S.r2) buildCompare();
@@ -1170,7 +1280,7 @@ function boot(){
   var step = S.step;
   if(step === 1 && !G[1]) step = 0;
   if(step === 5 && !G[2]) step = 4;
-  if(step === 6 && !(S.r1 && S.r2)) step = 4;
+  step = Math.min(step, S.maxStep);
   goto(step);
 }
 boot();
