@@ -1,0 +1,810 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Validity Ladder — valid means the last column is all true</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --vl:#2E4A6B;
+    --vl-bg:#E9EEF4;
+    --ok:#1B7A4B;
+    --ok-bg:#E7F4EC;
+    --no:#AF3244;
+    --no-bg:#FBEBEE;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--vl)}
+  :focus-visible{outline:3px solid var(--vl); outline-offset:2px; border-radius:3px}
+
+  table.tt{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:14.5px}
+  table.tt th, table.tt td{border:1px solid var(--rule); padding:4px 9px; text-align:center; min-width:30px}
+  table.tt th{background:var(--vl-bg); color:var(--vl); font-weight:700; white-space:nowrap; font-size:13.5px}
+  table.tt th.base{background:#EDF0F3; color:var(--muted)}
+  table.tt th.key{background:var(--vl); color:#fff}
+  table.tt th i, table.tt td i{font-style:italic}
+  table.tt td.t{background:var(--ok-bg); color:var(--ok); font-weight:700}
+  table.tt td.f{background:var(--no-bg); color:var(--no); font-weight:700}
+  table.tt td.ask{background:var(--vl-bg); color:var(--vl); font-weight:700}
+  table.tt tr.hi td{outline:2px solid var(--vl); outline-offset:-2px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--vl)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:18px 14px 16px; background:var(--card); overflow-x:auto; text-align:center}
+  .arg{max-width:520px; margin:0 auto 14px; text-align:left}
+  .arg .row{display:flex; gap:12px; padding:7px 13px; border-radius:7px; margin-bottom:4px; background:#EDF0F3}
+  .arg .row.cc{background:var(--vl-bg)}
+  .arg .nm{font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; min-width:86px; padding-top:3px; color:var(--muted)}
+  .arg .row.cc .nm{color:var(--vl)}
+  .arg .sen{font-family:var(--serif); font-size:clamp(14.5px,2.9vw,17px); line-height:1.4; flex:1}
+  .verdict{margin-top:14px; font-size:15px}
+  .badge{display:inline-block; font-size:13px; font-weight:600; padding:3px 13px; border-radius:20px; margin-right:9px}
+  .b-ok{background:var(--ok-bg); color:var(--ok)}
+  .b-no{background:var(--no-bg); color:var(--no)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--vl); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:70px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--vl); background:var(--vl-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--vl)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 12px; color:#31404F}
+  .stem .q i{font-style:italic}
+  .argbox{max-width:540px; margin:0 auto 12px; text-align:left; border:1px solid var(--rule); border-radius:9px; overflow:hidden; background:var(--paper)}
+  .argbox div{padding:8px 15px; font-family:var(--serif); font-size:16px; display:flex; gap:12px}
+  .argbox div+div{border-top:1px solid var(--rule)}
+  .argbox .nm{font-family:var(--sans); font-size:11.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); min-width:84px; padding-top:3px}
+  .argbox .cc{background:var(--vl-bg)}
+  .argbox .cc .nm{color:var(--vl)}
+  .form{margin:0 auto 12px; font-family:var(--serif); font-size:clamp(16px,3.2vw,21px); color:var(--vl)}
+  .form i{font-style:italic}
+  .board{margin:0 auto 12px; overflow-x:auto}
+
+  .options{display:grid; grid-template-columns:1fr; gap:10px; padding:8px 20px 20px}
+  .options.two{grid-template-columns:1fr 1fr}
+  .options.four{grid-template-columns:repeat(4,1fr)}
+  @media (max-width:640px){.options.two{grid-template-columns:1fr} .options.four{grid-template-columns:repeat(2,1fr)}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .opt .v i{font-style:italic}
+  .opt.col{flex-direction:column; align-items:center; gap:8px; padding:12px 8px}
+  .opt.col .k{align-self:auto}
+  .opt.sent .v{font-family:var(--serif); font-size:16.5px}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .fbox i{font-style:italic}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>⊨</span> The Validity Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 10 · valid arguments and fallacies</p>
+    <h1>Valid means the last column is all true.</h1>
+    <p class="lede">Build <b>[P₁ ∧ P₂] → C</b>, fill in its final column, and look. All true means <b>valid</b>: there is no situation where the premises hold and the conclusion fails. A single false row means <b>fallacy</b>, and that one row is a description of exactly how the argument goes wrong.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Valid is not the same as true.</b> A valid argument with a false premise can have a false conclusion, and a fallacy can land on a true conclusion by luck. “If it rains I stay home; I am at home; therefore it is raining” is a fallacy — and on a rainy day its conclusion is perfectly true. Validity is a property of the <i>shape</i>: it asks whether the conclusion would have to follow, not whether it happens to hold today.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–3 define validity and read it off a finished column. Rungs 4–6 settle what a single false row proves and turn that row into a concrete counterexample. Rungs 7–8 separate validity from truth. Rungs 9–10 stretch to three letters and mix everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>The breaking row is the point</h3><p>For every fallacy here, the false row can be read back as a real situation. That situation is the refutation.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Form first, facts second</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>A refutation is one situation</h3><p>To show an argument fails you describe a single case where the premises hold and the conclusion does not. Nothing more is needed.</p></div>
+      <div class="step"><span class="n">02</span><h3>True conclusions prove nothing</h3><p>Bad reasoning reaches right answers all the time. That is what makes it hard to notice.</p></div>
+      <div class="step"><span class="n">03</span><h3>Named forms come next</h3><p>Once you have seen which shapes are valid, you can judge an argument without building anything.</p></div>
+    </div>
+    <p class="closing">All true, and it is valid. One false row, and that row tells you exactly why not.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Validity Ladder · build [P₁ ∧ P₂] → C · all true means valid · one false row means fallacy · validity is about the form, not the facts</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function quo(s){return "\u201c"+s.replace(/\.$/,"")+"\u201d";}
+const AND="\u2227", OR="\u2228", ARR="\u2192";
+const SYM={and:AND, or:OR, imp:ARR};
+
+/* ================= expressions ================= */
+function isLit(e){return typeof e==="string";}
+function ren(e,top){
+  if(isLit(e)) return "<i>"+e+"</i>";
+  if(e[0]==="not"){
+    const x=e[1];
+    return isLit(x) ? ("~<i>"+x+"</i>") : ("~("+ren(x,true)+")");
+  }
+  const s=ren(e[1],false)+" "+SYM[e[0]]+" "+ren(e[2],false);
+  return top ? s : "("+s+")";
+}
+function renB(e){
+  if(!isLit(e)&&e[0]==="imp"&&!isLit(e[1])&&(e[1][0]==="and"||e[1][0]==="or")){
+    return "["+ren(e[1],true)+"] "+ARR+" "+ren(e[2],false);
+  }
+  return ren(e,true);
+}
+function plain(e){return renB(e).replace(/<[^>]+>/g,"");}
+function ev(e,env){
+  if(isLit(e)) return env[e];
+  if(e[0]==="not") return !ev(e[1],env);
+  const a=ev(e[1],env), b=ev(e[2],env);
+  if(e[0]==="and") return a&&b;
+  if(e[0]==="or")  return a||b;
+  return (!a)||b;
+}
+function letters(e,set){
+  set=set||{};
+  if(isLit(e)){ set[e]=1; return set; }
+  if(e[0]==="not") return letters(e[1],set);
+  letters(e[1],set); letters(e[2],set); return set;
+}
+function nLetters(e){return Object.keys(letters(e)).length;}
+function rowsFor(n){
+  const out=[], L="pqr".slice(0,n).split("");
+  for(let i=0;i<(1<<n);i++){
+    const env={};
+    L.forEach(function(x,j){ env[x]=((i>>(n-1-j))&1)===0; });
+    out.push(env);
+  }
+  return out;
+}
+function TF(b){return b?"T":"F";}
+
+/* ================= argument forms ================= */
+const FORMS={
+  direct:   {prem:[["imp","p","q"],"p"],             con:"q"},
+  contra:   {prem:[["imp","p","q"],["not","q"]],     con:["not","p"]},
+  disj1:    {prem:[["or","p","q"],["not","p"]],      con:"q"},
+  disj2:    {prem:[["or","p","q"],["not","q"]],      con:"p"},
+  conv:     {prem:[["imp","p","q"],"q"],             con:"p"},
+  inv:      {prem:[["imp","p","q"],["not","p"]],     con:["not","q"]},
+  misdisj1: {prem:[["or","p","q"],"p"],              con:["not","q"]},
+  misdisj2: {prem:[["or","p","q"],"q"],              con:["not","p"]},
+  trans:    {prem:[["imp","p","q"],["imp","q","r"]], con:["imp","p","r"], three:true},
+  transC:   {prem:[["imp","p","q"],["imp","q","r"]], con:["imp",["not","r"],["not","p"]], three:true},
+  mistrans: {prem:[["imp","p","q"],["imp","q","r"]], con:["imp","r","p"], three:true}
+};
+const F2=["direct","contra","disj1","disj2","conv","inv","misdisj1","misdisj2"];
+const F3=["trans","transC","mistrans"];
+const F2BAD=["conv","inv","misdisj1","misdisj2"];
+const F2GOOD=["direct","contra","disj1","disj2"];
+function assembled(f){return ["imp",["and",f.prem[0],f.prem[1]],f.con];}
+function nOf(f){return f.three?3:2;}
+function finalCol(f){return rowsFor(nOf(f)).map(function(env){return ev(assembled(f),env);});}
+function isValid(f){return finalCol(f).every(function(v){return v;});}
+function badRows(f){const c=finalCol(f); return c.map(function(v,i){return v?-1:i;}).filter(function(i){return i>=0;});}
+
+/* ================= clause banks ================= */
+const CTX2=[
+  {p:"I study for three hours", np:"I do not study for three hours",
+   q:"I fail the exam",         nq:"I do not fail the exam"},
+  {p:"it is cold outside",      np:"it is not cold outside",
+   q:"my car starts",           nq:"my car does not start"},
+  {p:"Cole plays in the game",  np:"Cole does not play in the game",
+   q:"the Astros win the game", nq:"the Astros do not win the game"},
+  {p:"I eat well",              np:"I do not eat well",
+   q:"I am overweight",         nq:"I am not overweight"},
+  {p:"it rains",                np:"it does not rain",
+   q:"I stay home",             nq:"I do not stay home"},
+  {p:"I eat",                   np:"I do not eat",
+   q:"I have a mouth",          nq:"I do not have a mouth"},
+  {p:"the alarm sounds",        np:"the alarm does not sound",
+   q:"the door is locked",      nq:"the door is not locked"},
+  {p:"you have a ticket",       np:"you do not have a ticket",
+   q:"you may enter",           nq:"you may not enter"}
+];
+const CTX3=[
+  {p:"I eat",            np:"I do not eat",
+   q:"I have energy",    nq:"I do not have energy",
+   r:"I can run",        nr:"I cannot run"},
+  {p:"it rains",         np:"it does not rain",
+   q:"the field floods", nq:"the field does not flood",
+   r:"the game is cancelled", nr:"the game is not cancelled"},
+  {p:"you study",        np:"you do not study",
+   q:"you understand the material", nq:"you do not understand the material",
+   r:"you pass",         nr:"you do not pass"},
+  {p:"the alarm sounds", np:"the alarm does not sound",
+   q:"the guard wakes",  nq:"the guard does not wake",
+   r:"the police are called", nr:"the police are not called"}
+];
+function engE(e,c){
+  if(isLit(e)) return c[e];
+  if(e[0]==="not") return c["n"+e[1]];
+  if(e[0]==="or")  return engE(e[1],c)+" or "+engE(e[2],c);
+  if(e[0]==="and") return engE(e[1],c)+" and "+engE(e[2],c);
+  return "if "+engE(e[1],c)+", then "+engE(e[2],c);
+}
+function premLine(e,c){return cap(engE(e,c))+".";}
+function concLine(e,c){return "Therefore, "+engE(e,c)+".";}
+function argBox(f,c){
+  const rows=[["Premise 1",premLine(f.prem[0],c)],["Premise 2",premLine(f.prem[1],c)],["Conclusion",concLine(f.con,c)]];
+  return '<div class="argbox">'+rows.map(function(r,i){
+    return '<div'+(i===2?' class="cc"':'')+'><span class="nm">'+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+/* a row read back as a plain description of a situation */
+function rowWords(f,c,i){
+  const env=rowsFor(nOf(f))[i];
+  const L="pqr".slice(0,nOf(f)).split("");
+  const parts=L.map(function(x){return env[x]?c[x]:c["n"+x];});
+  return parts.slice(0,-1).join(", ")+", and "+parts[parts.length-1];
+}
+
+/* ================= table ================= */
+function tt(headers,cells,o){
+  o=o||{}; const hi=o.hi||[];
+  let s='<table class="tt"><thead><tr>';
+  headers.forEach(function(h){
+    const c=(h&&typeof h==="object")?(h.cls||""):"";
+    const v=(h&&typeof h==="object")?h.v:h;
+    s+='<th class="'+c+'">'+v+"</th>";
+  });
+  s+="</tr></thead><tbody>";
+  cells.forEach(function(row,i){
+    s+='<tr'+(hi.indexOf(i)>=0?' class="hi"':"")+">";
+    row.forEach(function(cc){
+      let v,cls;
+      if(cc&&typeof cc==="object"){ v=cc.v; cls=cc.cls||""; }
+      else { v=cc; cls=(cc==="T"?"t":"f"); }
+      s+='<td class="'+cls+'">'+v+"</td>";
+    });
+    s+="</tr>";
+  });
+  return s+"</tbody></table>";
+}
+/* the columns worth showing, in build order */
+function colsFor(f){
+  const out=[];
+  const add=function(e){ if(!isLit(e)&&!out.some(function(x){return plain(x)===plain(e);})) out.push(e); };
+  add(f.prem[0]); add(f.prem[1]);
+  out.push(["and",f.prem[0],f.prem[1]]);
+  add(f.con);
+  out.push(assembled(f));
+  return out;
+}
+function board(f,o){
+  o=o||{};
+  const n=nOf(f), L="pqr".slice(0,n).split("");
+  const cols=colsFor(f), last=cols.length-1;
+  const heads=L.map(function(x){return {v:"<i>"+x+"</i>",cls:"base"};})
+    .concat(cols.map(function(e,i){
+      return {v:(i===last?renB(e):ren(e,true)), cls:(i===last?"key":"")};
+    }));
+  const cells=rowsFor(n).map(function(env,ri){
+    return L.map(function(x){return TF(env[x]);})
+      .concat(cols.map(function(e,i){
+        if(o.hideLast&&i===last) return {v:"\u2014",cls:"ask"};
+        return TF(ev(e,env));
+      }));
+  });
+  return tt(heads,cells,o);
+}
+/* a bare column, used as an answer option */
+function miniCol(vals,head){
+  return tt([{v:head||"?",cls:"key"}],vals.map(function(v){return [TF(v)];}));
+}
+
+/* ================= verdict options ================= */
+function verdictOpts(f,extra){
+  const v=isValid(f), c=finalCol(f);
+  const nF=c.filter(function(x){return !x;}).length;
+  return [
+    {label:"Valid", correct:v,
+     note:v?("Every row of the last column is true, so there is no situation where the premises hold and the conclusion fails."+(extra?" "+extra:""))
+           :("Not valid \u2014 "+nF+" row"+(nF===1?"":"s")+" of the last column come"+(nF===1?"s":"")+" out false.")},
+    {label:"A fallacy", correct:!v,
+     note:!v?("The last column has "+nF+" false row"+(nF===1?"":"s")+", and each one is a situation where both premises hold and the conclusion does not."+(extra?" "+extra:""))
+            :("The last column is true in every row, which is exactly what validity means.")},
+    {label:"Valid only when the premises are actually true",
+     note:"Validity never depends on whether the premises are true. It asks what would follow if they were."},
+    {label:"It cannot be decided from the table",
+     note:"The table has every possible row in it, so it settles the question completely."}
+  ];
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"What validity means",
+ sub:"A promise about every situation, not about the one you are in.",
+ gen:function(){
+   const forms=[
+     {q:"<b>An argument is valid when…</b>",
+      ans:"the conclusion is true in every situation where the premises are true",
+      bad:[["its premises are true","Premises can be false in a perfectly valid argument. Validity is about what follows from them."],
+        ["its conclusion is true","A fallacy can have a true conclusion, and a valid argument can have a false one."],
+        ["all three of its statements are true","All three being true is a coincidence about the facts, not a property of the reasoning."]],
+      note:"Which is why the test is a column that is true in every row."},
+     {q:"An argument that is not valid is called <b>what</b>?",
+      ans:"A fallacy",
+      bad:[["A contradiction","That is a statement false in every row, not an argument."],
+        ["A converse","That is a variation of a conditional statement."],
+        ["A premise","That is one of the granted statements inside an argument."]],
+      note:"Also called an invalid argument. The two words mean the same thing here."},
+     {q:"<b>What has to be built to test an argument?</b>",
+      ans:"One statement: the premises joined by "+AND+", with an arrow to the conclusion",
+      bad:[["A separate truth table for each premise","Each premise on its own says nothing about whether the conclusion follows."],
+        ["A truth table for the conclusion alone","That tells you when the conclusion holds, not whether the premises force it."],
+        ["A Venn diagram of the three statements","Venn diagrams handle sets. Arguments about statements use truth tables."]],
+      note:"[P\u2081 "+AND+" P\u2082] "+ARR+" C \u2014 one formula, one final column."},
+     {q:"The last column of an argument's table is <b>all true</b>. <b>What follows?</b>",
+      ans:"The argument is valid",
+      bad:[["The conclusion is true","The conclusion has its own column, and it is not this one."],
+        ["The premises are true","Whether the premises hold is a question about the world, not about the table."],
+        ["The argument is a tautology, but not necessarily valid","For an argument, being a tautology is exactly what being valid is."]],
+      note:"No row has the premises holding and the conclusion failing, because such a row is precisely a false row here."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Build the last column",
+ sub:"Every other column is done. One more step.",
+ gen:function(){
+   const k=pick(F2), f=FORMS[k], c=pick(CTX2);
+   const want=finalCol(f);
+   const pool=F2.map(function(x){return finalCol(FORMS[x]);})
+     .concat([[true,true,true,false],[false,false,false,true],[true,false,true,false]]);
+   const seen={}; seen[want.map(TF).join("")]=1;
+   const opts=[{label:miniCol(want,renB(assembled(f))), correct:true,
+     note:"Read across the two columns before it: the last one is false only where the conjunction is true and the conclusion is false."}];
+   shuffle(pool).forEach(function(v){
+     const key=v.map(TF).join(""); if(seen[key])return; seen[key]=1;
+     opts.push({label:miniCol(v), note:"That column reads "+key+", which does not match what the two columns before it give."});
+   });
+   return {q:"What goes in the <b>last column</b>?", arg:argBox(f,c), board:board(f,{hideLast:true}),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), cols:true};
+ }
+},
+{
+ title:"Read the verdict",
+ sub:"The table is finished. All true, or not.",
+ gen:function(){
+   const k=pick(F2), f=FORMS[k], c=pick(CTX2);
+   return {q:"Is this argument <b>valid</b>, or a <b>fallacy</b>?", arg:argBox(f,c), board:board(f),
+     opts:shuffle(distinctOpts(verdictOpts(f)).slice(0,4))};
+ }
+},
+{
+ title:"One false row is enough",
+ sub:"A single row can settle it against an argument. No row can settle it in favour.",
+ gen:function(){
+   const forms=[
+     {q:"Row three of an argument's last column is <b>false</b>. <b>What follows?</b>",
+      ans:"The argument is a fallacy",
+      bad:[["Nothing until the other rows are checked","One false row is already a situation where the premises hold and the conclusion fails. That is enough."],
+        ["The argument is valid","Validity needs every row true."],
+        ["The conclusion is false","The conclusion has its own column. A false row here means the whole conditional failed, not the conclusion by itself."]],
+      note:"One counterexample refutes an argument, exactly as one exception refutes an \u201call\u201d statement."},
+     {q:"Row one of an argument's last column is <b>true</b>. <b>What follows?</b>",
+      ans:"Nothing yet \u2014 the other rows still have to be checked",
+      bad:[["The argument is valid","Validity is a claim about every row. One row cannot establish it."],
+        ["The argument is a fallacy","A true row is no evidence against the argument at all."],
+        ["The premises are true in that row","They may be, but that is read from the premise columns, not from this one."]],
+      note:"A single row can refute an argument and can never confirm one."},
+     {q:"<b>What does a false row in the last column actually describe?</b>",
+      ans:"A situation where both premises hold and the conclusion fails",
+      bad:[["A situation where the premises are false","If a premise failed, the conjunction would be false and the conditional would come out true."],
+        ["A situation where the conclusion is false","The conclusion being false is not enough on its own. The premises have to hold as well."],
+        ["A mistake in the table","Nothing is wrong with the table. That row is the argument's weak point."]],
+      note:"A conditional fails only when its antecedent holds and its consequent does not \u2014 here, premises true and conclusion false."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Find the breaking row",
+ sub:"This argument fails. Exactly one row shows how.",
+ gen:function(){
+   const k=pick(F2BAD), f=FORMS[k], c=pick(CTX2);
+   const bad=badRows(f)[0];
+   const rows=rowsFor(2);
+   const opts=rows.map(function(env,i){
+     return {label:"Row "+(i+1)+" \u2014 <i>p</i> "+TF(env.p)+", <i>q</i> "+TF(env.q), correct:i===bad,
+       note:i===bad?("There both premises come out true and the conclusion comes out false, so the whole conditional is false.")
+                   :("There the last column is true"+(ev(["and",f.prem[0],f.prem[1]],env)?", because the conclusion holds as well.":", because at least one premise fails, so the argument is not being tested.")) };
+   });
+   return {q:"This argument is a fallacy. <b>Which row shows it?</b>", arg:argBox(f,c), board:board(f),
+     opts:shuffle(opts), two:true};
+ }
+},
+{
+ title:"Say the counterexample out loud",
+ sub:"Turn the breaking row back into a situation anyone could describe.",
+ gen:function(){
+   const k=pick(F2BAD), f=FORMS[k], c=pick(CTX2);
+   const bad=badRows(f)[0];
+   const rows=rowsFor(2);
+   const opts=rows.map(function(env,i){
+     return {label:cap(rowWords(f,c,i))+".", correct:i===bad,
+       note:i===bad?("In that case both premises hold and the conclusion does not \u2014 which is exactly what it takes to refute an argument.")
+                   :(ev(["and",f.prem[0],f.prem[1]],env)
+                      ? "Both premises hold there, but so does the conclusion, so nothing has gone wrong."
+                      : "At least one premise fails there, so the argument is not making any claim about that case.") };
+   });
+   return {q:"<b>Describe a situation that refutes this argument.</b>", arg:argBox(f,c),
+     opts:shuffle(opts), sent:true};
+ }
+},
+{
+ title:"Valid, with a false conclusion",
+ sub:"Validity says the conclusion follows if the premises hold. It does not say they do.",
+ gen:function(){
+   const forms=[
+     {q:"An argument is <b>valid</b>. <b>Must its conclusion be true?</b>",
+      ans:"No \u2014 not unless its premises are actually true",
+      bad:[["Yes \u2014 that is what valid means","Valid means the conclusion follows <i>if</i> the premises hold. A false premise carries a valid argument to a false conclusion."],
+        ["Yes, but only when there are two premises","The number of premises has nothing to do with it."],
+        ["No \u2014 a valid argument never has a true conclusion","Valid arguments usually do have true conclusions. The point is that validity alone does not guarantee it."]],
+      note:"\u201cIf the moon is made of cheese then mice live there; the moon is made of cheese; therefore mice live there\u201d is valid, and its conclusion is false."},
+     {q:"An argument is valid but its conclusion is <b>false</b>. <b>What must be the case?</b>",
+      ans:"At least one premise is false",
+      bad:[["The argument is not really valid after all","It can be perfectly valid. Validity and truth are separate questions."],
+        ["The truth table was built wrongly","Nothing is wrong with the table. It never claimed the premises were true."],
+        ["The conclusion was translated wrongly","Possible in principle, but not required. A false premise explains it completely."]],
+      note:"If the form is valid and all the premises held, the conclusion would have to hold too. So one of them does not."},
+     {q:"<b>What does a truth table for an argument actually test?</b>",
+      ans:"Whether the conclusion follows from the premises, whatever the facts turn out to be",
+      bad:[["Whether the premises are true","Nothing in the table can tell you that. It runs through every possibility instead."],
+        ["Whether the conclusion is true","Also outside what a table can say."],
+        ["Whether the statements are about the same subject","Truth tables do not look at subject matter at all."]],
+      note:"That is why every row is included, including the ones where the premises fail."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"A fallacy that gets it right",
+ sub:"Bad reasoning reaches true conclusions all the time. That is what hides it.",
+ gen:function(){
+   const c=pick(CTX2), k=pick(F2BAD), f=FORMS[k];
+   const forms=[
+     {q:"Suppose the conclusion of this argument happens to be <b>true</b>. <b>Is the argument valid?</b>",
+      ans:"No \u2014 validity is about the form, and this form has a false row",
+      bad:[["Yes \u2014 true premises and a true conclusion make it valid","Validity asks whether the conclusion <i>had</i> to follow. Landing on a true one by luck does not show that."],
+        ["Yes, in that particular case","Validity is not decided case by case. It is a property of the whole column."],
+        ["It cannot be decided without knowing the premises","The table already covers every combination, so the verdict does not depend on the facts."]],
+      note:"There is still a row where both premises hold and the conclusion fails, and that row is what makes it a fallacy."},
+     {q:"<b>Why is a fallacy with a true conclusion still a fallacy?</b>",
+      ans:"Because the premises could have held with the conclusion false",
+      bad:[["Because its premises must be false","The premises may be perfectly true. That is what makes the argument tempting."],
+        ["Because the conclusion is only true by accident","Whether it is an accident is not the issue \u2014 the issue is that the premises did not force it."],
+        ["Because it has the wrong number of premises","The number of premises is irrelevant."]],
+      note:"The argument claims the conclusion must follow. One row where it does not is enough to refute that claim."},
+     {q:"You want to show that an argument is a fallacy. <b>What is enough?</b>",
+      ans:"One situation where the premises hold and the conclusion fails",
+      bad:[["Showing that the conclusion is false","The conclusion may be true and the argument still bad."],
+        ["Showing that a premise is false","A false premise says nothing about whether the reasoning is any good."],
+        ["Showing that the argument feels unconvincing","How it feels is not a test. One row is."]],
+      note:"That is exactly what a single false row in the last column gives you."}
+   ];
+   const fm=pick(forms);
+   const opts=[{label:fm.ans,correct:true,note:fm.note}]
+     .concat(fm.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:fm.q, arg:argBox(f,c), opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Three letters, eight rows",
+ sub:"Two conditionals as premises, and eight rows to check instead of four.",
+ gen:function(){
+   const k=pick(F3), f=FORMS[k], c=pick(CTX3);
+   const showTable=Math.random()<.65;
+   return {q:"Is this argument <b>valid</b>, or a <b>fallacy</b>?", arg:argBox(f,c),
+     board:showTable?board(f):null,
+     form:showTable?null:renB(assembled(f)),
+     opts:shuffle(distinctOpts(verdictOpts(f,
+       showTable?"":"Its last column reads "+finalCol(f).map(TF).join("")+".")).slice(0,4))};
+ }
+},
+{
+ title:"Any argument, any verdict",
+ sub:"Two letters or three, with the table shown or not.",
+ gen:function(){
+   const three=Math.random()<.3;
+   const k=pick(three?F3:F2), f=FORMS[k];
+   const c=pick(three?CTX3:CTX2);
+   const showTable=Math.random()<.55;
+   return {q:"Is this argument <b>valid</b>, or a <b>fallacy</b>?", arg:argBox(f,c),
+     board:showTable?board(f):null,
+     form:showTable?null:renB(assembled(f)),
+     opts:shuffle(distinctOpts(verdictOpts(f,
+       showTable?"":"Its last column reads "+finalCol(f).map(TF).join("")+".")).slice(0,4))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const CHEESE={p:"the moon is made of cheese", np:"the moon is not made of cheese",
+  q:"mice live on the moon", nq:"mice do not live on the moon"};
+const HERO=[
+  {k:"disj1", c:CTX2[0],
+   note:"Your worksheet's first argument. Every row of the last column is true, so there is no situation at all where both premises hold and the conclusion fails."},
+  {k:"contra", c:CTX2[2],
+   note:"The Cole and Astros argument, also valid. Notice the two rows where a premise fails \u2014 the conditional comes out true there for free, which is why validity only really turns on the rows where the premises hold."},
+  {k:"conv", c:CTX2[4], hi:true,
+   note:"A fallacy, and the outlined row shows why: it does not rain, but I stay home anyway. Premise 1 holds because a conditional with a false antecedent is true, premise 2 holds, and the conclusion is false."},
+  {k:"misdisj1", c:CTX2[3], hi:true,
+   note:"Your worksheet's Example 1, also a fallacy. The outlined row is the case where both things happen at once \u2014 nothing in \u201cor\u201d rules that out, so eating well does not settle whether you are overweight."},
+  {k:"direct", c:CHEESE, cheese:true,
+   note:"Valid, and its conclusion is false. Every row of the last column is true, so the reasoning is impeccable \u2014 it is premise 2 that is untrue. Validity never promised a true conclusion."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel], f=FORMS[h.k], c=h.c;
+  const v=isValid(f), col=finalCol(f);
+  const nT=col.filter(function(x){return x;}).length;
+  const rows=[["Premise 1",premLine(f.prem[0],c)],["Premise 2",premLine(f.prem[1],c)],["Conclusion",concLine(f.con,c)]];
+  let html='<div class="arg">'+rows.map(function(r,i){
+    return '<div class="row'+(i===2?" cc":"")+'"><span class="nm">'+r[0]+"</span><span class=\"sen\">"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+  html+=board(f,{hi:h.hi?badRows(f):[]});
+  html+='<div class="verdict"><span class="badge '+(v?"b-ok":"b-no")+'">'+(v?"valid":"fallacy")+"</span>"
+    +nT+" of the "+col.length+" rows come out true."
+    +(h.cheese?" &nbsp;Conclusion in fact: <b>false</b>.":"")+"</div>";
+  document.getElementById("heroBody").innerHTML=html;
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  const lbl=["study or fail","Cole and the Astros","rain and staying home","eat well or overweight","valid, conclusion false"];
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+lbl[i]+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.arg||"")
+    +(q.form?'<div class="form">'+q.form+"</div>":"")
+    +(q.board?'<div class="board">'+q.board+'</div>':"");
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.cols?" four":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt'+(q.cols?" col":"")+(q.sent?" sent":"")+'" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' '
+      +(q.cols?"The correct column is marked above. ":"The answer is "+right.label+". ")+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
