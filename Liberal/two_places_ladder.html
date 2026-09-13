@@ -1,0 +1,733 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Two Places Ladder — which way the decimal moves</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --tp:#B5651D;
+    --tp-bg:#FAEFE2;
+    --old:#B6BFC8;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--tp)}
+  :focus-visible{outline:3px solid var(--tp); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--tp)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:16ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); text-align:center}
+  .conv{font-family:var(--serif); font-size:clamp(20px,4.4vw,30px); margin-bottom:6px}
+  .conv .arw{color:var(--tp); margin:0 14px; font-size:.85em}
+  .rulet{font-size:13.5px; color:var(--tp); letter-spacing:.03em; text-transform:uppercase; font-weight:600; margin-bottom:18px}
+  .strip{font-family:var(--mono); font-size:clamp(26px,6vw,44px); letter-spacing:.06em; line-height:1.1; margin-bottom:6px}
+  .strip .dg{color:var(--ink)}
+  .strip .pt{font-weight:700}
+  .strip .pt.old{color:var(--old); position:relative}
+  .strip .pt.new{color:var(--tp)}
+  .legend{font-size:13px; color:var(--muted); margin-bottom:14px}
+  .legend b{color:var(--tp)} .legend s{color:var(--old); text-decoration:none}
+  .sizecheck{display:inline-block; font-size:14.5px; background:var(--tp-bg); color:#6B3D0F; border-radius:20px; padding:4px 16px}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-family:var(--serif); font-size:15.5px; padding:5px 13px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--tp); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:68px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--tp); background:var(--tp-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--tp)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(26px,6vw,42px); background:var(--tp-bg); border-radius:12px; padding:10px 26px; margin:0 auto 16px}
+  .frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.05; font-size:.78em}
+  .frac .den{border-top:2px solid currentColor; padding-top:2px}
+  .roundnote{font-size:13.5px; color:var(--muted); margin:-8px auto 14px; max-width:44ch}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.two{grid-template-columns:1fr 1fr}
+  .options.one{grid-template-columns:1fr}
+  @media (max-width:660px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.two):not(.one) .opt{flex-direction:column; align-items:center; gap:7px}
+  .options:not(.two):not(.one) .opt .k{align-self:auto}
+  .options:not(.two):not(.one) .opt .v{font-family:var(--serif); font-size:21px; font-weight:700}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>0.68 → 68%</span> The Two Places Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 11 · decimals, percents and fractions</p>
+    <h1>Two places. The question is which way.</h1>
+    <p class="lede">Per cent means <i>per hundred</i>, so every conversion here is a multiply or divide by 100 — which is a decimal point moving <b>two places</b>. Going to a percent it moves right and the digits get bigger. Coming from a percent it moves left and they get smaller. Almost every wrong answer in this topic is two places the wrong way, or one place, or three.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>When the digits run out, write zeros.</b> Turning 1.2% into a decimal needs the point to move two places left, and there is only one digit there — so a zero gets written in: 0.012. Turning 100 into a percent needs two places right, and there is nothing to the right of the point at all — so two zeros get written in: 10,000%. The rule never changes; the padding is what makes these look harder than they are.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 take each direction on its own. Rungs 3–4 handle the cases that need padding zeros. Rungs 5–6 come in from fractions. Rungs 7–10 build the size check, handle values above 100%, and diagnose wrong conversions.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every wrong answer is a real slip</h3><p>The options are what you get from moving one place, three places, or the wrong way — so a miss names the mistake.</p></div>
+    </div>
+    <p class="note"><b>Rounding.</b> Percents are given to the hundredth of a percent, so <span style="font-family:var(--serif)">1/3</span> becomes 33.33%. Decimals that stop on their own are left exact — <span style="font-family:var(--serif)">7/8</span> is 0.875, not 0.88 — and only the ones that run forever get rounded, to the hundredth.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Everything after this multiplies by a decimal</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Tax and discounts need the decimal</h3><p>8.5% has to become 0.085 before it multiplies anything. A place out here is a place out in the money.</p></div>
+      <div class="step"><span class="n">02</span><h3>The size check catches most errors</h3><p>Decide before you convert whether the answer should be bigger or smaller. Then look at what you wrote.</p></div>
+      <div class="step"><span class="n">03</span><h3>Over 100% is normal</h3><p>Any decimal above 1 gives a percent above 100. Distrusting those answers is a habit worth losing early.</p></div>
+    </div>
+    <p class="closing">Two places, every time. Right to a percent, left from a percent, and pad with zeros when you run out of digits.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Two Places Ladder · per cent means per hundred · right to a percent, left from a percent · pad with zeros when the digits run out</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+
+/* ---- decimal arithmetic done on digit strings, so nothing is lost to floats ---- */
+function split(s){
+  let neg=false;
+  if(s.charAt(0)==="-"){neg=true;s=s.slice(1);}
+  const parts=s.split(".");
+  let ip=parts[0]===""?"0":parts[0];
+  let fp=parts.length>1?parts[1]:"";
+  return {neg:neg, ip:ip, fp:fp};
+}
+/* move the decimal point n places (positive = right) */
+function shift(s,n){
+  const o=split(s);
+  let digits=o.ip+o.fp, point=o.ip.length+n;
+  while(point>digits.length) digits+="0";
+  while(point<1){ digits="0"+digits; point++; }
+  let left=digits.slice(0,point).replace(/^0+(?=\d)/,"");
+  let right=digits.slice(point).replace(/0+$/,"");
+  if(left==="") left="0";
+  return (o.neg?"-":"")+left+(right?"."+right:"");
+}
+/* thousands separators for display */
+function fmt(s){
+  const o=split(s);
+  const ip=o.ip.replace(/\B(?=(\d{3})+(?!\d))/g,",");
+  return (o.neg?"-":"")+ip+(o.fp?"."+o.fp:"");
+}
+function pc(s){return fmt(s)+"%";}
+
+/* ---- fractions ---- */
+/* the percent for n/d, to the hundredth of a percent; exact when it terminates there */
+function pctOf(n,d){
+  const num=10000*n;
+  const exact=(num%d)===0;
+  const scaled=Math.floor((2*num+d)/(2*d));      /* round half up, integer only */
+  const ipart=Math.floor(scaled/100), frac=scaled%100;
+  let s=String(ipart);
+  if(frac>0) s+="."+(frac<10?"0"+frac:String(frac)).replace(/0$/,"");
+  return {s:s, exact:exact};
+}
+/* the decimal for n/d: exact if the percent terminated, otherwise to the hundredth */
+function decOf(n,d){
+  const p=pctOf(n,d);
+  if(p.exact) return {s:shift(p.s,-2), exact:true};
+  const scaled=Math.floor((2*100*n+d)/(2*d));
+  const ipart=Math.floor(scaled/100), frac=scaled%100;
+  let s=String(ipart)+"."+(frac<10?"0"+frac:String(frac));
+  return {s:s, exact:false};
+}
+function fracHTML(n,d){
+  return '<span class="frac"><span class="num">'+n+'</span><span class="den">'+d+"</span></span>";
+}
+
+/* ---- the digit strip, with the old and new point both marked ---- */
+function stripHTML(s,n){
+  const o=split(s);
+  let digits=o.ip+o.fp, oldP=o.ip.length, newP=oldP+n;
+  while(newP>digits.length) digits+="0";
+  while(newP<1){ digits="0"+digits; oldP++; newP++; }
+  let out="";
+  for(let i=0;i<=digits.length;i++){
+    if(i===oldP) out+='<span class="pt old">.</span>';
+    if(i===newP) out+='<span class="pt new">.</span>';
+    if(i<digits.length) out+='<span class="dg">'+digits.charAt(i)+"</span>";
+  }
+  return '<div class="strip">'+out+"</div>";
+}
+
+/* ================= banks ================= */
+const DECS=["0.68","1.23","0.5","0.07","2.4","0.125","3.06","0.9","0.045","1.5","0.02","4.75"];
+const PCTS=["95","250","4","1.2","7","12.5","300","60","0.5","8.5","110","3.25"];
+/* the cases that need padding zeros */
+const PADD=["0.025","0.07","0.005","0.09","0.004"];
+const PADP=["1.2","4","0.5","7","2.5","0.8"];
+/* whole numbers */
+const WHOLED=["100","5","1","3","20","12"];
+const WHOLEP=["100","200","300","500","1000","250"];
+/* fractions that terminate at two decimal places of a percent */
+const FR=[[1,5],[7,8],[3,40],[1,4],[3,8],[1,2],[9,20],[7,25],[1,8],[3,5],[11,20],[13,50],[5,8],[17,40],[21,25],[3,4],[1,20],[19,25]];
+/* fractions that do not */
+const FRR=[[1,3],[2,3],[4,3],[5,6],[1,6],[5,3],[1,9],[7,9],[2,7],[5,7],[1,7],[8,9]];
+
+/* ================= option builders ================= */
+const WHY={
+  one:"That moves the decimal only one place. Per cent means per hundred, so it is always two.",
+  three:"That moves the decimal three places. Two is what multiplying by 100 does.",
+  back:"That moves the decimal the wrong way, which divides by 100 instead of multiplying.",
+  backP:"That moves the decimal the wrong way, which multiplies by 100 instead of dividing.",
+  none:"That attaches the percent sign without moving anything. The digits have to move two places as well.",
+  noneP:"That removes the percent sign without moving anything. The digits have to move two places as well."
+};
+function toPctOpts(s){
+  const ans=shift(s,2);
+  const cands=[
+    {v:shift(s,1), w:WHY.one},
+    {v:shift(s,3), w:WHY.three},
+    {v:shift(s,-2), w:WHY.back},
+    {v:s,          w:WHY.none}
+  ];
+  const seen={}; seen[pc(ans)]=1;
+  const opts=[{label:pc(ans), correct:true,
+    note:"Two places right, then the percent sign: "+fmt(s)+" becomes "+pc(ans)+"."}];
+  shuffle(cands).forEach(function(c){
+    const L=pc(c.v); if(seen[L])return; seen[L]=1;
+    opts.push({label:L, note:c.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+function toDecOpts(s){
+  const ans=shift(s,-2);
+  const cands=[
+    {v:shift(s,-1), w:WHY.one},
+    {v:shift(s,-3), w:WHY.three},
+    {v:shift(s,2),  w:WHY.backP},
+    {v:s,           w:WHY.noneP}
+  ];
+  const seen={}; seen[fmt(ans)]=1;
+  const opts=[{label:fmt(ans), correct:true,
+    note:"Two places left, and the percent sign comes off: "+pc(s)+" becomes "+fmt(ans)+"."}];
+  shuffle(cands).forEach(function(c){
+    const L=fmt(c.v); if(seen[L])return; seen[L]=1;
+    opts.push({label:L, note:c.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+function fracOpts(n,d,note){
+  const p=pctOf(n,d), dec=decOf(n,d);
+  const flip=pctOf(d,n);
+  const cands=[
+    {v:pc(dec.s),         w:"That is the decimal with a percent sign attached. The decimal still has to move two places."},
+    {v:pc(shift(dec.s,1)),w:WHY.one},
+    {v:pc(shift(dec.s,3)),w:WHY.three},
+    {v:pc(flip.s),        w:"That divides the denominator by the numerator. It is "+d+" \u00f7 "+n+" rather than "+n+" \u00f7 "+d+"."}
+  ];
+  const seen={}; seen[pc(p.s)]=1;
+  const opts=[{label:pc(p.s), correct:true, note:note}];
+  shuffle(cands).forEach(function(c){
+    if(seen[c.v])return; seen[c.v]=1;
+    opts.push({label:c.v, note:c.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Decimal to percent",
+ sub:"Two places right, then attach the sign. The digits get bigger.",
+ gen:function(){
+   const s=pick(DECS);
+   return {q:"Write this as a <b>percent</b>.", big:fmt(s), opts:shuffle(toPctOpts(s))};
+ }
+},
+{
+ title:"Percent to decimal",
+ sub:"Two places left, and the sign comes off. The digits get smaller.",
+ gen:function(){
+   const s=pick(PCTS);
+   return {q:"Write this as a <b>decimal</b>.", big:pc(s), opts:shuffle(toDecOpts(s))};
+ }
+},
+{
+ title:"When the digits run out",
+ sub:"Write zeros into the empty places. The rule does not change.",
+ gen:function(){
+   if(Math.random()<.5){
+     const s=pick(PADD);
+     return {q:"Write this as a <b>percent</b>.", big:fmt(s),
+       opts:shuffle(toPctOpts(s))};
+   }
+   const s=pick(PADP);
+   return {q:"Write this as a <b>decimal</b>.", big:pc(s),
+     opts:shuffle(toDecOpts(s))};
+ }
+},
+{
+ title:"Whole numbers",
+ sub:"The point is at the end of a whole number, even when nobody writes it.",
+ gen:function(){
+   if(Math.random()<.5){
+     const s=pick(WHOLED);
+     const opts=toPctOpts(s);
+     opts.forEach(function(o){ if(o.correct) o.note="The point sits after the last digit of "+fmt(s)+", so two places right needs two zeros written in: "+pc(shift(s,2))+"."; });
+     return {q:"Write this as a <b>percent</b>.", big:fmt(s), opts:shuffle(opts)};
+   }
+   const s=pick(WHOLEP);
+   const opts=toDecOpts(s);
+   opts.forEach(function(o){ if(o.correct) o.note="The point sits after the last digit, so moving two places left gives "+fmt(shift(s,-2))+"."; });
+   return {q:"Write this as a <b>decimal</b>.", big:pc(s), opts:shuffle(opts)};
+ }
+},
+{
+ title:"Fractions to percents",
+ sub:"Divide first, then move the point two places right.",
+ gen:function(){
+   const f=pick(FR), n=f[0], d=f[1];
+   const dec=decOf(n,d), p=pctOf(n,d);
+   return {q:"Write this fraction as a <b>percent</b>.", big:fracHTML(n,d),
+     opts:shuffle(fracOpts(n,d,
+       n+" \u00f7 "+d+" = "+fmt(dec.s)+", and two places right gives "+pc(p.s)+"."))};
+ }
+},
+{
+ title:"When it does not divide evenly",
+ sub:"Carry the division out, then round the percent to the hundredth.",
+ gen:function(){
+   const f=pick(FRR), n=f[0], d=f[1];
+   const p=pctOf(n,d), dec=decOf(n,d);
+   return {q:"Write this fraction as a <b>percent</b>.", big:fracHTML(n,d),
+     round:"Round the percent to the hundredth of a percent.",
+     opts:shuffle(fracOpts(n,d,
+       n+" \u00f7 "+d+" runs on forever, so carry the division past two places and round at the end: "+pc(p.s)
+       +". Rounding the decimal to "+fmt(dec.s)+" first would lose those last digits."))};
+ }
+},
+{
+ title:"Bigger or smaller",
+ sub:"Decide the size of the answer before you write it, then check what you wrote.",
+ gen:function(){
+   const forms=[
+     {t:"dir"},{t:"catch"},{t:"which"}
+   ];
+   const f=pick(forms);
+   if(f.t==="dir"){
+     const toPct=Math.random()<.5;
+     const s=toPct?pick(DECS):pick(PCTS);
+     return {q:"You are converting "+(toPct?fmt(s)+" to a percent":pc(s)+" to a decimal")+". <b>Should the digits end up bigger or smaller?</b>",
+       opts:shuffle([
+         {label:toPct?"Bigger":"Smaller", correct:true,
+          note:toPct?("Going to a percent multiplies by 100, so "+fmt(s)+" becomes "+pc(shift(s,2))+".")
+                    :("Coming from a percent divides by 100, so "+pc(s)+" becomes "+fmt(shift(s,-2))+".")},
+         {label:toPct?"Smaller":"Bigger",
+          note:toPct?"That would be dividing by 100. A percent is the larger-looking form.":"That would be multiplying by 100. A decimal is the smaller-looking form."},
+         {label:"The same size",
+          note:"Only 0 comes out the same. Everything else changes by a factor of 100."},
+         {label:"It depends on whether the number is above 1",
+          note:"The direction never depends on the size of the number. Two places, the same way, every time."}
+       ]), wide:true};
+   }
+   if(f.t==="catch"){
+     const s=pick(DECS);
+     const wrong=shift(s,-2);
+     return {q:"Someone converts "+fmt(s)+" to a percent and writes <b>"+pc(wrong)+"</b>. <b>What went wrong?</b>",
+       opts:shuffle([
+         {label:"The point moved left instead of right", correct:true,
+          note:"That divides by 100 when it should multiply. The answer is "+pc(shift(s,2))+", which is bigger than "+fmt(s)+", not smaller."},
+         {label:"The point moved one place instead of two",
+          note:"One place would give "+pc(shift(s,1))+", which is still bigger than the number started out. This answer got smaller."},
+         {label:"The point moved three places",
+          note:"Three places would give "+pc(shift(s,3))+". Again, bigger rather than smaller."},
+         {label:"Nothing \u2014 that is correct",
+          note:"Going to a percent makes the digits bigger. This answer is a hundred times smaller than it should be."}
+       ]), wide:true};
+   }
+   const s=pick(["0.4","0.07","2.5","1.8"]);
+   const right=shift(s,2);
+   return {q:"Which of these <b>cannot</b> be "+fmt(s)+" written as a percent?",
+     opts:shuffle([
+       {label:pc(shift(s,-2)), correct:true,
+        note:"A percent is a hundred times the decimal, so it has to be bigger than "+fmt(s)+". This one is smaller. The answer is "+pc(right)+"."},
+       {label:pc(right), note:"That is the right answer, so it certainly can be."},
+       {label:pc(shift(s,1)), note:"Wrong, but not impossible on size \u2014 it is bigger than "+fmt(s)+", which is what a percent should be. It moved one place instead of two."},
+       {label:pc(shift(s,3)), note:"Wrong, but bigger than "+fmt(s)+", so the size check does not rule it out. It moved three places."}
+     ]), wide:true};
+ }
+},
+{
+ title:"Above one hundred percent",
+ sub:"Any decimal bigger than 1 gives a percent bigger than 100. That is ordinary.",
+ gen:function(){
+   const forms=["dec","pct","frac","concept"];
+   const t=pick(forms);
+   if(t==="dec"){
+     const s=pick(["1.23","2.4","3.06","1.5","4.75","1.08"]);
+     return {q:"Write this as a <b>percent</b>.", big:fmt(s), opts:shuffle(toPctOpts(s))};
+   }
+   if(t==="pct"){
+     const s=pick(["250","300","110","1000","125","400"]);
+     return {q:"Write this as a <b>decimal</b>.", big:pc(s), opts:shuffle(toDecOpts(s))};
+   }
+   if(t==="frac"){
+     const f=pick([[4,3],[5,3],[7,4],[9,8],[5,4],[8,5]]), n=f[0], d=f[1];
+     const p=pctOf(n,d), dec=decOf(n,d);
+     return {q:"Write this fraction as a <b>percent</b>.", big:fracHTML(n,d),
+       round:p.exact?null:"Round the percent to the hundredth of a percent.",
+       opts:shuffle(fracOpts(n,d,
+         "The fraction is bigger than 1, so the percent must be bigger than 100. "+n+" \u00f7 "+d+" = "+fmt(dec.s)+", giving "+pc(p.s)+"."))};
+   }
+   return {q:"<b>When is a percent bigger than 100%?</b>",
+     opts:shuffle([
+       {label:"Whenever the decimal form is bigger than 1", correct:true,
+        note:"100% is exactly 1, so anything above 1 lands above 100%. 1.23 becomes 123%, and "+fracHTML(4,3)+" becomes 133.33%."},
+       {label:"Never \u2014 a percent cannot exceed 100%",
+        note:"It certainly can. Prices rise by more than 100%, and any fraction above 1 converts to one."},
+       {label:"Only when the original was a fraction",
+        note:"Any form can give it. 2.4 is a decimal and it becomes 240%."},
+       {label:"Only when the number is a whole number",
+        note:"1.23 is not a whole number and it still gives 123%."}
+     ]), wide:true};
+ }
+},
+{
+ title:"Spot the wrong conversion",
+ sub:"Someone offers an answer. Say whether it works, and if not, what slipped.",
+ gen:function(){
+   const toPct=Math.random()<.5;
+   const s=toPct?pick(DECS.concat(PADD)):pick(PCTS.concat(PADP));
+   const n=toPct?2:-2;
+   const kind=pick(["ok","one","three","back"]);
+   const off={ok:n, one:(n>0?1:-1), three:(n>0?3:-3), back:-n}[kind];
+   const prop=shift(s,off);
+   const L={
+     ok:"It is correct",
+     one:"The point moved only one place",
+     three:"The point moved three places",
+     back:"The point moved the wrong way"
+   };
+   const ans=shift(s,n);
+   const notes={
+     ok:"Two places "+(toPct?"right":"left")+", exactly as the rule says.",
+     one:"One place multiplies or divides by 10, not 100. The answer is "+(toPct?pc(ans):fmt(ans))+".",
+     three:"Three places changes the number by 1000. The answer is "+(toPct?pc(ans):fmt(ans))+".",
+     back:"That went the wrong way, so the answer came out a hundred times "+(toPct?"too small":"too big")+". It should be "+(toPct?pc(ans):fmt(ans))+"."
+   };
+   const wrongNotes={
+     ok:"Count the places again \u2014 something is off.",
+     one:"The point moved more than one place here.",
+     three:"The point did not move three places here.",
+     back:"The point moved the right way here."
+   };
+   const opts=["ok","one","three","back"].map(function(k){
+     return {label:L[k], correct:k===kind, note:k===kind?notes[k]:wrongNotes[k]};
+   });
+   return {q:"Is this conversion correct?",
+     big:(toPct?fmt(s):pc(s))+' <span style="color:var(--tp)">\u2192</span> '+(toPct?pc(prop):fmt(prop)),
+     opts:shuffle(opts), wide:true};
+ }
+},
+{
+ title:"Either way, any form",
+ sub:"Decimals, percents and fractions, in both directions.",
+ gen:function(){
+   const t=pick(["toPct","toDec","frac","fracR"]);
+   if(t==="toPct"){
+     const s=pick(DECS.concat(PADD).concat(WHOLED));
+     return {q:"Write this as a <b>percent</b>.", big:fmt(s), opts:shuffle(toPctOpts(s))};
+   }
+   if(t==="toDec"){
+     const s=pick(PCTS.concat(PADP).concat(WHOLEP));
+     return {q:"Write this as a <b>decimal</b>.", big:pc(s), opts:shuffle(toDecOpts(s))};
+   }
+   const f=pick(t==="frac"?FR:FRR), n=f[0], d=f[1];
+   const p=pctOf(n,d), dec=decOf(n,d);
+   return {q:"Write this fraction as a <b>percent</b>.", big:fracHTML(n,d),
+     round:p.exact?null:"Round the percent to the hundredth of a percent.",
+     opts:shuffle(fracOpts(n,d,
+       n+" \u00f7 "+d+" = "+fmt(dec.s)+(p.exact?"":" (rounded)")+", and two places right gives "+pc(p.s)+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {s:"0.68", n:2, note:"The plain case. The point hops two places right, past the 6 and past the 8, and the percent sign goes on. 68% is a hundred times 0.68, which is what per cent means."},
+  {s:"0.025", n:2, note:"From your worksheet, and the one that catches people. Two hops right lands the point between the 2 and the 5 \u2014 giving 2.5%, not 25% and not 0.25%. Count the hops rather than reading the digits."},
+  {s:"100", n:2, note:"There is nothing to the right of the point here, so two zeros get written in. 100 as a percent is 10,000% \u2014 which is right, because 100 is a hundred times 100%."},
+  {s:"95", n:-2, note:"Coming the other way now. Two hops left, and the sign comes off. The digits got smaller, as they always do in this direction."},
+  {s:"1.2", n:-2, note:"Only one digit sits to the left of the point, so a zero is written in to make the second hop. 1.2% is 0.012 \u2014 three decimal places from a number that started with one."},
+  {s:"100", n:-2, note:"The companion to the third button, and worth seeing next to it. 100% is exactly 1. So 100% and 100 are a factor of ten thousand apart, even though they look almost the same on the page."},
+  {frac:[7,8], note:"From a fraction it is two steps. First 7 \u00f7 8 = 0.875, which stops on its own, so nothing is rounded. Then two hops right gives 87.5%."},
+  {frac:[4,3], note:"And the awkward one. 4 \u00f7 3 runs on forever, so the division is carried past two places and the percent is rounded at the end: 133.33%. Rounding to 1.33 first would have thrown away the digits that matter."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let html="";
+  if(h.frac){
+    const n=h.frac[0], d=h.frac[1], dec=decOf(n,d), p=pctOf(n,d);
+    html+='<div class="conv">'+fracHTML(n,d)+'<span class="arw">\u2192</span>'+fmt(dec.s)+'<span class="arw">\u2192</span>'+pc(p.s)+"</div>";
+    html+='<div class="rulet">divide, then two places right</div>';
+    html+=stripHTML(dec.s,2);
+    html+='<div class="legend"><s>.</s> where the point was &nbsp;·&nbsp; <b>.</b> where it lands</div>';
+    html+='<div class="sizecheck">'+fmt(dec.s)+" \u2192 "+pc(p.s)+" \u2014 the digits got bigger, as they must</div>";
+  }else{
+    const to=h.n>0;
+    const res=shift(h.s,h.n);
+    html+='<div class="conv">'+(to?fmt(h.s):pc(h.s))+'<span class="arw">\u2192</span>'+(to?pc(res):fmt(res))+"</div>";
+    html+='<div class="rulet">two places '+(to?"right":"left")+"</div>";
+    html+=stripHTML(h.s,h.n);
+    html+='<div class="legend"><s>.</s> where the point was &nbsp;·&nbsp; <b>.</b> where it lands</div>';
+    html+='<div class="sizecheck">the digits got '+(to?"bigger":"smaller")+", as they must going "+(to?"to":"from")+" a percent</div>";
+  }
+  document.getElementById("heroBody").innerHTML=html;
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  const lbl=HERO.map(function(h){
+    if(h.frac) return h.frac[0]+"/"+h.frac[1]+" \u2192 %";
+    return h.n>0 ? (fmt(h.s)+" \u2192 %") : (pc(h.s)+" \u2192 decimal");
+  });
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+lbl[i]+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML='<p class="q">'+q.q+'</p>'
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.round?'<p class="roundnote">'+q.round+"</p>":"");
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.wide?" one":"");
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
