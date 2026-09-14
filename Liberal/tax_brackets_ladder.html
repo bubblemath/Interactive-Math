@@ -1,0 +1,819 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Slices Ladder — a rate applies only to its own slice</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --mb:#5B4B8A;
+    --mb-bg:#EDEAF6;
+    --s1:#2E7D8F; --s2:#3E8F6B; --s3:#9A7B2E; --s4:#A0562E; --s5:#8A3A5C; --s6:#6B3A8A; --s7:#4A4A7A;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--mb)}
+  :focus-visible{outline:3px solid var(--mb); outline-offset:2px; border-radius:3px}
+
+  table.bt{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:14px}
+  table.bt th, table.bt td{border:1px solid var(--rule); padding:4px 12px; text-align:center; white-space:nowrap}
+  table.bt th{background:var(--mb-bg); color:var(--mb); font-weight:700; font-size:13px}
+  table.bt td.rt{font-weight:700}
+  table.bt tr.hi td{background:var(--mb-bg); outline:2px solid var(--mb); outline-offset:-2px}
+  table.bt tr.dim td{color:#9AA5AF}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--mb)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:20px 16px 16px; background:var(--card); overflow-x:auto}
+  .demo-top svg{display:block; width:100%; height:auto; max-width:620px; margin:0 auto}
+  .slicelist{max-width:520px; margin:12px auto 0; font-family:var(--serif); font-size:clamp(14px,2.8vw,16px)}
+  .slicelist .sl{display:flex; justify-content:space-between; gap:12px; padding:4px 12px; border-radius:6px}
+  .slicelist .sl .lb{color:var(--muted)}
+  .slicelist .sl .am{font-variant-numeric:tabular-nums; white-space:nowrap}
+  .slicelist .sl.tot{border-top:1.5px solid var(--ink); margin-top:4px; padding-top:7px; font-weight:700}
+  .slicelist .sl.tot .lb{color:var(--ink)}
+  .slicelist .sl.bad{background:var(--wrong-bg); color:var(--wrong)}
+  .slicelist .sl.bad .lb{color:var(--wrong)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--mb); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:72px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--mb); background:var(--mb-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--mb)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 12px; color:#31404F}
+  .scene{max-width:52ch; margin:0 auto 12px; background:var(--mb-bg); border-radius:10px; padding:12px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .bt-wrap{margin:0 auto 12px; overflow-x:auto}
+  .slices{margin:0 auto 12px; max-width:600px}
+  .slices svg{display:block; width:100%; height:auto}
+  .facts{max-width:44ch; margin:0 auto 12px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:15px}
+  .facts div{padding:6px 16px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .facts .am{font-variant-numeric:tabular-nums; white-space:nowrap}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:19px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>10% · 15% · 25%</span> The Slices Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 12 · marginal tax rates and the tax computation</p>
+    <h1>A rate applies to its slice, not to everything.</h1>
+    <p class="lede">Being “in the 25% bracket” does not mean paying 25% of your income. It means the <b>top slice</b> of your income is taxed at 25%, while the slices below it are still taxed at 10% and 15%. The tax is built by cutting taxable income at the bracket boundaries, taxing each piece at its own rate, and adding.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Multiplying the whole taxable income by the top rate is the error this lesson exists to stop.</b> A single filer with $28,650 of taxable income is in the 15% bracket, and 15% of $28,650 is $4,298 — but the actual tax is $3,834. The first $9,275 is taxed at 10%, not 15%, and that difference is worth $464. The wrong answer is always <i>too high</i>, and always plausible.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 read the table and find the top bracket. Rungs 3–5 cut the income into slices and add the pieces. Rungs 6–7 separate the marginal rate from the rate actually paid. Rungs 8–10 compare filing statuses, apply the tax credit, and run the whole computation.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>The top-rate answer is always there</h3><p>Whole income times the top rate appears among the options on every computation rung, because that is the answer most people reach for.</p></div>
+    </div>
+    <p class="note2"><b>The table.</b> 2016 marginal rates, exactly as in your worksheet's Table 8.1. Taxable income is taken as given — getting to it is the previous ladder's job. Tax amounts round to the nearest dollar, with the slices kept exact until the end.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Slices, not a single rate</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>A raise never costs you money</h3><p>Crossing into a higher bracket taxes only the part above the line. The idea that a raise can leave you worse off comes from this misunderstanding.</p></div>
+      <div class="step"><span class="n">02</span><h3>Marginal and effective differ</h3><p>The bracket you are in is the rate on your next dollar. The rate you actually pay overall is always lower.</p></div>
+      <div class="step"><span class="n">03</span><h3>Credits are not deductions</h3><p>A deduction reduces the income being taxed. A credit comes off the tax itself, dollar for dollar, right at the end.</p></div>
+    </div>
+    <p class="closing">Cut at the boundaries, tax each piece at its own rate, add them, then take the credit off.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Slices Ladder · each rate applies only inside its own bracket · the marginal rate is the rate on the last dollar · credits come off the tax, last</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function $$(n){return "$"+grp(Math.round(n));}
+function cents(scaled){                     /* scaled is dollars x tenths-of-a-percent */
+  const c=Math.round(scaled/10);            /* to the nearest cent */
+  const d=Math.floor(c/100), f=c%100;
+  return "$"+grp(d)+"."+(f<10?"0"+f:String(f));
+}
+
+/* ================= Table 8.1, 2016 ================= */
+/* rates are held in tenths of a percent: 10% is 100, 39.6% is 396 */
+const RATES=[100,150,250,280,330,350,396];
+const BR={
+  single:[9275,37650,91150,190150,413350,415050,Infinity],
+  mfs:   [9275,37650,75950,115725,206675,233475,Infinity],
+  mfj:   [18550,75300,151900,231450,413350,466950,Infinity],
+  hoh:   [13250,50400,130150,210800,413350,441000,Infinity]
+};
+const STATUS={single:"Single", mfs:"Married Filing Separately",
+  mfj:"Married Filing Jointly", hoh:"Head of Household"};
+const SKEYS=["single","mfs","mfj","hoh"];
+function rpct(r){return (r%10===0?String(r/10):(r/10).toFixed(1))+"%";}
+function lowerOf(st,i){return i===0?0:BR[st][i-1]+1;}
+function rangeText(st,i){
+  const up=BR[st][i];
+  if(i===0) return "up to "+$$(up);
+  if(up===Infinity) return "more than "+$$(BR[st][i-1]);
+  return $$(lowerOf(st,i))+" to "+$$(up);
+}
+/* cut the income at the bracket boundaries */
+function slices(st,inc){
+  const B=BR[st], out=[];
+  let prev=0;
+  for(let i=0;i<B.length;i++){
+    const up=B[i];
+    const amt=Math.max(0,Math.min(inc,up)-prev);
+    if(amt>0) out.push({i:i, lo:prev, up:up, rate:RATES[i], amt:amt, scaled:amt*RATES[i]});
+    if(inc<=up) break;
+    prev=up;
+  }
+  return out;
+}
+function bracketIndex(st,inc){
+  const B=BR[st];
+  for(let i=0;i<B.length;i++) if(inc<=B[i]) return i;
+  return B.length-1;
+}
+function taxScaled(st,inc){
+  return slices(st,inc).reduce(function(s,x){return s+x.scaled;},0);
+}
+function taxOf(st,inc){                      /* rounded to the nearest dollar */
+  return Math.floor((2*taxScaled(st,inc)+1000)/2000);
+}
+function marginal(st,inc){return RATES[bracketIndex(st,inc)];}
+function effective(st,inc){                  /* to the hundredth of a percent */
+  const t=taxOf(st,inc), num=10000*t;
+  const scaled=Math.floor((2*num+inc)/(2*inc));
+  const ip=Math.floor(scaled/100), fr=scaled%100;
+  return grp(ip)+(fr>0?("."+(fr%10===0?String(fr/10):(fr<10?"0"+fr:String(fr)))):"")+"%";
+}
+function wholeAtTop(st,inc){                 /* the mistake: whole income x top rate */
+  return Math.floor((2*inc*marginal(st,inc)+1000)/2000);
+}
+
+/* ================= renderers ================= */
+function bracketTable(st,hi,dimAbove){
+  let s='<table class="bt"><thead><tr><th>Tax Rate</th><th>'+STATUS[st]+"</th></tr></thead><tbody>";
+  for(let i=0;i<RATES.length;i++){
+    const cls=(hi!==undefined&&i===hi)?"hi":((dimAbove&&hi!==undefined&&i>hi)?"dim":"");
+    s+='<tr class="'+cls+'"><td class="rt">'+rpct(RATES[i])+"</td><td>"+rangeText(st,i)+"</td></tr>";
+  }
+  return s+"</tbody></table>";
+}
+const SC=["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)","var(--s6)","var(--s7)"];
+function sliceBar(st,inc,o){
+  o=o||{};
+  const sl=slices(st,inc), W=560, X=20, H=44, Y=34;
+  let s='<svg viewBox="0 0 600 '+(o.tall?128:110)+'" role="img" aria-label="taxable income cut into bracket slices">';
+  let x=X;
+  sl.forEach(function(p,k){
+    const w=Math.max(28,Math.round(W*p.amt/inc));
+    s+='<rect x="'+x+'" y="'+Y+'" width="'+w+'" height="'+H+'" fill="'+SC[p.i]+'" fill-opacity="0.85"/>';
+    s+='<text x="'+(x+w/2)+'" y="'+(Y+27)+'" text-anchor="middle" font-family="Georgia,serif" font-size="15" font-weight="700" fill="#fff">'+rpct(p.rate)+"</text>";
+    s+='<text x="'+(x+w/2)+'" y="'+(Y-9)+'" text-anchor="middle" font-family="Georgia,serif" font-size="11.5" fill="var(--muted)">'+$$(p.amt)+"</text>";
+    if(o.taxes) s+='<text x="'+(x+w/2)+'" y="'+(Y+H+16)+'" text-anchor="middle" font-family="Georgia,serif" font-size="11.5" font-weight="700" fill="'+SC[p.i]+'">'+cents(p.scaled)+"</text>";
+    x+=w;
+  });
+  s+='<text x="'+X+'" y="20" font-family="Georgia,serif" font-size="12.5" fill="var(--ink)">taxable income '+$$(inc)+"</text>";
+  return s+"</svg>";
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span class=\"am\">"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+function workText(st,inc){
+  return slices(st,inc).map(function(p){
+    return rpct(p.rate)+" on "+$$(p.amt);
+  }).join(" + ")+" = "+$$(taxOf(st,inc));
+}
+
+/* ================= income bank ================= */
+function randInc(st){
+  const b=ri(0,3);                          /* keep most incomes in the first four brackets */
+  const B=BR[st];
+  const lo=b===0?2000:B[b-1]+50;
+  const hi=Math.min(B[b]-50, b===0?B[0]:B[b]);
+  return ri(Math.ceil(lo/50),Math.floor(hi/50))*50;
+}
+function randStatus(){return pick(SKEYS);}
+/* for the computation rungs: an income past the first bracket, so that
+   "whole income x top rate" and "everything at 10%" are actually wrong */
+function randInc2(st){
+  let v,t=0;
+  do{ v=randInc(st); t++; }while(bracketIndex(st,v)===0&&t<200);
+  return v;
+}
+
+/* ================= option builders ================= */
+function moneyOpts(ans,pool,note){
+  const seen={}; seen[ans]=1;
+  const opts=[{label:$$(ans), correct:true, note:note}];
+  shuffle(pool).forEach(function(x){
+    if(x.v<0||seen[x.v])return; seen[x.v]=1;
+    opts.push({label:$$(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Read the table",
+ sub:"Every filing status has its own set of boundaries.",
+ gen:function(){
+   const st=randStatus(), i=ri(0,4);
+   if(Math.random()<.5){
+     /* build the correct option first, then three others, so truncating to four
+        can never drop the answer */
+     const opts=[{label:rpct(RATES[i]), correct:true,
+       note:"For "+STATUS[st]+" that row covers "+rangeText(st,i)+"."}];
+     shuffle([0,1,2,3,4,5,6].filter(function(k){return k!==i;})).forEach(function(k){
+       opts.push({label:rpct(RATES[k]), note:"That row covers "+rangeText(st,k)+"."});
+     });
+     return {q:"Which rate applies to the range <b>"+rangeText(st,i)+"</b>?",
+       table:bracketTable(st), opts:shuffle(distinctOpts(opts).slice(0,4))};
+   }
+   const opts=[{label:rangeText(st,i), correct:true,
+     note:"That is the "+rpct(RATES[i])+" row for "+STATUS[st]+"."}];
+   shuffle([0,1,2,3,4].filter(function(k){return k!==i;})).forEach(function(k){
+     opts.push({label:rangeText(st,k), note:"That is the "+rpct(RATES[k])+" row."});
+   });
+   const other=SKEYS.filter(function(x){return x!==st;})[0];
+   if(rangeText(other,i)!==rangeText(st,i))
+     opts.push({label:rangeText(other,i), note:"That is the "+rpct(RATES[i])+" row for "+STATUS[other]+", not for "+STATUS[st]+"."});
+   return {q:"For a filer who is <b>"+STATUS[st]+"</b>, which income range is taxed at <b>"+rpct(RATES[i])+"</b>?",
+     table:bracketTable(st), opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Which bracket does it reach",
+ sub:"The top bracket is the one the last dollar falls in.",
+ gen:function(){
+   const st=randStatus(), inc=randInc(st);
+   const i=bracketIndex(st,inc);
+   const opts=RATES.slice(0,5).map(function(r,k){
+     return {label:rpct(r), correct:k===i,
+       note:k===i?($$(inc)+" falls in the "+rangeText(st,i)+" row, so the top slice is taxed at "+rpct(r)+".")
+                 :(k<i?("That rate applies to a slice lower down. The income reaches past "+rangeText(st,k)+".")
+                      :("That row starts at "+$$(lowerOf(st,k))+", which is above this income."))};
+   });
+   return {q:"A <b>"+STATUS[st]+"</b> filer has taxable income of <b>"+$$(inc)+"</b>. <b>Which bracket does it reach?</b>",
+     table:bracketTable(st,i,true), opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"The bottom slice",
+ sub:"The first slice is taxed at 10%, whatever the income.",
+ gen:function(){
+   const st=randStatus(), inc=randInc2(st);
+   const sl=slices(st,inc), p=sl[0];
+   const pool=[
+     {v:Math.round(inc*100/1000), w:"That is 10% of the whole taxable income. Only the first "+$$(p.amt)+" sits in the 10% bracket."},
+     {v:Math.round(p.amt*marginal(st,inc)/1000), w:"That taxes the bottom slice at the top rate. Each slice keeps its own rate."},
+     {v:p.amt, w:"That is the size of the slice, not the tax on it."},
+     {v:taxOf(st,inc), w:"That is the tax on the whole income, all slices together."}
+   ];
+   return {q:"<b>How much tax is charged on the 10% slice?</b>",
+     table:bracketTable(st,0),
+     facts:factsHTML([["Filing status",STATUS[st]],["Taxable income",$$(inc)],["10% bracket",rangeText(st,0)]]),
+     opts:shuffle(moneyOpts(Math.round(p.scaled/1000),pool,
+       "The 10% bracket runs "+rangeText(st,0)+", so the slice is "+$$(p.amt)+" and the tax on it is "+cents(p.scaled)+"."))};
+ }
+},
+{
+ title:"The next slice up",
+ sub:"Only the part above the boundary. Subtract before multiplying.",
+ gen:function(){
+   let st,inc,sl,tries=0;
+   do{ st=randStatus(); inc=randInc(st); sl=slices(st,inc); tries++; }while(sl.length<2&&tries<200);
+   const k=ri(1,sl.length-1), p=sl[k];
+   const pool=[
+     {v:Math.round(Math.min(inc,p.up)*p.rate/1000), w:"That taxes everything up to "+$$(Math.min(inc,p.up))+" at "+rpct(p.rate)+". The lower part has already been taxed at lower rates."},
+     {v:Math.round(inc*p.rate/1000), w:"That taxes the whole income at "+rpct(p.rate)+"."},
+     {v:p.amt, w:"That is the size of the slice, not the tax on it."},
+     {v:Math.round(p.amt*RATES[p.i-1]/1000), w:"That uses the rate from the bracket below."}
+   ];
+   return {q:"<b>How much tax is charged on the "+rpct(p.rate)+" slice?</b>",
+     table:bracketTable(st,p.i),
+     facts:factsHTML([["Filing status",STATUS[st]],["Taxable income",$$(inc)],
+       [rpct(p.rate)+" bracket",rangeText(st,p.i)]]),
+     opts:shuffle(moneyOpts(Math.round(p.scaled/1000),pool,
+       "The slice runs from "+$$(p.lo)+" up to "+$$(p.lo+p.amt)+", so it is "+$$(p.amt)+" taxed at "+rpct(p.rate)+" = "+cents(p.scaled)+"."))};
+ }
+},
+{
+ title:"Add the slices",
+ sub:"Each piece at its own rate, then one total.",
+ gen:function(){
+   const st=randStatus(), inc=randInc2(st);
+   const t=taxOf(st,inc);
+   const pool=[
+     {v:wholeAtTop(st,inc), w:"That multiplies the whole income by the top rate. The lower slices are taxed at lower rates."},
+     {v:Math.round(inc*100/1000), w:"That taxes everything at 10%, which is only the bottom slice's rate."},
+     {v:slices(st,inc).reduce(function(s,p){return s+Math.round(p.amt*RATES[0]/1000);},0),
+      w:"That applies the 10% rate to every slice."},
+     {v:inc-t, w:"That is what is left after the tax, not the tax itself."}
+   ];
+   return {q:"<b>What is the tax computation?</b>",
+     table:bracketTable(st,bracketIndex(st,inc),true),
+     slices:sliceBar(st,inc,{taxes:true,tall:true}),
+     facts:factsHTML([["Filing status",STATUS[st]],["Taxable income",$$(inc)]]),
+     opts:shuffle(moneyOpts(t,pool,workText(st,inc)+"."))};
+ }
+},
+{
+ title:"Not the whole amount",
+ sub:"Being in a bracket is not the same as paying that rate on everything.",
+ gen:function(){
+   let st,inc,tries=0;
+   do{ st=randStatus(); inc=randInc(st); tries++; }while(bracketIndex(st,inc)===0&&tries<200);
+   const t=taxOf(st,inc), w=wholeAtTop(st,inc), m=marginal(st,inc);
+   const forms=["compare","why","howmuch"];
+   const f=pick(forms);
+   if(f==="compare"){
+     return {q:"This filer is in the "+rpct(m)+" bracket. <b>Is the tax "+rpct(m)+" of "+$$(inc)+"?</b>",
+       facts:factsHTML([["Filing status",STATUS[st]],["Taxable income",$$(inc)],
+         [rpct(m)+" of the whole amount",$$(w)]]),
+       opts:shuffle([
+         {label:"No \u2014 the real tax is "+$$(t), correct:true,
+          note:"Only the top slice is taxed at "+rpct(m)+". Working through the slices gives "+workText(st,inc)+", which is "+$$(w-t)+" less than "+$$(w)+"."},
+         {label:"Yes \u2014 that is what being in the bracket means",
+          note:"It means the <i>last</i> dollar is taxed at that rate. The earlier dollars are taxed at the lower rates."},
+         {label:"No \u2014 the real tax is higher",
+          note:"It is always lower, because every slice below the top one is taxed at a smaller rate."},
+         {label:"Only if there are no tax credits",
+          note:"Credits come off afterwards. Even with none, the whole-amount figure is too high."}
+       ]), one:true};
+   }
+   if(f==="howmuch"){
+     const pool=[
+       {v:t, w:"That is the real tax, not the difference."},
+       {v:w, w:"That is the whole-amount figure, not the difference."},
+       {v:Math.round(inc*(m-100)/1000), w:"That is the rate gap applied to the whole income, which is not how the slices work."}
+     ];
+     return {q:"<b>How much too high is the whole-amount answer?</b>",
+       facts:factsHTML([["Taxable income",$$(inc)],["Top rate",rpct(m)],
+         [rpct(m)+" of the whole amount",$$(w)],["Correct tax",$$(t)]]),
+       opts:shuffle(moneyOpts(w-t,pool,
+         $$(w)+" \u2212 "+$$(t)+" = "+$$(w-t)+", which is what the lower rates on the lower slices save."))};
+   }
+   return {q:"<b>Why is the tax always less than the top rate times the whole income?</b>",
+     opts:shuffle([
+       {label:"Every slice below the top one is taxed at a lower rate", correct:true,
+        note:"The rates only rise going up, so replacing them all with the top rate can only overstate the tax."},
+       {label:"Because tax credits reduce the total",
+        note:"Credits may or may not exist. This gap is there even with none."},
+       {label:"Because the rates in the table are maximums",
+        note:"Each rate applies exactly, but only inside its own bracket."},
+       {label:"Because taxable income is less than gross income",
+        note:"True, but irrelevant here \u2014 both figures start from the same taxable income."}
+     ]), one:true};
+ }
+},
+{
+ title:"Marginal and effective",
+ sub:"The rate on your last dollar, and the rate you actually paid.",
+ gen:function(){
+   let st,inc,tries=0;
+   do{ st=randStatus(); inc=randInc(st); tries++; }while(bracketIndex(st,inc)===0&&tries<200);
+   const t=taxOf(st,inc), m=marginal(st,inc), e=effective(st,inc);
+   const forms=["calc","def","compare"];
+   const f=pick(forms);
+   if(f==="calc"){
+     const opts=[
+       {label:e, correct:true,
+        note:$$(t)+" \u00f7 "+$$(inc)+" = "+e+". That is the share of taxable income actually paid, and it sits below the "+rpct(m)+" marginal rate."},
+       {label:rpct(m), note:"That is the marginal rate \u2014 the rate on the last dollar, not on all of it."},
+       {label:rpct(RATES[0]), note:"That is the bottom bracket's rate, which applies only to the first slice."},
+       {label:effective(st,Math.max(BR[st][0]+100,Math.round(inc/2))), note:"That is the effective rate for an income half the size."},
+       {label:effective(st,Math.min(inc*2,BR[st][4])), note:"That is the effective rate for a much larger income."}
+     ];
+     return {q:"<b>What is this filer's effective tax rate?</b>",
+       facts:factsHTML([["Filing status",STATUS[st]],["Taxable income",$$(inc)],["Tax",$$(t)],["Marginal rate",rpct(m)]]),
+       opts:shuffle(distinctOpts(opts).slice(0,4))};
+   }
+   if(f==="def"){
+     return {q:"<b>What does the marginal tax rate tell you?</b>",
+       opts:shuffle([
+         {label:"The rate charged on the next dollar of taxable income", correct:true,
+          note:"It is the rate of the bracket the income currently tops out in \u2014 here "+rpct(m)+"."},
+         {label:"The share of taxable income actually paid in tax",
+          note:"That is the effective rate, which for this filer is "+e+"."},
+         {label:"The average of all the rates the income passes through",
+          note:"No averaging happens. It is simply the rate of the top bracket reached."},
+         {label:"The highest rate in the table",
+          note:"That would be 39.6% for everyone, which is not what a bracket means."}
+       ]), one:true};
+   }
+   return {q:"This filer's marginal rate is "+rpct(m)+" and the effective rate is "+e+". <b>Why is the effective rate lower?</b>",
+     facts:factsHTML([["Taxable income",$$(inc)],["Tax",$$(t)]]),
+     opts:shuffle([
+       {label:"Only the top slice is taxed at "+rpct(m)+"; the slices below it pay less", correct:true,
+        note:"Averaged across the whole income, the lower slices pull the overall share down to "+e+"."},
+       {label:"Because deductions were subtracted first",
+        note:"Deductions happen before taxable income is set. Both rates here are measured against the same taxable income."},
+       {label:"Because a tax credit was applied",
+        note:"No credit is involved. The gap comes purely from the slicing."},
+       {label:"The effective rate is lower only for high earners",
+        note:"It is lower for anyone whose income reaches past the first bracket."}
+     ]), one:true};
+ }
+},
+{
+ title:"Same income, different status",
+ sub:"The boundaries move, so the tax moves with them.",
+ gen:function(){
+   const inc=ri(600,2400)*50;
+   const forms=["which","amount"];
+   if(pick(forms)==="which"){
+     const taxes=SKEYS.map(function(s){return {s:s, t:taxOf(s,inc)};});
+     const lo=taxes.slice().sort(function(a,b){return a.t-b.t;})[0];
+     const opts=taxes.map(function(x){
+       return {label:STATUS[x.s], correct:x.s===lo.s,
+         note:x.s===lo.s?("Its brackets are the widest, so more of the income falls in the lower rates. Tax "+$$(x.t)+".")
+                        :("Tax "+$$(x.t)+" for that status, which is more than the "+$$(lo.t)+" paid as "+STATUS[lo.s]+".")};
+     });
+     return {q:"On taxable income of <b>"+$$(inc)+"</b>, <b>which filing status pays the least?</b>",
+       opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+   }
+   const st=randStatus();
+   const diff=SKEYS.filter(function(x){return x!==st&&taxOf(x,inc)!==taxOf(st,inc);});
+   const other=diff.length?pick(diff):pick(SKEYS.filter(function(x){return x!==st;}));
+   const t=taxOf(st,inc);
+   const pool=[
+     {v:taxOf(other,inc), w:"That is the tax for a "+STATUS[other]+" filer. The boundaries differ by status."},
+     {v:wholeAtTop(st,inc), w:"That taxes the whole income at the top rate."},
+     {v:Math.round(inc*100/1000), w:"That taxes everything at 10%."}
+   ];
+   return {q:"<b>What is the tax computation?</b>",
+     table:bracketTable(st,bracketIndex(st,inc),true),
+     facts:factsHTML([["Filing status",STATUS[st]],["Taxable income",$$(inc)]]),
+     opts:shuffle(moneyOpts(t,pool,workText(st,inc)+"."))};
+ }
+},
+{
+ title:"The tax credit comes last",
+ sub:"A credit comes off the tax itself, dollar for dollar.",
+ gen:function(){
+   const st=randStatus(), inc=randInc2(st), cr=ri(2,20)*100;
+   const t=taxOf(st,inc), final=Math.max(0,t-cr);
+   const forms=["calc","def"];
+   if(pick(forms)==="def"){
+     return {q:"<b>How does a tax credit differ from a deduction?</b>",
+       opts:shuffle([
+         {label:"A credit comes off the tax owed; a deduction comes off the income being taxed", correct:true,
+          note:"So a "+$$(cr)+" credit saves exactly "+$$(cr)+", while a "+$$(cr)+" deduction saves only that amount multiplied by your rate."},
+         {label:"They are two names for the same thing",
+          note:"They act at different points and are worth different amounts."},
+         {label:"A credit comes off the income; a deduction comes off the tax",
+          note:"That is the right idea with the two swapped round."},
+         {label:"A credit applies only to filers in the lowest bracket",
+          note:"Credits apply regardless of bracket."}
+       ]), one:true};
+   }
+   const pool=[
+     {v:t, w:"That is the tax before the credit. The credit still has to come off."},
+     {v:t+cr, w:"That adds the credit on. A credit reduces what you owe."},
+     {v:taxOf(st,Math.max(0,inc-cr)), w:"That subtracts the credit from the <i>income</i> and then taxes it. A credit comes off the tax, not the income."}
+   ];
+   return {q:"<b>What is the income tax owed?</b>",
+     facts:factsHTML([["Filing status",STATUS[st]],["Taxable income",$$(inc)],["Tax credit",$$(cr)]]),
+     opts:shuffle(moneyOpts(final,pool,
+       workText(st,inc)+", then "+$$(t)+" \u2212 "+$$(cr)+" = "+$$(final)+"."))};
+ }
+},
+{
+ title:"The whole computation",
+ sub:"Taxable income in, tax owed out, any status, with or without a credit.",
+ gen:function(){
+   const st=randStatus(), inc=randInc2(st);
+   const hasCr=Math.random()<.45, cr=hasCr?ri(2,20)*100:0;
+   const t=taxOf(st,inc), final=Math.max(0,t-cr);
+   const pool=(hasCr?[
+     {v:t, w:"That is the tax before the credit comes off."},
+     {v:t+cr, w:"That adds the credit instead of subtracting it."},
+     {v:Math.max(0,wholeAtTop(st,inc)-cr), w:"That takes the credit off the whole-amount figure, which was too high to start with."},
+     {v:wholeAtTop(st,inc), w:"That multiplies the whole income by the top rate, and forgets the credit."}
+   ]:[
+     {v:wholeAtTop(st,inc), w:"That multiplies the whole income by the top rate. Each slice keeps its own rate."},
+     {v:Math.round(inc*RATES[0]/1000), w:"That taxes everything at 10%, which is only the bottom slice's rate."},
+     {v:inc-t, w:"That is what is left after the tax, not the tax itself."},
+     {v:Math.round(inc*RATES[bracketIndex(st,inc)-1]/1000), w:"That taxes the whole income at the rate of the bracket below the top one."}
+   ]).filter(function(x){return x.v!==final;});
+   return {q:"<b>What is the income tax owed?</b>",
+     table:bracketTable(st,bracketIndex(st,inc),true),
+     facts:factsHTML([["Filing status",STATUS[st]],["Taxable income",$$(inc)],
+       ["Tax credit",hasCr?$$(cr):"none"]]),
+     opts:shuffle(moneyOpts(final,pool,
+       workText(st,inc)+(hasCr?(", then "+$$(t)+" \u2212 "+$$(cr)+" = "+$$(final)):"")+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {st:"single", inc:28650, lbl:"the $28,650 filer",
+   note:"Your worksheet's first computation. Two slices: the first $9,275 at 10%, and the remaining $19,375 at 15%. They add to $3,834."},
+  {st:"mfs", inc:48750, cr:500, lbl:"the married woman",
+   note:"Three slices this time, because the income reaches into the 25% bracket. The pieces come to $7,959, and the $500 tax credit then comes straight off the tax, leaving $7,459."},
+  {st:"single", inc:28650, wrong:true, lbl:"the common mistake",
+   note:"The same filer, worked the wrong way. Multiplying all $28,650 by 15% gives $4,298 \u2014 $464 too much, because the first $9,275 was never taxed at 15%. Notice the wrong answer is always the larger one."},
+  {st:"single", inc:120000, lbl:"four slices",
+   note:"A larger income, cut into four pieces. The 28% label on the last slice is the marginal rate, and it applies to less than a quarter of the income. The other three slices are still taxed at 10, 15 and 25."},
+  {st:"single", inc:120000, eff:true, lbl:"marginal vs effective",
+   note:"The same filer again. The marginal rate is 28% \u2014 the rate on the next dollar earned. The effective rate is the tax divided by the income, and it comes out far lower, because most of the income sits in cheaper slices."},
+  {st:"all", inc:100000, lbl:"the same income, four ways",
+   note:"One taxable income, four filing statuses. The married-filing-jointly brackets are the widest, so more of the income falls in the lower rates and the tax is lowest. Nothing about the method changes \u2014 only the boundaries."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="", list="";
+  if(h.st==="all"){
+    body=bracketTable("single");
+    list='<div class="slicelist">'+SKEYS.map(function(s){
+      return '<div class="sl"><span class="lb">'+STATUS[s]+"</span><span class=\"am\">"+$$(taxOf(s,h.inc))+"</span></div>";
+    }).join("")+"</div>";
+    body="";
+  }else{
+    body=sliceBar(h.st,h.inc,{taxes:!h.wrong,tall:!h.wrong});
+    const sl=slices(h.st,h.inc), t=taxOf(h.st,h.inc);
+    let rows=sl.map(function(p){
+      return '<div class="sl"><span class="lb">'+rpct(p.rate)+" on "+$$(p.amt)+"</span><span class=\"am\">"+cents(p.scaled)+"</span></div>";
+    });
+    if(h.wrong){
+      rows=['<div class="sl bad"><span class="lb">'+rpct(marginal(h.st,h.inc))+" of the whole "+$$(h.inc)+"</span><span class=\"am\">"+$$(wholeAtTop(h.st,h.inc))+"</span></div>"].concat(rows);
+    }
+    rows.push('<div class="sl tot"><span class="lb">'+(h.wrong?"Correct tax":"Tax computation")+"</span><span class=\"am\">"+$$(t)+"</span></div>");
+    if(h.cr){
+      rows.push('<div class="sl"><span class="lb">Less tax credit</span><span class="am">\u2212'+$$(h.cr)+"</span></div>");
+      rows.push('<div class="sl tot"><span class="lb">Income tax owed</span><span class="am">'+$$(t-h.cr)+"</span></div>");
+    }
+    if(h.eff){
+      rows.push('<div class="sl"><span class="lb">Marginal rate (on the next dollar)</span><span class="am">'+rpct(marginal(h.st,h.inc))+"</span></div>");
+      rows.push('<div class="sl"><span class="lb">Effective rate ('+$$(t)+" \u00f7 "+$$(h.inc)+")</span><span class=\"am\">"+effective(h.st,h.inc)+"</span></div>");
+    }
+    list='<div class="slicelist">'+rows.join("")+"</div>";
+  }
+  document.getElementById("heroBody").innerHTML=body+list;
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.slices?'<div class="slices">'+q.slices+"</div>":"")
+    +(q.table?'<div class="bt-wrap">'+q.table+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
