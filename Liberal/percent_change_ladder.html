@@ -1,0 +1,796 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Original Amount Ladder — divide by where you started</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --pc:#2A6496;
+    --pc-bg:#E7EEF5;
+    --up:#1B7A4B;
+    --up-bg:#E7F4EC;
+    --dn:#AF3244;
+    --dn-bg:#FBEBEE;
+    --bar:#3E8FB0;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--pc)}
+  :focus-visible{outline:3px solid var(--pc); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--pc)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:16ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:20px 16px 16px; background:var(--card)}
+  .demo-top svg{display:block; width:100%; height:auto; max-width:600px; margin:0 auto}
+  .calc{text-align:center; font-family:var(--serif); font-size:clamp(16px,3.3vw,21px); margin-top:14px}
+  .calc .fr{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.1; font-size:.88em; margin:0 6px}
+  .calc .fr .den{border-top:2px solid currentColor; padding-top:2px}
+  .verdict{text-align:center; margin-top:12px}
+  .badge{display:inline-block; font-size:14px; font-weight:600; padding:4px 16px; border-radius:20px}
+  .b-up{background:var(--up-bg); color:var(--up)}
+  .b-dn{background:var(--dn-bg); color:var(--dn)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--pc); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:70px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--pc); background:var(--pc-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--pc)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 12px; color:#31404F}
+  .scene{max-width:52ch; margin:0 auto 14px; background:var(--pc-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(16px,3.2vw,19px); line-height:1.5; text-align:left}
+  .known{max-width:44ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:15.5px}
+  .known div{padding:7px 16px; display:flex; justify-content:space-between; gap:12px}
+  .known div+div{border-top:1px solid var(--rule)}
+  .known .lb{color:var(--muted)}
+  .chart{margin:0 auto 14px; max-width:560px}
+  .chart svg{display:block; width:100%; height:auto}
+  .roundnote{font-size:13.5px; color:var(--muted); margin:-6px auto 14px; max-width:44ch}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:680px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:19px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>change ÷ original</span> The Original Amount Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 11 · percent increase and percent decrease</p>
+    <h1>Divide by where you started.</h1>
+    <p class="lede">Percent change is one fraction: the <b>amount of change</b> on top, the <b>original amount</b> underneath. The subtraction is never the hard part. Choosing the denominator is — and putting the new value there instead gives a different answer every time.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>The same two numbers give two different answers.</b> A sofa falling from $840 to $714 is a <b>15% decrease</b>. The same sofa rising from $714 back to $840 is a <b>17.65% increase</b>. The change is $126 either way — only the denominator moved. So “15% off, then 15% back on” does not return you to the start, and a headline about a percent change is meaningless until you know which number it was divided by.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 separate the two jobs: find the change, then decide what goes underneath. Rungs 3–4 do decreases and increases. Rungs 5–7 press on the denominator — the same pair both ways, a change read off a bar graph, and why up-then-down does not cancel. Rungs 8–10 work backwards and mix everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>The wrong denominator is always offered</h3><p>Dividing by the new value gives a real number, just not the answer. It sits among the options on every rung.</p></div>
+    </div>
+    <p class="note"><b>Rounding.</b> Percents are given to the hundredth of a percent, so the stock example comes out at 19.55%. Where the division is exact the answer is left exact, as with the sofa's 15%.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>The denominator is the claim</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Percent changes do not cancel</h3><p>Down 20% then up 20% leaves you below where you started, because the second percent is taken from a smaller number.</p></div>
+      <div class="step"><span class="n">02</span><h3>Direction changes the figure</h3><p>The same gap between two numbers is a different percent depending on which end you call the original.</p></div>
+      <div class="step"><span class="n">03</span><h3>It is how every trend is reported</h3><p>Sales, prices, population, turnout. Knowing what a reported percent was divided by is most of reading the news.</p></div>
+    </div>
+    <p class="closing">Amount of change on top. Original amount underneath. Then convert to a percent.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Original Amount Ladder · change ÷ original · the original is where you started, not where you ended · up then down by the same percent does not return you to the start</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+
+/* ---- percents to the hundredth, worked in integers so nothing drifts ---- */
+function pctOf(n,d){
+  const num=10000*n;
+  const exact=(num%d)===0;
+  const scaled=Math.floor((2*num+d)/(2*d));
+  const ip=Math.floor(scaled/100), fr=scaled%100;
+  let s=grp(ip);
+  if(fr>0) s+="."+(fr%10===0?String(fr/10):(fr<10?"0"+fr:String(fr)));
+  return {s:s, exact:exact, scaled:scaled};
+}
+function pc(x){return x+"%";}
+/* the percent change from o to n */
+function chg(o,n){
+  const diff=Math.abs(n-o), up=n>o;
+  const p=pctOf(diff,o);
+  return {o:o, n:n, diff:diff, up:up, pct:p.s, exact:p.exact, scaled:p.scaled};
+}
+function money(v){return "$"+grp(v);}
+function fracHTML(a,b){
+  return '<span class="fr"><span class="num">'+a+'</span><span class="den">'+b+"</span></span>";
+}
+
+/* ================= banks ================= */
+/* money scenarios, given as whole dollars */
+const CASES=[
+  {th:"A sofa", a:"regularly sells for", b:"The sale price is", o:840, n:714, unit:"$"},
+  {th:"Your stock shares", a:"were worth", b:"In June they are worth", o:583, n:697, unit:"$"},
+  {th:"A jacket", a:"was priced at", b:"It now sells for", o:120, n:90, unit:"$"},
+  {th:"A bicycle", a:"cost", b:"The new price is", o:250, n:325, unit:"$"},
+  {th:"A textbook", a:"listed at", b:"The used copy is", o:180, n:126, unit:"$"},
+  {th:"Monthly rent", a:"was", b:"It has risen to", o:1400, n:1575, unit:"$"},
+  {th:"A laptop", a:"was priced at", b:"It is now", o:960, n:720, unit:"$"},
+  {th:"A concert ticket", a:"cost", b:"This year it costs", o:64, n:80, unit:"$"},
+  {th:"A phone plan", a:"cost", b:"It now costs", o:45, n:54, unit:"$"},
+  {th:"A used car", a:"was listed at", b:"It sold for", o:7200, n:6120, unit:"$"}
+];
+/* count scenarios */
+const COUNTS=[
+  {th:"Weekly visitors", a:"numbered", b:"This week there are", o:250, n:450, unit:""},
+  {th:"The club membership", a:"stood at", b:"It now stands at", o:80, n:68, unit:""},
+  {th:"Daily orders", a:"averaged", b:"They now average", o:120, n:168, unit:""},
+  {th:"The staff", a:"numbered", b:"It now numbers", o:45, n:36, unit:""}
+];
+function allCases(){return CASES.concat(COUNTS);}
+function val(c,v){return c.unit==="$"?money(v):grp(v);}
+function sceneText(c){
+  return c.th+" "+c.a+" "+val(c,c.o)+". "+c.b+" "+val(c,c.n)+".";
+}
+
+/* ---- bar chart data ---- */
+const CHARTS=[
+  {title:"Number of buses manufactured", ylab:"buses", step:200, max:2000,
+   data:[["Jan",600],["Feb",800],["Mar",1000],["Apr",1200],["May",1400],["Jun",1600],["Jul",1800],["Aug",1800]]},
+  {title:"Website visitors per week", ylab:"visitors", step:100, max:800,
+   data:[["W1",250],["W2",300],["W3",450],["W4",400],["W5",600],["W6",750]]},
+  {title:"Quarterly sales", ylab:"units", step:1000, max:7000,
+   data:[["Q1",4000],["Q2",5000],["Q3",4500],["Q4",6000]]}
+];
+
+/* ================= renderers ================= */
+function barsPair(o,n,c){
+  const big=Math.max(o,n), W=420, BX=120;
+  const wo=Math.round(W*o/big), wn=Math.round(W*n/big);
+  const up=n>o, dw=Math.abs(wn-wo);
+  let s='<svg viewBox="0 0 600 150" role="img" aria-label="original and new amounts as bars">';
+  const row=function(y,w,lab,vtext,shade){
+    let g='<text x="'+(BX-12)+'" y="'+(y+23)+'" text-anchor="end" font-family="'+"Georgia,serif"+'" font-size="14" fill="var(--muted)">'+lab+"</text>";
+    g+='<rect x="'+BX+'" y="'+y+'" width="'+w+'" height="34" rx="3" fill="var(--bar)" fill-opacity="'+(shade?".35":".8")+'"/>';
+    g+='<text x="'+(BX+w+10)+'" y="'+(y+23)+'" font-family="Georgia,serif" font-size="15" font-weight="700" fill="var(--ink)">'+vtext+"</text>";
+    return g;
+  };
+  s+=row(20,wo,"original",val(c,o),false);
+  s+=row(76,wn,"new",val(c,n),false);
+  /* the difference, marked on whichever bar is longer */
+  const dy=up?76:20, dx=BX+Math.min(wo,wn);
+  s+='<rect x="'+dx+'" y="'+dy+'" width="'+dw+'" height="34" rx="3" fill="'+(up?"var(--up)":"var(--dn)")+'" fill-opacity="0.55"/>';
+  s+='<text x="'+(dx+dw/2)+'" y="'+(dy+22)+'" text-anchor="middle" font-family="Georgia,serif" font-size="13" font-weight="700" fill="#fff">'+(up?"+":"\u2212")+val(c,Math.abs(n-o)).replace("$","$")+"</text>";
+  return s+"</svg>";
+}
+function barChart(ch,hi){
+  hi=hi||[];
+  const W=560,H=260, L=54, B=210, T=20;
+  const n=ch.data.length, gap=8;
+  const bw=Math.floor((W-L-18-gap*(n-1))/n);
+  let s='<svg viewBox="0 0 '+W+" "+H+'" role="img" aria-label="'+ch.title+'">';
+  /* gridlines and axis labels */
+  for(let v=0;v<=ch.max;v+=ch.step){
+    const y=B-(B-T)*v/ch.max;
+    s+='<line x1="'+L+'" y1="'+y+'" x2="'+(W-10)+'" y2="'+y+'" stroke="var(--rule)" stroke-width="1"/>';
+    s+='<text x="'+(L-8)+'" y="'+(y+4)+'" text-anchor="end" font-family="Georgia,serif" font-size="11" fill="var(--muted)">'+grp(v)+"</text>";
+  }
+  ch.data.forEach(function(d,i){
+    const x=L+10+i*(bw+gap), h=(B-T)*d[1]/ch.max, y=B-h;
+    const on=hi.indexOf(i)>=0;
+    s+='<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+h+'" fill="var(--bar)" fill-opacity="'+(on?"1":".45")+'"'
+      +(on?' stroke="var(--pc)" stroke-width="2"':"")+"/>";
+    s+='<text x="'+(x+bw/2)+'" y="'+(B+16)+'" text-anchor="middle" font-family="Georgia,serif" font-size="12" fill="'+(on?"var(--pc)":"var(--muted)")+'"'+(on?' font-weight="700"':"")+">"+d[0]+"</text>";
+    if(on) s+='<text x="'+(x+bw/2)+'" y="'+(y-6)+'" text-anchor="middle" font-family="Georgia,serif" font-size="12.5" font-weight="700" fill="var(--pc)">'+grp(d[1])+"</text>";
+  });
+  s+='<line x1="'+L+'" y1="'+B+'" x2="'+(W-10)+'" y2="'+B+'" stroke="var(--ink)" stroke-width="1.3"/>';
+  s+='<line x1="'+L+'" y1="'+T+'" x2="'+L+'" y2="'+B+'" stroke="var(--ink)" stroke-width="1.3"/>';
+  s+='<text x="'+(W/2)+'" y="'+(H-8)+'" text-anchor="middle" font-family="Georgia,serif" font-size="13" fill="var(--muted)">'+ch.title+"</text>";
+  return s+"</svg>";
+}
+function knownBox(rows){
+  return '<div class="known">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+
+/* ================= option builders ================= */
+/* the wrong percents people actually produce */
+function pctPool(o,n){
+  const diff=Math.abs(n-o);
+  return [
+    {v:pc(pctOf(diff,n).s), w:"That divides by the <i>new</i> value instead of the original. The denominator has to be where the change started from."},
+    {v:pc(pctOf(n,o).s),    w:"That is the new value as a percent of the original, not the change. It answers \u201chow big is it now\u201d rather than \u201chow much did it move\u201d."},
+    {v:pc(pctOf(o,n).s),    w:"That is the original as a percent of the new value \u2014 the fraction upside down."},
+    {v:pc(grp(diff)),       w:"That is the amount of change itself, before it was divided by anything or turned into a percent."}
+  ];
+}
+function pctOpts(o,n,note){
+  const c=chg(o,n);
+  const seen={}; seen[pc(c.pct)]=1;
+  const opts=[{label:pc(c.pct), correct:true, note:note}];
+  shuffle(pctPool(o,n)).forEach(function(x){
+    if(seen[x.v])return; seen[x.v]=1;
+    opts.push({label:x.v, note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"The amount of change",
+ sub:"Subtract. Nothing else happens on this rung.",
+ gen:function(){
+   const c=pick(allCases());
+   const d=Math.abs(c.n-c.o);
+   const opts=[
+     {label:val(c,d), correct:true,
+      note:"The larger figure minus the smaller: "+val(c,Math.max(c.o,c.n))+" \u2212 "+val(c,Math.min(c.o,c.n))+" = "+val(c,d)+"."},
+     {label:val(c,c.o+c.n), note:"That adds the two figures together. A change is a difference."},
+     {label:val(c,c.o), note:"That is the original amount, not the amount it moved by."},
+     {label:val(c,c.n), note:"That is the new amount, not the amount it moved by."}
+   ];
+   return {q:"<b>What is the amount of change?</b>", scene:sceneText(c),
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"What goes underneath",
+ sub:"The fraction's denominator is the original amount, always.",
+ gen:function(){
+   const c=pick(allCases());
+   const d=Math.abs(c.n-c.o);
+   if(Math.random()<.5){
+     const opts=[
+       {label:val(c,c.o), correct:true,
+        note:"The original amount is where the change started from. Here that is "+val(c,c.o)+", so the fraction is "+fracHTML(val(c,d),val(c,c.o))+"."},
+       {label:val(c,c.n), note:"That is the new amount. Dividing by it gives a different percent, and not the one asked for."},
+       {label:val(c,d), note:"That is the amount of change, which belongs on top of the fraction."},
+       {label:val(c,c.o+c.n), note:"Nothing in percent change uses the two figures added together."}
+     ];
+     return {q:"<b>Which number goes on the bottom of the fraction?</b>", scene:sceneText(c),
+       opts:shuffle(distinctOpts(opts).slice(0,4))};
+   }
+   const opts=[
+     {label:fracHTML(val(c,d),val(c,c.o)), correct:true,
+      note:"Amount of change over original amount. That fraction converts to "+pc(chg(c.o,c.n).pct)+"."},
+     {label:fracHTML(val(c,d),val(c,c.n)), note:"The denominator is the new amount here. It has to be the original."},
+     {label:fracHTML(val(c,c.o),val(c,d)), note:"That is upside down \u2014 the change belongs on top."},
+     {label:fracHTML(val(c,c.n),val(c,c.o)), note:"That compares the whole new amount with the original, rather than the change."}
+   ];
+   return {q:"<b>Which fraction gives the percent change?</b>", scene:sceneText(c),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), two:true};
+ }
+},
+{
+ title:"Percent decrease",
+ sub:"The value fell. Divide the drop by what it started at.",
+ gen:function(){
+   const c=pick(allCases().filter(function(x){return x.n<x.o;}));
+   const d=c.o-c.n, r=chg(c.o,c.n);
+   return {q:"<b>Find the percent decrease.</b>", scene:sceneText(c),
+     known:knownBox([["Original",val(c,c.o)],["New",val(c,c.n)],["Amount of decrease",val(c,d)]]),
+     round:r.exact?null:"Round to the hundredth of a percent.",
+     opts:shuffle(pctOpts(c.o,c.n,
+       grp(d)+" \u00f7 "+grp(c.o)+" = "+pc(r.pct)+" once it is written as a percent."))};
+ }
+},
+{
+ title:"Percent increase",
+ sub:"The value rose. Same fraction, same denominator.",
+ gen:function(){
+   const c=pick(allCases().filter(function(x){return x.n>x.o;}));
+   const d=c.n-c.o, r=chg(c.o,c.n);
+   return {q:"<b>Find the percent increase.</b>", scene:sceneText(c),
+     known:knownBox([["Original",val(c,c.o)],["New",val(c,c.n)],["Amount of increase",val(c,d)]]),
+     round:r.exact?null:"Round to the hundredth of a percent.",
+     opts:shuffle(pctOpts(c.o,c.n,
+       grp(d)+" \u00f7 "+grp(c.o)+" = "+pc(r.pct)+" once it is written as a percent."))};
+ }
+},
+{
+ title:"The same pair, both ways",
+ sub:"Two numbers, one gap, and two different percents depending on the direction.",
+ gen:function(){
+   const c=pick(allCases());
+   const lo=Math.min(c.o,c.n), hi=Math.max(c.o,c.n);
+   const down=chg(hi,lo), up=chg(lo,hi);
+   const forms=["why","which","pair"];
+   const f=pick(forms);
+   if(f==="why"){
+     return {q:"Going from "+val(c,hi)+" down to "+val(c,lo)+" is a "+pc(down.pct)+" decrease. Coming back up is a "+pc(up.pct)+" increase. <b>Why are they different?</b>",
+       opts:shuffle([
+         {label:"The change is the same, but it is divided by a different original each time", correct:true,
+          note:"Both times the gap is "+val(c,down.diff)+". Going down it is divided by "+grp(hi)+"; coming up it is divided by "+grp(lo)+", which is smaller, so the percent is bigger."},
+         {label:"The amount of change is larger going up",
+          note:"It is identical: "+val(c,down.diff)+" either way. Only the denominator moved."},
+         {label:"Increases are always reported as larger than decreases",
+          note:"No such rule exists. It happens here because the smaller figure is the denominator on the way up."},
+         {label:"One of the two calculations must be wrong",
+          note:"Both are right. A percent change is always relative to where it started."}
+       ]), one:true};
+   }
+   if(f==="which"){
+     const goDown=Math.random()<.5;
+     const from=goDown?hi:lo, to=goDown?lo:hi;
+     const r=chg(from,to);
+     return {q:"<b>Find the percent "+(goDown?"decrease":"increase")+".</b>",
+       scene:"The figure goes from "+val(c,from)+" to "+val(c,to)+".",
+       round:r.exact?null:"Round to the hundredth of a percent.",
+       opts:shuffle(pctOpts(from,to,
+         "The original here is "+val(c,from)+", so it is "+grp(r.diff)+" \u00f7 "+grp(from)+" = "+pc(r.pct)+"."))};
+   }
+   return {q:"A figure goes from "+val(c,lo)+" up to "+val(c,hi)+", then back down to "+val(c,lo)+". <b>What are the two percent changes?</b>",
+     opts:shuffle([
+       {label:"Up "+pc(up.pct)+", then down "+pc(down.pct), correct:true,
+        note:"The rise is divided by "+grp(lo)+" and the fall by "+grp(hi)+". Bigger denominator, smaller percent."},
+       {label:"Up "+pc(up.pct)+", then down "+pc(up.pct),
+        note:"That would need both to be divided by the same number, and they are not."},
+       {label:"Up "+pc(down.pct)+", then down "+pc(down.pct),
+        note:"Both divided by the larger figure. Only the fall starts from there."},
+       {label:"Up "+pc(down.pct)+", then down "+pc(up.pct),
+        note:"The two are the right way round only if you swap them \u2014 the rise starts from the smaller figure."}
+     ]), one:true};
+ }
+},
+{
+ title:"Off the bar graph",
+ sub:"Read the two heights, then the same fraction as always.",
+ gen:function(){
+   const ch=pick(CHARTS);
+   let i,j,tries=0;
+   do{ i=Math.floor(Math.random()*ch.data.length); j=Math.floor(Math.random()*ch.data.length); tries++; }
+   while((i===j||ch.data[i][1]===ch.data[j][1])&&tries<80);
+   const o=ch.data[i][1], n=ch.data[j][1], r=chg(o,n);
+   return {q:"<b>Find the percent "+(r.up?"increase":"decrease")+" from "+ch.data[i][0]+" to "+ch.data[j][0]+".</b>",
+     chart:barChart(ch,[i,j]),
+     round:r.exact?null:"Round to the hundredth of a percent.",
+     opts:shuffle(pctOpts(o,n,
+       ch.data[i][0]+" reads "+grp(o)+" and "+ch.data[j][0]+" reads "+grp(n)+". The change is "+grp(r.diff)
+       +", and "+grp(r.diff)+" \u00f7 "+grp(o)+" = "+pc(r.pct)+" \u2014 divided by "+ch.data[i][0]+", because that is where it started."))};
+ }
+},
+{
+ title:"Up then down does not cancel",
+ sub:"The second percent is taken from a different number than the first.",
+ gen:function(){
+   const base=pick([200,400,600,800,1000,500]);
+   const rate=pick([10,20,25,50,40]);
+   const upV=base+base*rate/100;
+   const backDown=upV-upV*rate/100;
+   const dnV=base-base*rate/100;
+   const backUp=dnV+dnV*rate/100;
+   const forms=["updown","needed","why"];
+   const f=pick(forms);
+   if(f==="updown"){
+     const goesUp=Math.random()<.5;
+     const mid=goesUp?upV:dnV, end=goesUp?backDown:backUp;
+     return {q:"A price of "+money(base)+" "+(goesUp?"rises":"falls")+" by "+rate+"%, then "+(goesUp?"falls":"rises")+" by "+rate+"%. <b>What is it now?</b>",
+       known:knownBox([["Start",money(base)],["After the first change",money(mid)]]),
+       opts:shuffle(distinctOpts([
+         {label:money(end), correct:true,
+          note:"The second "+rate+"% is taken from "+money(mid)+", not from "+money(base)+", so it is worth "+money(Math.abs(mid-end))+" rather than "+money(base*rate/100)+". The price ends "+(end<base?"below":"above")+" where it began."},
+         {label:money(base), note:"That assumes the two changes cancel. They do not \u2014 the second percent is a percent of a different number."},
+         {label:money(mid), note:"That is the value after the first change only."},
+         {label:money(goesUp?base+2*base*rate/100:base-2*base*rate/100),
+          note:"That applies both changes to the starting price, as though they went the same way."}
+       ]).slice(0,4))};
+   }
+   if(f==="needed"){
+     const up=chg(base,upV);
+     const need=chg(upV,base);
+     return {q:"A price rises by "+rate+"%. <b>By what percent must it now fall to get back to where it started?</b>",
+       known:knownBox([["Start",money(base)],["After the rise",money(upV)]]),
+       round:need.exact?null:"Round to the hundredth of a percent.",
+       opts:shuffle(distinctOpts([
+         {label:pc(need.pct), correct:true,
+          note:"The fall is "+money(upV-base)+" out of "+money(upV)+", because the fall starts from the raised price. "+grp(upV-base)+" \u00f7 "+grp(upV)+" = "+pc(need.pct)+"."},
+         {label:pc(String(rate)), note:"Falling by the same percent takes "+rate+"% of the <i>raised</i> price, which is more than was added. It would land below the start."},
+         {label:pc(pctOf(upV-base,base).s), note:"That divides by the starting price. The fall starts from the raised price instead."},
+         {label:pc(pctOf(upV,base).s), note:"That is the raised price as a percent of the start, not the fall needed."}
+       ]).slice(0,4))};
+   }
+   return {q:"A value goes up by "+rate+"% and then down by "+rate+"%. <b>Where does it end up?</b>",
+     opts:shuffle([
+       {label:"Below where it started", correct:true,
+        note:"The rise is "+rate+"% of the original, but the fall is "+rate+"% of the larger figure, so more comes off than went on. "+money(base)+" becomes "+money(upV)+" and then "+money(backDown)+"."},
+       {label:"Exactly where it started",
+        note:"Only if both percents were taken from the same number, and they are not."},
+       {label:"Above where it started",
+        note:"That would need the fall to be smaller than the rise, and it is larger."},
+       {label:"It depends on the size of the percent",
+        note:"It always ends below, for any rate above zero. The size only changes how far below."}
+     ]), one:true};
+ }
+},
+{
+ title:"Back to the original",
+ sub:"Given the new value and the percent change, recover where it started.",
+ gen:function(){
+   const bank=[[840,15,"down"],[600,25,"up"],[250,20,"down"],[400,50,"up"],[1200,10,"down"],
+     [80,25,"up"],[960,40,"down"],[500,30,"up"],[720,5,"down"],[150,20,"up"]];
+   const b=pick(bank), orig=b[0], rate=b[1], dir=b[2];
+   const nv=dir==="up"?orig+orig*rate/100:orig-orig*rate/100;
+   const mult=dir==="up"?(100+rate):(100-rate);
+   const wrongBack=dir==="up"?nv-nv*rate/100:nv+nv*rate/100;
+   const opts=[
+     {label:money(orig), correct:true,
+      note:"The new value is "+(mult/100)+" of the original, so divide: "+money(nv)+" \u00f7 "+(mult/100)+" = "+money(orig)
+        +". Check it forwards \u2014 "+rate+"% of "+money(orig)+" is "+money(orig*rate/100)+"."},
+     {label:money(wrongBack),
+      note:"That takes "+rate+"% of the <i>new</i> value. The percent was of the original, so this over- or under-corrects."},
+     {label:money(nv),
+      note:"That is the new value itself, before working back at all."},
+     {label:money(dir==="up"?nv+nv*rate/100:nv-nv*rate/100),
+      note:"That moves the new value further in the same direction instead of undoing the change."}
+   ];
+   return {q:"<b>What was the original value?</b>",
+     scene:"After a "+rate+"% "+(dir==="up"?"increase":"decrease")+", the value is "+money(nv)+".",
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Spot the wrong answer",
+ sub:"Someone reports a percent change. Say whether it works, and if not, what slipped.",
+ gen:function(){
+   const c=pick(allCases());
+   const r=chg(c.o,c.n);
+   const k=pick(["ok","newden","ratio","raw"]);
+   const prop={
+     ok:pc(r.pct),
+     newden:pc(pctOf(r.diff,c.n).s),
+     ratio:pc(pctOf(c.n,c.o).s),
+     raw:pc(grp(r.diff))
+   }[k];
+   const L={
+     ok:"It is correct",
+     newden:"It divided by the new value instead of the original",
+     ratio:"It compared the new value with the original, rather than the change",
+     raw:"It reported the amount of change as though it were a percent"
+   };
+   const notes={
+     ok:"Amount of change over original amount: "+grp(r.diff)+" \u00f7 "+grp(c.o)+" = "+pc(r.pct)+".",
+     newden:"The denominator must be "+grp(c.o)+", where the change started from. The answer is "+pc(r.pct)+".",
+     ratio:"That says how big the new figure is relative to the old one, not how far it moved. The answer is "+pc(r.pct)+".",
+     raw:"That is "+grp(r.diff)+" units of change, not a percent. It still has to be divided by "+grp(c.o)+". The answer is "+pc(r.pct)+"."
+   };
+   const wrongNotes={
+     ok:"Work the fraction out again \u2014 something does not match.",
+     newden:"The denominator used here is the original, which is right.",
+     ratio:"The change was used on top here, which is right.",
+     raw:"A division was carried out here."
+   };
+   const opts=["ok","newden","ratio","raw"].map(function(x){
+     return {label:L[x], correct:x===k, note:x===k?notes[x]:wrongNotes[x]};
+   });
+   return {q:"Is this percent change correct?", scene:sceneText(c),
+     known:knownBox([["Reported as a "+(r.up?"percent increase":"percent decrease"),prop]]),
+     opts:shuffle(opts), one:true};
+ }
+},
+{
+ title:"Any change, any direction",
+ sub:"Increases and decreases, from sentences and from graphs.",
+ gen:function(){
+   const t=pick(["case","case","chart"]);
+   if(t==="chart"){
+     const ch=pick(CHARTS);
+     let i,j,tries=0;
+     do{ i=Math.floor(Math.random()*ch.data.length); j=Math.floor(Math.random()*ch.data.length); tries++; }
+     while((i===j||ch.data[i][1]===ch.data[j][1])&&tries<80);
+     const o=ch.data[i][1], n=ch.data[j][1], r=chg(o,n);
+     return {q:"<b>Find the percent "+(r.up?"increase":"decrease")+" from "+ch.data[i][0]+" to "+ch.data[j][0]+".</b>",
+       chart:barChart(ch,[i,j]),
+       round:r.exact?null:"Round to the hundredth of a percent.",
+       opts:shuffle(pctOpts(o,n,grp(r.diff)+" \u00f7 "+grp(o)+" = "+pc(r.pct)+"."))};
+   }
+   const c=pick(allCases());
+   const swap=Math.random()<.4;
+   const o=swap?c.n:c.o, n=swap?c.o:c.n;
+   const r=chg(o,n);
+   return {q:"<b>Find the percent "+(r.up?"increase":"decrease")+".</b>",
+     scene:"The figure goes from "+val(c,o)+" to "+val(c,n)+".",
+     round:r.exact?null:"Round to the hundredth of a percent.",
+     opts:shuffle(pctOpts(o,n,
+       "The original is "+val(c,o)+", so the fraction is "+grp(r.diff)+" \u00f7 "+grp(o)+" = "+pc(r.pct)+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {o:840, n:714, c:CASES[0], lbl:"sofa, $840 to $714",
+   note:"Your worksheet's first example. The sofa drops $126, and that $126 is divided by the $840 it started at \u2014 giving exactly 15%."},
+  {o:583, n:697, c:CASES[1], lbl:"stock, $583 to $697",
+   note:"The shares gain $114 on a starting value of $583. That division does not come out evenly, so the percent is rounded at the end: 19.55%."},
+  {o:800, n:1800, c:{unit:""}, chart:0, i:1, j:6, lbl:"buses, Feb to Jul",
+   note:"Read the two bars, then the same fraction. February is 800 and July is 1,800, so the increase is 1,000 out of 800 \u2014 more than the whole starting amount, which is why the answer is over 100%."},
+  {o:714, n:840, c:CASES[0], lbl:"and the sofa back up",
+   note:"The same two numbers as the first button, running the other way. The gap is still $126 \u2014 but now it is divided by $714 instead of $840, and the answer is 17.65% rather than 15%. Nothing changed except the denominator."},
+  {o:200, n:300, c:{unit:"$"}, half:true, lbl:"up 50%, then down 50%",
+   note:"$200 rises by half to $300. Falling by half from there takes off $150, not $100, and lands at $150 \u2014 well below where it started. The second percent was a percent of a bigger number."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="", calcHTML="", verd="";
+  if(h.chart!==undefined){
+    const ch=CHARTS[h.chart];
+    body=barChart(ch,[h.i,h.j]);
+  }else if(h.half){
+    body=barsPair(200,300,{unit:"$"});
+  }else{
+    body=barsPair(h.o,h.n,h.c);
+  }
+  if(h.half){
+    calcHTML='$200 <span style="color:var(--up)">+50%</span> \u2192 $300 <span style="color:var(--dn)">\u221250%</span> \u2192 $150';
+    verd='<span class="badge b-dn">ends $50 below the start</span>';
+  }else{
+    const r=chg(h.o,h.n);
+    calcHTML=fracHTML("change","original")+" = "+fracHTML(grp(r.diff),grp(h.o))+" = "+pc(r.pct);
+    verd='<span class="badge '+(r.up?"b-up":"b-dn")+'">'+pc(r.pct)+" "+(r.up?"increase":"decrease")+"</span>";
+  }
+  document.getElementById("heroBody").innerHTML=body
+    +'<div class="calc">'+calcHTML+"</div>"
+    +'<div class="verdict">'+verd+"</div>";
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.chart?'<div class="chart">'+q.chart+"</div>":"")
+    +(q.known||"")
+    +'<p class="q">'+q.q+"</p>"
+    +(q.round?'<p class="roundnote">'+q.round+"</p>":"");
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
