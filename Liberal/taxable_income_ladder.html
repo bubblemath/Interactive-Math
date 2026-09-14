@@ -1,0 +1,833 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Three Subtractions Ladder — gross to adjusted gross to taxable</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --tx:#2F5F6B;
+    --tx-bg:#E5EFF1;
+    --in:#1B7A4B;
+    --in-bg:#E7F4EC;
+    --out:#AF3244;
+    --out-bg:#FBEBEE;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--tx)}
+  :focus-visible{outline:3px solid var(--tx); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--tx)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:20px 16px 16px; background:var(--card)}
+  .form{max-width:480px; margin:0 auto; font-family:var(--serif); font-size:clamp(14.5px,2.9vw,16.5px)}
+  .form .ln{display:flex; justify-content:space-between; gap:14px; padding:5px 12px}
+  .form .ln .lb{color:var(--muted)}
+  .form .ln .am{font-variant-numeric:tabular-nums; white-space:nowrap}
+  .form .ln.pos .am{color:var(--in)}
+  .form .ln.neg .am{color:var(--out)}
+  .form .ln.tot{border-top:1.5px solid var(--ink); margin-top:3px; padding-top:7px; font-weight:700}
+  .form .ln.tot .lb{color:var(--ink)}
+  .form .ln.key{background:var(--tx-bg); border-radius:6px; margin-top:4px}
+  .form .ln.key .lb,.form .ln.key .am{color:var(--tx); font-weight:700}
+  .form .hd{font-size:11.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--tx); padding:10px 12px 3px; font-family:var(--sans); font-weight:600}
+  .form .note{font-size:12.5px; color:var(--muted); padding:1px 12px 4px; font-family:var(--sans)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--tx); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:72px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--tx); background:var(--tx-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--tx)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 12px; color:#31404F}
+  .scene{max-width:54ch; margin:0 auto 14px; background:var(--tx-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:46ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:15px}
+  .facts div{padding:6px 16px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .facts .am{font-variant-numeric:tabular-nums; white-space:nowrap}
+  .facts .hd{background:#EDF0F3; font-family:var(--sans); font-size:11.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); display:block; padding:5px 16px}
+  .item{display:inline-block; font-family:var(--serif); font-size:clamp(17px,3.6vw,22px); background:var(--tx-bg); border-radius:10px; padding:10px 24px; margin:0 auto 14px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:19px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>AGI</span> The Three Subtractions Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 12 · gross income, adjusted gross income and taxable income</p>
+    <h1>Three subtractions, and each has its own list.</h1>
+    <p class="lede">The arithmetic never gets harder than subtraction. What makes this topic difficult is <b>sorting</b>: savings interest is income and goes <i>in</i>, a retirement contribution is an adjustment and comes <i>out</i>, and a mortgage payment is neither — only the interest on it is deductible. Get the lists right and the three lines fill themselves in.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>You take the standard deduction or the itemized total — whichever is larger — never both and never the wrong one.</b> This is the only place in the whole calculation where you choose rather than follow a rule, and picking the smaller one leaves no trace: the arithmetic downstream still works, the answer is simply too high. Add the itemized list up first, then compare it with the standard figure and keep the bigger number.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–3 sort items into income, adjustments and neither, and reach adjusted gross income. Rungs 4–7 handle exemptions, the standard-versus-itemized choice, and the medical threshold. Rungs 8–10 finish at taxable income and run the whole chain.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>No tax owed yet</h3><p>This ladder stops at taxable income. Turning that into a tax bill is the next ladder's job, and it needs this number first.</p></div>
+    </div>
+    <p class="note2"><b>The figures.</b> 2016 rates throughout, as in your worksheet: a personal exemption of $4,050 per person, and standard deductions of $6,300 single, $6,300 married filing separately, $12,600 married filing jointly and $9,300 head of household. Everything rounds to the nearest dollar.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Sorting, then subtracting</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The lists are the lesson</h3><p>Every line of a real return is a decision about which pile something belongs in. The arithmetic is the easy half.</p></div>
+      <div class="step"><span class="n">02</span><h3>One wrong pile moves everything</h3><p>Counting an adjustment as a deduction gives the same taxable income by luck. Counting income as an adjustment does not.</p></div>
+      <div class="step"><span class="n">03</span><h3>Taxable income drives the rest</h3><p>The bracket you land in, and so the tax you owe, depends entirely on getting this last number right.</p></div>
+    </div>
+    <p class="closing">Income in, adjustments out, exemptions and deductions out. In that order, every time.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Three Subtractions Ladder · AGI = gross − adjustments · taxable = AGI − (exemptions + deductions) · standard or itemized, whichever is larger</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function $$(n){return "$"+grp(n);}
+function neg$(n){return "\u2212$"+grp(n);}
+
+/* ================= 2016 figures, as in the worksheet ================= */
+const EXEMPT=4050;
+const STD={single:6300, mfs:6300, mfj:12600, hoh:9300};
+const STATUS={
+  single:"single",
+  mfs:"married filing separately",
+  mfj:"married filing jointly",
+  hoh:"head of household"
+};
+const MEDRATE=75;                       /* 7.5%, held in tenths of a percent */
+function medFloor(agi){return Math.round(agi*MEDRATE/1000);}
+
+/* ================= what belongs in which pile ================= */
+const INCOME=["wages","tips","interest from a savings account","dividends from investments",
+  "unemployment compensation","profit from a small business","rental income from a second property",
+  "game show winnings","a year-end bonus","freelance design income"];
+const ADJUST=["a contribution to a tax-deferred savings plan","a contribution to a retirement plan",
+  "interest paid on a student loan","alimony payments made"];
+const ITEMIZE=["interest on a home mortgage","state income tax paid","property taxes",
+  "charitable contributions","a theft loss","the cost of tax preparation"];
+const NEITHER=["groceries for the year","a car payment","credit card interest",
+  "commuting costs","a gym membership","a family vacation","the monthly cell phone bill",
+  "new clothing for work"];
+const PILES={
+  income:{k:"income", label:"Part of gross income",
+    why:"Money coming in. It is added when the gross income line is worked out."},
+  adjust:{k:"adjust", label:"An adjustment",
+    why:"Untaxed income of a kind the law lets you set aside. It is subtracted from gross income to give the adjusted gross income."},
+  item:{k:"item", label:"An itemized deduction",
+    why:"A deductible expense. It goes on the itemized list, which is then compared with the standard deduction."},
+  none:{k:"none", label:"None of these",
+    why:"An ordinary personal expense. It never appears anywhere in the calculation."}
+};
+function pileOf(s){
+  if(INCOME.indexOf(s)>=0) return "income";
+  if(ADJUST.indexOf(s)>=0) return "adjust";
+  if(ITEMIZE.indexOf(s)>=0) return "item";
+  return "none";
+}
+
+/* ================= building a case ================= */
+function buildCase(o){
+  o=o||{};
+  const st=o.status||pick(["single","single","mfs","mfj","hoh"]);
+  const people=o.people||(st==="mfj"?2:1);
+  const wages=o.wages||ri(35,120)*1000;
+  const inc=o.inc||shuffle(INCOME.filter(function(x){return x!=="wages";})).slice(0,ri(1,2))
+    .map(function(l){return {l:l, a:ri(4,60)*100};});
+  const adj=o.adj||shuffle(ADJUST).slice(0,ri(1,2))
+    .map(function(l){return {l:l, a:ri(8,45)*100};});
+  const lo=o.lowItem;
+  const item=o.item||shuffle(ITEMIZE).slice(0,lo?ri(1,2):ri(2,4))
+    .map(function(l){return {l:l, a:(lo?ri(3,22):ri(8,110))*100};});
+  const med=(o.med===undefined)?(Math.random()<.5?ri(5,120)*100:0):o.med;
+
+  const gross=wages+inc.reduce(function(s,x){return s+x.a;},0);
+  const adjTot=adj.reduce(function(s,x){return s+x.a;},0);
+  const agi=gross-adjTot;
+  const floor=medFloor(agi);
+  const medAllowed=Math.max(0,med-floor);
+  const itemBase=item.reduce(function(s,x){return s+x.a;},0);
+  const itemTot=itemBase+medAllowed;
+  const std=STD[st];
+  const useItem=itemTot>std;
+  const ded=Math.max(std,itemTot);
+  const exempt=EXEMPT*people;
+  const taxable=agi-(exempt+ded);
+  return {st:st, people:people, wages:wages, inc:inc, adj:adj, item:item, med:med,
+    gross:gross, adjTot:adjTot, agi:agi, floor:floor, medAllowed:medAllowed,
+    itemBase:itemBase, itemTot:itemTot, std:std, useItem:useItem, ded:ded,
+    exempt:exempt, taxable:taxable};
+}
+function goodCase(o){
+  let c,t=0;
+  do{ c=buildCase(o); t++; }while(c.taxable<5000&&t<200);
+  return c;
+}
+/* force the standard-or-itemized choice to land on a chosen side */
+function caseWith(wantItem,o){
+  o=o||{};
+  let c,t=0;
+  do{
+    c=buildCase(Object.assign({},o,{lowItem:!wantItem}));
+    t++;
+  }while((c.taxable<5000||c.useItem!==wantItem)&&t<400);
+  return c;
+}
+
+/* the three worked examples from the worksheet */
+const W1=buildCase({status:"single", people:1, wages:87200,
+  inc:[{l:"interest from a savings account", a:2680}],
+  adj:[{l:"a contribution to a tax-deferred savings plan", a:3200}],
+  item:[{l:"interest on a home mortgage",a:11700},{l:"property taxes",a:4300},
+        {l:"state income tax paid",a:5220},{l:"charitable contributions",a:15000}],
+  med:0});
+const W2=buildCase({status:"single", people:1, wages:40000, inc:[],
+  adj:[{l:"a contribution to a retirement plan", a:1000}],
+  item:[{l:"charitable contributions",a:3000},{l:"a theft loss",a:1500},
+        {l:"the cost of tax preparation",a:300}],
+  med:0});
+const W3=buildCase({status:"mfs", people:1, wages:75000, inc:[],
+  adj:[{l:"a contribution to a retirement plan", a:4000}],
+  item:[{l:"interest on a home mortgage",a:11000},{l:"property taxes",a:4200},
+        {l:"charitable contributions",a:3000}],
+  med:1500});
+
+/* ================= renderers ================= */
+function formHTML(rows){
+  return '<div class="form">'+rows.map(function(r){
+    if(r.hd) return '<div class="hd">'+r.hd+"</div>";
+    if(r.nt) return '<div class="note">'+r.nt+"</div>";
+    return '<div class="ln'+(r.cls?" "+r.cls:"")+'"><span class="lb">'+r.l+"</span><span class=\"am\">"+r.a+"</span></div>";
+  }).join("")+"</div>";
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    if(r.hd) return '<span class="hd">'+r.hd+"</span>";
+    return "<div><span class=\"lb\">"+r.l+"</span><span class=\"am\">"+r.a+"</span></div>";
+  }).join("")+"</div>";
+}
+function caseFacts(c,upto){
+  const rows=[{hd:"Income"},{l:"Wages",a:$$(c.wages)}];
+  c.inc.forEach(function(x){ rows.push({l:x.l.charAt(0).toUpperCase()+x.l.slice(1), a:$$(x.a)}); });
+  if(upto>=1){ rows.push({hd:"Adjustments"});
+    c.adj.forEach(function(x){ rows.push({l:x.l.charAt(0).toUpperCase()+x.l.slice(1), a:$$(x.a)}); }); }
+  if(upto>=2){ rows.push({hd:"Deductible expenses"});
+    c.item.forEach(function(x){ rows.push({l:x.l.charAt(0).toUpperCase()+x.l.slice(1), a:$$(x.a)}); });
+    if(c.med>0) rows.push({l:"Medical expenses", a:$$(c.med)}); }
+  if(upto>=3){ rows.push({hd:"Filing"});
+    rows.push({l:"Status", a:STATUS[c.st]});
+    rows.push({l:"Exemptions", a:c.people+" \u00d7 "+$$(EXEMPT)});
+    rows.push({l:"Standard deduction", a:$$(c.std)}); }
+  return factsHTML(rows);
+}
+function moneyOpts(ans,pool,note){
+  const seen={}; seen[ans]=1;
+  const opts=[{label:$$(ans), correct:true, note:note}];
+  shuffle(pool).forEach(function(x){
+    if(x.v<0||seen[x.v])return; seen[x.v]=1;
+    opts.push({label:$$(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Which pile does it go in",
+ sub:"Income, adjustment, deduction, or nothing at all.",
+ gen:function(){
+   const s=pick(INCOME.concat(ADJUST).concat(ITEMIZE).concat(NEITHER));
+   const k=pileOf(s);
+   const opts=["income","adjust","item","none"].map(function(x){
+     return {label:PILES[x].label, correct:x===k,
+       note:x===k?PILES[x].why:("That pile is for "+PILES[x].why.charAt(0).toLowerCase()+PILES[x].why.slice(1))};
+   });
+   return {q:"Where does this belong in the calculation?",
+     item:s.charAt(0).toUpperCase()+s.slice(1), opts:shuffle(opts), one:true};
+ }
+},
+{
+ title:"Gross income",
+ sub:"Add everything that came in. Nothing is subtracted yet.",
+ gen:function(){
+   const c=goodCase();
+   const pool=[
+     {v:c.wages, w:"That is the wages alone. Interest, dividends and other income all count as well."},
+     {v:c.agi,   w:"That is the adjusted gross income \u2014 gross income with the adjustments already taken out. This step comes before that."},
+     {v:c.gross+c.adjTot, w:"That adds the adjustments in. Adjustments are subtracted later, never added."},
+     {v:c.gross-c.adjTot-c.exempt, w:"That runs several steps ahead at once."}
+   ];
+   return {q:"<b>What is the gross income?</b>", facts:caseFacts(c,1),
+     opts:shuffle(moneyOpts(c.gross,pool,
+       $$(c.wages)+" in wages plus "+c.inc.map(function(x){return $$(x.a);}).join(" plus ")+" = "+$$(c.gross)+". The adjustments stay out of this line."))};
+ }
+},
+{
+ title:"Adjusted gross income",
+ sub:"Gross income minus the adjustments. The first subtraction.",
+ gen:function(){
+   const c=goodCase();
+   const pool=[
+     {v:c.gross, w:"That is the gross income, before the adjustments come out."},
+     {v:c.gross+c.adjTot, w:"That adds the adjustments instead of subtracting them."},
+     {v:c.agi-c.exempt, w:"That takes the exemption out too. Exemptions belong to the next step."},
+     {v:c.agi-c.ded, w:"That takes the deduction out as well, which is the step after this one."}
+   ];
+   return {q:"<b>What is the adjusted gross income?</b>", facts:caseFacts(c,1),
+     opts:shuffle(moneyOpts(c.agi,pool,
+       "Gross income "+$$(c.gross)+" minus adjustments of "+$$(c.adjTot)+" = "+$$(c.agi)+"."))};
+ }
+},
+{
+ title:"Exemptions and deductions",
+ sub:"Two different things, added together, then subtracted once.",
+ gen:function(){
+   const c=goodCase();
+   const forms=[
+     {q:"<b>What is an exemption?</b>",
+      ans:"A fixed amount for each person supported by your income",
+      bad:[["A lump sum you may subtract instead of listing expenses","That describes the standard deduction."],
+        ["An expense you list separately on the return","That describes an itemized deduction."],
+        ["Untaxed income subtracted from gross income","That describes an adjustment."]],
+      note:"The IRS sets the figure. For 2016 it was "+$$(EXEMPT)+" per person."},
+     {q:"<b>What is a standard deduction?</b>",
+      ans:"A lump-sum amount you may subtract without listing anything",
+      bad:[["A fixed amount for each person you support","That is an exemption."],
+        ["The total of your deductible expenses","That is the itemized deduction."],
+        ["A dollar-for-dollar reduction in the tax you owe","That is a tax credit, and it comes much later."]],
+      note:"For "+STATUS[c.st]+" in 2016 it was "+$$(STD[c.st])+"."},
+     {q:"In <i>taxable income = adjusted gross income \u2212 (exemptions + deductions)</i>, <b>what do the brackets mean?</b>",
+      ans:"The exemptions and the deduction are added together first, then that total is subtracted once",
+      bad:[["Either the exemptions or the deduction is subtracted, not both","Both come out. The choice is only between the standard and the itemized deduction."],
+        ["The exemptions are subtracted and the deduction is added","Both are subtracted."],
+        ["The brackets are decorative and change nothing","They change which number gets subtracted \u2014 the sum rather than one of the parts."]],
+      note:"For this filer that is "+$$(c.exempt)+" of exemptions plus "+$$(c.ded)+" of deduction, giving "+$$(c.exempt+c.ded)+" to subtract."},
+     {q:"This filer supports "+c.people+" person"+(c.people===1?"":"s")+". <b>What is the total exemption amount?</b>",
+      ans:$$(c.exempt),
+      bad:[[$$(EXEMPT*(c.people+1)),"That is one person too many."],
+        [$$(STD[c.st]),"That is the standard deduction, not the exemption."],
+        [$$(c.exempt+STD[c.st]),"That adds the standard deduction on. The question asked for the exemptions alone."]],
+      note:c.people+" \u00d7 "+$$(EXEMPT)+" = "+$$(c.exempt)+"."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Which expenses can be itemized",
+ sub:"Deductible expenses go on the list. Ordinary living costs do not.",
+ gen:function(){
+   if(Math.random()<.5){
+     const s=pick(ITEMIZE.concat(NEITHER));
+     const yes=ITEMIZE.indexOf(s)>=0;
+     const opts=[
+       {label:"Yes \u2014 it goes on the itemized list", correct:yes,
+        note:yes?"A deductible expense of the kind the return allows you to list."
+                :"That is an ordinary personal expense, and personal expenses are not deductible."},
+       {label:"No \u2014 it is an ordinary personal expense", correct:!yes,
+        note:!yes?"Personal living costs never appear on the return."
+                 :"This one is deductible, so it belongs on the list."},
+       {label:"No \u2014 it is an adjustment instead",
+        note:"Adjustments are things like retirement contributions and student loan interest, and they come out earlier, at the adjusted gross income line."},
+       {label:"Only if you also take the standard deduction",
+        note:"You take the standard deduction <i>or</i> the itemized total, never both together."}
+     ];
+     return {q:"Can this be itemized?", item:s.charAt(0).toUpperCase()+s.slice(1),
+       opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+   }
+   const c=goodCase({med:0});
+   const junk=pick(NEITHER), junkAmt=ri(10,40)*100;
+   const pool=[
+     {v:c.itemBase+junkAmt, w:"That includes "+junk+", which is a personal expense and is not deductible."},
+     {v:c.itemBase-c.item[0].a, w:"One of the deductible items has been left off the list."},
+     {v:c.itemBase+c.std, w:"That adds the standard deduction to the itemized list. You use one or the other, not both."},
+     {v:c.std, w:"That is the standard deduction, not the total of the listed expenses."}
+   ];
+   const rows=[{hd:"The year's expenses"}]
+     .concat(c.item.map(function(x){return {l:x.l.charAt(0).toUpperCase()+x.l.slice(1), a:$$(x.a)};}))
+     .concat([{l:junk.charAt(0).toUpperCase()+junk.slice(1), a:$$(junkAmt)}]);
+   return {q:"<b>What is the total of the itemized deductions?</b>", facts:factsHTML(rows),
+     opts:shuffle(moneyOpts(c.itemBase,pool,
+       "The deductible items add to "+$$(c.itemBase)+". "+junk.charAt(0).toUpperCase()+junk.slice(1)+" is a personal expense and does not go on the list."))};
+ }
+},
+{
+ title:"Standard or itemized",
+ sub:"Add the list up, compare with the standard figure, keep the larger one.",
+ gen:function(){
+   const c=caseWith(Math.random()<.5,{med:0});
+   const forms=["which","amount","why"];
+   const f=pick(forms);
+   if(f==="which"){
+     const opts=[
+       {label:c.useItem?"The itemized total, "+$$(c.itemTot):"The standard deduction, "+$$(c.std), correct:true,
+        note:c.useItem?("The listed expenses come to "+$$(c.itemTot)+", which beats the standard "+$$(c.std)+". Take the larger.")
+                      :("The listed expenses come to only "+$$(c.itemTot)+", so the standard "+$$(c.std)+" is worth more. Take the larger.")},
+       {label:c.useItem?"The standard deduction, "+$$(c.std):"The itemized total, "+$$(c.itemTot),
+        note:"That is the smaller of the two. Choosing it would leave taxable income higher than it needs to be, and nothing downstream would look wrong."},
+       {label:"Both, added together: "+$$(c.std+c.itemTot),
+        note:"You may take one or the other, never both."},
+       {label:"The average of the two, "+$$(Math.round((c.std+c.itemTot)/2)),
+        note:"No averaging happens anywhere on a return."}
+     ];
+     return {q:"<b>Which deduction should this filer take?</b>",
+       facts:factsHTML([{hd:"The choice"},
+         {l:"Itemized total",a:$$(c.itemTot)},
+         {l:"Standard deduction ("+STATUS[c.st]+")",a:$$(c.std)}]),
+       opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+   }
+   if(f==="amount"){
+     const pool=[
+       {v:c.useItem?c.std:c.itemTot, w:"That is the smaller of the two. The rule is to take whichever is larger."},
+       {v:c.std+c.itemTot, w:"That takes both. Only one of the two may be used."},
+       {v:c.ded+c.exempt, w:"That adds the exemptions on. The question asked for the deduction alone."}
+     ];
+     return {q:"<b>What deduction amount is used?</b>", facts:caseFacts(c,3),
+       opts:shuffle(moneyOpts(c.ded,pool,
+         "Itemized "+$$(c.itemTot)+" against standard "+$$(c.std)+", so the "+(c.useItem?"itemized total":"standard deduction")+" of "+$$(c.ded)+" is used."))};
+   }
+   return {q:"<b>Why would a young filer often take the standard deduction?</b>",
+     ans:null,
+     opts:shuffle([
+       {label:"Their deductible expenses usually add up to less than the standard amount", correct:true,
+        note:"Mortgage interest, property taxes and large charitable gifts are the big itemized entries, and someone renting an apartment has none of them."},
+       {label:"The standard deduction is required for anyone under a certain age",
+        note:"There is no age rule. It is simply a choice between two numbers."},
+       {label:"Itemizing is not allowed unless you own a home",
+        note:"Anyone may itemize. It is only worth doing when the list beats the standard figure."},
+       {label:"The standard deduction is always the larger of the two",
+        note:"Often it is, for a young filer. For someone with a mortgage it usually is not."}
+     ]), one:true};
+ }
+},
+{
+ title:"The medical threshold",
+ sub:"Only the part above 7.5% of adjusted gross income counts.",
+ gen:function(){
+   const big=Math.random()<.5;
+   const c=goodCase({med:big?ri(80,200)*100:ri(5,50)*100});
+   const forms=["allowed","floor","concept"];
+   const f=pick(forms);
+   if(f==="floor"){
+     const pool=[
+       {v:Math.round(c.agi*75/100), w:"That is 75% of the adjusted gross income. The threshold is 7.5%."},
+       {v:Math.round(c.gross*75/1000), w:"That uses gross income. The threshold is a percent of the <i>adjusted</i> gross income."},
+       {v:Math.round(c.agi*7/1000), w:"That uses 0.7%, one decimal place out."}
+     ];
+     return {q:"<b>What is the medical expense threshold for this filer?</b>",
+       facts:factsHTML([{hd:"Known"},{l:"Adjusted gross income",a:$$(c.agi)},{l:"Medical expenses paid",a:$$(c.med)}]),
+       opts:shuffle(moneyOpts(c.floor,pool,
+         "7.5% of "+$$(c.agi)+" is "+$$(c.floor)+". Only medical expenses above that figure can be deducted."))};
+   }
+   if(f==="allowed"){
+     const pool=[
+       {v:c.med, w:"That deducts the whole medical bill. Only the part above the threshold counts."},
+       {v:c.floor, w:"That is the threshold itself, not the deductible part."},
+       {v:c.med+c.floor, w:"That adds the threshold on instead of taking it off."}
+     ];
+     return {q:"<b>How much of the medical expense can be deducted?</b>",
+       facts:factsHTML([{hd:"Known"},{l:"Adjusted gross income",a:$$(c.agi)},
+         {l:"Medical expenses paid",a:$$(c.med)},{l:"7.5% of AGI",a:$$(c.floor)}]),
+       opts:shuffle(moneyOpts(c.medAllowed,pool,
+         c.medAllowed>0
+           ? ($$(c.med)+" \u2212 "+$$(c.floor)+" = "+$$(c.medAllowed)+" is above the threshold, and that part is deductible.")
+           : ($$(c.med)+" is below the threshold of "+$$(c.floor)+", so none of it can be deducted.")))};
+   }
+   return {q:"<b>Which medical expenses are deductible?</b>",
+     opts:shuffle([
+       {label:"Only the amount above 7.5% of adjusted gross income", correct:true,
+        note:"The threshold is a share of income, so it is different for every filer. Below it, nothing counts."},
+       {label:"All of them, in full",
+        note:"Only the part above the threshold. Most filers deduct none at all."},
+       {label:"7.5% of the medical bill",
+        note:"The 7.5% is of income, not of the bill, and it is the part you cannot deduct."},
+       {label:"Only the amount above 7.5% of gross income",
+        note:"Close \u2014 but it is measured against the <i>adjusted</i> gross income, after the adjustments come out."}
+     ]), one:true};
+ }
+},
+{
+ title:"Taxable income",
+ sub:"Exemptions plus deduction, added first, then taken off the adjusted gross income.",
+ gen:function(){
+   const c=goodCase();
+   const pool=[
+     {v:c.agi-c.ded, w:"That leaves the exemptions out. Both the exemptions and the deduction come off."},
+     {v:c.agi-c.exempt, w:"That leaves the deduction out."},
+     {v:c.agi, w:"That is the adjusted gross income, before the last subtraction."},
+     {v:c.gross-(c.exempt+c.ded), w:"That starts from gross income. The adjustments have to come out first."},
+     {v:c.agi-(c.exempt+(c.useItem?c.std:c.itemTot)), w:"That uses the smaller of the standard and itemized figures. Take whichever is larger."}
+   ];
+   return {q:"<b>What is the taxable income?</b>", facts:caseFacts(c,3),
+     opts:shuffle(moneyOpts(c.taxable,pool,
+       "Deduction used: "+$$(c.ded)+" ("+(c.useItem?"itemized, the larger":"standard, the larger")+"). Exemptions "+$$(c.exempt)
+       +". So "+$$(c.agi)+" \u2212 "+$$(c.exempt+c.ded)+" = "+$$(c.taxable)+"."))};
+ }
+},
+{
+ title:"Which line is it",
+ sub:"A number is given. Say which of the three lines it belongs to.",
+ gen:function(){
+   const c=goodCase();
+   const rows=[
+     {v:c.gross,   n:"Gross income",           w:"Everything that came in, before anything is taken out."},
+     {v:c.agi,     n:"Adjusted gross income",  w:"Gross income with the adjustments subtracted."},
+     {v:c.taxable, n:"Taxable income",         w:"Adjusted gross income with the exemptions and deduction subtracted."},
+     {v:c.ded,     n:"The deduction used",     w:"The larger of the standard deduction and the itemized total."}
+   ];
+   const t=pick(rows);
+   const opts=rows.map(function(r){
+     return {label:r.n, correct:r.v===t.v, note:r.v===t.v?r.w:("That line reads "+$$(r.v)+" for this filer. "+r.w)};
+   });
+   return {q:"For this filer, <b>which line is "+$$(t.v)+"?</b>", facts:caseFacts(c,3),
+     opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"The whole return",
+ sub:"Any line, any filer, all the way from wages to taxable income.",
+ gen:function(){
+   const c=goodCase();
+   const t=pick(["gross","agi","ded","taxable"]);
+   if(t==="gross"){
+     return {q:"<b>What is the gross income?</b>", facts:caseFacts(c,1),
+       opts:shuffle(moneyOpts(c.gross,
+         [{v:c.wages,w:"Wages alone. The other income counts too."},
+          {v:c.agi,w:"That is after the adjustments come out."},
+          {v:c.gross+c.adjTot,w:"That adds the adjustments rather than leaving them for the next step."}],
+         "Everything that came in: "+$$(c.gross)+"."))};
+   }
+   if(t==="agi"){
+     return {q:"<b>What is the adjusted gross income?</b>", facts:caseFacts(c,1),
+       opts:shuffle(moneyOpts(c.agi,
+         [{v:c.gross,w:"That is before the adjustments come out."},
+          {v:c.gross+c.adjTot,w:"That adds the adjustments instead of subtracting."},
+          {v:c.agi-c.exempt,w:"That takes the exemptions out too, which belongs to the last step."}],
+         $$(c.gross)+" \u2212 "+$$(c.adjTot)+" = "+$$(c.agi)+"."))};
+   }
+   if(t==="ded"){
+     return {q:"<b>What deduction amount is used?</b>", facts:caseFacts(c,3),
+       opts:shuffle(moneyOpts(c.ded,
+         [{v:c.useItem?c.std:c.itemTot,w:"That is the smaller of the two."},
+          {v:c.std+c.itemTot,w:"That takes both. Only one may be used."},
+          {v:c.exempt,w:"That is the exemption amount, not the deduction."}],
+         "Itemized "+$$(c.itemTot)+" against standard "+$$(c.std)+": take "+$$(c.ded)+"."))};
+   }
+   return {q:"<b>What is the taxable income?</b>", facts:caseFacts(c,3),
+     opts:shuffle(moneyOpts(c.taxable,
+       [{v:c.agi-c.ded,w:"The exemptions were left out."},
+        {v:c.agi-c.exempt,w:"The deduction was left out."},
+        {v:c.agi,w:"That is the adjusted gross income."},
+        {v:c.agi-(c.exempt+(c.useItem?c.std:c.itemTot)),w:"That used the smaller deduction figure."}],
+       $$(c.agi)+" \u2212 ("+$$(c.exempt)+" + "+$$(c.ded)+") = "+$$(c.taxable)+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {c:W1, upto:0, lbl:"the woman: gross",
+   note:"Your worksheet's first example. The savings interest is income, so it is added in \u2014 a common slip is to leave it out because it is not wages. Gross income comes to "+$$(W1.gross)+"."},
+  {c:W1, upto:1, lbl:"...adjusted gross",
+   note:"The tax-deferred savings contribution is an adjustment, so it comes straight back out. One subtraction, and the adjusted gross income is "+$$(W1.agi)+"."},
+  {c:W1, upto:2, lbl:"...taxable",
+   note:"Her itemized expenses total "+$$(W1.itemTot)+", far more than the "+$$(W1.std)+" standard deduction, so the itemized figure is used. Exemptions and deduction are added and taken off together, leaving "+$$(W1.taxable)+"."},
+  {c:W2, upto:2, lbl:"when standard wins",
+   note:"The $40,000 filer. His listed expenses come to only "+$$(W2.itemTot)+", so the "+$$(W2.std)+" standard deduction is worth more and the list is discarded entirely. This is the choice worth slowing down for."},
+  {c:W3, upto:2, lbl:"the medical threshold",
+   note:"The married woman filing separately. Her medical expenses of "+$$(W3.med)+" fall below 7.5% of her adjusted gross income, which is "+$$(W3.floor)+" \u2014 so none of it is deductible and the line contributes nothing."}
+];
+function heroForm(c,upto){
+  const rows=[{hd:"Income"},{l:"Wages",a:$$(c.wages),cls:"pos"}];
+  c.inc.forEach(function(x){ rows.push({l:x.l.charAt(0).toUpperCase()+x.l.slice(1), a:$$(x.a), cls:"pos"}); });
+  rows.push({l:"Gross income", a:$$(c.gross), cls:"tot"});
+  if(upto>=1){
+    rows.push({hd:"Adjustments"});
+    c.adj.forEach(function(x){ rows.push({l:x.l.charAt(0).toUpperCase()+x.l.slice(1), a:neg$(x.a), cls:"neg"}); });
+    rows.push({l:"Adjusted gross income", a:$$(c.agi), cls:"tot"});
+  }
+  if(upto>=2){
+    rows.push({hd:"Deductions and exemptions"});
+    c.item.forEach(function(x){ rows.push({l:x.l.charAt(0).toUpperCase()+x.l.slice(1), a:$$(x.a)}); });
+    if(c.med>0){
+      rows.push({l:"Medical expenses", a:$$(c.med)});
+      rows.push({nt:"7.5% of "+$$(c.agi)+" is "+$$(c.floor)+", so "+(c.medAllowed>0?$$(c.medAllowed)+" of this counts":"none of this counts")});
+    }
+    rows.push({l:"Itemized total", a:$$(c.itemTot)});
+    rows.push({l:"Standard deduction", a:$$(c.std)});
+    rows.push({nt:(c.useItem?"Itemized is larger, so the standard deduction is discarded":"The standard deduction is larger, so the itemized list is discarded")});
+    rows.push({l:"Deduction used", a:neg$(c.ded), cls:"neg"});
+    rows.push({l:"Exemptions ("+c.people+" \u00d7 "+$$(EXEMPT)+")", a:neg$(c.exempt), cls:"neg"});
+    rows.push({l:"Taxable income", a:$$(c.taxable), cls:"key"});
+  }
+  return formHTML(rows);
+}
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  document.getElementById("heroBody").innerHTML=heroForm(h.c,h.upto);
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.item?'<div class="item">'+q.item+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
