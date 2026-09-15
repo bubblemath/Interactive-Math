@@ -1,0 +1,843 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Cap Ladder — one rate below the line, another above it</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --fc:#8C4A3C;
+    --fc-bg:#F7EBE8;
+    --below:#2E7D8F;
+    --above:#9A7B2E;
+    --ss:#3E6F8F;
+    --mc:#8A5A2E;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--fc)}
+  :focus-visible{outline:3px solid var(--fc); outline-offset:2px; border-radius:3px}
+
+  table.ft{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:13.5px}
+  table.ft th, table.ft td{border:1px solid var(--rule); padding:5px 12px; text-align:left; vertical-align:top}
+  table.ft th{background:var(--fc-bg); color:var(--fc); font-weight:700; font-size:13px; text-align:center}
+  table.ft td.hi{background:var(--fc-bg); outline:2px solid var(--fc); outline-offset:-2px}
+  table.ft ul{margin:0; padding-left:16px}
+  table.ft li{margin:2px 0}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--fc)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:20px 16px 16px; background:var(--card); overflow-x:auto}
+  .demo-top svg{display:block; width:100%; height:auto; max-width:620px; margin:0 auto}
+  .lines{max-width:500px; margin:12px auto 0; font-family:var(--serif); font-size:clamp(14px,2.8vw,16px)}
+  .lines .ln{display:flex; justify-content:space-between; gap:12px; padding:4px 12px; border-radius:6px}
+  .lines .ln .lb{color:var(--muted)}
+  .lines .ln .am{font-variant-numeric:tabular-nums; white-space:nowrap}
+  .lines .ln.b .lb,.lines .ln.b .am{color:var(--below)}
+  .lines .ln.a .lb,.lines .ln.a .am{color:var(--above)}
+  .lines .ln.tot{border-top:1.5px solid var(--ink); margin-top:4px; padding-top:7px; font-weight:700}
+  .lines .ln.tot .lb{color:var(--ink)}
+  .lines .ln.sub{font-size:.9em}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--fc); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:72px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--fc); background:var(--fc-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--fc)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:22px 20px 4px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 12px; color:#31404F}
+  .scene{max-width:52ch; margin:0 auto 12px; background:var(--fc-bg); border-radius:10px; padding:12px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .ft-wrap{margin:0 auto 12px; overflow-x:auto}
+  .split{margin:0 auto 12px; max-width:600px}
+  .split svg{display:block; width:100%; height:auto}
+  .facts{max-width:46ch; margin:0 auto 12px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:15px}
+  .facts div{padding:6px 16px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .facts .am{font-variant-numeric:tabular-nums; white-space:nowrap}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:18px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>7.65% | 1.45%</span> The Cap Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 12 · FICA tax for Social Security and Medicare</p>
+    <h1>One rate below the line, another above it.</h1>
+    <p class="lede">FICA is not a stack of brackets climbing upward. It is a single <b>cap</b> at $118,500, with a higher rate below it and a lower rate above. Earn less than the cap and there is one multiplication. Earn more and there are two — and the rate on the part above is the <i>smaller</i> one, which is the opposite of what income tax does.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>The second rate applies to the excess only, not to the whole amount.</b> On $200,000 of wages the 1.45% is charged on $81,500 — the part above the cap — not on all $200,000. And the 7.65% below the cap is charged on $118,500 exactly, whatever the income is above it, because that is where the cap bites. Subtract before multiplying, both times.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 read the table and handle income under the cap, where it is one multiplication. Rungs 3–5 split an income at the cap and add the pieces. Rungs 6–8 cover the self-employed rates, the employer's matching share, and why the rate drops. Rungs 9–10 put FICA beside income tax and mix everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>The whole-amount answer is always there</h3><p>Charging one rate on everything is the error, and that figure sits among the options on every computation rung.</p></div>
+    </div>
+    <p class="note2"><b>The figures.</b> 2016 rates, exactly as in your worksheet's Table 8.2, with the cap at $118,500. FICA amounts land on exact cents and are shown that way — the worksheet's own two examples come out at $10,247.00 and $19,044.00.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>A cap behaves unlike a bracket</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The rate falls, not rises</h3><p>Income tax rates climb with income. FICA's drops at the cap, so a high earner pays a smaller share of each extra dollar.</p></div>
+      <div class="step"><span class="n">02</span><h3>It is charged on earnings</h3><p>FICA applies to wages and net profits, not to taxable income. Deductions and exemptions do not reduce it.</p></div>
+      <div class="step"><span class="n">03</span><h3>Self-employment doubles it</h3><p>Someone self-employed pays both halves, which is why the rates are exactly twice the employee's.</p></div>
+    </div>
+    <p class="closing">Split at the cap. The higher rate below, the lower rate on the excess, and add.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Cap Ladder · $118,500 cap · employee 7.65% then 1.45% · self-employed 15.3% then 2.9% · the employer matches the employee's share</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function $$(n){return "$"+grp(Math.round(n));}
+function mc(c){                              /* cents -> $1,234.56 */
+  const neg=c<0; c=Math.abs(Math.round(c));
+  const d=Math.floor(c/100), f=c%100;
+  return (neg?"-$":"$")+grp(d)+"."+(f<10?"0"+f:String(f));
+}
+
+/* ================= Table 8.2, 2016 ================= */
+const CAP=118500;
+/* rates in hundredths of a percent: 7.65% is 765 */
+const KIND={
+  emp:  {n:"an employee",    below:765,  above:145,  ss:620,  med:145,
+         label:"Employee", noun:"income"},
+  self: {n:"self-employed",  below:1530, above:290,  ss:1240, med:290,
+         label:"Self-employed", noun:"net profits"}
+};
+function rpct(r){
+  const w=Math.floor(r/100), f=r%100;
+  return w+(f>0?("."+(f%10===0?String(f/10):(f<10?"0"+f:String(f)))):"")+"%";
+}
+/* income in dollars, rate in hundredths of a percent -> cents, exact for
+   incomes that are whole hundreds */
+function amtC(inc,rate){ return Math.floor((2*inc*rate+100)/200); }
+function fica(inc,k){
+  const K=KIND[k];
+  const capped=Math.min(inc,CAP), excess=Math.max(0,inc-CAP);
+  const c1=amtC(capped,K.below), c2=amtC(excess,K.above);
+  return {capped:capped, excess:excess, c1:c1, c2:c2, total:c1+c2, over:inc>CAP};
+}
+
+/* ================= renderers ================= */
+function ficaTable(hiCol,hiRow){
+  const cols=[
+    {h:"Employee's Rates", r:["7.65% on first $118,500 of income","1.45% of income in excess of $118,500"]},
+    {h:"Matching Rates Paid by the Employer", r:["7.65% on first $118,500 paid in wages","1.45% of wages paid in excess of $118,500"]},
+    {h:"Self-Employed Rates", r:["15.3% on first $118,500 of net profits","2.9% of net profits in excess of $118,500"]}
+  ];
+  let s='<table class="ft"><thead><tr>'+cols.map(function(c){return "<th>"+c.h+"</th>";}).join("")+"</tr></thead><tbody><tr>";
+  cols.forEach(function(c,i){
+    const on=(hiCol===i);
+    s+='<td class="'+(on?"hi":"")+'"><ul>'+c.r.map(function(t,k){
+      return "<li"+(on&&hiRow===k?' style="font-weight:700"':"")+">"+t+"</li>";
+    }).join("")+"</ul></td>";
+  });
+  return s+"</tr></tbody></table>";
+}
+function splitBar(inc,k,o){
+  o=o||{};
+  const K=KIND[k], f=fica(inc,k);
+  const W=540, X=26, H=46, Y=40;
+  const big=Math.max(inc,CAP*1.05);
+  const wc=Math.round(W*f.capped/big), we=Math.round(W*f.excess/big);
+  let s='<svg viewBox="0 0 600 '+(o.taxes?132:112)+'" role="img" aria-label="earnings split at the FICA cap">';
+  s+='<rect x="'+X+'" y="'+Y+'" width="'+wc+'" height="'+H+'" fill="var(--below)" fill-opacity="0.85"/>';
+  s+='<text x="'+(X+wc/2)+'" y="'+(Y+28)+'" text-anchor="middle" font-family="Georgia,serif" font-size="15" font-weight="700" fill="#fff">'+rpct(K.below)+"</text>";
+  s+='<text x="'+(X+wc/2)+'" y="'+(Y-9)+'" text-anchor="middle" font-family="Georgia,serif" font-size="11.5" fill="var(--muted)">'+$$(f.capped)+"</text>";
+  if(o.taxes) s+='<text x="'+(X+wc/2)+'" y="'+(Y+H+17)+'" text-anchor="middle" font-family="Georgia,serif" font-size="12" font-weight="700" fill="var(--below)">'+mc(f.c1)+"</text>";
+  if(f.excess>0){
+    s+='<rect x="'+(X+wc)+'" y="'+Y+'" width="'+we+'" height="'+H+'" fill="var(--above)" fill-opacity="0.85"/>';
+    s+='<text x="'+(X+wc+we/2)+'" y="'+(Y+28)+'" text-anchor="middle" font-family="Georgia,serif" font-size="15" font-weight="700" fill="#fff">'+rpct(K.above)+"</text>";
+    s+='<text x="'+(X+wc+we/2)+'" y="'+(Y-9)+'" text-anchor="middle" font-family="Georgia,serif" font-size="11.5" fill="var(--muted)">'+$$(f.excess)+"</text>";
+    if(o.taxes) s+='<text x="'+(X+wc+we/2)+'" y="'+(Y+H+17)+'" text-anchor="middle" font-family="Georgia,serif" font-size="12" font-weight="700" fill="var(--above)">'+mc(f.c2)+"</text>";
+  }
+  /* the cap line */
+  s+='<line x1="'+(X+wc)+'" y1="'+(Y-24)+'" x2="'+(X+wc)+'" y2="'+(Y+H+6)+'" stroke="var(--fc)" stroke-width="2" stroke-dasharray="4 3"/>';
+  s+='<text x="'+(X+wc)+'" y="'+(Y-28)+'" text-anchor="middle" font-family="Georgia,serif" font-size="12" font-weight="700" fill="var(--fc)">cap '+$$(CAP)+"</text>";
+  s+='<text x="'+X+'" y="18" font-family="Georgia,serif" font-size="12.5" fill="var(--ink)">'+KIND[k].noun+" "+$$(inc)+"</text>";
+  return s+"</svg>";
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span class=\"am\">"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+function workText(inc,k){
+  const K=KIND[k], f=fica(inc,k);
+  if(!f.over) return rpct(K.below)+" of "+$$(inc)+" = "+mc(f.total);
+  return rpct(K.below)+" of "+$$(f.capped)+" = "+mc(f.c1)+", plus "+rpct(K.above)+" of "+$$(f.excess)+" = "+mc(f.c2)+", giving "+mc(f.total);
+}
+
+/* ================= incomes ================= */
+function incUnder(){return ri(200,1180)*100;}          /* below the cap */
+function incOver(){return ri(1200,4000)*100;}          /* above the cap */
+function anyInc(){return Math.random()<.5?incUnder():incOver();}
+
+/* ================= options ================= */
+function centOpts(ans,pool,note){
+  const seen={}; seen[ans]=1;
+  const opts=[{label:mc(ans), correct:true, note:note}];
+  shuffle(pool).forEach(function(x){
+    if(x.v<0||seen[x.v])return; seen[x.v]=1;
+    opts.push({label:mc(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"The rates and the cap",
+ sub:"Two rates, one boundary, and a separate column for the self-employed.",
+ gen:function(){
+   const forms=["rate","cap","which","why"];
+   const f=pick(forms);
+   if(f==="rate"){
+     const k=pick(["emp","self"]), over=Math.random()<.5;
+     const K=KIND[k], want=over?K.above:K.below;
+     const opts=[765,145,1530,290].map(function(r){
+       return {label:rpct(r), correct:r===want,
+         note:r===want?("That is the "+KIND[k].label.toLowerCase()+" rate "+(over?"above":"below")+" the cap.")
+           :("That is "+(r===765?"the employee rate below the cap":r===145?"the employee rate above the cap":r===1530?"the self-employed rate below the cap":"the self-employed rate above the cap")+".")};
+     });
+     return {q:"What rate applies to "+KIND[k].noun+" <b>"+(over?"above":"below")+"</b> the cap for someone who is <b>"+KIND[k].n+"</b>?",
+       table:ficaTable(k==="emp"?0:2,over?1:0), opts:shuffle(distinctOpts(opts).slice(0,4))};
+   }
+   if(f==="cap"){
+     return {q:"<b>Where does the FICA cap sit?</b>", table:ficaTable(),
+       opts:shuffle([
+         {label:$$(CAP), correct:true, note:"Below that figure one rate applies; above it, a lower one."},
+         {label:$$(115725), note:"That is a bracket boundary from the income tax table, not the FICA cap."},
+         {label:$$(118500*2), note:"The cap is the figure itself, not twice it."},
+         {label:"There is no cap", note:"There is \u2014 that is exactly what makes FICA behave differently from the income tax brackets."}
+       ]), one:true};
+   }
+   if(f==="which"){
+     return {q:"<b>What is FICA tax used for?</b>", table:ficaTable(),
+       opts:shuffle([
+         {label:"Social Security and Medicare benefits", correct:true,
+          note:"The Federal Insurance Contributions Act funds those two programmes, which is why the rate splits at a cap."},
+         {label:"Federal income tax", note:"Income tax is a separate calculation with its own brackets."},
+         {label:"State income tax", note:"FICA is federal."},
+         {label:"Property taxes", note:"Those are local and unrelated."}
+       ]), one:true};
+   }
+   return {q:"<b>How is FICA different from the income tax brackets?</b>", table:ficaTable(),
+     opts:shuffle([
+       {label:"The rate falls above the cap, instead of rising", correct:true,
+        note:"Income tax rates climb as income climbs. FICA charges "+rpct(765)+" up to the cap and only "+rpct(145)+" above it."},
+       {label:"There is only one rate, not several",
+        note:"There are two \u2014 one below the cap and one above."},
+       {label:"It is charged on taxable income rather than earnings",
+        note:"The other way round: FICA is charged on earnings, and income tax on taxable income."},
+       {label:"It has more brackets than the income tax table",
+        note:"It has just two pieces, split at a single cap."}
+     ]), one:true};
+ }
+},
+{
+ title:"Under the cap",
+ sub:"One multiplication. Nothing is split.",
+ gen:function(){
+   const k=pick(["emp","self"]), inc=incUnder();
+   const K=KIND[k], f=fica(inc,k);
+   const pool=[
+     {v:amtC(inc,K.above), w:"That uses the rate for the part <i>above</i> the cap. This income never reaches it."},
+     {v:amtC(CAP,K.below), w:"That charges the rate on the full cap of "+$$(CAP)+". The rate applies to what was actually earned."},
+     {v:amtC(inc,KIND[k==="emp"?"self":"emp"].below), w:"That uses the "+KIND[k==="emp"?"self":"emp"].label.toLowerCase()+" rate."},
+     {v:amtC(inc,K.below)*2, w:"That doubles the tax. Only someone self-employed pays both halves, and the self-employed rate already includes that."}
+   ];
+   return {q:"<b>What is the FICA tax?</b>",
+     table:ficaTable(k==="emp"?0:2,0),
+     split:splitBar(inc,k),
+     facts:factsHTML([["Status",KIND[k].n.charAt(0).toUpperCase()+KIND[k].n.slice(1)],[KIND[k].noun.charAt(0).toUpperCase()+KIND[k].noun.slice(1),$$(inc)]]),
+     opts:shuffle(centOpts(f.total,pool,
+       $$(inc)+" is below the cap of "+$$(CAP)+", so the whole amount is charged at "+rpct(K.below)+": "+mc(f.total)+"."))};
+ }
+},
+{
+ title:"The part below the cap",
+ sub:"Above the cap, this piece stops growing. It is always the cap exactly.",
+ gen:function(){
+   const k=pick(["emp","self"]), inc=incOver();
+   const K=KIND[k], f=fica(inc,k);
+   const pool=[
+     {v:amtC(inc,K.below), w:"That charges "+rpct(K.below)+" on the whole "+$$(inc)+". Only the first "+$$(CAP)+" is charged at that rate."},
+     {v:amtC(f.excess,K.below), w:"That is the excess charged at the below-cap rate, which has the two pieces the wrong way round."},
+     {v:amtC(CAP,K.above), w:"That charges the capped amount at the above-cap rate."},
+     {v:f.total, w:"That is the whole FICA bill, both pieces together."}
+   ];
+   return {q:"<b>How much is charged on the part below the cap?</b>",
+     table:ficaTable(k==="emp"?0:2,0),
+     split:splitBar(inc,k),
+     facts:factsHTML([["Status",KIND[k].n.charAt(0).toUpperCase()+KIND[k].n.slice(1)],
+       [KIND[k].noun.charAt(0).toUpperCase()+KIND[k].noun.slice(1),$$(inc)],["Cap",$$(CAP)]]),
+     opts:shuffle(centOpts(f.c1,pool,
+       "The income passes the cap, so this piece is the cap itself: "+rpct(K.below)+" of "+$$(CAP)+" = "+mc(f.c1)+". It would be the same for any income above "+$$(CAP)+"."))};
+ }
+},
+{
+ title:"The part above the cap",
+ sub:"Subtract the cap first, then multiply by the lower rate.",
+ gen:function(){
+   const k=pick(["emp","self"]), inc=incOver();
+   const K=KIND[k], f=fica(inc,k);
+   const pool=[
+     {v:amtC(inc,K.above), w:"That charges "+rpct(K.above)+" on the whole "+$$(inc)+". Only the excess above the cap is charged at that rate."},
+     {v:amtC(f.excess,K.below), w:"That uses the below-cap rate on the excess. The two rates are the other way round."},
+     {v:f.c1, w:"That is the piece below the cap."},
+     {v:f.total, w:"That is the whole FICA bill."}
+   ];
+   return {q:"<b>How much is charged on the part above the cap?</b>",
+     table:ficaTable(k==="emp"?0:2,1),
+     split:splitBar(inc,k),
+     facts:factsHTML([["Status",KIND[k].n.charAt(0).toUpperCase()+KIND[k].n.slice(1)],
+       [KIND[k].noun.charAt(0).toUpperCase()+KIND[k].noun.slice(1),$$(inc)],
+       ["Amount above the cap",$$(inc)+" \u2212 "+$$(CAP)+" = "+$$(f.excess)]]),
+     opts:shuffle(centOpts(f.c2,pool,
+       rpct(K.above)+" of "+$$(f.excess)+" = "+mc(f.c2)+". The subtraction comes before the multiplication."))};
+ }
+},
+{
+ title:"Add the two pieces",
+ sub:"The whole FICA bill for an income that crosses the cap.",
+ gen:function(){
+   const k=pick(["emp","self"]), inc=incOver();
+   const K=KIND[k], f=fica(inc,k);
+   const pool=[
+     {v:amtC(inc,K.below), w:"That charges "+rpct(K.below)+" on everything. Above the cap the rate drops to "+rpct(K.above)+"."},
+     {v:amtC(inc,K.above), w:"That charges "+rpct(K.above)+" on everything. Below the cap the rate is "+rpct(K.below)+"."},
+     {v:f.c1, w:"That is only the piece below the cap."},
+     {v:f.c2, w:"That is only the piece above the cap."}
+   ];
+   return {q:"<b>What is the total FICA tax?</b>",
+     split:splitBar(inc,k,{taxes:true}),
+     facts:factsHTML([["Status",KIND[k].n.charAt(0).toUpperCase()+KIND[k].n.slice(1)],
+       [KIND[k].noun.charAt(0).toUpperCase()+KIND[k].noun.slice(1),$$(inc)]]),
+     opts:shuffle(centOpts(f.total,pool,workText(inc,k)+"."))};
+ }
+},
+{
+ title:"Self-employed",
+ sub:"Exactly double the employee's rates, because both halves are paid by one person.",
+ gen:function(){
+   const inc=anyInc();
+   const e=fica(inc,"emp"), s=fica(inc,"self");
+   const forms=["calc","why","compare"];
+   const f=pick(forms);
+   if(f==="calc"){
+     const fs=fica(inc,"self");
+     const pool=[
+       {v:e.total, w:"That uses the employee rates. Someone self-employed pays at "+rpct(1530)+" and "+rpct(290)+"."},
+       {v:e.total*3, w:"The self-employed rates are double the employee's, not triple."},
+       {v:amtC(inc,290), w:"That charges the above-cap rate of "+rpct(290)+" on the whole amount."},
+       (s.over
+         ? {v:amtC(inc,1530), w:"That charges "+rpct(1530)+" on everything, ignoring the cap."}
+         : {v:amtC(CAP,1530), w:"That charges the rate on the full cap of "+$$(CAP)+" rather than on what was actually earned."}),
+       (s.over
+         ? {v:amtC(fs.capped,1530)+amtC(fs.excess,145), w:"That uses the self-employed rate below the cap and the employee rate above it."}
+         : {v:amtC(inc,765), w:"That uses the employee rate below the cap."})
+     ];
+     return {q:"<b>What is the FICA tax for someone self-employed?</b>",
+       table:ficaTable(2),
+       split:splitBar(inc,"self"),
+       facts:factsHTML([["Net profits",$$(inc)]]),
+       opts:shuffle(centOpts(s.total,pool,workText(inc,"self")+"."))};
+   }
+   if(f==="why"){
+     return {q:"<b>Why are the self-employed rates double the employee's?</b>",
+       table:ficaTable(),
+       opts:shuffle([
+         {label:"There is no employer to pay the matching half, so the one person pays both", correct:true,
+          note:rpct(765)+" \u00d7 2 = "+rpct(1530)+", and "+rpct(145)+" \u00d7 2 = "+rpct(290)+". The totals are identical; only who writes the cheque changes."},
+         {label:"Self-employment income is taxed more heavily as a matter of policy",
+          note:"The total is the same as for an employed person. The employee simply does not see the employer's half."},
+         {label:"The cap does not apply to the self-employed",
+          note:"It applies exactly the same way, at "+$$(CAP)+"."},
+         {label:"Because net profits are larger than wages",
+          note:"The size of the income has nothing to do with the rate."}
+       ]), one:true};
+   }
+   const oi=incOver(), oe=fica(oi,"emp"), os=fica(oi,"self");
+   return {q:"<b>How much more FICA does a self-employed person pay on "+$$(oi)+" than an employee does?</b>",
+     facts:factsHTML([["Income",$$(oi)],["Employee FICA",mc(oe.total)],["Self-employed FICA",mc(os.total)]]),
+     opts:shuffle(centOpts(os.total-oe.total,
+       [{v:os.total, w:"That is the whole self-employed bill, not the difference."},
+        {v:os.total+oe.total, w:"That adds the two bills together instead of subtracting."},
+        {v:os.c1-oe.c1, w:"That is the difference on the capped piece alone, leaving out the part above the cap."},
+        {v:oe.c1, w:"That is the employee's tax on the capped piece only."}],
+       "The self-employed rates are exactly double, so the extra comes to the same as the employee's whole bill: "+mc(oe.total)+"."))};
+ }
+},
+{
+ title:"What the employer pays",
+ sub:"The employer matches the employee's share, on top of the wages.",
+ gen:function(){
+   const inc=anyInc();
+   const e=fica(inc,"emp");
+   const forms=["amount","total","who"];
+   const f=pick(forms);
+   if(f==="amount"){
+     const pool=[
+       {v:e.total*2, w:"That is both halves together. The employer's own share is one of them."},
+       {v:Math.round(e.total/2), w:"The employer matches the full employee share, not half of it."},
+       (e.over
+         ? {v:amtC(inc,765), w:"That charges "+rpct(765)+" on everything, ignoring the cap."}
+         : {v:amtC(CAP,765), w:"That charges the rate on the full cap of "+$$(CAP)+" rather than on the wages actually paid."}),
+       {v:amtC(inc,145), w:"That uses the above-cap rate on the whole amount."}
+     ];
+     return {q:"<b>How much FICA does the employer pay on these wages?</b>",
+       table:ficaTable(1),
+       facts:factsHTML([["Wages paid",$$(inc)],["Employee's FICA",mc(e.total)]]),
+       opts:shuffle(centOpts(e.total,pool,
+         "The employer pays at the same rates on the same wages, so its share matches the employee's exactly: "+mc(e.total)+"."))};
+   }
+   if(f==="total"){
+     const pool=[
+       {v:e.total, w:"That is one share. The question asks for both together."},
+       {v:Math.round(e.total*1.5), w:"The employer matches in full, so the total is twice the employee's share, not one and a half times."},
+       (e.over
+         ? {v:amtC(inc,1530), w:"That charges "+rpct(1530)+" on everything, ignoring the cap."}
+         : {v:amtC(CAP,765)*2, w:"That charges both shares on the full cap of "+$$(CAP)+" rather than on the wages actually paid."}),
+       {v:amtC(inc,145)*2, w:"That uses the above-cap rate on the whole amount."}
+     ];
+     return {q:"<b>How much reaches the government in total on these wages?</b>",
+       table:ficaTable(),
+       facts:factsHTML([["Wages paid",$$(inc)],["Employee's share",mc(e.total)],["Employer's share",mc(e.total)]]),
+       opts:shuffle(centOpts(e.total*2,pool,
+         mc(e.total)+" from each side comes to "+mc(e.total*2)+" \u2014 the same figure a self-employed person on "+$$(inc)+" would pay alone."))};
+   }
+   return {q:"<b>Who pays the matching share?</b>", table:ficaTable(1),
+     opts:shuffle([
+       {label:"The employer, in addition to the employee's share", correct:true,
+        note:"It never appears on the employee's payslip, which is why the true cost of FICA is easy to underestimate."},
+       {label:"The employee, deducted twice from wages",
+        note:"The employee pays one share. The employer pays a second."},
+       {label:"Nobody \u2014 the column is only for the self-employed",
+        note:"The self-employed have their own column. This one is what an employer pays for an employee."},
+       {label:"The government, as a subsidy",
+        note:"The government receives it rather than paying it."}
+     ]), one:true};
+ }
+},
+{
+ title:"Why the rate drops",
+ sub:"Two programmes are inside one rate, and only one of them is capped.",
+ gen:function(){
+   const forms=["split","which","effect"];
+   const f=pick(forms);
+   if(f==="split"){
+     return {q:"The employee rate of "+rpct(765)+" is made of two parts. <b>What are they?</b>",
+       opts:shuffle([
+         {label:rpct(620)+" for Social Security and "+rpct(145)+" for Medicare", correct:true,
+          note:"Above the cap the Social Security part stops, and only the Medicare "+rpct(145)+" continues \u2014 which is exactly the second rate in the table."},
+         {label:rpct(500)+" for Social Security and "+rpct(265)+" for Medicare",
+          note:"Those do add to "+rpct(765)+", but the Medicare share is "+rpct(145)+", which is the rate that carries on above the cap."},
+         {label:rpct(765)+" for Social Security and nothing for Medicare",
+          note:"Then nothing would be charged above the cap, and the table shows "+rpct(145)+"."},
+         {label:rpct(382)+" for each",
+          note:"They are not equal. The Medicare share is the smaller one, at "+rpct(145)+"."}
+       ]), one:true};
+     }
+   if(f==="which"){
+     return {q:"<b>Which part of FICA stops at the cap?</b>", table:ficaTable(),
+       opts:shuffle([
+         {label:"Social Security", correct:true,
+          note:"Its "+rpct(620)+" applies only up to "+$$(CAP)+". Medicare's "+rpct(145)+" carries on with no ceiling, which is why the rate above the cap is exactly "+rpct(145)+"."},
+         {label:"Medicare", note:"Medicare has no cap. It is the part that continues above "+$$(CAP)+"."},
+         {label:"Both of them", note:"Then nothing at all would be charged above the cap."},
+         {label:"Neither \u2014 the cap is only a reporting threshold", note:"It genuinely changes the rate charged."}
+       ]), one:true};
+   }
+   const inc=incOver();
+   const e=fica(inc,"emp");
+   const nocap=amtC(inc,765);
+   return {q:"<b>How much does the cap save this earner?</b>",
+     facts:factsHTML([["Wages",$$(inc)],[rpct(765)+" on the whole amount",mc(nocap)],["Actual FICA",mc(e.total)]]),
+     opts:shuffle(centOpts(nocap-e.total,
+       [{v:e.total, w:"That is the FICA actually paid, not the saving."},
+        {v:nocap, w:"That is the uncapped figure, not the saving."},
+        {v:e.c2, w:"That is the tax on the excess, not the amount saved on it."}],
+       mc(nocap)+" \u2212 "+mc(e.total)+" = "+mc(nocap-e.total)+", which is "+rpct(620)+" of the "+$$(e.excess)+" above the cap \u2014 the Social Security part that stopped."))};
+ }
+},
+{
+ title:"FICA and income tax together",
+ sub:"They are charged on different amounts. FICA does not care about deductions.",
+ gen:function(){
+   const inc=anyInc();
+   const taxable=Math.max(8000,inc-ri(10,26)*1000);
+   const e=fica(inc,"emp");
+   const onTaxable=fica(taxable,"emp");
+   const forms=["which","calc"];
+   if(pick(forms)==="which"){
+     return {q:"<b>Which amount is FICA charged on?</b>",
+       facts:factsHTML([["Wages earned",$$(inc)],["Taxable income",$$(taxable)]]),
+       opts:shuffle([
+         {label:"The wages, "+$$(inc), correct:true,
+          note:"FICA is charged on what you earn. Adjustments, exemptions and deductions reduce taxable income, and none of them reduces FICA."},
+         {label:"The taxable income, "+$$(taxable),
+          note:"That is what the income tax brackets use. FICA is charged earlier, on the earnings themselves."},
+         {label:"The difference between them, "+$$(inc-taxable),
+          note:"That is roughly the total of the adjustments and deductions, which FICA ignores entirely."},
+         {label:"Whichever is smaller",
+          note:"There is no such rule. FICA always uses the earnings."}
+       ]), one:true};
+   }
+   const pool=[
+     {v:onTaxable.total, w:"That charges FICA on the taxable income. FICA is charged on the wages, before any deductions."},
+     {v:amtC(inc,1530), w:"That uses the self-employed rate."},
+     (e.over
+       ? {v:amtC(inc,765), w:"That charges "+rpct(765)+" on everything, ignoring the cap."}
+       : {v:amtC(CAP,765), w:"That charges the rate on the full cap rather than on the wages earned."}),
+     (e.over
+       ? {v:e.c1, w:"That is only the part below the cap."}
+       : {v:amtC(inc,145), w:"That uses the above-cap rate, which this income never reaches."})
+   ];
+   return {q:"<b>What is the FICA tax?</b>",
+     facts:factsHTML([["Wages earned",$$(inc)],["Taxable income",$$(taxable)]]),
+     opts:shuffle(centOpts(e.total,pool,
+       "FICA uses the wages of "+$$(inc)+", not the taxable income. "+workText(inc,"emp")+"."))};
+ }
+},
+{
+ title:"Any earner, any income",
+ sub:"Employee or self-employed, above the cap or below it.",
+ gen:function(){
+   const k=pick(["emp","self"]), inc=anyInc();
+   const K=KIND[k], f=fica(inc,k);
+   const other=k==="emp"?"self":"emp";
+   const pool=[
+     {v:amtC(inc,K.below), w:"That charges "+rpct(K.below)+" on everything"+(f.over?", ignoring the cap":"; but check the rate against the table")+"."},
+     {v:amtC(inc,K.above), w:"That charges the above-cap rate on everything."},
+     {v:fica(inc,other).total, w:"That uses the "+KIND[other].label.toLowerCase()+" rates."},
+     {v:f.over?f.c1:amtC(CAP,K.below), w:f.over?"That is only the piece below the cap.":"That charges the rate on the full cap rather than on what was earned."}
+   ];
+   return {q:"<b>What is the FICA tax?</b>",
+     table:ficaTable(k==="emp"?0:2),
+     split:splitBar(inc,k,{taxes:f.over}),
+     facts:factsHTML([["Status",KIND[k].n.charAt(0).toUpperCase()+KIND[k].n.slice(1)],
+       [KIND[k].noun.charAt(0).toUpperCase()+KIND[k].noun.slice(1),$$(inc)]]),
+     opts:shuffle(centOpts(f.total,pool,workText(inc,k)+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {inc:80000, k:"emp", lbl:"$80,000 employee",
+   note:"Below the cap, so there is nothing to split. The whole "+$$(80000)+" is charged at "+rpct(765)+" and that is the entire calculation."},
+  {inc:200000, k:"emp", lbl:"$200,000 employee",
+   note:"Your worksheet's first example. The income crosses the cap, so it splits: "+$$(CAP)+" at "+rpct(765)+" and the remaining "+$$(81500)+" at only "+rpct(145)+". The two pieces come to $10,247.00."},
+  {inc:150000, k:"self", lbl:"$150,000 self-employed",
+   note:"Your worksheet's second example, at the self-employed rates \u2014 exactly double the employee's, because one person is paying both halves. "+$$(CAP)+" at "+rpct(1530)+" plus "+$$(31500)+" at "+rpct(290)+" gives $19,044.00."},
+  {inc:150000, k:"cmp", lbl:"the same income, both ways",
+   note:"One income, two statuses. Every figure in the self-employed row is precisely twice the employee's, because the employee's own bill is matched by an employer who pays a second, identical share."},
+  {inc:200000, k:"emp", employer:true, lbl:"what the employer adds",
+   note:"The employer pays the same amount again on the same wages. It never appears on a payslip, so the real total reaching the government is double what the employee sees."},
+  {inc:200000, k:"emp", why:true, lbl:"why the rate drops",
+   note:"The "+rpct(765)+" is two things at once: "+rpct(620)+" for Social Security and "+rpct(145)+" for Medicare. Social Security stops at the cap and Medicare does not \u2014 so the rate above the cap is exactly the Medicare share, left on its own."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="", rows=[];
+  if(h.k==="cmp"){
+    const e=fica(h.inc,"emp"), s=fica(h.inc,"self");
+    body=splitBar(h.inc,"self",{taxes:true});
+    rows=[
+      '<div class="ln b"><span class="lb">Employee: '+rpct(765)+" of "+$$(e.capped)+"</span><span class=\"am\">"+mc(e.c1)+"</span></div>",
+      '<div class="ln b"><span class="lb">Employee: '+rpct(145)+" of "+$$(e.excess)+"</span><span class=\"am\">"+mc(e.c2)+"</span></div>",
+      '<div class="ln tot"><span class="lb">Employee total</span><span class="am">'+mc(e.total)+"</span></div>",
+      '<div class="ln a"><span class="lb">Self-employed: '+rpct(1530)+" of "+$$(s.capped)+"</span><span class=\"am\">"+mc(s.c1)+"</span></div>",
+      '<div class="ln a"><span class="lb">Self-employed: '+rpct(290)+" of "+$$(s.excess)+"</span><span class=\"am\">"+mc(s.c2)+"</span></div>",
+      '<div class="ln tot"><span class="lb">Self-employed total</span><span class="am">'+mc(s.total)+"</span></div>"
+    ];
+  }else if(h.why){
+    const f=fica(h.inc,"emp");
+    const ssC=amtC(f.capped,620), medAll=amtC(f.capped,145)+amtC(f.excess,145);
+    body=splitBar(h.inc,"emp",{taxes:true});
+    rows=[
+      '<div class="ln sub"><span class="lb">Social Security, '+rpct(620)+" of "+$$(f.capped)+" (capped)</span><span class=\"am\">"+mc(ssC)+"</span></div>",
+      '<div class="ln sub"><span class="lb">Medicare, '+rpct(145)+" of all "+$$(h.inc)+" (no cap)</span><span class=\"am\">"+mc(medAll)+"</span></div>",
+      '<div class="ln tot"><span class="lb">Total FICA</span><span class="am">'+mc(ssC+medAll)+"</span></div>"
+    ];
+  }else{
+    const f=fica(h.inc,h.k);
+    body=splitBar(h.inc,h.k,{taxes:true});
+    rows=[
+      '<div class="ln b"><span class="lb">'+rpct(KIND[h.k].below)+" of "+$$(f.capped)+"</span><span class=\"am\">"+mc(f.c1)+"</span></div>"
+    ];
+    if(f.excess>0) rows.push('<div class="ln a"><span class="lb">'+rpct(KIND[h.k].above)+" of "+$$(f.excess)+"</span><span class=\"am\">"+mc(f.c2)+"</span></div>");
+    rows.push('<div class="ln tot"><span class="lb">'+(h.employer?"Employee's share":"FICA tax")+'</span><span class="am">'+mc(f.total)+"</span></div>");
+    if(h.employer){
+      rows.push('<div class="ln"><span class="lb">Employer\u2019s matching share</span><span class="am">'+mc(f.total)+"</span></div>");
+      rows.push('<div class="ln tot"><span class="lb">Total reaching the government</span><span class="am">'+mc(f.total*2)+"</span></div>");
+    }
+  }
+  document.getElementById("heroBody").innerHTML=body+'<div class="lines">'+rows.join("")+"</div>";
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.split?'<div class="split">'+q.split+"</div>":"")
+    +(q.table?'<div class="ft-wrap">'+q.table+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
