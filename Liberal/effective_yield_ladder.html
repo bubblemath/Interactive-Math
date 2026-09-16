@@ -1,0 +1,944 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Yield Ladder — the stated rate is not the rate you get</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --yl:#8A5E00;
+    --yl-bg:#FAF1DC;
+    --nom:#5D6B7A;
+    --eff:#1B7A4B;
+    --aa:#2E6F8F;
+    --bb:#8A3A5C;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--yl)}
+  :focus-visible{outline:3px solid var(--yl); outline-offset:2px; border-radius:3px}
+
+  .frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.05; font-size:.76em; margin:0 2px}
+  .frac .den{border-top:2px solid currentColor; padding-top:1px}
+  sup{font-size:.62em; vertical-align:super; line-height:0}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--yl)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:18ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:20px 16px 18px; background:var(--card)}
+  .given{font-family:var(--serif); font-size:clamp(14px,2.8vw,16px); color:var(--muted); margin-bottom:16px; text-align:center}
+  .given b{font-weight:400; color:var(--ink)}
+  .eq{max-width:580px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.2vw,21px); line-height:2.1; text-align:center}
+  .eq .res{color:var(--yl); font-weight:700}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:660px; margin:0 auto}
+  @media (max-width:620px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:14px 16px; text-align:center}
+  .pane.a{background:#E7EFF5} .pane.b{background:#F7EAEF}
+  .pane .ttl{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:8px}
+  .pane.a .ttl{color:var(--aa)} .pane.b .ttl{color:var(--bb)}
+  .pane .nom{font-family:var(--serif); font-size:clamp(15px,3vw,18px); color:var(--muted)}
+  .pane .eff{font-family:var(--serif); font-size:clamp(20px,4.4vw,28px); font-weight:700; margin-top:6px}
+  .pane.a .eff{color:var(--aa)} .pane.b .eff{color:var(--bb)}
+  .pane .win{display:inline-block; font-size:12px; font-weight:600; padding:2px 12px; border-radius:20px; background:var(--right-bg); color:var(--right); margin-top:8px}
+  table.yt{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:14.5px}
+  table.yt th,table.yt td{border:1px solid var(--rule); padding:4px 16px; text-align:right; white-space:nowrap}
+  table.yt th{background:var(--yl-bg); color:var(--yl); font-weight:700; font-size:13px; text-align:center}
+  table.yt td.lab{text-align:left}
+  table.yt tr.hi td{background:var(--yl-bg); outline:2px solid var(--yl); outline-offset:-2px}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--yl); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--yl); background:var(--yl-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--yl)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .scene{max-width:52ch; margin:0 auto 14px; background:var(--yl-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:40ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .item{display:inline-block; font-family:var(--serif); font-size:clamp(17px,3.8vw,24px); background:var(--yl-bg); border-radius:10px; padding:10px 24px; margin:0 auto 14px}
+  .tbl{margin:0 auto 14px; overflow-x:auto}
+  .pair{max-width:520px; margin:0 auto 14px}
+  .roundnote{font-size:13.5px; color:var(--muted); margin:-6px auto 14px; max-width:44ch}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:19px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>Y = (1 + r/n)<sup>n</sup> − 1</span> The Yield Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 14 · effective annual yield</p>
+    <h1>The stated rate is not the rate you get.</h1>
+    <p class="lede">An account advertised at 8% compounded monthly does not pay 8% over a year — it pays 8.3%, because the interest added each month starts earning too. The <b>effective annual yield</b> is the simple rate that would produce the same balance in one year, and it is the only number on which two accounts can honestly be compared.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>The higher stated rate does not always win.</b> Comparing two accounts by the rate on the poster works only when they compound equally often, and they rarely do. A lower nominal rate compounded far more frequently can overtake a higher one compounded annually — so the rule is not “pick the bigger number”, it is <i>work out both yields, then pick the bigger number</i>. Rung 8 is built entirely from pairs where the poster lies.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–4 separate nominal from effective and build Y one step at a time: the bracket, the power, the subtraction, the percent. Rung 5 asks why t never appears. Rungs 6–8 compute yields, compare two investments, and handle the cases where the higher stated rate loses. Rungs 9–10 cover borrowing and mix everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>The nominal rate is always offered</h3><p>Forgetting to subtract the 1, or reporting the stated rate back, are the two commonest answers. Both sit among the options.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Yields to the nearest tenth of a percent, as your worksheet asks. Money to the cent. The unrounded yield is shown in the working, because rounding before comparing two close investments can hide the difference.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>One number, honestly comparable</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>It is why the figure is published</h3><p>Banks must quote an effective yield precisely so two accounts can be compared without doing this arithmetic yourself.</p></div>
+      <div class="step"><span class="n">02</span><h3>Borrowing works the same way</h3><p>The same calculation on a loan is the annual percentage rate, and it is what the true cost of borrowing is measured in.</p></div>
+      <div class="step"><span class="n">03</span><h3>It compresses the whole lesson</h3><p>Y is the compound formula over one year with the principal stripped out. Everything from this lesson is inside it.</p></div>
+    </div>
+    <p class="closing">Build the bracket, raise it to n, take away the 1, and read it as a percent.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Yield Ladder · Y = (1 + r/n)<sup>n</sup> − 1 · nominal is what is advertised, effective is what is paid · compare yields, never posters</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function mc(c){
+  const neg=c<0; c=Math.abs(Math.round(c));
+  const d=Math.floor(c/100), f=c%100;
+  return (neg?"-$":"$")+grp(d)+"."+(f<10?"0"+f:String(f));
+}
+function $$(d){return "$"+grp(d);}
+/* a value on an exact half boundary is stored a hair below it by a double,
+   so nudge by a relative epsilon before rounding */
+function roundCents(x){ return Math.round(x + Math.abs(x)*1e-12); }
+
+/* ================= rates ================= */
+/* rates are held in hundredths of a percent: 8% is 800, 5.25% is 525 */
+function rpct(r){
+  const w=Math.floor(r/100), f=r%100;
+  return w+(f>0?("."+(f%10===0?String(f/10):(f<10?"0"+f:String(f)))):"")+"%";
+}
+function rdec(r){
+  let s=String(r); while(s.length<4) s="0"+s;
+  const w=s.slice(0,s.length-4)||"0";
+  const f=s.slice(s.length-4).replace(/0+$/,"");
+  return w+(f?"."+f:"");
+}
+/* a rate held in hundredths of a percent, converted to tenths so it can be
+   compared with a yield without a unit mismatch */
+function rTenths(r){ return Math.round(r/10); }
+/* a percent given in tenths: 51 -> "5.1%" */
+function tenths(x){
+  const w=Math.floor(Math.abs(x)/10), f=Math.abs(x)%10;
+  return (x<0?"-":"")+w+(f>0?("."+f):"")+"%";
+}
+
+/* ================= the yield formula ================= */
+/* the bracket raised to n, before the 1 comes off */
+function growth(r,n){ return Math.pow(1+r/(10000*n),n); }
+function growthCont(r){ return Math.exp(r/10000); }
+/* Y as a plain decimal */
+function yDec(r,n){ return growth(r,n)-1; }
+function yDecCont(r){ return growthCont(r)-1; }
+/* Y to the nearest tenth of a percent, held as an integer number of tenths */
+function yTenths(r,n){
+  const v=yDec(r,n)*1000;
+  return Math.round(v+Math.abs(v)*1e-12);
+}
+function yTenthsCont(r){
+  const v=yDecCont(r)*1000;
+  return Math.round(v+Math.abs(v)*1e-12);
+}
+function yPct(r,n){ return tenths(yTenths(r,n)); }
+function yPctCont(r){ return tenths(yTenthsCont(r)); }
+/* the unrounded yield, for showing the working */
+function yFull(r,n){ return (yDec(r,n)*100).toFixed(4)+"%"; }
+/* the factor, to six places */
+function gFull(r,n){ return growth(r,n).toFixed(6); }
+/* one year's balance under compound or simple interest */
+function oneYear(Pc,r,n){ return roundCents(Pc*growth(r,n)); }
+function oneYearSimple(Pc,r){ return roundCents(Pc*(1+r/10000)); }
+
+/* ================= compounding words ================= */
+const NWORDS=[
+  {w:"annually",n:1},{w:"semiannually",n:2},{w:"quarterly",n:4},
+  {w:"monthly",n:12},{w:"weekly",n:52},{w:"daily",n:365}
+];
+function nameOfN(n){
+  for(let i=0;i<NWORDS.length;i++) if(NWORDS[i].n===n) return NWORDS[i].w;
+  return n+" times a year";
+}
+
+/* ================= banks ================= */
+const NS=[1,2,4,12,52,365];
+const NSREAL=[2,4,12,52,365];                      /* n = 1 makes Y equal r */
+const PRINC=[4000,1000,2500,5000,8000,10000,3000,6000,12000,1500];
+/* rates in hundredths of a percent, a tenth of a point apart */
+const RATES=(function(){
+  const out=[];
+  for(let r=200;r<=1500;r+=10) out.push(r);
+  return out;
+})();
+
+function makeCase(o){
+  o=o||{};
+  let r,n,Y,tries=0;
+  do{
+    r=o.r||pick(RATES);
+    n=o.n||pick(o.real?NSREAL:NS);
+    Y=yTenths(r,n);
+    tries++;
+  }while(o.real&&Y===rTenths(r)&&tries<300);       /* the yield must beat the poster */
+  return {r:r, n:n, Y:Y, g:growth(r,n)};
+}
+/* Reversal pairs are rare enough that hunting for them by trial and error
+   sometimes gives up and returns a pair that is not a reversal at all. So they
+   are constructed instead, once, and picked from.
+   A compounds annually, so its yield IS its stated rate. Give A a rate above
+   B's but below B's yield, and A must lose despite the better poster. */
+const FLIPS=(function(){
+  const out=[];
+  RATES.forEach(function(rb){
+    [2,4,12,52,365].forEach(function(nb){
+      const yb=yTenths(rb,nb);                     /* B's yield, in tenths */
+      const cap=yDec(rb,nb)*10000;                 /* B's yield, in hundredths of a percent */
+      RATES.forEach(function(ra){
+        if(ra<=rb||ra>=cap) return;                /* higher stated rate, lower yield */
+        if(yTenths(ra,1)===yb) return;             /* the rounded yields must differ */
+        out.push({ar:ra, br:rb, bn:nb});
+      });
+    });
+  });
+  return out;
+})();
+/* two investments whose rounded yields differ, so the comparison has an answer */
+function makePair(o){
+  o=o||{};
+  if(o.flip){
+    const f=pick(FLIPS);
+    const a={r:f.ar, n:1}, b={r:f.br, n:f.bn};
+    a.Y=yTenths(a.r,a.n); b.Y=yTenths(b.r,b.n);
+    return {a:a, b:b};
+  }
+  let a,b,tries=0;
+  do{
+    a={r:pick(RATES), n:pick(NSREAL)};
+    b={r:pick(RATES), n:pick(NSREAL)};
+    a.Y=yTenths(a.r,a.n); b.Y=yTenths(b.r,b.n);
+    tries++;
+  }while((a.Y===b.Y||(o.plain&&!(a.r>b.r&&a.Y>b.Y)))&&tries<4000);
+  /* a plain pair only needs distinct yields; if the extra condition could not
+     be met, the pair is still a valid comparison question */
+  if(a.Y===b.Y){ b={r:pick(RATES), n:1}; b.Y=yTenths(b.r,b.n);
+    while(b.Y===a.Y){ b={r:pick(RATES), n:1}; b.Y=yTenths(b.r,b.n); } }
+  return {a:a, b:b};
+}
+
+/* ================= options ================= */
+function labelOpts(ans,cands,note){
+  const seen={}; seen[ans]=1;
+  const opts=[{label:ans, correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.v===null||seen[x.v])return; seen[x.v]=1;
+    opts.push({label:x.v, note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+function centOpts(ans,pool,note){
+  const seen={}; seen[ans]=1;
+  const opts=[{label:mc(ans), correct:true, note:note}];
+  shuffle(pool).forEach(function(x){
+    if(!Number.isFinite(x.v)||x.v<=0||seen[x.v])return; seen[x.v]=1;
+    opts.push({label:mc(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* the wrong yields people actually report */
+function yPool(c){
+  return [
+    {v:tenths(Math.round(c.g*1000)), w:"That is the bracket raised to n, without the 1 subtracted. The 1 is the principal you already had \u2014 it is not yield."},
+    {v:rpct(c.r), w:"That is the nominal rate, the one on the poster. The effective yield is what it actually pays over a year."},
+    {v:tenths(yTenths(c.r,1)), w:"That treats the account as compounding once a year, which is what the nominal rate assumes."},
+    {v:tenths(yTenthsCont(c.r)), w:"That is the yield under continuous compounding, which is the ceiling rather than this account."},
+    {v:c.n<=12?tenths(Math.round(c.r*c.n/10)):null,
+     w:"That multiplies the rate by n. The formula divides by n inside the bracket and raises to the power n."},
+    {v:tenths(yTenths(c.r,c.n*2)), w:"That is the yield this rate would give compounded twice as often."},
+    /* for a large n the periodic rate rounds to zero, and "0%" is not a
+       plausible yield - drop it rather than offer it */
+    {v:Math.round(c.r/(10*c.n))>0?tenths(Math.round(c.r/(10*c.n))):null,
+     w:"That is the rate for one period, r \u00f7 n, rather than the yield for the year."},
+    {v:tenths(c.Y+10), w:"A full point above the yield \u2014 check the subtraction of the 1."}
+  ];
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+function pairHTML(p,showY){
+  return '<div class="pair"><div class="duo">'
+    +'<div class="pane a"><div class="ttl">Investment A</div><div class="nom">'+rpct(p.a.r)+" compounded "+nameOfN(p.a.n)+"</div>"
+      +(showY?'<div class="eff">'+tenths(p.a.Y)+"</div>":"")+"</div>"
+    +'<div class="pane b"><div class="ttl">Investment B</div><div class="nom">'+rpct(p.b.r)+" compounded "+nameOfN(p.b.n)+"</div>"
+      +(showY?'<div class="eff">'+tenths(p.b.Y)+"</div>":"")+"</div>"
+    +"</div></div>";
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Nominal and effective",
+ sub:"The rate advertised, and the rate actually paid over a year.",
+ gen:function(){
+   const forms=[
+     {q:"<b>What is the effective annual yield?</b>",
+      ans:"The simple rate that would give the same balance after one year",
+      bad:[["The rate the bank advertises","That is the nominal rate."],
+        ["The rate charged in each compounding period","That is r divided by n."],
+        ["The total interest earned over the whole term","Yield is a rate, not an amount, and it always covers exactly one year."]],
+      note:"It answers: what single, uncompounded rate would have done the same job?"},
+     {q:"An account pays 8% compounded monthly. <b>What is the 8% called?</b>",
+      ans:"The nominal rate",
+      bad:[["The effective rate","The effective rate is what it works out to \u2014 8.3% here."],
+        ["The annual percentage yield","That is another name for the effective rate."],
+        ["The periodic rate","That is 8% \u00f7 12, the rate charged each month."]],
+      note:"Nominal means named. It is what appears on the poster, before compounding is taken into account."},
+     {q:"<b>When is the effective yield equal to the nominal rate?</b>",
+      ans:"When the interest is compounded once a year",
+      bad:[["Never \u2014 the effective rate is always higher","With n = 1 they are identical, because there is no interest on interest to add."],
+        ["Always \u2014 they are two names for the same rate","They differ whenever interest compounds more than once a year."],
+        ["When the principal is small enough","Yield does not depend on the principal at all."]],
+      note:"With n = 1, (1 + r/1)<sup>1</sup> \u2212 1 is just r."},
+     {q:"<b>Can the effective yield ever be lower than the nominal rate?</b>",
+      ans:"No \u2014 compounding can only add to it, so it is equal or higher",
+      bad:[["Yes, when the term is short","The yield is always measured over exactly one year."],
+        ["Yes, when the principal is large","The principal plays no part in the formula."],
+        ["Yes, when n is large","A larger n makes the yield higher, not lower."]],
+      note:"Every extra compounding period adds a little interest on interest, and nothing takes any away."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Raise the bracket to n",
+ sub:"The same bracket as the compound formula, over a single year.",
+ gen:function(){
+   const c=makeCase({real:true});
+   const cands=[
+     {v:(1+c.r/10000).toFixed(6), w:"That is 1 + r, without dividing by n or raising to the power n."},
+     {v:(1+c.r/(10000*c.n)).toFixed(6), w:"That is the bracket, but it has not been raised to the power n yet."},
+     {v:Math.pow(1+c.r/10000,c.n).toFixed(6), w:"That leaves the rate undivided inside the bracket."},
+     {v:(c.g-1).toFixed(6), w:"That is the yield itself, with the 1 already subtracted. This step comes first."}
+   ];
+   return {q:"<b>What is (1 + r/n)<sup>n</sup>?</b>",
+     scene:"An account pays "+rpct(c.r)+" compounded "+nameOfN(c.n)+".",
+     facts:factsHTML([["r",rpct(c.r)+" = "+rdec(c.r)],["n",String(c.n)]]),
+     round:"Give it to six decimal places.",
+     opts:shuffle(labelOpts(gFull(c.r,c.n),cands,
+       "(1 + "+rdec(c.r)+" \u00f7 "+c.n+")<sup>"+c.n+"</sup> = "+gFull(c.r,c.n)+". A year turns every dollar into this many."))};
+ }
+},
+{
+ title:"Subtract the 1",
+ sub:"The 1 is the money you already had. What is left is the yield.",
+ gen:function(){
+   const c=makeCase({real:true});
+   const forms=["calc","why"];
+   if(pick(forms)==="why"){
+     return {q:"<b>Why does the formula subtract 1?</b>",
+       opts:shuffle([
+         {label:"The 1 represents the original money, which is not interest", correct:true,
+          note:"(1 + r/n)<sup>n</sup> is what a dollar becomes. Taking away the dollar you started with leaves only what it earned."},
+         {label:"To convert the decimal into a percent",
+          note:"That is done by multiplying by 100, not by subtracting 1."},
+         {label:"To cancel the 1 inside the bracket",
+          note:"The bracket has already been raised to a power, so nothing cancels."},
+         {label:"To adjust for the first compounding period",
+          note:"All n periods are already inside the power. Nothing needs adjusting."}
+       ]), one:true};
+   }
+   const cands=[
+     {v:gFull(c.r,c.n), w:"That is the factor before the 1 comes off. It includes the original dollar."},
+     {v:(c.g+1).toFixed(6), w:"That adds 1 instead of subtracting it."},
+     {v:(1-c.g).toFixed(6), w:"That subtracts the other way round, which makes it negative."},
+     {v:(c.r/10000).toFixed(6), w:"That is the nominal rate as a decimal."}
+   ];
+   return {q:"<b>What is Y as a decimal?</b>",
+     scene:"An account pays "+rpct(c.r)+" compounded "+nameOfN(c.n)+".",
+     facts:factsHTML([["(1 + r/n)<sup>n</sup>",gFull(c.r,c.n)]]),
+     round:"Give it to six decimal places.",
+     opts:shuffle(labelOpts((c.g-1).toFixed(6),cands,
+       gFull(c.r,c.n)+" \u2212 1 = "+(c.g-1).toFixed(6)+". That is the yield, still in decimal form."))};
+ }
+},
+{
+ title:"Read it as a percent",
+ sub:"Two places right, then round to the nearest tenth.",
+ gen:function(){
+   const c=makeCase({real:true});
+   const dec=(c.g-1).toFixed(6);
+   const cands=[
+     {v:dec, w:"That is the decimal form. A yield is reported as a percent, so the point moves two places right."},
+     {v:tenths(Math.round((c.g-1)*100)), w:"That moves the decimal only one place instead of two."},
+     {v:tenths(Math.round((c.g-1)*10000)), w:"That moves the decimal three places."},
+     {v:tenths(Math.round(c.g*1000)), w:"That is the factor turned into a percent without the 1 subtracted."}
+   ];
+   return {q:"The decimal form of Y is <b>"+dec+"</b>. <b>What is the effective annual yield?</b>",
+     scene:"An account pays "+rpct(c.r)+" compounded "+nameOfN(c.n)+".",
+     round:"Round to the nearest tenth of a percent.",
+     opts:shuffle(labelOpts(tenths(c.Y),cands,
+       dec+" \u00d7 100 = "+yFull(c.r,c.n)+", which is "+tenths(c.Y)+" to the nearest tenth."))};
+ }
+},
+{
+ title:"Why there is no t",
+ sub:"A yield is always for one year, so the years never enter the formula.",
+ gen:function(){
+   const c=makeCase({real:true});
+   const forms=["why","same","cmp"];
+   const f=pick(forms);
+   if(f==="why"){
+     return {q:"<b>Why does Y = (1 + r/n)<sup>n</sup> \u2212 1 have no t in it?</b>",
+       opts:shuffle([
+         {label:"A yield is defined over exactly one year, so t is always 1", correct:true,
+          note:"Put t = 1 into the compound formula and the exponent nt becomes n. That is the whole difference between the two formulas."},
+         {label:"Because t cancels out of the algebra",
+          note:"Nothing cancels. It is fixed at 1 by the definition of an annual yield."},
+         {label:"Because the yield is the same for any t",
+          note:"The balance depends on t, but the yield is a per-year figure by construction."},
+         {label:"Because t is already inside n",
+          note:"n counts the periods in one year. It carries no information about the term."}
+       ]), one:true};
+   }
+   if(f==="same"){
+     const t=pick([3,5,8,10]);
+     return {q:"The same account is held for <b>"+t+" years</b> instead of one. <b>What happens to the effective annual yield?</b>",
+       scene:"An account pays "+rpct(c.r)+" compounded "+nameOfN(c.n)+", with an effective yield of "+tenths(c.Y)+".",
+       opts:shuffle([
+         {label:"It stays at "+tenths(c.Y), correct:true,
+          note:"The yield is a rate per year. The balance grows with the term; the yield does not."},
+         {label:"It multiplies by "+t,
+          note:"That would be the total simple growth, not a yield."},
+         {label:"It rises, because more compounding happens",
+          note:"More compounding happens, but the rate per year is unchanged."},
+         {label:"It cannot be worked out without knowing the principal",
+          note:"The principal never appears in the formula."}
+       ]), one:true};
+   }
+   return {q:"<b>How does Y = (1 + r/n)<sup>n</sup> \u2212 1 relate to A = P(1 + r/n)<sup>nt</sup>?</b>",
+     opts:shuffle([
+       {label:"It is the same formula with t = 1 and the principal stripped out", correct:true,
+        note:"Set t = 1 so the exponent is n, divide through by P, and subtract the original 1. What remains is the yield."},
+       {label:"They are unrelated formulas that happen to share a bracket",
+        note:"One is derived directly from the other."},
+       {label:"It is the compound formula with n set to 1",
+        note:"It is t that is set to 1, not n. The n stays as the exponent."},
+       {label:"It is the compound formula divided by t",
+        note:"No division by t happens anywhere."}
+     ]), one:true};
+ }
+},
+{
+ title:"Find the yield",
+ sub:"All four steps: bracket, power, subtract, percent.",
+ gen:function(){
+   const c=makeCase({real:true});
+   return {q:"<b>What is the effective annual yield?</b>",
+     scene:"An account pays "+rpct(c.r)+" compounded "+nameOfN(c.n)+".",
+     facts:factsHTML([["r",rpct(c.r)+" = "+rdec(c.r)],["n",String(c.n)]]),
+     round:"Round to the nearest tenth of a percent.",
+     opts:shuffle(labelOpts(tenths(c.Y),yPool(c),
+       "(1 + "+rdec(c.r)+" \u00f7 "+c.n+")<sup>"+c.n+"</sup> = "+gFull(c.r,c.n)+", minus 1 gives "+yFull(c.r,c.n)+", which rounds to "+tenths(c.Y)+"."))};
+ }
+},
+{
+ title:"Which investment is better",
+ sub:"Work out both yields, then compare those.",
+ gen:function(){
+   const p=makePair({plain:Math.random()<.5});
+   const better=p.a.Y>p.b.Y?"A":"B";
+   const W=better==="A"?p.a:p.b, L=better==="A"?p.b:p.a;
+   const forms=["which","one"];
+   if(pick(forms)==="one"){
+     const c={r:p.a.r, n:p.a.n, Y:p.a.Y, g:growth(p.a.r,p.a.n)};
+     return {q:"<b>What is Investment A's effective annual yield?</b>",
+       pair:pairHTML(p,false),
+       round:"Round to the nearest tenth of a percent.",
+       opts:shuffle(labelOpts(tenths(c.Y),yPool(c).concat([
+         {v:tenths(p.b.Y), w:"That is Investment B's yield."}]),
+         "(1 + "+rdec(c.r)+" \u00f7 "+c.n+")<sup>"+c.n+"</sup> \u2212 1 = "+yFull(c.r,c.n)+", or "+tenths(c.Y)+"."))};
+   }
+   return {q:"<b>Which is the better investment?</b>", pair:pairHTML(p,true),
+     opts:shuffle([
+       {label:"Investment "+better, correct:true,
+        note:"Its effective yield of "+tenths(W.Y)+" beats the other's "+tenths(L.Y)+", and the yield is the only fair comparison."},
+       {label:"Investment "+(better==="A"?"B":"A"),
+        note:"Its yield is "+tenths(L.Y)+", below the "+tenths(W.Y)+" of the other."},
+       {label:"They are equally good",
+        note:"The yields differ: "+tenths(p.a.Y)+" against "+tenths(p.b.Y)+"."},
+       {label:"Whichever has the higher stated rate",
+        note:"That rule fails whenever the two compound at different frequencies, which is most of the time."}
+     ]), two:true};
+ }
+},
+{
+ title:"When the poster lies",
+ sub:"A lower stated rate, compounded more often, can win.",
+ gen:function(){
+   const p=makePair({flip:true});                  /* A's rate is higher, B's yield is higher */
+   const forms=["which","why","gap"];
+   const f=pick(forms);
+   if(f==="which"){
+     return {q:"<b>Which is the better investment?</b>", pair:pairHTML(p,false),
+       round:"Work out both yields first.",
+       opts:shuffle([
+         {label:"Investment B", correct:true,
+          note:"B's stated rate is lower, but it compounds "+nameOfN(p.b.n)+" against A's "+nameOfN(p.a.n)+". The yields are "+tenths(p.b.Y)+" for B and "+tenths(p.a.Y)+" for A."},
+         {label:"Investment A",
+          note:"A has the higher stated rate, but it compounds less often. Its yield is only "+tenths(p.a.Y)+", against B's "+tenths(p.b.Y)+"."},
+         {label:"They are equal",
+          note:"The yields differ: "+tenths(p.a.Y)+" against "+tenths(p.b.Y)+"."},
+         {label:"There is no way to compare different compounding frequencies",
+          note:"That is exactly what the effective yield is for."}
+       ]), two:true};
+   }
+   if(f==="gap"){
+     return {q:"<b>By how much does B's yield beat A's?</b>", pair:pairHTML(p,true),
+       opts:shuffle(labelOpts(tenths(p.b.Y-p.a.Y),
+         [{v:tenths(rTenths(p.a.r)-rTenths(p.b.r)), w:"That is the gap in the stated rates, which points the other way."},
+          {v:tenths(p.b.Y), w:"That is B's whole yield, not the gap."},
+          {v:tenths(p.a.Y), w:"That is A's whole yield."},
+          {v:tenths(p.b.Y+p.a.Y), w:"That adds the two yields together."}],
+         tenths(p.b.Y)+" \u2212 "+tenths(p.a.Y)+" = "+tenths(p.b.Y-p.a.Y)+", even though A is advertised at "+tenths(rTenths(p.a.r)-rTenths(p.b.r))+" more."))};
+   }
+   return {q:"Investment A is advertised at a <b>higher</b> rate but yields <b>less</b>. <b>Why?</b>",
+     pair:pairHTML(p,true),
+     opts:shuffle([
+       {label:"B compounds far more often, and that outweighs the lower stated rate", correct:true,
+        note:"A compounds once a year, so its yield is exactly its stated rate \u2014 it gains nothing. B gains "+tenths(p.b.Y-rTenths(p.b.r))+" from compounding "+nameOfN(p.b.n)+", which is more than the "+tenths(rTenths(p.a.r)-rTenths(p.b.r))+" A has on the poster."},
+       {label:"A charges fees that reduce the yield",
+        note:"No fees are involved. The difference comes entirely from how often each compounds."},
+       {label:"The stated rates were quoted over different terms",
+        note:"Both are annual rates. Only n differs."},
+       {label:"A rounding error in the calculation",
+        note:"The gap is "+tenths(p.b.Y-p.a.Y)+", far larger than any rounding could produce."}
+     ]), one:true};
+ }
+},
+{
+ title:"Yield and the balance",
+ sub:"The yield is the simple rate that lands on the same figure after a year.",
+ gen:function(){
+   const c=makeCase({real:true});
+   const P=pick(PRINC), Pc=P*100;
+   const comp=oneYear(Pc,c.r,c.n);
+   const forms=["balance","apr","match"];
+   const f=pick(forms);
+   if(f==="balance"){
+     return {q:"<b>What is the balance after one year?</b>",
+       scene:$$(P)+" is deposited at "+rpct(c.r)+" compounded "+nameOfN(c.n)+".",
+       facts:factsHTML([["P",$$(P)],["Effective yield",tenths(c.Y)]]),
+       opts:shuffle(centOpts(comp,
+         [{v:oneYearSimple(Pc,c.r), w:"That applies the nominal rate as simple interest, which is what the account would pay with no compounding."},
+          {v:Pc, w:"That is the deposit, with no interest at all."},
+          {v:roundCents(Pc*(1+c.r*c.n/10000)), w:"That multiplies the rate by n instead of compounding."},
+          {v:roundCents(Pc*growthCont(c.r)), w:"That uses continuous compounding, which is the ceiling rather than this account."}],
+         $$(P)+" \u00d7 "+gFull(c.r,c.n)+" = "+mc(comp)+", which is the same as applying "+tenths(c.Y)+" as a simple rate."))};
+   }
+   if(f==="match"){
+     return {q:"<b>What simple interest rate would give the same balance after one year?</b>",
+       scene:$$(P)+" is deposited at "+rpct(c.r)+" compounded "+nameOfN(c.n)+", reaching "+mc(comp)+" after a year.",
+       round:"Round to the nearest tenth of a percent.",
+       opts:shuffle(labelOpts(tenths(c.Y),yPool(c),
+         "That is exactly what the effective yield means: "+$$(P)+" at a simple "+tenths(c.Y)+" reaches the same "+mc(comp)+"."))};
+   }
+   return {q:"<b>What is the effective rate called when you are borrowing rather than investing?</b>",
+     opts:shuffle([
+       {label:"The annual percentage rate", correct:true,
+        note:"Same calculation, different name. It is what the true cost of a loan is measured in."},
+       {label:"The nominal rate",
+        note:"That is the rate quoted before compounding is taken into account."},
+       {label:"The periodic rate",
+        note:"That is r divided by n, charged once each period."},
+       {label:"The prime rate",
+        note:"That is a benchmark lending rate, unrelated to this calculation."}
+     ]), one:true};
+ }
+},
+{
+ title:"Any account, any comparison",
+ sub:"Compute a yield, or choose between two.",
+ gen:function(){
+   const t=pick(["yield","yield","pair","flip"]);
+   if(t==="yield"){
+     const c=makeCase({real:true});
+     return {q:"<b>What is the effective annual yield?</b>",
+       scene:"An account pays "+rpct(c.r)+" compounded "+nameOfN(c.n)+".",
+       round:"Round to the nearest tenth of a percent.",
+       opts:shuffle(labelOpts(tenths(c.Y),yPool(c),
+         "(1 + "+rdec(c.r)+" \u00f7 "+c.n+")<sup>"+c.n+"</sup> \u2212 1 = "+yFull(c.r,c.n)+", or "+tenths(c.Y)+"."))};
+   }
+   const p=makePair(t==="flip"?{flip:true}:{});
+   const better=p.a.Y>p.b.Y?"A":"B";
+   const W=better==="A"?p.a:p.b, L=better==="A"?p.b:p.a;
+   return {q:"<b>Which is the better investment?</b>", pair:pairHTML(p,false),
+     round:"Work out both yields first.",
+     opts:shuffle([
+       {label:"Investment "+better, correct:true,
+        note:"Yields: A "+tenths(p.a.Y)+", B "+tenths(p.b.Y)+". "+(W.r<L.r?"The winner has the lower stated rate, but compounds "+nameOfN(W.n)+".":"")},
+       {label:"Investment "+(better==="A"?"B":"A"),
+        note:"Its yield is "+tenths(L.Y)+", below the other's "+tenths(W.Y)+"."},
+       {label:"They are equal",
+        note:"The yields differ: "+tenths(p.a.Y)+" against "+tenths(p.b.Y)+"."},
+       {label:"Whichever compounds more often",
+        note:"Frequency alone does not decide it \u2014 the stated rate matters too. Here "+(W.n>L.n?"it happens to agree, but":"it does not: the winner compounds less often and")+" the yields are what settle it."}
+     ]), two:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const H4={P:4000, Pc:400000, r:800, n:12, sr:830};
+const HQ={r:500, n:4};
+const HPAIR={a:{r:500,n:12}, b:{r:525,n:4}};
+HPAIR.a.Y=yTenths(HPAIR.a.r,HPAIR.a.n); HPAIR.b.Y=yTenths(HPAIR.b.r,HPAIR.b.n);
+const HFLIP={a:{r:1250,n:1}, b:{r:1200,n:12}};
+HFLIP.a.Y=yTenths(HFLIP.a.r,HFLIP.a.n); HFLIP.b.Y=yTenths(HFLIP.b.r,HFLIP.b.n);
+const HERO=[
+  {kind:"match", lbl:"$4,000, two ways",
+   note:"Your worksheet's opening comparison, and the definition in one picture. 8% compounded monthly and a simple 8.3% land on the very same balance after a year. That is what makes 8.3% the effective yield of 8% monthly \u2014 the two are interchangeable over twelve months."},
+  {kind:"build", lbl:"building Y",
+   note:"Your worksheet's 5% compounded quarterly. The bracket holds 1 + 0.05 \u00f7 4, raised to the fourth power because there are four periods in the year. Subtract the 1 to strip out the original dollar, and what is left is the yield."},
+  {kind:"not", lbl:"no t anywhere",
+   note:"Y is the compound formula with t set to 1 and the principal divided out. That is why there is no t and no P \u2014 a yield is a rate for one year, and it is the same whether you hold the account for one year or thirty."},
+  {kind:"table", lbl:"yield by frequency",
+   note:"A nominal 6% under every compounding frequency. The yield climbs with n and flattens out against the continuous ceiling, exactly as the balances did. Annual compounding is the only case where the effective yield equals the stated rate."},
+  {kind:"pair", lbl:"your two investments",
+   note:"Your worksheet's comparison. Investment B wins \u2014 and here the higher stated rate happens to have the higher yield too, which is what makes the next panel worth seeing."},
+  {kind:"flip", lbl:"when the poster lies",
+   note:"The case the rule of thumb gets wrong. A is advertised half a point higher, but compounds only once a year; B compounds monthly and overtakes it. Comparing the posters picks A. Comparing the yields picks B, correctly."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="match"){
+    const comp=oneYear(H4.Pc,H4.r,H4.n), simp=oneYearSimple(H4.Pc,H4.sr);
+    body='<div class="given"><b>P = '+$$(H4.P)+"</b> &nbsp;&middot;&nbsp; <b>held for 1 year</b></div>"
+      +'<div class="duo">'
+      +'<div class="pane a"><div class="ttl">'+rpct(H4.r)+" compounded monthly</div>"
+        +'<div class="nom">'+$$(H4.P)+" \u00d7 (1 + "+rdec(H4.r)+" \u00f7 12)<sup>12</sup></div>"
+        +'<div class="eff">'+mc(comp)+"</div></div>"
+      +'<div class="pane b"><div class="ttl">simple interest at '+rpct(H4.sr)+"</div>"
+        +'<div class="nom">'+$$(H4.P)+" \u00d7 (1 + "+rdec(H4.sr)+")</div>"
+        +'<div class="eff">'+mc(simp)+"</div></div></div>"
+      +'<div class="eq" style="margin-top:14px">'+rpct(H4.r)+" is the <b>nominal</b> rate &nbsp;\u00b7&nbsp; "
+      +rpct(H4.sr)+" is the <b>effective</b> rate"
+      +'<span class="lbl">the same balance, so the two rates are interchangeable over a year</span></div>';
+  }else if(h.kind==="build"){
+    body='<div class="given"><b>r = '+rpct(HQ.r)+" = "+rdec(HQ.r)+"</b> &nbsp;&middot;&nbsp; <b>compounded "+nameOfN(HQ.n)+", so n = "+HQ.n+"</b></div>"
+      +'<div class="eq">'
+      +"Y = (1 + "+'<span class="frac"><span>r</span><span class="den">n</span></span>'+")<sup>n</sup> \u2212 1<br>"
+      +"= (1 + "+rdec(HQ.r)+" \u00f7 "+HQ.n+")<sup>"+HQ.n+"</sup> \u2212 1"
+      +'<span class="lbl">the bracket, raised to the number of periods in a year</span>'
+      +"= "+gFull(HQ.r,HQ.n)+" \u2212 1 = "+(growth(HQ.r,HQ.n)-1).toFixed(6)
+      +'<span class="lbl">subtract the 1 \u2014 that was the original dollar, not yield</span>'
+      +'<span class="res">Y = '+yFull(HQ.r,HQ.n)+" = "+yPct(HQ.r,HQ.n)+"</span></div>";
+  }else if(h.kind==="not"){
+    body='<div class="eq">'
+      +"A = P (1 + "+'<span class="frac"><span>r</span><span class="den">n</span></span>'+")<sup>n t</sup>"
+      +'<span class="lbl">the compound formula</span>'
+      +"Y = &nbsp;&nbsp; (1 + "+'<span class="frac"><span>r</span><span class="den">n</span></span>'+")<sup>n</sup> \u2212 1"
+      +'<span class="lbl">set t = 1, divide out the P, take away the original 1</span>'
+      +'<span class="res">no t, and no P</span>'
+      +'<span class="lbl">a yield is a rate for one year, whatever the term or the deposit</span></div>';
+  }else if(h.kind==="table"){
+    const r=600;
+    let rows="";
+    NS.forEach(function(n){
+      rows+='<tr'+(n===1?' class="hi"':"")+'><td class="lab">'+nameOfN(n)+"</td><td>"+grp(n)+"</td><td>"
+        +gFull(r,n)+"</td><td>"+yFull(r,n)+"</td><td>"+yPct(r,n)+"</td></tr>";
+    });
+    rows+='<tr><td class="lab">continuously</td><td>\u2192 \u221e</td><td>'+growthCont(r).toFixed(6)
+      +"</td><td>"+(yDecCont(r)*100).toFixed(4)+"%</td><td>"+yPctCont(r)+"</td></tr>";
+    body='<div class="given"><b>nominal rate '+rpct(r)+"</b> &nbsp;&middot;&nbsp; <b>the effect of n alone</b></div>"
+      +'<table class="yt"><thead><tr><th>compounded</th><th>n</th><th>(1 + r/n)<sup>n</sup></th><th>Y</th><th>rounded</th></tr></thead><tbody>'
+      +rows+"</tbody></table>";
+  }else{
+    const p=h.kind==="pair"?HPAIR:HFLIP;
+    const better=p.a.Y>p.b.Y?"A":"B";
+    body='<div class="duo">'
+      +'<div class="pane a"><div class="ttl">Investment A</div><div class="nom">'+rpct(p.a.r)+" compounded "+nameOfN(p.a.n)+"</div>"
+        +'<div class="eff">'+tenths(p.a.Y)+"</div>"+(better==="A"?'<div class="win">better</div>':"")+"</div>"
+      +'<div class="pane b"><div class="ttl">Investment B</div><div class="nom">'+rpct(p.b.r)+" compounded "+nameOfN(p.b.n)+"</div>"
+        +'<div class="eff">'+tenths(p.b.Y)+"</div>"+(better==="B"?'<div class="win">better</div>':"")+"</div></div>"
+      +'<div class="eq" style="margin-top:14px">'
+      +"A: "+yFull(p.a.r,p.a.n)+" &nbsp;&nbsp; B: "+yFull(p.b.r,p.b.n)
+      +'<span class="lbl">'+(h.kind==="flip"
+        ? "the higher stated rate is A, the higher yield is B"
+        : "choose the greater effective annual yield")+"</span></div>";
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.pair||"")
+    +(q.tbl?'<div class="tbl">'+q.tbl+"</div>":"")
+    +(q.item?'<div class="item">'+q.item+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>"
+    +(q.round?'<p class="roundnote">'+q.round+"</p>":"");
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
