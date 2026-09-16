@@ -1,0 +1,866 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Rearrange Ladder — three given, one to find</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --rb:#7A3E5C;
+    --rb-bg:#F6EAF0;
+    --kn:#2E6F8F;
+    --mi:#A0522D;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--rb)}
+  :focus-visible{outline:3px solid var(--rb); outline-offset:2px; border-radius:3px}
+
+  .frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.05; font-size:.78em; margin:0 3px}
+  .frac .den{border-top:2px solid currentColor; padding-top:1px}
+  .miss{color:var(--mi); font-weight:700}
+  .kno{color:var(--kn)}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--rb)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:16ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:20px 16px 18px; background:var(--card)}
+  .known{max-width:520px; margin:0 auto 16px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+  .known .box{border-radius:8px; padding:7px 15px; font-family:var(--serif); font-size:clamp(14px,2.8vw,16px); background:#EDF0F3; color:var(--kn)}
+  .known .box.q{background:var(--rb-bg); color:var(--mi); font-weight:700}
+  .known .box b{font-weight:400; opacity:.7; margin-right:5px}
+  .steps{max-width:540px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3vw,19px); line-height:2.1; text-align:center}
+  .steps .res{color:var(--rb); font-weight:700}
+  .steps .bad{color:var(--wrong)}
+  .steps .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:8px}
+  .checkline{text-align:center; margin-top:14px; font-size:14.5px; color:var(--rb)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--rb); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:72px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--rb); background:var(--rb-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--rb)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .scene{max-width:54ch; margin:0 auto 14px; background:var(--rb-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:42ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .facts .qq{background:var(--rb-bg)} .facts .qq .lb,.facts .qq span{color:var(--mi); font-weight:700}
+  .item{display:inline-block; font-family:var(--serif); font-size:clamp(18px,4vw,25px); background:var(--rb-bg); border-radius:10px; padding:10px 26px; margin:0 auto 14px}
+  .roundnote{font-size:13.5px; color:var(--muted); margin:-6px auto 14px; max-width:44ch}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:19px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>A = P(1 + rt)</span> The Rearrange Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 13 · solving for a missing quantity</p>
+    <h1>Three given, one to find.</h1>
+    <p class="lede">The formula has four letters. Give any three and the fourth follows — but it follows by <b>rearranging first</b>. Find which letter is missing, get it alone on one side, and only then put the numbers in. Substituting before rearranging is how a division turns into a subtraction and the answer comes out quietly wrong.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>To undo a multiplication you divide — you do not take the percent back off.</b> To have $2,000 in two years at 4%, you need <b>2000 ÷ 1.08 = $1,851.85</b> today. Taking 8% off $2,000 instead gives $1,840, and that is not the same number: grow $1,840 by 8% and you reach $1,987.20, eleven dollars and eighty cents short. The 8% was a percent of the <i>deposit</i>, not of the target.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rung 1 names the missing letter. Rung 2 recovers the interest from A and P. Rungs 3–5 solve for r, for t and for P. Rungs 6–7 handle the present-value trap and checking an answer forwards. Rungs 8–10 cover units, bad rearrangements, and everything mixed.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Every answer can be checked</h3><p>Put the recovered value back into A = P(1 + rt) and you should land on the figure you started with.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Money to the cent, rates to the nearest hundredth of a percent, and time as an exact fraction of a year. Present value rarely comes out even, so those answers are rounded to the cent and the rung says so.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Rearranging beats guessing</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The real questions are backwards</h3><p>Nobody knows the interest in advance. They know what they borrowed and what they repaid, and want the rate.</p></div>
+      <div class="step"><span class="n">02</span><h3>Dividing is not subtracting a percent</h3><p>Undoing growth means dividing by the factor. Taking the same percent back off lands somewhere else.</p></div>
+      <div class="step"><span class="n">03</span><h3>The check is free</h3><p>Run any answer forwards through the formula. If it does not return the figure you were given, it is wrong.</p></div>
+    </div>
+    <p class="closing">Find the missing letter, get it alone, substitute last. Then check it forwards.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Rearrange Ladder · I = A − P · r = I ÷ Pt · t = I ÷ Pr · P = A ÷ (1 + rt) · always check it forwards</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function gcd(a,b){while(b){const t=a%b;a=b;b=t;}return a;}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function mc(c){
+  const neg=c<0; c=Math.abs(Math.round(c));
+  const d=Math.floor(c/100), f=c%100;
+  return (neg?"-$":"$")+grp(d)+"."+(f<10?"0"+f:String(f));
+}
+function $$(d){return "$"+grp(d);}
+
+/* ================= rate and time ================= */
+function rpct(r){                                  /* r in hundredths of a percent */
+  const w=Math.floor(r/100), f=r%100;
+  return w+(f>0?("."+(f%10===0?String(f/10):(f<10?"0"+f:String(f)))):"")+"%";
+}
+function rdec(r){
+  let s=String(r); while(s.length<4) s="0"+s;
+  const w=s.slice(0,s.length-4)||"0";
+  const f=s.slice(s.length-4).replace(/0+$/,"");
+  return w+(f?"."+f:"");
+}
+function tFrac(n,d){const g=gcd(n,d)||1; return {n:n/g,d:d/g,rawN:n,rawD:d};}
+function fracHTML(n,d){return d===1?String(n):('<span class="frac"><span>'+n+'</span><span class="den">'+d+"</span></span>");}
+function tText(t){return t.rawD===1?(t.rawN+(t.rawN===1?" year":" years")):(t.rawN+(t.rawN===1?" month":" months"));}
+function tSym(t){return fracHTML(t.rawN,t.rawD);}
+function tYears(t){                                /* as a decimal when it terminates */
+  return ratToDec(t.rawN,t.rawD);
+}
+function ratToDec(num,den){
+  const g=gcd(num,den)||1; num/=g; den/=g;
+  let a=0,b=0,d=den;
+  while(d%2===0){d/=2;a++;}
+  while(d%5===0){d/=5;b++;}
+  if(d!==1) return null;
+  const k=Math.max(a,b);
+  const mult=Math.pow(10,k)/den;
+  let digits=String(Math.round(num*mult));
+  while(digits.length<=k) digits="0"+digits;
+  const ip=digits.slice(0,digits.length-k)||"0";
+  const fp=digits.slice(digits.length-k).replace(/0+$/,"");
+  return ip+(fp?"."+fp:"");
+}
+
+/* ================= the four rearrangements ================= */
+function iCents(Pc,r,t){
+  const num=Pc*r*t.rawN, den=10000*t.rawD;
+  return Math.floor((2*num+den)/(2*den));
+}
+function isExactI(Pc,r,t){ return (Pc*r*t.rawN)%(10000*t.rawD)===0; }
+/* r = I / (P t), returned in hundredths of a percent */
+function solveR(Ic,Pc,t){
+  const num=10000*Ic*t.rawD, den=Pc*t.rawN;
+  return Math.floor((2*num+den)/(2*den));
+}
+/* t = I / (P r), returned in months */
+function solveTmonths(Ic,Pc,r){
+  const num=12*10000*Ic, den=Pc*r;
+  return Math.floor((2*num+den)/(2*den));
+}
+/* P = A / (1 + rt), in cents */
+function solveP(Ac,r,t){
+  const num=Ac*10000*t.rawD, den=10000*t.rawD+r*t.rawN;
+  return Math.floor((2*num+den)/(2*den));
+}
+function factorDec(r,t){return ratToDec(r*t.rawN+10000*t.rawD,10000*t.rawD);}
+
+/* ================= banks ================= */
+const PRINC=[2500,1200,1800,3000,900,4500,6000,750,1500,2400,3600,800,5000,9000,2000,7200];
+const RTARG=[250,300,400,450,500,600,650,700,750,800,900,1000,1100,1200,1240,1500];
+const YEARS=[1,2,3,4,5];
+const MONTHS=[3,4,6,8,9,10,15,18,24,30];
+const TARGETA=[1000,1500,2000,2500,3000,4000,5000,6000,8000,10000];
+
+function baseCase(o){
+  o=o||{};
+  let P,r,t,tries=0;
+  do{
+    P=o.P||pick(PRINC);
+    r=o.r||pick(RTARG);
+    t=o.t||(o.months?tFrac(pick(MONTHS),12):(Math.random()<.45?tFrac(pick(YEARS),1):tFrac(pick(MONTHS),12)));
+    tries++;
+  }while(!isExactI(P*100,r,t)&&tries<500);
+  const Pc=P*100, I=iCents(Pc,r,t);
+  return {P:P, Pc:Pc, r:r, t:t, I:I, A:Pc+I, f:factorDec(r,t)};
+}
+/* the rate has to come back out exactly as it went in */
+function caseR(o){
+  let c,tries=0;
+  do{ c=baseCase(o); tries++; }while((solveR(c.I,c.Pc,c.t)!==c.r||c.I<100)&&tries<500);
+  return c;
+}
+/* ...and, where the factor is going to be printed, it has to terminate too */
+function caseRf(o){
+  let c,tries=0;
+  do{ c=caseR(o); tries++; }while(c.f===null&&tries<500);
+  return c;
+}
+/* the term has to come back out as a whole number of months */
+function caseT(o){
+  let c,tries=0;
+  do{ c=baseCase(Object.assign({months:true},o||{})); tries++; }
+  while((solveTmonths(c.I,c.Pc,c.r)!==c.t.rawN||c.I<100)&&tries<500);
+  return c;
+}
+/* the principal has to come back out exactly */
+function casePexact(o){
+  let c,tries=0;
+  do{ c=baseCase(o); tries++; }while(solveP(c.A,c.r,c.t)!==c.Pc&&tries<500);
+  return c;
+}
+/* a round target A, with the present value rounded to the cent */
+function casePtarget(){
+  let A,r,t,f,tries=0;
+  do{
+    A=pick(TARGETA); r=pick(RTARG);
+    t=Math.random()<.5?tFrac(pick(YEARS),1):tFrac(pick(MONTHS),12);
+    f=factorDec(r,t); tries++;
+  }while(f===null&&tries<400);
+  const Ac=A*100, Pc=solveP(Ac,r,t);
+  return {A:A, Ac:Ac, r:r, t:t, f:f, Pc:Pc, I:Ac-Pc,
+    exact:(Ac*10000*t.rawD)%(10000*t.rawD+r*t.rawN)===0};
+}
+
+/* the worksheet's two backwards examples */
+const WR={P:2500, Pc:250000, Ac:265500, t:tFrac(6,12)};
+WR.I=WR.Ac-WR.Pc; WR.r=solveR(WR.I,WR.Pc,WR.t); WR.f=factorDec(WR.r,WR.t);
+const WP={A:2000, Ac:200000, r:400, t:tFrac(2,1)};
+WP.f=factorDec(WP.r,WP.t); WP.Pc=solveP(WP.Ac,WP.r,WP.t); WP.I=WP.Ac-WP.Pc;
+
+/* ================= rendering ================= */
+function knownHTML(rows){
+  return '<div class="known">'+rows.map(function(r){
+    return '<div class="box'+(r[2]?" q":"")+'"><b>'+r[0]+"</b>"+r[1]+"</div>";
+  }).join("")+"</div>";
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div"+(r[2]?' class="qq"':"")+"><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+
+/* ================= wrong answers people actually get ================= */
+function rPool(c){
+  const out=[];
+  out.push({v:rpct(solveR(c.I,c.Ac||c.A,c.t)), w:"That divides by the amount repaid instead of by the principal. The interest was charged on what was borrowed."});
+  out.push({v:rpct(Math.floor((2*10000*c.I+c.Pc)/(2*c.Pc))), w:"That leaves the time out. The interest built up over "+tText(c.t)+", so it has to be divided by the term as well."});
+  out.push({v:rdec(c.r), w:"That is the rate as a decimal. A rate is reported as a percent."});
+  out.push({v:mc(c.I), w:"That is the interest in dollars, not the rate."});
+  return out;
+}
+function centPool(c,want){
+  const out=[];
+  if(want==="P"){
+    out.push({v:c.Ac-Math.floor((2*c.Ac*c.r*c.t.rawN+10000*c.t.rawD)/(2*10000*c.t.rawD)),
+      w:"That takes the interest percent off the target amount. The percent applies to the deposit, not to the target, so this takes off too much."});
+    out.push({v:c.Ac, w:"That is the target amount, not what has to go in today."});
+    out.push({v:Math.floor((2*c.Ac*(10000*c.t.rawD+c.r*c.t.rawN)+10000*c.t.rawD)/(2*10000*c.t.rawD)),
+      w:"That multiplies by the factor instead of dividing. Multiplying grows the money; you are working backwards."});
+    out.push({v:c.Ac-c.I*2, w:"That removes the interest twice."});
+  }
+  return out;
+}
+function centOpts(ans,pool,note){
+  const seen={}; seen[ans]=1;
+  const opts=[{label:mc(ans), correct:true, note:note}];
+  shuffle(pool).forEach(function(x){
+    if(x.v<=0||seen[x.v])return; seen[x.v]=1;
+    opts.push({label:mc(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+function labelOpts(ans,cands,note){
+  const seen={}; seen[ans]=1;
+  const opts=[{label:ans, correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.v===null||seen[x.v])return; seen[x.v]=1;
+    opts.push({label:x.v, note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Which letter is missing",
+ sub:"Name it before you touch the numbers.",
+ gen:function(){
+   const c=baseCase();
+   const which=pick(["r","t","P","I"]);
+   const scenes={
+     r:"You borrow "+$$(c.P)+" and promise to repay "+mc(c.A)+" in "+tText(c.t)+". What simple interest rate did you pay?",
+     t:"A loan of "+$$(c.P)+" at "+rpct(c.r)+" simple interest runs up "+mc(c.I)+" of interest. How long was the term?",
+     P:"You want "+mc(c.A)+" in "+tText(c.t)+" and can earn "+rpct(c.r)+" simple interest. How much must you deposit now?",
+     I:"A loan of "+$$(c.P)+" is repaid with "+mc(c.A)+". How much interest was paid?"
+   };
+   const names={r:"the rate, r", t:"the time, t", P:"the principal, P", I:"the interest, I"};
+   const whys={
+     r:"The principal, the amount repaid and the term are all given. The rate is what is being asked for.",
+     t:"The principal, the rate and the interest are given. The term is the unknown.",
+     P:"The target amount, the rate and the term are given. The deposit needed is the unknown.",
+     I:"Only the principal and the amount repaid appear. The interest is the difference between them."
+   };
+   const opts=["r","t","P","I"].map(function(x){
+     return {label:names[x], correct:x===which,
+       note:x===which?whys[x]:("That one is given in this problem \u2014 read the sentence again for which number is absent.")};
+   });
+   return {q:"<b>Which quantity is the problem asking for?</b>", scene:scenes[which],
+     opts:shuffle(opts), one:true};
+ }
+},
+{
+ title:"Interest from A and P",
+ sub:"A = P + I, so I = A − P. The simplest rearrangement there is.",
+ gen:function(){
+   const c=baseCase();
+   const opts=[
+     {label:mc(c.I), correct:true, note:mc(c.A)+" \u2212 "+mc(c.Pc)+" = "+mc(c.I)+". Everything repaid above the principal is interest."},
+     {label:mc(c.A+c.Pc), note:"That adds them. The interest is the gap between the two, not their total."},
+     {label:mc(c.Pc), note:"That is the principal."},
+     {label:mc(c.A), note:"That is the total repaid, principal included."}
+   ];
+   return {q:"<b>How much interest was paid?</b>",
+     scene:"You borrow "+$$(c.P)+" and repay "+mc(c.A)+" at the end of "+tText(c.t)+".",
+     known:knownHTML([["P ",mc(c.Pc)],["A ",mc(c.A)],["I ","?",true]]),
+     opts:shuffle(distinctOpts(opts).slice(0,4))};
+ }
+},
+{
+ title:"Solving for the rate",
+ sub:"I = Prt, so r = I ÷ Pt. Divide by both of them.",
+ gen:function(){
+   const c=caseR();
+   return {q:"<b>What simple interest rate was paid?</b>",
+     scene:"You borrow "+$$(c.P)+" and promise to repay "+mc(c.A)+" in "+tText(c.t)+".",
+     facts:factsHTML([["P",mc(c.Pc)],["A",mc(c.A)],["I = A \u2212 P",mc(c.I)],
+       ["t",c.t.rawD===1?tText(c.t):(c.t.rawN+" months = "+tSym(c.t)+" year")],["r","?",true]]),
+     opts:shuffle(labelOpts(rpct(c.r),rPool(c),
+       mc(c.I)+" \u00f7 ("+mc(c.Pc)+" \u00d7 "+(c.t.rawD===1?String(c.t.rawN):tSym(c.t))+") = "+rdec(c.r)+", which is "+rpct(c.r)+"."))};
+ }
+},
+{
+ title:"Solving for the time",
+ sub:"t = I ÷ Pr, and the answer comes out in years.",
+ gen:function(){
+   const c=caseT();
+   const yrs=tYears(c.t);
+   const cands=[
+     {v:(c.t.rawN*2)+" months", w:"That is twice the term. Check the division again."},
+     {v:yrs===null?null:(yrs+" years"), w:"That is the term in years rather than months \u2014 the same length, but the question asked for months."},
+     {v:Math.round(c.t.rawN/2)+" months", w:"That is half the term."},
+     {v:c.r/100+" months", w:"That is the rate, not the time."},
+     {v:(c.t.rawN+12)+" months", w:"That adds a year for no reason."}
+   ];
+   return {q:"<b>How long was the term, in months?</b>",
+     scene:"A loan of "+$$(c.P)+" at "+rpct(c.r)+" simple interest runs up "+mc(c.I)+" in interest.",
+     facts:factsHTML([["P",mc(c.Pc)],["r",rpct(c.r)+" = "+rdec(c.r)],["I",mc(c.I)],["t","?",true]]),
+     opts:shuffle(labelOpts(c.t.rawN+" months",cands,
+       mc(c.I)+" \u00f7 ("+mc(c.Pc)+" \u00d7 "+rdec(c.r)+") = "+(yrs===null?("about "+(c.t.rawN/12).toFixed(3)):yrs)+" of a year, which is "+c.t.rawN+" months."))};
+ }
+},
+{
+ title:"Solving for the principal",
+ sub:"A = P(1 + rt), so P = A ÷ (1 + rt). Divide by the factor.",
+ gen:function(){
+   const c=casePtarget();
+   return {q:"<b>How much must be deposited now?</b>",
+     scene:"You want "+$$(c.A)+" in "+tText(c.t)+", and can buy a certificate of deposit paying "+rpct(c.r)+" simple interest.",
+     facts:factsHTML([["A",mc(c.Ac)],["r",rpct(c.r)+" = "+rdec(c.r)],
+       ["t",c.t.rawD===1?tText(c.t):(c.t.rawN+" months = "+tSym(c.t)+" year")],["1 + rt",c.f],["P","?",true]]),
+     round:c.exact?null:"Round to the nearest cent.",
+     opts:shuffle(centOpts(c.Pc,centPool(c,"P"),
+       mc(c.Ac)+" \u00f7 "+c.f+" = "+mc(c.Pc)+(c.exact?".":" to the nearest cent.")))};
+ }
+},
+{
+ title:"Divide, do not subtract",
+ sub:"Undoing growth means dividing by the factor, not taking the percent back off.",
+ gen:function(){
+   const c=casePtarget();
+   const rtOff=Math.floor((2*c.Ac*c.r*c.t.rawN+10000*c.t.rawD)/(2*10000*c.t.rawD));
+   const naive=c.Ac-rtOff;
+   const grown=Math.floor((2*naive*(10000*c.t.rawD+c.r*c.t.rawN)+10000*c.t.rawD)/(2*10000*c.t.rawD));
+   const forms=["why","check","gap"];
+   const f=pick(forms);
+   if(f==="check"){
+     return {q:"Someone deposits <b>"+mc(naive)+"</b>, got by taking the interest percent off "+$$(c.A)+". <b>What does it grow to?</b>",
+       scene:"The target is "+$$(c.A)+" in "+tText(c.t)+" at "+rpct(c.r)+" simple interest.",
+       opts:shuffle(centOpts(grown,
+         [{v:c.Ac, w:"That is the target. This deposit falls short of it, which is how you know the method was wrong."},
+          {v:naive, w:"That is the deposit itself, before any growth."},
+          {v:c.Pc, w:"That is the deposit that would actually work."}],
+         mc(naive)+" \u00d7 "+c.f+" = "+mc(grown)+", which misses "+$$(c.A)+" by "+mc(c.Ac-grown)+". The right deposit is "+mc(c.Pc)+"."))};
+   }
+   if(f==="gap"){
+     return {q:"<b>How much bigger is the correct deposit than the one you get by subtracting?</b>",
+       facts:factsHTML([["Target A",mc(c.Ac)],["Correct: A \u00f7 "+c.f,mc(c.Pc)],["Subtracting "+rpct(c.r)+" \u00d7 "+(c.t.rawD===1?String(c.t.rawN):tSym(c.t))+" of A",mc(naive)]]),
+       opts:shuffle(centOpts(c.Pc-naive,
+         [{v:c.Pc, w:"That is the correct deposit, not the gap."},
+          {v:naive, w:"That is the wrong deposit, not the gap."},
+          {v:c.Ac-c.Pc, w:"That is the interest the correct deposit earns."}],
+         mc(c.Pc)+" \u2212 "+mc(naive)+" = "+mc(c.Pc-naive)+". Subtracting takes the percent off the larger figure, so it removes too much."))};
+   }
+   return {q:"<b>Why is dividing by 1 + rt not the same as taking "+rpct(c.r)+" off?</b>",
+     scene:"You want "+$$(c.A)+" in "+tText(c.t)+" at "+rpct(c.r)+" simple interest.",
+     opts:shuffle([
+       {label:"The interest is a percent of the deposit, not of the target", correct:true,
+        note:"The deposit is the smaller figure, so a percent of it is smaller too. Dividing by "+c.f+" gives "+mc(c.Pc)+"; subtracting from the target gives "+mc(naive)+", which is too little."},
+       {label:"Because the rate changes over the term",
+        note:"The rate is fixed. The difference comes from which amount the percent is taken of."},
+       {label:"Because interest is rounded to the cent",
+        note:"Rounding moves the answer by less than a cent. This gap is "+mc(c.Pc-naive)+"."},
+       {label:"They are the same \u2014 either method works",
+        note:"They are not. Growing "+mc(naive)+" forwards gives "+mc(grown)+", not "+$$(c.A)+"."}
+     ]), one:true};
+ }
+},
+{
+ title:"Check it forwards",
+ sub:"Put the answer back in. It should return the figure you were given.",
+ gen:function(){
+   const useWhich=Math.random()<.5;
+   const c=useWhich?caseRf():caseR();
+   if(useWhich){
+     return {q:"You work out that the rate is <b>"+rpct(c.r)+"</b>. <b>How do you check it?</b>",
+       scene:"You borrowed "+$$(c.P)+" and repaid "+mc(c.A)+" after "+tText(c.t)+".",
+       opts:shuffle([
+         {label:"Work out P(1 + rt) and see whether it comes to "+mc(c.A), correct:true,
+          note:$$(c.P)+" \u00d7 "+c.f+" = "+mc(c.A)+", which is what was repaid. The rate is right."},
+         {label:"Work out A \u2212 P and see whether it comes to the rate",
+          note:"A \u2212 P gives the interest in dollars, "+mc(c.I)+", not a rate."},
+         {label:"Divide the rate by the time",
+          note:"Nothing in the formula divides the rate by the time."},
+         {label:"There is no way to check without the original working",
+          note:"There always is: run the answer forwards through A = P(1 + rt)."}
+       ]), one:true};
+   }
+   const wrongR=c.r+pick([100,200,-100,-50,50]);
+   const useRight=Math.random()<.5;
+   const shownR=useRight?c.r:Math.max(50,wrongR);
+   const grown=Math.floor((2*c.Pc*(10000*c.t.rawD+shownR*c.t.rawN)+10000*c.t.rawD)/(2*10000*c.t.rawD));
+   return {q:"Someone answers <b>"+rpct(shownR)+"</b>. <b>Does it check out?</b>",
+     scene:"You borrowed "+$$(c.P)+" and repaid "+mc(c.A)+" after "+tText(c.t)+".",
+     opts:shuffle(distinctOpts([
+       {label:"Yes \u2014 running it forwards returns the amount repaid", correct:useRight,
+        note:useRight?($$(c.P)+" \u00d7 (1 + "+rdec(shownR)+" \u00d7 "+(c.t.rawD===1?String(c.t.rawN):tSym(c.t))+") = "+mc(grown)+", exactly what was repaid.")
+                     :("It does not. "+$$(c.P)+" at "+rpct(shownR)+" for "+tText(c.t)+" grows to "+mc(grown)+", not "+mc(c.A)+".")},
+       {label:"No \u2014 running it forwards misses the amount repaid", correct:!useRight,
+        note:!useRight?($$(c.P)+" at "+rpct(shownR)+" grows to "+mc(grown)+", missing "+mc(c.A)+" by "+mc(Math.abs(grown-c.A))+". The rate that works is "+rpct(c.r)+".")
+                      :("It lands exactly on "+mc(c.A)+", so the answer stands.")},
+       {label:"No \u2014 the rate cannot be found from these three figures",
+        note:"It can: r = I \u00f7 Pt, with I = A \u2212 P."},
+       {label:"The check only works when the term is a whole number of years",
+        note:"It works for any term, as long as the time goes in as a fraction of a year."}
+     ]).slice(0,4)), one:true};
+ }
+},
+{
+ title:"What form does the answer take",
+ sub:"A rate is reported as a percent. A time is a length, not a decimal on its own.",
+ gen:function(){
+   const forms=["rate","time"];
+   if(pick(forms)==="rate"){
+     const c=caseR();
+     return {q:"The division gives <b>"+rdec(c.r)+"</b>. <b>How is the rate reported?</b>",
+       facts:factsHTML([["I \u00f7 Pt",rdec(c.r)]]),
+       opts:shuffle(labelOpts(rpct(c.r),
+         [{v:rdec(c.r), w:"That is the decimal the division produced. A rate is quoted as a percent, so it moves two places the other way."},
+          {v:rdec(c.r)+"%", w:"That attaches the percent sign without moving the decimal, which makes the rate a hundred times too small."},
+          {v:rpct(c.r*100), w:"That moves the decimal two places too far."}],
+         rdec(c.r)+" \u00d7 100 = "+rpct(c.r)+". The decimal is what goes into the formula; the percent is what gets reported."))};
+   }
+   const c=caseT();
+   const yrs=tYears(c.t);
+   return {q:"The division gives <b>"+(yrs===null?(c.t.rawN+" \u00f7 12"):yrs)+"</b> of a year. <b>How long is that in months?</b>",
+     facts:factsHTML([["I \u00f7 Pr",(yrs===null?fracHTML(c.t.rawN,12):yrs)+" year"]]),
+     opts:shuffle(labelOpts(c.t.rawN+" months",
+       [{v:(c.t.rawN*12)+" months", w:"That multiplies by 12 twice. The division already gave a fraction of a year."},
+        {v:Math.round(c.t.rawN/12)+" months", w:"That divides by 12 again."},
+        {v:c.t.rawN+" years", w:"That is the right number with the wrong unit."},
+        {v:(c.t.rawN+1)+" months", w:"Close, but check the division again."}],
+       (yrs===null?("that fraction"):yrs)+" of a year \u00d7 12 = "+c.t.rawN+" months."))};
+ }
+},
+{
+ title:"Spot the wrong rearrangement",
+ sub:"Someone gets the missing letter alone. Say whether they did it right.",
+ gen:function(){
+   const which=pick(["r","t","P"]);
+   const sets={
+     r:{ok:"r = I \u00f7 (P \u00d7 t)", bad:[
+       ["r = I \u00d7 P \u00d7 t","That multiplies by the very things that have to be divided out."],
+       ["r = (A \u2212 P) \u00f7 A","The interest is divided by the principal, not by the amount repaid."],
+       ["r = I \u00f7 P","The time is left out, so the answer would be the rate for the whole term rather than per year."]],
+       note:"Starting from I = Prt, dividing both sides by P and by t leaves r alone."},
+     t:{ok:"t = I \u00f7 (P \u00d7 r)", bad:[
+       ["t = I \u00d7 P \u00d7 r","Again, multiplying by what should be divided out."],
+       ["t = P \u00f7 (I \u00d7 r)","The interest and the principal have swapped places."],
+       ["t = I \u00f7 r","The principal is left out."]],
+       note:"Same move as for r, dividing by the other two factors."},
+     P:{ok:"P = A \u00f7 (1 + rt)", bad:[
+       ["P = A \u00d7 (1 + rt)","That grows the money again. Working backwards means dividing by the factor."],
+       ["P = A \u2212 rt","rt is a decimal, not an amount of money, so it cannot be subtracted from dollars."],
+       ["P = A \u2212 (A \u00d7 rt)","That takes the percent off the target. The percent belongs to the deposit, which is smaller."]],
+       note:"A = P(1 + rt), so dividing both sides by the bracket leaves P alone."}
+   };
+   const S=sets[which];
+   const opts=[{label:S.ok, correct:true, note:S.note}]
+     .concat(S.bad.map(function(x){return {label:x[0], note:x[1]};}));
+   return {q:"<b>Which rearrangement finds "+(which==="P"?"the principal":which==="r"?"the rate":"the time")+"?</b>",
+     opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Any missing quantity",
+ sub:"Rate, time, principal or interest, from whichever three are given.",
+ gen:function(){
+   const which=pick(["I","r","t","P"]);
+   if(which==="I"){
+     const c=baseCase();
+     return {q:"<b>How much interest was paid?</b>",
+       scene:"You borrow "+$$(c.P)+" and repay "+mc(c.A)+" after "+tText(c.t)+".",
+       opts:shuffle(distinctOpts([
+         {label:mc(c.I), correct:true, note:mc(c.A)+" \u2212 "+mc(c.Pc)+" = "+mc(c.I)+"."},
+         {label:mc(c.A+c.Pc), note:"That adds the two figures instead of subtracting."},
+         {label:mc(c.Pc), note:"That is the principal."},
+         {label:mc(c.A), note:"That is the total repaid."}
+       ]).slice(0,4))};
+   }
+   if(which==="r"){
+     const c=caseR();
+     return {q:"<b>What simple interest rate was paid?</b>",
+       scene:"You borrow "+$$(c.P)+" and repay "+mc(c.A)+" in "+tText(c.t)+".",
+       facts:factsHTML([["P",mc(c.Pc)],["A",mc(c.A)],["t",c.t.rawD===1?tText(c.t):(c.t.rawN+" months")],["r","?",true]]),
+       opts:shuffle(labelOpts(rpct(c.r),rPool(c),
+         "I = "+mc(c.I)+", then "+mc(c.I)+" \u00f7 ("+mc(c.Pc)+" \u00d7 "+(c.t.rawD===1?String(c.t.rawN):tSym(c.t))+") = "+rpct(c.r)+"."))};
+   }
+   if(which==="t"){
+     const c=caseT();
+     const yrs=tYears(c.t);
+     return {q:"<b>How long was the term, in months?</b>",
+       scene:"A loan of "+$$(c.P)+" at "+rpct(c.r)+" simple interest runs up "+mc(c.I)+" in interest.",
+       opts:shuffle(labelOpts(c.t.rawN+" months",
+         [{v:(c.t.rawN*2)+" months", w:"That is twice the term."},
+          {v:yrs===null?null:(yrs+" years"), w:"The right length, but the question asked for months."},
+          {v:Math.round(c.t.rawN/2)+" months", w:"That is half the term."},
+          {v:(c.t.rawN+6)+" months", w:"Check the division again."}],
+         mc(c.I)+" \u00f7 ("+mc(c.Pc)+" \u00d7 "+rdec(c.r)+") gives "+c.t.rawN+" months."))};
+   }
+   const c=casePtarget();
+   return {q:"<b>How much must be deposited now?</b>",
+     scene:"You want "+$$(c.A)+" in "+tText(c.t)+" at "+rpct(c.r)+" simple interest.",
+     facts:factsHTML([["A",mc(c.Ac)],["1 + rt",c.f],["P","?",true]]),
+     round:c.exact?null:"Round to the nearest cent.",
+     opts:shuffle(centOpts(c.Pc,centPool(c,"P"),
+       mc(c.Ac)+" \u00f7 "+c.f+" = "+mc(c.Pc)+(c.exact?".":" to the nearest cent.")))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {kind:"r", lbl:"$2,500 repaid as $2,655",
+   note:"Your worksheet's rate question. The interest is the gap between the two figures, $155. Divide that by the principal and by the term \u2014 half a year \u2014 and the rate comes out at 12.4%."},
+  {kind:"P", lbl:"$2,000 in two years",
+   note:"The certificate of deposit question. The factor is 1.08, and the deposit is the target divided by it: $1,851.85 to the nearest cent. This one rarely comes out even, which is why the answer is rounded."},
+  {kind:"trap", lbl:"why not just take 8% off",
+   note:"The tempting shortcut, and why it fails. Taking 8% off $2,000 gives $1,840 \u2014 but that deposit grows to only $1,987.20, eleven dollars and eighty cents short. The 8% was a percent of the deposit, and the deposit is the smaller number."},
+  {kind:"t", lbl:"finding the term",
+   note:"The same move with a different letter. Divide the interest by the principal and by the rate, and what is left is the time in years \u2014 here a quarter of a year, or three months."},
+  {kind:"check", lbl:"checking it forwards",
+   note:"Every answer here can be checked for free. Put the recovered rate back into A = P(1 + rt) and it returns exactly the $2,655 that was repaid. If it does not, the rearrangement went wrong."}
+];
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="r"){
+    body=knownHTML([["P ",mc(WR.Pc)],["A ",mc(WR.Ac)],["t ","6 months"],["r ","?",true]])
+      +'<div class="steps">'
+      +"I = A \u2212 P = "+mc(WR.Ac)+" \u2212 "+mc(WR.Pc)+" = "+mc(WR.I)+"<br>"
+      +"r = "+'<span class="frac"><span>I</span><span class="den">P t</span></span>'+" = "
+      +'<span class="frac"><span>'+mc(WR.I)+'</span><span class="den">'+mc(WR.Pc)+" \u00d7 "+fracHTML(6,12)+"</span></span> = "+rdec(WR.r)
+      +'<br><span class="res">r = '+rpct(WR.r)+"</span></div>";
+  }else if(h.kind==="P"){
+    body=knownHTML([["A ",mc(WP.Ac)],["r ","4%"],["t ","2 years"],["P ","?",true]])
+      +'<div class="steps">'
+      +"1 + rt = 1 + 0.04 \u00d7 2 = "+WP.f+"<br>"
+      +"P = "+'<span class="frac"><span>A</span><span class="den">1 + rt</span></span>'+" = "
+      +'<span class="frac"><span>'+mc(WP.Ac)+'</span><span class="den">'+WP.f+"</span></span>"
+      +'<br><span class="res">P = '+mc(WP.Pc)+"</span>"
+      +'<span class="lbl">to the nearest cent</span></div>';
+  }else if(h.kind==="trap"){
+    const off=Math.floor((2*WP.Ac*WP.r*WP.t.rawN+10000*WP.t.rawD)/(2*10000*WP.t.rawD));
+    const naive=WP.Ac-off;
+    const grown=Math.floor((2*naive*(10000*WP.t.rawD+WP.r*WP.t.rawN)+10000*WP.t.rawD)/(2*10000*WP.t.rawD));
+    body=knownHTML([["A ",mc(WP.Ac)],["r ","4%"],["t ","2 years"]])
+      +'<div class="steps">'
+      +"<span class=\"res\">"+mc(WP.Ac)+" \u00f7 "+WP.f+" = "+mc(WP.Pc)+"</span>"
+      +'<span class="lbl">divide by the factor</span>'
+      +'<span class="bad">'+mc(WP.Ac)+" \u2212 8% of "+mc(WP.Ac)+" = "+mc(naive)+"</span>"
+      +'<span class="lbl">take the percent off instead</span>'
+      +'<span class="bad">'+mc(naive)+" \u00d7 "+WP.f+" = "+mc(grown)+"</span>"
+      +'<span class="lbl">and it grows to '+mc(Math.abs(WP.Ac-grown))+" short of the target</span></div>";
+  }else if(h.kind==="t"){
+    const P=4000, r=600, t=tFrac(3,12), Pc=P*100, I=iCents(Pc,r,t);
+    body=knownHTML([["P ",mc(Pc)],["r ","6%"],["I ",mc(I)],["t ","?",true]])
+      +'<div class="steps">'
+      +"t = "+'<span class="frac"><span>I</span><span class="den">P r</span></span>'+" = "
+      +'<span class="frac"><span>'+mc(I)+'</span><span class="den">'+mc(Pc)+" \u00d7 0.06</span></span> = 0.25 year"
+      +'<br><span class="res">t = 3 months</span></div>';
+  }else{
+    body=knownHTML([["P ",mc(WR.Pc)],["r ",rpct(WR.r)],["t ","6 months"]])
+      +'<div class="steps">'
+      +"1 + rt = 1 + "+rdec(WR.r)+" \u00d7 "+fracHTML(6,12)+" = "+WR.f+"<br>"
+      +"A = "+mc(WR.Pc)+" \u00d7 "+WR.f+" = <span class=\"res\">"+mc(WR.Pc*(10000*WR.t.rawD+WR.r*WR.t.rawN)/(10000*WR.t.rawD))+"</span></div>"
+      +'<div class="checkline">which is exactly what was repaid, so the rate is right</div>';
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=h.note;
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.known||"")
+    +(q.item?'<div class="item">'+q.item+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>"
+    +(q.round?'<p class="roundnote">'+q.round+"</p>":"");
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
