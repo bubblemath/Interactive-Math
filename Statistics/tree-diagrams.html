@@ -1,0 +1,1477 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tree Diagrams</title>
+<style>
+:root{
+  --paper:#F3F1E7; --sheet:#FBFAF4; --rule:#D8D3C2; --rule-2:#EAE6D9;
+  --ink:#14213D; --ink-soft:#5C6478;
+  --blue:#1F4E9C; --blue-soft:#E4EBF7;
+  --red:#B3221F; --red-soft:#F7E4E3;
+  --turf:#2E6B45; --turf-soft:#E2EFE7;
+  --gold:#B58B15; --gold-soft:#F6EFD8;
+  --plum:#6B3A7A; --plum-soft:#EFE6F3;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
+.wrap{max-width:940px;margin:0 auto;padding:0 18px 80px}
+
+.masthead{border-bottom:3px double var(--ink);padding:26px 0 14px;margin-bottom:22px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.masthead h1{font-family:var(--serif);font-size:clamp(30px,6vw,46px);line-height:1;margin:0;letter-spacing:-.015em}
+.masthead p{margin:6px 0 0;color:var(--ink-soft);font-size:15px;max-width:48ch}
+
+.rail{display:flex;margin:0 0 26px;border:1px solid var(--rule);background:var(--sheet);overflow:hidden;border-radius:3px}
+.rail > *{flex:1;padding:8px 3px;text-align:center;font-size:11px;line-height:1.25;color:var(--ink-soft);border:0;border-right:1px solid var(--rule-2);background:var(--sheet);font-family:var(--sans)}
+.rail > *:last-child{border-right:0}
+.rail > * b{display:block;font-family:var(--mono);font-size:13px;font-weight:700}
+.rail > *.done{color:var(--turf);background:var(--turf-soft)}
+.rail > *.now{color:#fff;background:var(--blue)}
+.rail > *.now b{color:#fff}
+.rail div{opacity:.5;cursor:default}
+.rail button{cursor:pointer}
+.rail button:hover{background:#EEEBDE}
+.rail button.done:hover{background:#CFE5D9}
+.rail button.now:hover{background:#183E7D}
+
+.panel{display:none}
+.panel.on{display:block}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:3px;padding:22px 22px 24px;margin-bottom:20px}
+h2{font-family:var(--serif);font-size:25px;margin:0 0 4px;line-height:1.15}
+h3{font-family:var(--serif);font-size:18px;margin:24px 0 6px}
+.lede{color:var(--ink-soft);margin:0 0 18px;max-width:68ch}
+p{max-width:72ch}
+.note{border-left:3px solid var(--blue);background:var(--blue-soft);padding:10px 14px;margin:16px 0;font-size:14.5px;border-radius:0 3px 3px 0}
+.note.warn{border-left-color:var(--red);background:var(--red-soft)}
+.note.good{border-left-color:var(--turf);background:var(--turf-soft)}
+.note.gold{border-left-color:var(--gold);background:var(--gold-soft)}
+.note p{margin:0;max-width:none}
+.story{font-family:var(--serif);font-size:17px;line-height:1.6;background:#fff;border:1px solid var(--rule);border-left:4px solid var(--ink);border-radius:0 3px 3px 0;padding:14px 18px;margin:0 0 18px;max-width:none}
+
+button{font-family:inherit;font-size:15px;cursor:pointer}
+.btn{background:var(--blue);color:#fff;border:1px solid var(--blue);padding:10px 20px;border-radius:3px;font-weight:600}
+.btn:hover:not(:disabled){background:#183E7D}
+.btn:disabled{background:#B9BDC7;border-color:#B9BDC7;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--blue)}
+.btn.ghost:hover:not(:disabled){background:var(--blue-soft)}
+.btn.quiet{background:transparent;color:var(--ink-soft);border-color:var(--rule);font-weight:500}
+.btn.quiet:hover:not(:disabled){background:var(--paper);color:var(--ink)}
+.btn.big{font-size:17px;padding:13px 26px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.hidden{display:none !important}
+
+/* ---- scenario picker ---- */
+.picker{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px}
+@media(max-width:700px){.picker{grid-template-columns:1fr}}
+.pcard{background:#fff;border:2px solid var(--rule);border-radius:4px;padding:13px 14px;text-align:left;font-family:inherit;cursor:pointer}
+.pcard:hover{border-color:var(--ink)}
+.pcard.sel{border-color:var(--blue);border-width:3px;padding:12px 13px}
+.pcard .t{font-family:var(--serif);font-size:16.5px;display:block;margin-bottom:3px}
+.pcard .s{font-size:12.5px;color:var(--ink-soft);display:block}
+.pcard .badge{display:inline-block;font-size:10.5px;font-family:var(--mono);padding:1px 6px;border-radius:9px;margin-top:7px}
+.badge.core{background:var(--blue-soft);color:var(--blue)}
+.badge.stretch{background:var(--plum-soft);color:var(--plum)}
+.badge.done{background:var(--turf-soft);color:var(--turf)}
+
+/* ---- structure builder ---- */
+.bnode{border:1px solid var(--rule-2);border-radius:3px;background:#fff;padding:10px 12px;margin:8px 0}
+.bnode .hd{font-size:13.5px;color:var(--ink-soft);margin-bottom:6px}
+.stepper{display:inline-flex;align-items:center;gap:0;vertical-align:middle;margin:0 6px}
+.stepper button{width:30px;height:30px;border:1px solid var(--rule);background:#fff;color:var(--ink);font-size:17px;line-height:1;padding:0}
+.stepper button:first-child{border-radius:3px 0 0 3px}
+.stepper button:last-child{border-radius:0 3px 3px 0}
+.stepper span{min-width:34px;height:30px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;background:#fff}
+.labels{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.labels input{width:130px;padding:7px 9px;border:1px solid var(--rule);border-radius:3px;font-family:var(--sans);font-size:14.5px;background:#fff;color:var(--ink)}
+.labels input:focus{outline:2px solid var(--blue);outline-offset:-1px}
+
+/* ---- tree canvas ---- */
+.treewrap{overflow-x:auto;background:#fff;border:1px solid var(--rule);border-radius:3px;padding:6px 0}
+.tree{position:relative}
+.tree svg{position:absolute;top:0;left:0;pointer-events:none}
+.chip{position:absolute;transform:translateY(-50%);font-size:13.5px;font-weight:600;padding:3px 9px;border-radius:3px;white-space:nowrap;border:1.5px solid}
+.chip.c0{background:var(--red-soft);border-color:var(--red);color:var(--red)}
+.chip.c1{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.chip.c2{background:var(--turf-soft);border-color:var(--turf);color:var(--turf)}
+.chip.c3{background:var(--gold-soft);border-color:var(--gold);color:#6E540B}
+.chip.root{background:var(--ink);border-color:var(--ink);color:#fff}
+.pbox{position:absolute;transform:translate(-50%,-50%);background:#fff;padding:0}
+.pbox input{width:78px;padding:5px 4px;text-align:center;font-family:var(--mono);font-size:14px;border:1.5px solid var(--rule);border-radius:3px;background:#fff;color:var(--ink)}
+.pbox input:focus{outline:2px solid var(--blue);outline-offset:-1px}
+.pbox.right input{border-color:var(--turf);background:var(--turf-soft);color:var(--turf);font-weight:700}
+.pbox.wrong input{border-color:var(--red);background:var(--red-soft);color:var(--red);font-weight:700}
+.pbox select{display:block;width:78px;margin-top:3px;font-size:10.5px;padding:2px;border:1px solid var(--rule);border-radius:3px;background:#fff;color:var(--ink-soft);font-family:var(--sans)}
+.pbox select.right{border-color:var(--turf);color:var(--turf);background:var(--turf-soft)}
+.pbox select.wrong{border-color:var(--red);color:var(--red);background:var(--red-soft)}
+.pbox .shown{display:block;width:78px;text-align:center;font-family:var(--mono);font-size:14px;padding:5px 4px;border:1.5px solid var(--turf);border-radius:3px;background:var(--turf-soft);color:var(--turf);font-weight:700}
+.jbox{position:absolute;transform:translateY(-50%)}
+.jbox input{width:96px;padding:6px 4px;text-align:center;font-family:var(--mono);font-size:14px;border:1.5px solid var(--rule);border-radius:3px;background:#fff;color:var(--ink)}
+.jbox input:focus{outline:2px solid var(--blue);outline-offset:-1px}
+.jbox.right input{border-color:var(--turf);background:var(--turf-soft);color:var(--turf);font-weight:700}
+.jbox.wrong input{border-color:var(--red);background:var(--red-soft);color:var(--red);font-weight:700}
+.tree .edge.hl{stroke:var(--gold);stroke-width:4}
+.pathlabel{position:absolute;transform:translateY(-50%);font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);white-space:nowrap}
+
+/* ---- two-way table ---- */
+.twt{border-collapse:collapse;font-family:var(--mono);font-size:14.5px;margin-top:10px}
+.twt th,.twt td{border:1px solid var(--rule);padding:9px 12px;text-align:center;min-width:92px}
+.twt th{background:var(--ink);color:#fff;font-size:12px;font-weight:600}
+.twt td.cell{background:#fff;cursor:pointer}
+.twt td.cell:hover{background:var(--gold-soft)}
+.twt td.cell.hl{background:var(--gold-soft);outline:2px solid var(--gold);outline-offset:-2px}
+.twt td.marg{background:var(--blue-soft);color:var(--blue);font-weight:700}
+.twt td.grand{background:var(--ink);color:#fff;font-weight:700}
+.twt th.rowh{background:var(--ink)}
+.tkey{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft);margin-top:10px}
+.tkey b{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:-1px;border:1px solid var(--rule)}
+
+/* ---- questions ---- */
+.qrow{border:1px solid var(--rule-2);border-radius:3px;background:#fff;padding:12px 14px;margin:10px 0}
+.qrow .qt{font-size:15px;margin-bottom:8px}
+.qrow .qt b{font-family:var(--mono)}
+.qrow input{width:150px;padding:7px 9px;font-family:var(--mono);font-size:15px;text-align:center;border:1.5px solid var(--rule);border-radius:3px;background:#fff;color:var(--ink)}
+.qrow input:focus{outline:2px solid var(--blue);outline-offset:-1px}
+.qrow.right input{border-color:var(--turf);background:var(--turf-soft);color:var(--turf);font-weight:700}
+.qrow.wrong input{border-color:var(--red);background:var(--red-soft);color:var(--red);font-weight:700}
+.qrow .fb{font-size:13.5px;margin-top:7px}
+.qrow .fb.ok{color:var(--turf)}
+.qrow .fb.no{color:var(--red)}
+.scaffold{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-top:10px}
+.scaffold .sl{font-size:12.5px;color:var(--ink-soft);display:block;margin-bottom:4px}
+.frac-ui{display:inline-block;text-align:center;font-family:var(--mono)}
+.frac-ui .bar{border-top:2px solid var(--ink);margin:4px 0}
+
+.metrics{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.metric{border:1px solid var(--rule);border-radius:3px;background:#fff;padding:10px 16px;min-width:140px}
+.metric b{display:block;font-family:var(--mono);font-size:24px;line-height:1.15}
+.metric small{color:var(--ink-soft);font-size:12px}
+
+textarea{width:100%;min-height:74px;padding:10px;border:1px solid var(--rule);border-radius:3px;font-family:var(--sans);font-size:15px;background:#fff;color:var(--ink);resize:vertical;line-height:1.5}
+textarea:focus{outline:2px solid var(--blue);outline-offset:-1px}
+label.q{display:block;margin:16px 0 5px;font-weight:600;font-size:15px}
+.footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-soft);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.donelist{font-size:14px;color:var(--ink-soft);margin-top:10px}
+.donelist span{display:inline-block;background:var(--turf-soft);color:var(--turf);border-radius:3px;padding:2px 8px;margin:2px 4px 2px 0;font-size:12.5px}
+
+@media print{
+  body{background:#fff}
+  .rail,.btnrow,.footer,.no-print{display:none !important}
+  .panel{display:block !important;page-break-before:always}
+  .sheet{border-color:#999}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div>
+    <h1>Tree Diagrams</h1>
+    <p>Build the tree, label every branch, and read the marginal, conditional and joint probabilities straight off the picture.</p>
+  </div>
+  <svg width="94" height="78" viewBox="0 0 120 100" aria-hidden="true">
+    <path d="M14,50 L52,24 M14,50 L52,76 M52,24 L96,12 M52,24 L96,36 M52,76 L96,64 M52,76 L96,88"
+          stroke="#14213D" stroke-width="2.5" fill="none"/>
+    <circle cx="14" cy="50" r="6" fill="#14213D"/>
+    <circle cx="52" cy="24" r="6" fill="#B3221F"/>
+    <circle cx="52" cy="76" r="6" fill="#1F4E9C"/>
+    <circle cx="96" cy="12" r="5" fill="#B3221F"/><circle cx="96" cy="36" r="5" fill="#1F4E9C"/>
+    <circle cx="96" cy="64" r="5" fill="#B3221F"/><circle cx="96" cy="88" r="5" fill="#1F4E9C"/>
+  </svg>
+</header>
+
+<nav class="rail" id="rail" aria-label="Activity steps"></nav>
+
+<!-- 1. PICK -->
+<section class="panel" id="p-pick">
+  <div class="sheet">
+    <h2>Choose a problem</h2>
+    <p class="lede">Each one runs through the same six steps: build the tree, fill the branches, work out the joint probabilities, answer questions, and then run the tree backwards.</p>
+    <div class="picker" id="picker"></div>
+    <div class="donelist" id="donelist"></div>
+    <div class="note gold">
+      <p><b>Answer format.</b> Every probability may be written as a fraction or as a decimal. Fractions need not be reduced — 4/6 and 2/3 both count. <b>If you use decimal form, round to 4 decimal places</b> (for example 0.6667, not 0.67).</p>
+    </div>
+    <div class="btnrow" id="pickbtns"></div>
+  </div>
+</section>
+
+<!-- 2. BUILD -->
+<section class="panel" id="p-build">
+  <div class="sheet">
+    <h2>Build the tree</h2>
+    <div class="story" id="story2"></div>
+    <p class="lede">Decide how many branches come out of each point, and name the outcome on each branch. Not every tree is a neat rectangle — if an outcome ends the experiment, give it zero branches.</p>
+    <div id="builder"></div>
+    <div class="btnrow">
+      <button class="btn" id="checkstruct">Check my tree</button>
+      <button class="btn quiet" id="clearstruct">Start the tree over</button>
+    </div>
+    <div id="structmsg" style="font-size:14.5px;margin-top:10px"></div>
+    <div class="btnrow" id="buildnext"></div>
+  </div>
+</section>
+
+<!-- 3. BRANCHES -->
+<section class="panel" id="p-branch">
+  <div class="sheet">
+    <h2>Label every branch</h2>
+    <div class="story" id="story3"></div>
+    <p class="lede">Write the probability on each branch, then say what kind of probability it is. A branch leaving the starting point is a <b>marginal</b> probability. A branch further along depends on what already happened, so it is a <b>conditional</b> probability.</p>
+    <div class="note gold"><p>Fraction or decimal, your choice. Fractions need not be reduced. <b>Decimals round to 4 places.</b></p></div>
+    <div class="treewrap"><div class="tree" id="tree3"></div></div>
+    <div class="btnrow">
+      <button class="btn" id="checkbranch">Check the branches</button>
+      <button class="btn quiet" id="clearbranch">Clear</button>
+    </div>
+    <div id="branchmsg" style="font-size:14.5px;margin-top:10px"></div>
+    <div class="btnrow" id="branchnext"></div>
+  </div>
+</section>
+
+<!-- 4. JOINTS -->
+<section class="panel" id="p-joint">
+  <div class="sheet">
+    <h2>Joint probabilities</h2>
+    <p class="lede">Follow each path from the start to its end and multiply the branches along the way. That product is the joint probability of the whole path — the chance that <i>all</i> of those things happen in that order.</p>
+    <div class="treewrap"><div class="tree" id="tree4"></div></div>
+    <div class="btnrow">
+      <button class="btn" id="checkjoint">Check the joints</button>
+      <button class="btn quiet" id="clearjoint">Clear</button>
+      <button class="btn ghost" id="toggletable">Show the two-way table</button>
+    </div>
+    <div id="jointmsg" style="font-size:14.5px;margin-top:10px"></div>
+    <div id="tablepanel" class="hidden">
+      <h3>The same numbers, arranged as a table</h3>
+      <p class="lede">Click any cell to light up the path it came from. The four inner cells are the joint probabilities. The edges are the marginal probabilities, and the corner is always 1.</p>
+      <div style="overflow-x:auto"><table class="twt" id="twt"></table></div>
+      <div class="tkey">
+        <span><b style="background:#fff"></b>Joint — one path through the tree</span>
+        <span><b style="background:var(--blue-soft);border-color:var(--blue)"></b>Marginal — a whole row or column</span>
+        <span><b style="background:var(--ink)"></b>Everything, which must total 1</span>
+      </div>
+      <div id="tablenote"></div>
+    </div>
+    <div class="btnrow" id="jointnext"></div>
+  </div>
+</section>
+
+<!-- 5. QUESTIONS -->
+<section class="panel" id="p-quest">
+  <div class="sheet">
+    <h2>Answer the questions</h2>
+    <div class="story" id="story5"></div>
+    <div id="questions"></div>
+    <div class="btnrow">
+      <button class="btn" id="checkquest">Check my answers</button>
+    </div>
+    <div id="questmsg" style="font-size:14.5px;margin-top:10px"></div>
+    <div class="btnrow" id="questnext"></div>
+  </div>
+</section>
+
+<!-- 6. REVERSE -->
+<section class="panel" id="p-rev">
+  <div class="sheet">
+    <h2>Run the tree backwards</h2>
+    <p class="lede">Every branch on your tree points forwards in time: first this, then that. The interesting question usually runs the other way — you are told how things ended and asked what probably happened first. The tree answers that too, with no new formula.</p>
+    <div id="revhost"></div>
+    <div class="btnrow">
+      <button class="btn" id="checkrev">Check</button>
+    </div>
+    <div id="revmsg" style="font-size:14.5px;margin-top:10px"></div>
+    <div id="revafter"></div>
+    <div class="btnrow" id="revnext"></div>
+  </div>
+</section>
+
+<!-- 7. WRITE-UP -->
+<section class="panel" id="p-done">
+  <div class="sheet">
+    <h2>Finished</h2>
+    <div class="metrics" id="finalmetrics"></div>
+    <div id="finalnote"></div>
+    <h3>Write it up</h3>
+    <label class="q" for="w1">Point to one number on your tree that is a marginal probability, one that is conditional, and one that is joint. Say how you can tell them apart by where they sit.</label>
+    <textarea id="w1"></textarea>
+    <label class="q" for="w2">Every set of branches leaving a single point adds to 1, and all the joint probabilities together add to 1. Explain why both of those have to be true.</label>
+    <textarea id="w2"></textarea>
+    <label class="q" for="w3">What did running the tree backwards tell you that reading it forwards did not?</label>
+    <textarea id="w3"></textarea>
+    <div class="btnrow no-print">
+      <button class="btn big" id="another">Try another problem</button>
+      <button class="btn" id="printit">Print or save as PDF</button>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  <span>Progress saves in this browser automatically.</span>
+  <span><button class="btn quiet" id="wipe" style="font-size:12px;padding:4px 10px">Erase my saved work</button></span>
+</div>
+</div>
+
+<script>
+/* ==================================================================
+   ============ CORE LOGIC — START (stress-tested in Node) ==========
+   ================================================================== */
+
+var DEC_TOL = 1e-4;       /* a 4-decimal answer lands inside this */
+var NEAR_TOL = 5e-3;      /* right value, too few decimal places */
+
+/* ---------------- exact rational arithmetic ----------------
+   Everything is kept as an exact fraction so that "is 4/6 the same as
+   2/3" is a decision about integers, never about rounding. */
+function gcd(a, b){
+  a = Math.abs(a); b = Math.abs(b);
+  while(b){ var t = b; b = a % b; a = t; }
+  return a || 1;
+}
+function F(n, d){
+  if(d === undefined) d = 1;
+  if(d < 0){ n = -n; d = -d; }
+  return {n:n, d:d};
+}
+function fred(f){ var g = gcd(f.n, f.d); return F(f.n/g, f.d/g); }
+function fmul(a, b){ return fred(F(a.n*b.n, a.d*b.d)); }
+function fadd(a, b){ return fred(F(a.n*b.d + b.n*a.d, a.d*b.d)); }
+function fsub(a, b){ return fred(F(a.n*b.d - b.n*a.d, a.d*b.d)); }
+function fdiv(a, b){ return fred(F(a.n*b.d, a.d*b.n)); }
+function feq(a, b){ return a.n*b.d === b.n*a.d; }
+function fval(f){ return f.n / f.d; }
+function fstr(f){ var r = fred(f); return r.d === 1 ? String(r.n) : r.n + '/' + r.d; }
+function fdec(f){ return fval(f).toFixed(4); }
+/* how the answer key is shown: exact fraction plus its 4-place decimal */
+function fboth(f){
+  var r = fred(f);
+  if(r.d === 1) return String(r.n);
+  return fstr(r) + ' = ' + fdec(r);
+}
+
+/* ---------------- answer parsing and checking ---------------- */
+function parseAns(s){
+  if(s === null || s === undefined) return null;
+  s = String(s).trim().replace(/\s+/g, '');
+  if(!s) return null;
+  var m = s.match(/^(\d+)\/(\d+)$/);
+  if(m){
+    var d = parseInt(m[2], 10);
+    if(d === 0) return null;
+    return {kind:'frac', f:F(parseInt(m[1], 10), d)};
+  }
+  if(/^\d*\.?\d+$/.test(s) || /^\d+\.$/.test(s)){
+    var v = parseFloat(s);
+    if(isNaN(v)) return null;
+    return {kind:'dec', v:v, places:(s.split('.')[1] || '').length};
+  }
+  return null;
+}
+/* Returns ok plus a reason, so the page can tell a wrong value apart from
+   a right value that was rounded too early. */
+function checkAns(s, target){
+  var p = parseAns(s);
+  if(!p) return {ok:false, why:'blank'};
+  if(p.kind === 'frac'){
+    /* any equivalent fraction is accepted, reduced or not */
+    return {ok:feq(p.f, target), why:feq(p.f, target) ? 'ok' : 'value'};
+  }
+  var v = fval(target);
+  if(Math.abs(p.v - v) < DEC_TOL) return {ok:true, why:'ok'};
+  if(Math.abs(p.v - v) < NEAR_TOL) return {ok:false, why:'rounding'};
+  return {ok:false, why:'value'};
+}
+
+/* ---------------- tree structure ----------------
+   A node is {label, p, kids}. The root carries no label and probability 1.
+   Depth 1 branches are marginal; anything deeper is conditional. */
+function node(label, p, kids){ return {label:label, p:p, kids:kids || []}; }
+function rootOf(kids){ return node(null, F(1,1), kids); }
+
+function keyOf(path){ return path.join('>'); }
+
+/* Visit every non-root node with the path of labels that reaches it and the
+   running product of branch probabilities, which is that node's joint. */
+function walk(tree, fn){
+  (function rec(n, path, acc, depth){
+    for(var i = 0; i < n.kids.length; i++){
+      var k = n.kids[i];
+      var p2 = path.concat([k.label]);
+      var acc2 = fmul(acc, k.p);
+      fn(k, p2, acc2, depth + 1);
+      rec(k, p2, acc2, depth + 1);
+    }
+  })(tree, [], F(1,1), 0);
+}
+function allNodes(tree){
+  var out = [];
+  walk(tree, function(n, path, joint, depth){ out.push({node:n, path:path, joint:joint, depth:depth}); });
+  return out;
+}
+function leavesOf(tree){
+  return allNodes(tree).filter(function(r){ return r.node.kids.length === 0; });
+}
+function maxDepth(tree){
+  return allNodes(tree).reduce(function(m, r){ return Math.max(m, r.depth); }, 0);
+}
+/* sum of the joint probabilities of every leaf whose path satisfies pred */
+function sumWhere(tree, pred){
+  return leavesOf(tree).reduce(function(acc, r){
+    return pred(r.path) ? fadd(acc, r.joint) : acc;
+  }, F(0,1));
+}
+function countIn(path, label){
+  var c = 0;
+  for(var i = 0; i < path.length; i++) if(path[i] === label) c++;
+  return c;
+}
+/* marginal probability that the draw at position idx (1-based) is label */
+function stageMarginal(tree, idx, label){
+  return sumWhere(tree, function(path){ return path.length >= idx && path[idx-1] === label; });
+}
+
+/* ---------------- tree builders ---------------- */
+/* Repeated draws from one container. replace=false removes the drawn item,
+   which is what makes the second stage depend on the first. */
+function drawTree(counts, colors, replace, draws){
+  function build(rem, depth){
+    var tot = 0, i;
+    for(i = 0; i < colors.length; i++) tot += rem[colors[i]];
+    var kids = [];
+    for(i = 0; i < colors.length; i++){
+      var c = colors[i];
+      if(rem[c] <= 0) continue;               /* an impossible branch is not drawn */
+      var nd = node(c, fred(F(rem[c], tot)), []);
+      if(depth < draws - 1){
+        var nxt = {};
+        for(var j = 0; j < colors.length; j++) nxt[colors[j]] = rem[colors[j]];
+        if(!replace) nxt[c] = nxt[c] - 1;
+        nd.kids = build(nxt, depth + 1);
+      }
+      kids.push(nd);
+    }
+    return kids;
+  }
+  return rootOf(build(counts, 0));
+}
+/* One draw from each of two separate containers: the second stage is the
+   same whatever happened first, which is what independence looks like. */
+function twoBagTree(bagA, bagB, colors){
+  var totA = 0, totB = 0, i;
+  for(i = 0; i < colors.length; i++){ totA += bagA[colors[i]]; totB += bagB[colors[i]]; }
+  var kids = [];
+  for(i = 0; i < colors.length; i++){
+    var sub = [];
+    for(var j = 0; j < colors.length; j++){
+      sub.push(node(colors[j], fred(F(bagB[colors[j]], totB)), []));
+    }
+    kids.push(node(colors[i], fred(F(bagA[colors[i]], totA)), sub));
+  }
+  return rootOf(kids);
+}
+/* Draw until stopColor appears, up to maxDraws. Paths end at different
+   depths, so this tree is not a rectangle and has no two-way table. */
+function drawUntilTree(counts, colors, stopColor, maxDraws){
+  function build(rem, depth){
+    var tot = 0, i;
+    for(i = 0; i < colors.length; i++) tot += rem[colors[i]];
+    var kids = [];
+    for(i = 0; i < colors.length; i++){
+      var c = colors[i];
+      if(rem[c] <= 0) continue;
+      var nd = node(c, fred(F(rem[c], tot)), []);
+      if(c !== stopColor && depth < maxDraws - 1){
+        var nxt = {};
+        for(var j = 0; j < colors.length; j++) nxt[colors[j]] = rem[colors[j]];
+        nxt[c] = nxt[c] - 1;
+        nd.kids = build(nxt, depth + 1);
+      }
+      kids.push(nd);
+    }
+    return kids;
+  }
+  return rootOf(build(counts, 0));
+}
+function medicalTree(prev, sens, spec){
+  var noDis = fsub(F(1,1), prev);
+  var falsePos = fsub(F(1,1), spec);
+  var falseNeg = fsub(F(1,1), sens);
+  return rootOf([
+    node('Disease', prev, [node('Positive', sens, []), node('Negative', falseNeg, [])]),
+    node('No disease', noDis, [node('Positive', falsePos, []), node('Negative', spec, [])])
+  ]);
+}
+
+/* ---------------- two-way table ----------------
+   Only a tree whose paths all have length 2 and whose second stage offers
+   the same outcomes everywhere can be laid out as a rectangle. */
+function isRectangular(tree){
+  if(maxDepth(tree) !== 2) return false;
+  var sig = null;
+  for(var i = 0; i < tree.kids.length; i++){
+    var k = tree.kids[i];
+    if(!k.kids.length) return false;
+    var s = k.kids.map(function(c){ return c.label; }).slice().sort().join('|');
+    if(sig === null) sig = s; else if(s !== sig) return false;
+  }
+  return sig !== null;
+}
+function twoWay(tree){
+  var rows = tree.kids.map(function(k){ return k.label; });
+  var cols = tree.kids[0].kids.map(function(c){ return c.label; });
+  var cells = {}, i, j;
+  leavesOf(tree).forEach(function(r){ cells[keyOf(r.path)] = r.joint; });
+  var rowM = {}, colM = {};
+  for(i = 0; i < rows.length; i++){
+    rowM[rows[i]] = cols.reduce(function(a, c){ return fadd(a, cells[keyOf([rows[i], c])]); }, F(0,1));
+  }
+  for(j = 0; j < cols.length; j++){
+    colM[cols[j]] = rows.reduce(function(a, r){ return fadd(a, cells[keyOf([r, cols[j]])]); }, F(0,1));
+  }
+  var grand = rows.reduce(function(a, r){ return fadd(a, rowM[r]); }, F(0,1));
+  return {rows:rows, cols:cols, cells:cells, rowM:rowM, colM:colM, grand:grand};
+}
+
+/* ---------------- structure matching ----------------
+   The student's tree matches if, at every point, the same number of branches
+   carry the same set of outcome names. Order and capitalisation are ignored. */
+function norm(s){ return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+function structMatches(mine, real){
+  if(mine.length !== real.length) return false;
+  var used = [];
+  for(var i = 0; i < mine.length; i++){
+    var found = -1;
+    for(var j = 0; j < real.length; j++){
+      if(used.indexOf(j) >= 0) continue;
+      if(norm(real[j].label) !== norm(mine[i].label)) continue;
+      if(!structMatches(mine[i].kids || [], real[j].kids || [])) continue;
+      found = j; break;
+    }
+    if(found < 0) return false;
+    used.push(found);
+  }
+  return true;
+}
+/* first thing that is wrong, so the page can say something useful */
+function structFault(mine, real, where){
+  where = where || 'the start';
+  if(mine.length !== real.length){
+    return 'From ' + where + ' there should be ' + real.length + ' branch' +
+           (real.length === 1 ? '' : 'es') + ', but you have ' + mine.length + '.';
+  }
+  var names = real.map(function(r){ return norm(r.label); });
+  for(var i = 0; i < mine.length; i++){
+    if(names.indexOf(norm(mine[i].label)) < 0){
+      return '"' + (mine[i].label || '(blank)') + '" is not one of the outcomes from ' + where + '.';
+    }
+  }
+  for(var j = 0; j < mine.length; j++){
+    var match = null;
+    for(var k = 0; k < real.length; k++) if(norm(real[k].label) === norm(mine[j].label)) match = real[k];
+    if(match){
+      var sub = structFault(mine[j].kids || [], match.kids || [], '"' + match.label + '"');
+      if(sub) return sub;
+    }
+  }
+  return null;
+}
+
+/* ---------------- scenarios ---------------- */
+var COLORS4 = ['Red', 'Blue', 'Green', 'Gold'];
+
+function qBoth(tree, c, txt){
+  return {text:txt, target:sumWhere(tree, function(p){ return p.length === 2 && p[0] === c && p[1] === c; })};
+}
+function qAtLeast(tree, c, txt){
+  return {text:txt, target:sumWhere(tree, function(p){ return countIn(p, c) >= 1; }),
+          alt:{text:'the complement route', target:fsub(F(1,1), sumWhere(tree, function(p){ return countIn(p, c) === 0; }))}};
+}
+function qExactlyOneEach(tree, a, b, txt){
+  return {text:txt, target:sumWhere(tree, function(p){ return countIn(p, a) === 1 && countIn(p, b) === 1; })};
+}
+function qSame(tree, txt){
+  return {text:txt, target:sumWhere(tree, function(p){ return p.length === 2 && p[0] === p[1]; })};
+}
+
+/* P(first = a | second = b), read off the tree as joint over marginal */
+function reverseQ(tree, a, b, stageWords){
+  var joint = sumWhere(tree, function(p){ return p.length === 2 && p[0] === a && p[1] === b; });
+  var marg = stageMarginal(tree, 2, b);
+  return {
+    text: 'You are told the ' + stageWords[1] + ' is <b>' + b + '</b>. What is the probability the ' +
+          stageWords[0] + ' was <b>' + a + '</b>?',
+    numerText: 'P(' + a + ' then ' + b + ') — the joint, one path',
+    denomText: 'P(' + b + ' on the ' + stageWords[1] + ') — the marginal, add the paths',
+    numer: joint, denom: marg, target: fdiv(joint, marg)
+  };
+}
+
+function scenTwoBags(){
+  var t = twoBagTree({Red:2, Black:8}, {Red:4, Black:8}, ['Red', 'Black']);
+  return {
+    id:'two-bags', title:'Two bags', sub:'One marble from each of two different bags',
+    tag:'core', stages:['Bag A marble', 'Bag B marble'],
+    story:'Bag A contains 10 marbles, of which 2 are red and 8 are black. Bag B contains 12 marbles, of which 4 are red and 8 are black. One marble is drawn at random from each bag.',
+    tree:t,
+    questions:[
+      qBoth(t, 'Red', 'Find the probability that <b>both are red</b>.'),
+      qBoth(t, 'Black', 'Find the probability that <b>both are black</b>.'),
+      qExactlyOneEach(t, 'Red', 'Black', 'Find the probability of <b>one black and one red</b>.'),
+      qAtLeast(t, 'Red', 'Find the probability of <b>at least one red</b>.')
+    ],
+    reverse: reverseQ(t, 'Red', 'Red', ['Bag A marble', 'Bag B marble']),
+    revNote:'Compare your answer with the plain probability that the Bag A marble is red. They are the same. Being told about Bag B tells you nothing at all about Bag A, and that is what independence means.'
+  };
+}
+function scenWith(){
+  var t = drawTree({Red:4, Blue:2}, ['Red', 'Blue'], true, 2);
+  return {
+    id:'with-replacement', title:'With replacement', sub:'The chip goes back in before the second draw',
+    tag:'core', stages:['first chip', 'second chip'],
+    story:'A box contains 4 red and 2 blue chips. A chip is drawn at random and then replaced. A second chip is then drawn at random.',
+    tree:t,
+    questions:[
+      qAtLeast(t, 'Blue', 'Find the probability of <b>at least one blue</b>.'),
+      qExactlyOneEach(t, 'Red', 'Blue', 'Find the probability of <b>one red and one blue</b>.'),
+      qSame(t, 'Find the probability of <b>two of the same colour</b>.')
+    ],
+    reverse: reverseQ(t, 'Red', 'Blue', ['first chip', 'second chip']),
+    revNote:'Because the chip went back in, both halves of your tree carry the same numbers. Knowing the second chip was blue tells you nothing about the first, so this answer is just P(Red) over again.'
+  };
+}
+function scenWithout(){
+  var t = drawTree({Red:4, Blue:2}, ['Red', 'Blue'], false, 2);
+  return {
+    id:'without-replacement', title:'Without replacement', sub:'The chip stays out — the same box, one rule changed',
+    tag:'core', stages:['first chip', 'second chip'],
+    story:'A box contains 4 red and 2 blue chips. A chip is drawn at random and is <b>not</b> replaced. A second chip is then drawn at random.',
+    tree:t,
+    questions:[
+      qAtLeast(t, 'Blue', 'Find the probability of <b>at least one blue</b>.'),
+      qExactlyOneEach(t, 'Red', 'Blue', 'Find the probability of <b>one red and one blue</b>.'),
+      qSame(t, 'Find the probability of <b>two of the same colour</b>.'),
+      {text:'Add the paths that end in a red second chip. What is the probability the <b>second</b> chip is red?',
+       target: stageMarginal(t, 2, 'Red')}
+    ],
+    reverse: reverseQ(t, 'Red', 'Blue', ['first chip', 'second chip']),
+    revNote:'This time the answer is not P(Red). Removing the first chip changed the box, so the second draw carries information about the first. Compare this with the same problem done with replacement.'
+  };
+}
+function scenMedical(){
+  var t = medicalTree(F(1,100), F(99,100), F(95,100));
+  return {
+    id:'medical', title:'The medical test', sub:'A very accurate test, and a very surprising answer',
+    tag:'stretch', stages:['patient', 'test result'],
+    story:'A disease affects 1% of the population. A screening test correctly returns a positive result for 99% of people who have the disease, and correctly returns a negative result for 95% of people who do not. One person is chosen at random and tested.',
+    tree:t,
+    questions:[
+      {text:'Find the probability that a randomly chosen person <b>has the disease and tests positive</b>.',
+       target: sumWhere(t, function(p){ return p[0] === 'Disease' && p[1] === 'Positive'; })},
+      {text:'Find the probability that a person <b>does not have the disease but still tests positive</b>.',
+       target: sumWhere(t, function(p){ return p[0] === 'No disease' && p[1] === 'Positive'; })},
+      {text:'Add those two paths. What is the probability that a randomly chosen person <b>tests positive</b>?',
+       target: stageMarginal(t, 2, 'Positive')}
+    ],
+    reverse: reverseQ(t, 'Disease', 'Positive', ['patient', 'test result']),
+    revNote:'Fewer than one positive result in five comes from someone who actually has the disease. Nothing is wrong with the test — it is that the 5% of false positives are drawn from the 99% of people who are well, and that swamps the 1% who are sick.'
+  };
+}
+function scenDrawUntil(){
+  var t = drawUntilTree({Red:4, Blue:2}, ['Red', 'Blue'], 'Red', 3);
+  var moreThanOne = fsub(F(1,1), sumWhere(t, function(p){ return p.length === 1; }));
+  return {
+    id:'draw-until', title:'Draw until red', sub:'A tree that is not a rectangle',
+    tag:'stretch', stages:['first draw', 'later draws'],
+    story:'A box contains 4 red and 2 blue chips. Chips are drawn one at a time without replacement, and you <b>stop as soon as a red chip appears</b>. You never draw more than three chips. A red chip ends the experiment, so a red branch has nothing after it.',
+    tree:t,
+    questions:[
+      {text:'Find the probability that you <b>stop on the first draw</b>.',
+       target: sumWhere(t, function(p){ return p.length === 1 && p[0] === 'Red'; })},
+      {text:'Find the probability that you need <b>exactly two draws</b>.',
+       target: sumWhere(t, function(p){ return p.length === 2 && p[p.length-1] === 'Red'; })},
+      {text:'Find the probability that you need <b>all three draws</b>.',
+       target: sumWhere(t, function(p){ return p.length === 3; })},
+      {text:'Find the probability that you need <b>more than one draw</b>.', target: moreThanOne}
+    ],
+    reverse:{
+      text:'You are told the first chip was <b>blue</b>, so the experiment carried on. What is the probability you finished on the <b>second</b> draw?',
+      numerText:'P(Blue then Red) — the joint, one path',
+      denomText:'P(first chip is Blue) — the marginal for that branch',
+      numer: sumWhere(t, function(p){ return p.length === 2 && p[0] === 'Blue' && p[1] === 'Red'; }),
+      denom: stageMarginal(t, 1, 'Blue'),
+      target: fdiv(sumWhere(t, function(p){ return p.length === 2 && p[0] === 'Blue' && p[1] === 'Red'; }),
+                   stageMarginal(t, 1, 'Blue'))
+    },
+    revNote:'Notice this is just the number already written on that branch. A conditional probability read off the tree and a conditional probability computed as joint over marginal are the same thing — the tree has the division built in.',
+    noTable:true
+  };
+}
+/* Replayable random scenario: two colours or three, with or without
+   replacement, or two separate bags. */
+function scenRandom(rng){
+  var mode = Math.floor(rng()*3);            /* 0 with, 1 without, 2 two bags */
+  var nCol = rng() < 0.75 ? 2 : 3;
+  var colors = COLORS4.slice(0, nCol);
+  var i, counts = {}, bagA = {}, bagB = {};
+  for(i = 0; i < nCol; i++){
+    counts[colors[i]] = 2 + Math.floor(rng()*6);      /* 2..7, never exhausted in 2 draws */
+    bagA[colors[i]]   = 1 + Math.floor(rng()*7);
+    bagB[colors[i]]   = 1 + Math.floor(rng()*7);
+  }
+  var t, story, stages;
+  if(mode === 2){
+    t = twoBagTree(bagA, bagB, colors);
+    var totA = colors.reduce(function(a,c){ return a + bagA[c]; }, 0);
+    var totB = colors.reduce(function(a,c){ return a + bagB[c]; }, 0);
+    story = 'Bag A contains ' + totA + ' marbles: ' + colors.map(function(c){ return bagA[c] + ' ' + c.toLowerCase(); }).join(', ') +
+            '. Bag B contains ' + totB + ' marbles: ' + colors.map(function(c){ return bagB[c] + ' ' + c.toLowerCase(); }).join(', ') +
+            '. One marble is drawn at random from each bag.';
+    stages = ['Bag A marble', 'Bag B marble'];
+  } else {
+    var replace = (mode === 0);
+    t = drawTree(counts, colors, replace, 2);
+    var tot = colors.reduce(function(a,c){ return a + counts[c]; }, 0);
+    story = 'A box contains ' + tot + ' chips: ' + colors.map(function(c){ return counts[c] + ' ' + c.toLowerCase(); }).join(', ') +
+            '. A chip is drawn at random and ' + (replace ? 'then replaced' : 'is <b>not</b> replaced') +
+            '. A second chip is then drawn at random.';
+    stages = ['first chip', 'second chip'];
+  }
+  var c0 = colors[0], c1 = colors[1];
+  var qs = [
+    qBoth(t, c0, 'Find the probability that <b>both are ' + c0.toLowerCase() + '</b>.'),
+    qSame(t, 'Find the probability that <b>both are the same colour</b>.'),
+    qAtLeast(t, c1, 'Find the probability of <b>at least one ' + c1.toLowerCase() + '</b>.'),
+    {text:'Find the probability that the <b>second</b> draw is ' + c0.toLowerCase() + '.',
+     target: stageMarginal(t, 2, c0)}
+  ];
+  return {
+    id:'random', title:'Random problem', sub:'A fresh bag-and-chip scenario every time',
+    tag:'core', stages:stages, story:story, tree:t, questions:qs,
+    reverse: reverseQ(t, c0, c1, stages),
+    revNote:'Check whether your answer equals the plain probability of ' + c0.toLowerCase() +
+            ' on the first draw. If it does, the two draws are independent; if it does not, the first draw changed the second.'
+  };
+}
+
+var SCEN_IDS = ['two-bags', 'with-replacement', 'without-replacement', 'random', 'medical', 'draw-until'];
+function makeScenario(id, rng){
+  if(id === 'two-bags') return scenTwoBags();
+  if(id === 'with-replacement') return scenWith();
+  if(id === 'without-replacement') return scenWithout();
+  if(id === 'medical') return scenMedical();
+  if(id === 'draw-until') return scenDrawUntil();
+  return scenRandom(rng || Math.random);
+}
+
+/* ---------------- layout ----------------
+   Rows are assigned from the structure alone, never measured from the page,
+   so the drawing is identical everywhere and testable off-screen. */
+var ROW_H = 56, COL_W = 196, X0 = 34, Y0 = 30;
+function layout(tree){
+  var rows = 0;
+  (function assign(n, d){
+    n._d = d;
+    if(!n.kids.length){ n._row = rows++; return n._row; }
+    var s = 0;
+    for(var i = 0; i < n.kids.length; i++) s += assign(n.kids[i], d + 1);
+    n._row = s / n.kids.length;
+    return n._row;
+  })(tree, 0);
+  return {leaves:rows, depth:maxDepth(tree),
+          width:X0 + (maxDepth(tree)) * COL_W + 190,
+          height:Y0 * 2 + Math.max(0, rows - 1) * ROW_H};
+}
+function nodeX(d){ return X0 + d * COL_W; }
+function nodeY(row){ return Y0 + row * ROW_H; }
+
+/* ==================================================================
+   ============ CORE LOGIC — END ====================================
+   ================================================================== */
+</script>
+
+<script>
+(function(){
+if(typeof document === 'undefined') return;
+
+var KEY = 'treeDiagramsV1';
+var STEPS = ['p-pick','p-build','p-branch','p-joint','p-quest','p-rev','p-done'];
+var RAIL = [
+  {n:'1',t:'Problem'},{n:'2',t:'Build'},{n:'3',t:'Branches'},
+  {n:'4',t:'Joints'},{n:'5',t:'Questions'},{n:'6',t:'Reverse'},{n:'7',t:'Write-up'}
+];
+
+var S = {
+  step:0, maxStep:0, scenId:null, seed:null,
+  struct:null, structOK:false,
+  probs:{}, tags:{}, branchOK:false,
+  joints:{}, jointOK:false, tableSeen:false,
+  answers:{}, questOK:false,
+  rev:{}, revOK:false,
+  completed:[], w1:'', w2:'', w3:''
+};
+var SC = null;          /* the live scenario object, rebuilt from scenId + seed */
+
+function $(id){ return document.getElementById(id); }
+function el(t,c,x){ var n=document.createElement(t); if(c)n.className=c; if(x!==undefined)n.textContent=x; return n; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(!raw) return;
+    var o = JSON.parse(raw);
+    for(var k in o) if(o.hasOwnProperty(k)) S[k] = o[k];
+  }catch(e){}
+}
+/* a seeded generator so a random problem rebuilds identically on reload */
+function mulberry(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function buildScenario(){
+  SC = S.scenId ? makeScenario(S.scenId, mulberry(S.seed || 1)) : null;
+  return SC;
+}
+
+/* ---------------- rail ---------------- */
+function drawRail(){
+  var r = $('rail'); r.innerHTML = '';
+  for(var i=0;i<RAIL.length;i++){
+    (function(k){
+      var reached = k <= S.maxStep;
+      var d = document.createElement(reached ? 'button' : 'div');
+      d.className = k < S.step ? 'done' : (k === S.step ? 'now' : '');
+      if(reached){
+        d.type = 'button';
+        d.setAttribute('aria-label','Step ' + RAIL[k].n + ', ' + RAIL[k].t);
+        if(k === S.step) d.setAttribute('aria-current','step');
+        d.onclick = function(){ navTo(k); };
+      }
+      d.appendChild(el('b',null,RAIL[k].n));
+      d.appendChild(document.createTextNode(RAIL[k].t));
+      r.appendChild(d);
+    })(i);
+  }
+}
+function goto(i){
+  S.step = i;
+  if(i > S.maxStep) S.maxStep = i;
+  for(var k=0;k<STEPS.length;k++) $(STEPS[k]).classList.toggle('on', k===i);
+  drawRail();
+  window.scrollTo({top:0,behavior:'smooth'});
+  save();
+}
+function navTo(i){
+  if(i > S.maxStep) return;
+  if(i === 0) drawPicker();
+  if(i === 1) drawBuilder();
+  if(i === 2) drawBranchStep();
+  if(i === 3) drawJointStep();
+  if(i === 4) drawQuestions();
+  if(i === 5) drawReverse();
+  if(i === 6) drawFinal();
+  goto(i);
+}
+/* Each step is gated by the work the one before it produces; trim a restored
+   rail to what the save can actually support. */
+function clampRail(){
+  if(typeof S.step !== 'number' || S.step < 0) S.step = 0;
+  if(typeof S.maxStep !== 'number' || S.maxStep < 0) S.maxStep = 0;
+  S.maxStep = Math.max(S.maxStep, S.step);
+  S.maxStep = Math.min(S.maxStep, STEPS.length - 1);
+  if(!S.scenId){
+    /* flags left over from a previous problem describe a tree that is no
+       longer loaded, so nothing downstream can be trusted */
+    S.structOK = S.branchOK = S.jointOK = S.questOK = S.revOK = false;
+    S.maxStep = 0;
+  }
+  if(!S.structOK)   S.maxStep = Math.min(S.maxStep, 1);
+  if(!S.branchOK)   S.maxStep = Math.min(S.maxStep, 2);
+  if(!S.jointOK)    S.maxStep = Math.min(S.maxStep, 3);
+  if(!S.questOK)    S.maxStep = Math.min(S.maxStep, 4);
+  if(!S.revOK)      S.maxStep = Math.min(S.maxStep, 5);
+  S.step = Math.min(S.step, S.maxStep);
+}
+
+/* ---------------- step 1: pick ---------------- */
+var CARDS = [
+  {id:'two-bags', title:'Part I — Two bags', sub:'One marble from each of two bags', tag:'core'},
+  {id:'with-replacement', title:'Part II — With replacement', sub:'The chip goes back in', tag:'core'},
+  {id:'without-replacement', title:'Part III — Without replacement', sub:'The chip stays out', tag:'core'},
+  {id:'random', title:'Random problem', sub:'A fresh scenario every time', tag:'core'},
+  {id:'medical', title:'The medical test', sub:'An accurate test, a surprising answer', tag:'stretch'},
+  {id:'draw-until', title:'Draw until red', sub:'A tree that is not a rectangle', tag:'stretch'}
+];
+function drawPicker(){
+  var h = $('picker'); h.innerHTML = '';
+  CARDS.forEach(function(c){
+    var b = el('button','pcard' + (S.scenId === c.id ? ' sel' : ''));
+    b.appendChild(el('span','t',c.title));
+    b.appendChild(el('span','s',c.sub));
+    var done = S.completed.indexOf(c.id) >= 0;
+    var badge = el('span','badge ' + (done ? 'done' : c.tag),
+      done ? 'completed' : (c.tag === 'core' ? 'core' : 'stretch'));
+    b.appendChild(badge);
+    b.onclick = function(){ startScenario(c.id); };
+    h.appendChild(b);
+  });
+  var dl = $('donelist');
+  dl.innerHTML = '';
+  if(S.completed.length){
+    dl.appendChild(document.createTextNode('Completed so far: '));
+    S.completed.forEach(function(id){
+      var c = CARDS.filter(function(x){ return x.id === id; })[0];
+      dl.appendChild(el('span', null, c ? c.title : id));
+    });
+  }
+  var pb = $('pickbtns'); pb.innerHTML = '';
+  if(S.scenId){
+    var go = el('button','btn big','Build this tree');
+    go.onclick = function(){ drawBuilder(); goto(1); };
+    pb.appendChild(go);
+    var cur = CARDS.filter(function(x){ return x.id === S.scenId; })[0];
+    pb.appendChild(el('span', null, 'Selected: ' + (cur ? cur.title : S.scenId)));
+  }
+}
+function startScenario(id){
+  S.scenId = id;
+  S.seed = Math.floor(Math.random() * 1e9);
+  S.struct = null; S.structOK = false;
+  S.probs = {}; S.tags = {}; S.branchOK = false;
+  S.joints = {}; S.jointOK = false; S.tableSeen = false;
+  S.answers = {}; S.questOK = false;
+  S.rev = {}; S.revOK = false;
+  S.maxStep = 0;
+  buildScenario();
+  drawRail();            /* the rail must retract on screen, not just in state */
+  drawPicker(); drawBuilder();
+  save();
+}
+
+/* ---------------- step 2: build the structure ---------------- */
+function blankStruct(){ return [{label:'', kids:[]}, {label:'', kids:[]}]; }
+function levelCap(){ return SC ? maxDepth(SC.tree) : 2; }
+function drawBuilder(){
+  if(!SC) buildScenario();
+  if(!SC) return;
+  $('story2').innerHTML = SC.story;
+  if(!S.struct) S.struct = blankStruct();
+  var h = $('builder'); h.innerHTML = '';
+
+  h.appendChild(levelBlock(S.struct, 'the start', 1, function(){ drawBuilder(); save(); }));
+
+  var bn = $('buildnext'); bn.innerHTML = '';
+  if(S.structOK){
+    var nx = el('button','btn big','Fill in the branches');
+    nx.onclick = function(){ drawBranchStep(); goto(2); };
+    bn.appendChild(nx);
+  }
+}
+/* one editable level: a branch count, the outcome names, and then the same
+   thing again underneath each outcome */
+function levelBlock(list, whereName, depth, redraw){
+  var box = el('div','bnode');
+  var hd = el('div','hd');
+  hd.appendChild(document.createTextNode('Branches out of ' + whereName + ':'));
+  var st = el('span','stepper');
+  var minus = el('button', null, '\u2212');
+  minus.setAttribute('aria-label','one fewer branch out of ' + whereName);
+  minus.onclick = function(){ if(list.length > 0){ list.pop(); redraw(); } };
+  var cnt = el('span', null, String(list.length));
+  var plus = el('button', null, '+');
+  plus.setAttribute('aria-label','one more branch out of ' + whereName);
+  plus.onclick = function(){ if(list.length < 4){ list.push({label:'', kids:[]}); redraw(); } };
+  st.appendChild(minus); st.appendChild(cnt); st.appendChild(plus);
+  hd.appendChild(st);
+  if(list.length === 0) hd.appendChild(document.createTextNode('nothing follows — this path ends here'));
+  box.appendChild(hd);
+
+  if(list.length){
+    var row = el('div','labels');
+    list.forEach(function(item, i){
+      var inp = document.createElement('input');
+      inp.type = 'text'; inp.placeholder = 'outcome ' + (i+1); inp.maxLength = 22;
+      inp.value = item.label || '';
+      inp.setAttribute('aria-label','name of branch ' + (i+1) + ' out of ' + whereName);
+      inp.oninput = function(){ item.label = this.value; S.structOK = false; save(); };
+      row.appendChild(inp);
+    });
+    box.appendChild(row);
+    /* every branch gets its own sub-level straight away, named or not, so the
+       page never waits on a keystroke before offering somewhere to build */
+    if(depth < levelCap()){
+      list.forEach(function(item, i){
+        var nm = item.label ? '"' + item.label + '"' : 'branch ' + (i + 1);
+        box.appendChild(levelBlock(item.kids, nm, depth + 1, redraw));
+      });
+    }
+  }
+  return box;
+}
+function checkStruct(){
+  var m = $('structmsg');
+  var fault = structFault(S.struct || [], SC.tree.kids);
+  if(!fault && structMatches(S.struct || [], SC.tree.kids)){
+    S.structOK = true;
+    m.innerHTML = '<b style="color:var(--turf)">That is the right shape.</b> ' +
+      leavesOf(SC.tree).length + ' complete paths through the tree.';
+  } else {
+    S.structOK = false;
+    m.innerHTML = '<span style="color:var(--red)">' + (fault || 'Not quite — check the branch names.') + '</span>';
+  }
+  drawBuilder(); save();
+}
+
+/* ---------------- tree drawing ---------------- */
+var CHIP_CLASS = {};
+function chipClass(label){
+  if(!(label in CHIP_CLASS)){
+    var n = Object.keys(CHIP_CLASS).length;
+    CHIP_CLASS[label] = 'c' + (n % 4);
+  }
+  return CHIP_CLASS[label];
+}
+/* mode 'branch' shows a probability input plus a marginal/conditional
+   selector; mode 'joint' shows the verified branch values and asks for the
+   product at each leaf */
+function renderTree(hostId, mode){
+  var host = $(hostId);
+  host.innerHTML = '';
+  CHIP_CLASS = {};
+  var L = layout(SC.tree);
+  host.style.width = L.width + 'px';
+  host.style.height = L.height + 'px';
+
+  var svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width', L.width); svg.setAttribute('height', L.height);
+  host.appendChild(svg);
+
+  var root = el('div','chip root','Start');
+  root.style.left = '0px';
+  root.style.top = nodeY(SC.tree._row) + 'px';
+  host.appendChild(root);
+
+  allNodes(SC.tree).forEach(function(r){
+    var n = r.node, parentRow, parentD = r.depth - 1;
+    var parent = parentOf(SC.tree, r.path);
+    parentRow = parent._row;
+    var x1 = nodeX(parentD) + (parentD === 0 ? 24 : 6), y1 = nodeY(parentRow);
+    var x2 = nodeX(r.depth) - 8, y2 = nodeY(n._row);
+
+    var line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke','#8D93A3'); line.setAttribute('stroke-width','2');
+    line.setAttribute('class','edge');
+    line.setAttribute('data-key', keyOf(r.path));
+    svg.appendChild(line);
+
+    var chip = el('div','chip ' + chipClass(n.label), n.label);
+    chip.style.left = nodeX(r.depth) + 'px';
+    chip.style.top = nodeY(n._row) + 'px';
+    host.appendChild(chip);
+
+    var pb = el('div','pbox');
+    pb.style.left = ((x1 + x2)/2) + 'px';
+    pb.style.top = ((y1 + y2)/2) + 'px';
+    var k = keyOf(r.path);
+    if(mode === 'branch'){
+      var inp = document.createElement('input');
+      inp.type='text'; inp.value = S.probs[k] || '';
+      inp.setAttribute('aria-label','probability on the branch to ' + n.label +
+        (r.depth > 1 ? ' after ' + r.path.slice(0,-1).join(' then ') : ''));
+      inp.oninput = function(){ S.probs[k] = this.value; pb.className='pbox'; S.branchOK=false; save(); };
+      pb.appendChild(inp);
+      var sel = document.createElement('select');
+      sel.setAttribute('aria-label','kind of probability on the branch to ' + n.label);
+      [['','kind?'],['marginal','marginal'],['conditional','conditional']].forEach(function(o){
+        var op = document.createElement('option'); op.value=o[0]; op.textContent=o[1];
+        if((S.tags[k]||'') === o[0]) op.selected = true;
+        sel.appendChild(op);
+      });
+      sel.onchange = function(){ S.tags[k] = this.value; sel.className=''; S.branchOK=false; save(); };
+      pb.appendChild(sel);
+    } else {
+      var shown = el('span','shown', fstr(n.p));
+      pb.appendChild(shown);
+    }
+    host.appendChild(pb);
+  });
+
+  if(mode === 'joint'){
+    leavesOf(SC.tree).forEach(function(r){
+      var jb = el('div','jbox');
+      jb.style.left = (nodeX(L.depth) + 96) + 'px';
+      jb.style.top = nodeY(r.node._row) + 'px';
+      var k = keyOf(r.path);
+      var inp = document.createElement('input');
+      inp.type='text'; inp.value = S.joints[k] || '';
+      inp.setAttribute('aria-label','joint probability of the path ' + r.path.join(' then '));
+      inp.oninput = function(){ S.joints[k] = this.value; jb.className='jbox'; S.jointOK=false; save(); };
+      jb.appendChild(inp);
+      host.appendChild(jb);
+      var lab = el('div','pathlabel', r.path.join(' \u2192 '));
+      lab.style.left = (nodeX(L.depth) + 96) + 'px';
+      lab.style.top = (nodeY(r.node._row) + 20) + 'px';
+      host.appendChild(lab);
+    });
+  }
+}
+function parentOf(tree, path){
+  if(path.length === 1) return tree;
+  var n = tree;
+  for(var i = 0; i < path.length - 1; i++){
+    for(var j = 0; j < n.kids.length; j++){
+      if(n.kids[j].label === path[i]){ n = n.kids[j]; break; }
+    }
+  }
+  return n;
+}
+
+/* ---------------- step 3: branches ---------------- */
+function drawBranchStep(){
+  if(!SC) buildScenario();
+  $('story3').innerHTML = SC.story;
+  renderTree('tree3','branch');
+  $('branchnext').innerHTML = '';
+  if(S.branchOK){ markBranches(true); branchNext(); }
+}
+function branchNext(){ addNext('branchnext','On to the joint probabilities', function(){ drawJointStep(); goto(3); }); }
+function jointNext(){ addNext('jointnext','On to the questions', function(){ drawQuestions(); goto(4); }); }
+function questNext(){ addNext('questnext','Now run the tree backwards', function(){ drawReverse(); goto(5); }); }
+
+function markBranches(silent){
+  var nodes = allNodes(SC.tree);
+  var host = $('tree3');
+  var boxes = host.querySelectorAll('.pbox');
+  var nRight = 0, nTag = 0, rounding = 0;
+  nodes.forEach(function(r, i){
+    var k = keyOf(r.path), box = boxes[i];
+    var res = checkAns(S.probs[k], r.node.p);
+    box.className = 'pbox ' + (res.ok ? 'right' : (S.probs[k] ? 'wrong' : ''));
+    if(res.ok) nRight++;
+    if(res.why === 'rounding') rounding++;
+    var want = r.depth === 1 ? 'marginal' : 'conditional';
+    var sel = box.querySelector('select');
+    if(sel){
+      if((S.tags[k]||'') === want){ sel.className = 'right'; nTag++; }
+      else if(S.tags[k]) sel.className = 'wrong';
+      else sel.className = '';
+    }
+  });
+  S.branchOK = (nRight === nodes.length && nTag === nodes.length);
+  if(!silent){
+    var m = $('branchmsg');
+    if(S.branchOK){
+      m.innerHTML = '<b style="color:var(--turf)">Every branch is right.</b> ' +
+        'Notice the branches out of any single point add to 1 — nothing else can happen.';
+    } else {
+      var bits = [nRight + ' of ' + nodes.length + ' probabilities correct',
+                  nTag + ' of ' + nodes.length + ' labelled correctly'];
+      if(rounding) bits.push('<b>' + rounding + ' close but rounded too early — decimals need 4 places</b>');
+      m.innerHTML = '<span style="color:var(--red)">' + bits.join(' &middot; ') + '</span>';
+    }
+  }
+  save();
+}
+
+/* ---------------- step 4: joints + two-way table ---------------- */
+function drawJointStep(){
+  if(!SC) buildScenario();
+  renderTree('tree4','joint');
+  $('tablepanel').classList.toggle('hidden', !S.tableSeen);
+  $('toggletable').textContent = S.tableSeen ? 'Hide the two-way table' : 'Show the two-way table';
+  if(S.tableSeen) drawTable();
+  $('jointnext').innerHTML = '';
+  if(S.jointOK){ markJoints(true); jointNext(); }
+}
+function markJoints(silent){
+  var lv = leavesOf(SC.tree);
+  var boxes = $('tree4').querySelectorAll('.jbox');
+  var n = 0, rounding = 0;
+  lv.forEach(function(r, i){
+    var k = keyOf(r.path), res = checkAns(S.joints[k], r.joint);
+    boxes[i].className = 'jbox ' + (res.ok ? 'right' : (S.joints[k] ? 'wrong' : ''));
+    if(res.ok) n++;
+    if(res.why === 'rounding') rounding++;
+  });
+  S.jointOK = (n === lv.length);
+  if(!silent){
+    var m = $('jointmsg');
+    if(S.jointOK){
+      var tot = lv.reduce(function(a,r){ return fadd(a, r.joint); }, F(0,1));
+      m.innerHTML = '<b style="color:var(--turf)">All ' + lv.length + ' joint probabilities are right.</b> ' +
+        'Add them up and you get ' + fstr(tot) + ' — every possible way the experiment can finish is on your tree exactly once.';
+    } else {
+      var s = '<span style="color:var(--red)">' + n + ' of ' + lv.length + ' correct';
+      if(rounding) s += ' &middot; <b>' + rounding + ' rounded too early — decimals need 4 places</b>';
+      m.innerHTML = s + '</span>';
+    }
+  }
+  save();
+}
+function drawTable(){
+  var host = $('tablenote'); host.innerHTML = '';
+  var t = $('twt'); t.innerHTML = '';
+  if(!isRectangular(SC.tree)){
+    t.classList.add('hidden');
+    var d = el('div','note gold');
+    d.innerHTML = '<p>This tree has no two-way table, and that is the point. A table needs every path to have the same length and the same choices at each step. Here a red chip ends the experiment, so the paths stop at different places. Trees can describe experiments that tables cannot — which is the honest reason the technique exists.</p>';
+    host.appendChild(d);
+    return;
+  }
+  t.classList.remove('hidden');
+  var W = twoWay(SC.tree);
+  var head = el('thead'), hr = el('tr');
+  hr.appendChild(el('th','rowh',''));
+  W.cols.forEach(function(c){ hr.appendChild(el('th',null,c)); });
+  hr.appendChild(el('th',null,'Row total'));
+  head.appendChild(hr); t.appendChild(head);
+  var tb = el('tbody');
+  W.rows.forEach(function(rw){
+    var tr = el('tr');
+    tr.appendChild(el('th','rowh',rw));
+    W.cols.forEach(function(c){
+      (function(rr, cc){
+        var td = el('td','cell', fstr(W.cells[keyOf([rr,cc])]));
+        td.setAttribute('tabindex','0');
+        td.setAttribute('aria-label','joint probability of ' + rr + ' then ' + cc);
+        var hit = function(){ highlightPath([rr,cc], td); };
+        td.onclick = hit; td.onkeydown = function(e){ if(e.key==='Enter'||e.key===' ') hit(); };
+        tr.appendChild(td);
+      })(rw, c);
+    });
+    tr.appendChild(el('td','marg', fstr(W.rowM[rw])));
+    tb.appendChild(tr);
+  });
+  var fr = el('tr');
+  fr.appendChild(el('th','rowh','Column total'));
+  W.cols.forEach(function(c){ fr.appendChild(el('td','marg', fstr(W.colM[c]))); });
+  fr.appendChild(el('td','grand', fstr(W.grand)));
+  tb.appendChild(fr);
+  t.appendChild(tb);
+
+  var d2 = el('div','note');
+  d2.innerHTML = '<p>The row totals are the probabilities on your first set of branches. The column totals are something the tree does not show directly — to get one you have to add the joint probabilities down a whole column, which is the law of total probability doing its work.</p>';
+  host.appendChild(d2);
+}
+function highlightPath(path, cell){
+  var svg = $('tree4').querySelector('svg');
+  if(svg) Array.prototype.forEach.call(svg.querySelectorAll('.edge'), function(e){ e.classList.remove('hl'); });
+  Array.prototype.forEach.call($('twt').querySelectorAll('td.cell'), function(c){ c.classList.remove('hl'); });
+  if(cell) cell.classList.add('hl');
+  for(var i = 1; i <= path.length; i++){
+    var k = keyOf(path.slice(0, i));
+    var e = svg && svg.querySelector('.edge[data-key="' + k + '"]');
+    if(e) e.classList.add('hl');
+  }
+}
+
+/* ---------------- step 5: questions ---------------- */
+function drawQuestions(){
+  if(!SC) buildScenario();
+  $('story5').innerHTML = SC.story;
+  var h = $('questions'); h.innerHTML = '';
+  SC.questions.forEach(function(q, i){
+    var row = el('div','qrow'); row.id = 'q' + i;
+    var qt = el('div','qt'); qt.innerHTML = '<b>' + String.fromCharCode(97+i) + ')</b> ' + q.text;
+    row.appendChild(qt);
+    var inp = document.createElement('input');
+    inp.type='text'; inp.value = S.answers[i] || ''; inp.placeholder = 'fraction or 4 dp';
+    inp.setAttribute('aria-label','answer to part ' + String.fromCharCode(97+i));
+    inp.oninput = function(){ S.answers[i] = this.value; row.className='qrow'; S.questOK=false; save(); };
+    row.appendChild(inp);
+    row.appendChild(el('div','fb'));
+    h.appendChild(row);
+  });
+  $('questnext').innerHTML = '';
+  if(S.questOK){ markQuestions(true); questNext(); }
+}
+function markQuestions(silent){
+  var n = 0, rounding = 0;
+  SC.questions.forEach(function(q, i){
+    var row = $('q' + i);
+    var res = checkAns(S.answers[i], q.target);
+    row.className = 'qrow ' + (res.ok ? 'right' : (S.answers[i] ? 'wrong' : ''));
+    var fb = row.querySelector('.fb');
+    if(res.ok){
+      n++;
+      fb.className = 'fb ok';
+      fb.textContent = fboth(q.target) + (q.alt ? '  \u2014 and 1 minus the paths with none of them gives the same number.' : '');
+    } else if(res.why === 'rounding'){
+      rounding++;
+      fb.className = 'fb no'; fb.textContent = 'The value is right but round decimals to 4 places.';
+    } else if(S.answers[i]){
+      fb.className = 'fb no'; fb.textContent = 'Not yet — add up the paths that fit the description.';
+    } else { fb.className = 'fb'; fb.textContent = ''; }
+  });
+  S.questOK = (n === SC.questions.length);
+  if(!silent){
+    var m = $('questmsg');
+    m.innerHTML = S.questOK
+      ? '<b style="color:var(--turf)">All correct.</b>'
+      : '<span style="color:var(--red)">' + n + ' of ' + SC.questions.length + ' correct' +
+        (rounding ? ' &middot; <b>' + rounding + ' rounded too early</b>' : '') + '</span>';
+  }
+  save();
+}
+
+/* ---------------- step 6: reverse ---------------- */
+function drawReverse(){
+  if(!SC) buildScenario();
+  var R = SC.reverse;
+  var h = $('revhost'); h.innerHTML = '';
+  var q = el('div','qrow');
+  var qt = el('div','qt'); qt.innerHTML = R.text;
+  q.appendChild(qt);
+  var sc = el('div','scaffold');
+  [['numer', R.numerText], ['denom', R.denomText], ['final', 'Divide: the conditional probability']].forEach(function(f){
+    var w = el('div');
+    w.appendChild(el('span','sl', f[1]));
+    var inp = document.createElement('input');
+    inp.type='text'; inp.value = S.rev[f[0]] || ''; inp.placeholder='fraction or 4 dp';
+    inp.setAttribute('aria-label', f[1]);
+    inp.id = 'rev-' + f[0];
+    inp.oninput = function(){ S.rev[f[0]] = this.value; this.parentNode.className=''; S.revOK=false; save(); };
+    w.appendChild(inp);
+    sc.appendChild(w);
+  });
+  q.appendChild(sc);
+  h.appendChild(q);
+  $('revafter').innerHTML = '';
+  var bn = $('revnext'); bn.innerHTML = '';
+  if(S.revOK){ markReverse(true); showRevNote(); addRevNext(); }
+}
+/* idempotent: adding the forward button must never rebuild the step, or the
+   marking that was just painted on would be thrown away */
+function addNext(hostId, label, fn){
+  var bn = $(hostId);
+  if(bn.querySelector('button')) return;
+  var nx = el('button','btn big', label);
+  nx.onclick = fn;
+  bn.appendChild(nx);
+}
+function addRevNext(){
+  var bn = $('revnext');
+  if(bn.querySelector('button')) return;
+  var nx = el('button','btn big','Finish');
+  nx.onclick = function(){
+    if(S.completed.indexOf(S.scenId) < 0) S.completed.push(S.scenId);
+    drawFinal(); goto(6);
+  };
+  bn.appendChild(nx);
+}
+function markReverse(silent){
+  var R = SC.reverse, n = 0, rounding = 0;
+  [['numer', R.numer], ['denom', R.denom], ['final', R.target]].forEach(function(f){
+    var inp = $('rev-' + f[0]);
+    var res = checkAns(S.rev[f[0]], f[1]);
+    inp.parentNode.className = res.ok ? 'right' : '';
+    inp.style.borderColor = res.ok ? 'var(--turf)' : (S.rev[f[0]] ? 'var(--red)' : '');
+    inp.style.background = res.ok ? 'var(--turf-soft)' : (S.rev[f[0]] ? 'var(--red-soft)' : '#fff');
+    inp.style.color = res.ok ? 'var(--turf)' : (S.rev[f[0]] ? 'var(--red)' : 'var(--ink)');
+    if(res.ok) n++;
+    if(res.why === 'rounding') rounding++;
+  });
+  S.revOK = (n === 3);
+  if(!silent){
+    var m = $('revmsg');
+    if(S.revOK){
+      m.innerHTML = '<b style="color:var(--turf)">That is Bayes\' theorem, and you did not need the formula.</b> ' +
+        'You divided one path by the total of the paths that end the same way.';
+      showRevNote(); addRevNext();
+    } else {
+      m.innerHTML = '<span style="color:var(--red)">' + n + ' of 3 correct' +
+        (rounding ? ' &middot; <b>rounded too early</b>' : '') + '</span>';
+    }
+  }
+  save();
+}
+function showRevNote(){
+  var h = $('revafter'); h.innerHTML = '';
+  var d = el('div','note good');
+  d.innerHTML = '<p>' + SC.revNote + '</p>';
+  h.appendChild(d);
+}
+
+/* ---------------- step 7 ---------------- */
+function drawFinal(){
+  if(!SC) buildScenario();
+  var m = $('finalmetrics'); m.innerHTML = '';
+  var lv = leavesOf(SC.tree);
+  m.appendChild(metric(String(lv.length), 'Complete paths on your tree'));
+  m.appendChild(metric(String(allNodes(SC.tree).length), 'Branches labelled'));
+  m.appendChild(metric(fboth(SC.reverse.target).split(' = ')[0], 'Your reversed probability'));
+  m.appendChild(metric(S.completed.length + ' of ' + CARDS.length, 'Problems completed'));
+  var n = $('finalnote'); n.innerHTML = '';
+  var d = el('div','note good');
+  d.innerHTML = '<p>Marginal probabilities sit on the first branches, conditional probabilities on every branch after that, and joint probabilities at the ends of the paths. Those are not three separate techniques — they are three places to look on one picture.</p>';
+  n.appendChild(d);
+}
+function metric(b,s){
+  var d = el('div','metric'); d.appendChild(el('b',null,b)); d.appendChild(el('small',null,s)); return d;
+}
+
+/* ---------------- wiring ---------------- */
+function boot(){
+  load(); clampRail();
+  if(S.scenId) buildScenario();
+  drawRail();
+  drawPicker();
+  if(SC){ drawBuilder(); drawBranchStep(); drawJointStep(); drawQuestions(); drawReverse(); drawFinal(); }
+  if(SC){
+    if(S.structOK) checkStructQuiet();
+    if(S.branchOK){ markBranches(true); branchNext(); }
+    if(S.jointOK){ markJoints(true); jointNext(); }
+    if(S.questOK){ markQuestions(true); questNext(); }
+    if(S.revOK){ markReverse(true); showRevNote(); addRevNext(); }
+  }
+
+  $('checkstruct').onclick = function(){ checkStruct(); };
+  $('clearstruct').onclick = function(){ S.struct = blankStruct(); S.structOK=false; $('structmsg').innerHTML=''; drawBuilder(); save(); };
+  $('checkbranch').onclick = function(){ markBranches(false); if(S.branchOK) branchNext(); };
+  $('clearbranch').onclick = function(){ S.probs={}; S.tags={}; S.branchOK=false; $('branchmsg').innerHTML=''; drawBranchStep(); save(); };
+  $('checkjoint').onclick = function(){ markJoints(false); if(S.jointOK) jointNext(); };
+  $('clearjoint').onclick = function(){ S.joints={}; S.jointOK=false; $('jointmsg').innerHTML=''; drawJointStep(); save(); };
+  $('toggletable').onclick = function(){
+    S.tableSeen = !S.tableSeen;
+    $('tablepanel').classList.toggle('hidden', !S.tableSeen);
+    this.textContent = S.tableSeen ? 'Hide the two-way table' : 'Show the two-way table';
+    if(S.tableSeen) drawTable();
+    save();
+  };
+  $('checkquest').onclick = function(){ markQuestions(false); if(S.questOK) questNext(); };
+  $('checkrev').onclick = function(){ markReverse(false); };
+  $('another').onclick = function(){ drawPicker(); goto(0); };
+  $('printit').onclick = function(){ window.print(); };
+  $('wipe').onclick = function(){
+    if(confirm('Erase everything saved in this browser?')){
+      try{ localStorage.removeItem(KEY); }catch(e){}
+      location.reload();
+    }
+  };
+  ['w1','w2','w3'].forEach(function(q){
+    $(q).value = S[q] || '';
+    $(q).oninput = function(){ S[q] = this.value; save(); };
+  });
+  goto(S.step);
+}
+function checkStructQuiet(){
+  $('structmsg').innerHTML = '<b style="color:var(--turf)">That is the right shape.</b> ' +
+    leavesOf(SC.tree).length + ' complete paths through the tree.';
+}
+boot();
+})();
+</script>
+</body>
+</html>
