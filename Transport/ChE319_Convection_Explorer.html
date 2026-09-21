@@ -1,0 +1,834 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Convection Explorer — ChE 319</title>
+<style>
+  :root {
+    --paper:     #F6F8FA;
+    --panel:     #FFFFFF;
+    --ink:       #101823;
+    --ink-soft:  #5A6675;
+    --rule:      #CBD5E1;
+    --rule-soft: #E4EAF1;
+    --navy:      #16305C;
+    --flux:      #0F7A6E;
+    --temp:      #B3202B;
+    --gen:       #6B4EA8;
+    --clad:      #4A6FA5;
+    --focus:     #0F7A6E;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 28px 20px 60px;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+
+  .masthead { border-bottom: 2px solid var(--navy); padding-bottom: 14px; }
+  h1 { font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+       font-weight: 600; font-size: clamp(24px,4vw,34px); line-height: 1.15;
+       letter-spacing: -0.01em; color: var(--navy); margin: 0 0 6px; }
+  .standfirst { max-width: 72ch; color: var(--ink-soft); font-size: 15px; margin: 0; }
+
+  .tabs { display: flex; border-bottom: 1px solid var(--rule); margin: 0 0 22px; flex-wrap: wrap; }
+  .tab { appearance: none; background: none; border: 0; border-bottom: 3px solid transparent;
+         padding: 13px 18px 11px; font: inherit; font-size: 14.5px; color: var(--ink-soft);
+         cursor: pointer; margin-bottom: -1px; }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] { color: var(--navy); font-weight: 600; border-bottom-color: var(--navy); }
+  .tab:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
+
+  .lede { max-width: 78ch; margin: 0 0 20px; color: var(--ink-soft); }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .stage { display: grid; grid-template-columns: minmax(0,1fr) 330px; gap: 22px; align-items: start; }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 900px) { .stage, .duo { grid-template-columns: 1fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--rule); }
+  .card > h2 { font-family: Georgia, "Iowan Old Style", serif; font-size: 15px; font-weight: 600;
+               color: var(--navy); margin: 0; padding: 11px 16px 10px;
+               border-bottom: 1px solid var(--rule-soft); }
+  .card .body { padding: 16px; }
+
+  canvas { display: block; width: 100%; height: auto; touch-action: none; }
+  canvas.grab { cursor: ew-resize; }
+  canvas:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .canvhost { padding: 12px 0 0; }
+  .hint { font-size: 12.5px; color: var(--ink-soft); padding: 4px 16px 10px; }
+
+  .ctl { margin-bottom: 14px; }
+  .ctl:last-child { margin-bottom: 0; }
+  .ctl label { display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+               font-size: 13.5px; margin-bottom: 5px; }
+  .ctl .grouplabel { display: block; font-size: 13.5px; margin-bottom: 5px; }
+  .val { font-family: ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size: 12.5px;
+         font-variant-numeric: tabular-nums; color: var(--navy); }
+  input[type=range] { width: 100%; accent-color: var(--navy); margin: 0; }
+  input[type=range]:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+  .seg { display: flex; flex-wrap: wrap; border: 1px solid var(--rule); }
+  .seg button { flex: 1 1 auto; appearance: none; background: var(--panel); border: 0;
+                border-right: 1px solid var(--rule); padding: 7px 4px; font: inherit;
+                font-size: 11.5px; color: var(--ink-soft); cursor: pointer; white-space: nowrap; }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+  .seg button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+  .divider { height: 1px; background: var(--rule-soft); margin: 15px 0; }
+
+  .eqn { font-family: ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size: 12.5px;
+         font-variant-numeric: tabular-nums; line-height: 1.9; }
+  .eqn .row { display: flex; justify-content: space-between; gap: 12px; }
+  .eqn .k { color: var(--ink-soft); }
+  .eqn .v { color: var(--ink); font-weight: 600; }
+  .eqn .v.flux { color: var(--flux); }
+  .eqn .v.temp { color: var(--temp); }
+  .eqn .v.big { font-size: 15px; }
+  .fracline { border-top: 1px solid var(--rule); margin: 6px 0; }
+
+  .flag { display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 11.5px;
+          font-weight: 600; font-family: ui-sans-serif, system-ui, sans-serif; }
+  .flag.lam { background: #E4EAF1; color: var(--clad); }
+  .flag.turb { background: #FBE9E7; color: var(--temp); }
+  .flag.warn { background: #FDF6E3; color: #8A6D1F; }
+
+  .note { margin-top: 22px; padding: 14px 18px; background: #EFF4F0;
+          border-left: 3px solid var(--flux); max-width: 82ch; font-size: 14.5px; }
+  .note b { color: var(--navy); }
+  .note.caution { background: #FDF6E3; border-left-color: #C9A227; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--ink-soft);
+            padding: 0 16px 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 16px; height: 3px; border-radius: 2px; }
+
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.tbl th { text-align: left; font-weight: 600; font-size: 12px; color: var(--ink-soft);
+                 padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+  table.tbl td { padding: 6px 8px; border-bottom: 1px solid var(--rule-soft);
+                 font-variant-numeric: tabular-nums; }
+  table.tbl tr.on td { background: #EFF4F0; font-weight: 600; }
+
+  .foot { margin-top: 34px; padding-top: 12px; border-top: 1px solid var(--rule);
+          font-size: 12.5px; color: var(--ink-soft); max-width: 82ch; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Convection Explorer</h1>
+    <p class="standfirst">Three things this lesson asks you to hold at once: where the number <em>h</em> comes from, how to measure a pipe that isn't round, and what the fluid does once it's inside. One tab each.</p>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-a" aria-controls="p-a" aria-selected="true">Where h comes from</button>
+    <button class="tab" role="tab" id="tab-b" aria-controls="p-b" aria-selected="false">Hydraulic diameter</button>
+    <button class="tab" role="tab" id="tab-c" aria-controls="p-c" aria-selected="false">Down the tube</button>
+  </div>
+
+  <!-- ================= PANEL A ================= -->
+  <section id="p-a" role="tabpanel" aria-labelledby="tab-a">
+    <p class="lede">Pick a fluid and a flow, and watch the chain run: <strong>Re decides the regime</strong>, the regime decides which correlation applies, and that gives Nu and finally h. The left plot shows the jump that happens when flow turns turbulent.</p>
+
+    <div class="stage">
+      <div>
+        <div class="duo">
+          <div class="card">
+            <h2>h as you open the valve</h2>
+            <div id="plotA1"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--clad)"></i>laminar, Nu = 3.66</span>
+              <span><i class="swatch" style="background:var(--temp)"></i>turbulent, Dittus–Boelter</span>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Nusselt against Reynolds</h2>
+            <div id="plotA2"></div>
+            <div class="legend"><span>Both axes logarithmic — the turbulent branch is a straight line of slope 0.8.</span></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h2>The chain of reasoning</h2>
+          <div class="body"><div id="chainA"></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <span class="grouplabel" id="aFlL">Fluid</span>
+            <div class="seg" id="aFl" role="group" aria-labelledby="aFlL">
+              <button data-f="water20" aria-pressed="true">Water 20°</button>
+              <button data-f="water100" aria-pressed="false">Water 100°</button>
+              <button data-f="air20" aria-pressed="false">Air 20°</button>
+              <button data-f="oil40" aria-pressed="false">Oil 40°</button>
+            </div>
+          </div>
+          <div class="ctl">
+            <label for="aV">Mean velocity ⟨V⟩ <span class="val" id="aVv"></span></label>
+            <input type="range" id="aV" min="0.01" max="6" step="0.01" value="1">
+          </div>
+          <div class="ctl">
+            <label for="aD">Tube diameter D <span class="val" id="aDv"></span></label>
+            <input type="range" id="aD" min="4" max="80" step="0.5" value="20">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">ρ</span><span class="v" id="aRho"></span></div>
+            <div class="row"><span class="k">μ</span><span class="v" id="aMu"></span></div>
+            <div class="row"><span class="k">k</span><span class="v" id="aK"></span></div>
+            <div class="row"><span class="k">Pr = C<sub>p</sub>μ/k</span><span class="v" id="aPr"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">Re = ρ⟨V⟩D/μ</span><span class="v big" id="aRe"></span></div>
+            <div class="row"><span class="k">regime</span><span id="aReg"></span></div>
+            <div class="row"><span class="k">Nu = hD/k</span><span class="v" id="aNu"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">h</span><span class="v flux big" id="aH"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">⟨V⟩ for Re = 2000</span><span class="v" id="aVc"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteA"></p>
+    <p class="note caution" id="cautionA"></p>
+  </section>
+
+  <!-- ================= PANEL B ================= -->
+  <section id="p-b" role="tabpanel" aria-labelledby="tab-b">
+    <p class="lede">Reynolds number needs a length scale, and real ducts aren't always round. The rule is <strong>four times the flow area over the wetted perimeter</strong>. The shaded region below is the flow area; the heavy outline is the wetted perimeter — <strong>including any obstruction the fluid touches</strong>.</p>
+
+    <div class="stage">
+      <div class="card">
+        <h2>Cross-section</h2>
+        <div class="canvhost"><canvas id="cvB" aria-label="Duct cross-section showing flow area and wetted perimeter."></canvas></div>
+        <p class="hint">Shaded = flow area · Heavy outline = wetted perimeter</p>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <span class="grouplabel" id="bShL">Duct shape</span>
+            <div class="seg" id="bSh" role="group" aria-labelledby="bShL" style="flex-wrap:wrap">
+              <button data-s="circle" aria-pressed="true">Circle</button>
+              <button data-s="square" aria-pressed="false">Square</button>
+              <button data-s="rect" aria-pressed="false">Rectangle</button>
+              <button data-s="rod" aria-pressed="false">Square + rod</button>
+              <button data-s="annulus" aria-pressed="false">Annulus</button>
+            </div>
+          </div>
+          <div class="ctl" id="bD1wrap">
+            <label for="bD1"><span id="bD1lab"></span> <span class="val" id="bD1v"></span></label>
+            <input type="range" id="bD1" min="10" max="100" step="1" value="60">
+          </div>
+          <div class="ctl" id="bD2wrap">
+            <label for="bD2"><span id="bD2lab"></span> <span class="val" id="bD2v"></span></label>
+            <input type="range" id="bD2" min="2" max="90" step="1" value="30">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">flow area A</span><span class="v" id="bA"></span></div>
+            <div class="row"><span class="k">wetted perimeter P</span><span class="v" id="bP"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">D<sub>h</sub> = 4A/P</span><span class="v flux big" id="bDh"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">formula</span><span class="v" id="bForm" style="font-size:11px"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteB"></p>
+  </section>
+
+  <!-- ================= PANEL C ================= -->
+  <section id="p-c" role="tabpanel" aria-labelledby="tab-c">
+    <p class="lede">The tube wall is held at a fixed temperature and the fluid creeps toward it. The strip below is the fluid coloured by temperature, sitting directly above its own curve on the same axis. <strong>h is computed from the correlation in the first tab</strong>, so the two halves of the lesson are linked here.</p>
+
+    <div class="stage">
+      <div>
+        <div class="card">
+          <h2>Fluid down the tube, coloured by temperature</h2>
+          <div class="canvhost"><canvas id="cvC" tabindex="0" class="grab" aria-label="Tube coloured by fluid temperature. Arrow keys move the measuring position."></canvas></div>
+          <p class="hint">Drag left or right to move along the tube, or focus it and use ← →</p>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h2>Fluid temperature T(x)</h2>
+          <div id="plotC"></div>
+          <div class="legend">
+            <span><i class="swatch" style="background:var(--temp)"></i>fluid</span>
+            <span><i class="swatch" style="background:var(--ink-soft)"></i>wall T<sub>s</sub></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <span class="grouplabel" id="cFlL">Fluid</span>
+            <div class="seg" id="cFl" role="group" aria-labelledby="cFlL">
+              <button data-f="water20" aria-pressed="true">Water</button>
+              <button data-f="air20" aria-pressed="false">Air</button>
+              <button data-f="oil40" aria-pressed="false">Oil</button>
+            </div>
+          </div>
+          <div class="ctl">
+            <label for="cV">Mean velocity ⟨V⟩ <span class="val" id="cVv"></span></label>
+            <input type="range" id="cV" min="0.05" max="6" step="0.05" value="1">
+          </div>
+          <div class="ctl">
+            <label for="cD">Tube diameter D <span class="val" id="cDv"></span></label>
+            <input type="range" id="cD" min="4" max="60" step="0.5" value="20">
+          </div>
+          <div class="ctl">
+            <label for="cL">Tube length L <span class="val" id="cLv"></span></label>
+            <input type="range" id="cL" min="0.2" max="20" step="0.1" value="3">
+          </div>
+          <div class="ctl">
+            <label for="cT0">Inlet temperature T₀ <span class="val" id="cT0v"></span></label>
+            <input type="range" id="cT0" min="0" max="90" step="1" value="20">
+          </div>
+          <div class="ctl">
+            <label for="cTs">Wall temperature T<sub>s</sub> <span class="val" id="cTsv"></span></label>
+            <input type="range" id="cTs" min="10" max="200" step="1" value="100">
+          </div>
+          <div class="ctl">
+            <label for="cX">Position x <span class="val" id="cXv"></span></label>
+            <input type="range" id="cX" min="0" max="20" step="0.05" value="1">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">h (from correlation)</span><span class="v flux" id="cH"></span></div>
+            <div class="row"><span class="k">Re</span><span class="v" id="cRe"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">NTU = 4hL/ρ⟨V⟩C<sub>p</sub>D</span><span class="v big" id="cNTU"></span></div>
+            <div class="row"><span class="k">gap closed</span><span class="v" id="cClose"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">T at this x</span><span class="v temp" id="cTx"></span></div>
+            <div class="row"><span class="k">exit T<sub>L</sub></span><span class="v temp big" id="cTL"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">Q from ṁC<sub>p</sub>ΔT</span><span class="v" id="cQ1"></span></div>
+            <div class="row"><span class="k">Q from hAΔT<sub>lm</sub></span><span class="v" id="cQ2"></span></div>
+            <div class="row"><span class="k">ΔT<sub>lm</sub></span><span class="v" id="cLM"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteC"></p>
+  </section>
+
+  <p class="foot">Companion to the ChE 319 Lecture 5 study guide. Fluid properties are taken at the stated temperatures and held constant. The laminar branch uses Nu = 3.66, the fully developed value for a round tube at constant wall temperature; the turbulent branch uses Dittus–Boelter with Pr<sup>0.4</sup> (heating).</p>
+</div>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
+const MM = 1e-3, TAU = Math.PI*2;
+
+function sup(n){
+  const map={"-":"\u207b","0":"\u2070","1":"\u00b9","2":"\u00b2","3":"\u00b3",
+             "4":"\u2074","5":"\u2075","6":"\u2076","7":"\u2077","8":"\u2078","9":"\u2079"};
+  return String(n).split("").map(c=>map[c]||c).join("");
+}
+function fmt(v,d){
+  if(!isFinite(v)) return "\u2014";
+  if(v===0) return "0";
+  const a=Math.abs(v);
+  if(a>=1e5||a<1e-3){ const e=Math.floor(Math.log10(a));
+    return (v/Math.pow(10,e)).toFixed(d===undefined?2:d)+"\u00d710"+sup(e); }
+  if(a>=1000) return v.toFixed(0);
+  if(a>=100)  return v.toFixed(d===undefined?0:d);
+  if(a>=10)   return v.toFixed(d===undefined?1:d);
+  return v.toFixed(d===undefined?2:d);
+}
+function ticks(lo,hi,count){
+  if(!(hi>lo)) return [lo];
+  const raw=(hi-lo)/count, mag=Math.pow(10,Math.floor(Math.log10(raw))), n=raw/mag;
+  const step=(n<1.5?1:n<3?2:n<7?5:10)*mag;
+  const out=[];
+  for(let t=Math.ceil(lo/step)*step;t<=hi+step*1e-9;t+=step) out.push(t);
+  return out;
+}
+
+/* ---------- fluids ---------- */
+const FLUIDS = {
+  water20 : {name:"Water 20\u00b0C",  rho:998,   mu:1.00e-3, k:0.598,  cp:4182},
+  water100: {name:"Water 100\u00b0C", rho:958,   mu:2.82e-4, k:0.679,  cp:4216},
+  air20   : {name:"Air 20\u00b0C",    rho:1.204, mu:1.82e-5, k:0.0257, cp:1006},
+  oil40   : {name:"Oil 40\u00b0C",    rho:876,   mu:0.210,   k:0.144,  cp:1964}
+};
+const PrOf = f => f.cp*f.mu/f.k;
+const ReOf = (f,V,D) => f.rho*V*D/f.mu;
+const NuOf = (f,V,D) => { const Re=ReOf(f,V,D);
+  return Re<2000 ? 3.66 : 0.023*Math.pow(Re,0.8)*Math.pow(PrOf(f),0.4); };
+const hOf  = (f,V,D) => NuOf(f,V,D)*f.k/D;
+
+/* ---------- SVG plot ---------- */
+const PW=470, PH=250, PM={l:62,r:16,t:14,b:38};
+function drawPlot(host,cfg){
+  const iw=PW-PM.l-PM.r, ih=PH-PM.t-PM.b, NS=cfg.samples||260;
+  const logX=!!cfg.logX, logY=!!cfg.logY;
+  const {x0,x1}=cfg;
+  const xAt = i => logX
+    ? Math.pow(10, Math.log10(x0)+(Math.log10(x1)-Math.log10(x0))*i/NS)
+    : x0+(x1-x0)*i/NS;
+
+  const data=(cfg.series||[]).map(s=>{
+    const pts=[];
+    for(let i=0;i<=NS;i++){
+      const x=xAt(i);
+      if(s.xmin!==undefined && x<s.xmin) continue;
+      if(s.xmax!==undefined && x>s.xmax) continue;
+      const y=s.f(x);
+      if(isFinite(y) && (!logY||y>0)) pts.push([x,y]);
+    }
+    return {...s,pts};
+  });
+
+  let ylo=Infinity,yhi=-Infinity;
+  data.forEach(s=>s.pts.forEach(p=>{ if(p[1]<ylo)ylo=p[1]; if(p[1]>yhi)yhi=p[1]; }));
+  if(!isFinite(ylo)){ylo=0;yhi=1;}
+  if(cfg.yMin!==undefined) ylo=cfg.yMin;
+  if(cfg.yMax!==undefined) yhi=cfg.yMax;
+  else if(logY) yhi*=1.6; else yhi+=(yhi-ylo)*0.10||1;
+  if(!logY && cfg.yMin===undefined && ylo>0) ylo=0;
+  if(logY) ylo=Math.max(ylo/1.6, yhi/1e6);
+  if(yhi===ylo) yhi=ylo+1;
+
+  const X = logX
+    ? v=>PM.l+(Math.log10(Math.max(v,x0))-Math.log10(x0))/(Math.log10(x1)-Math.log10(x0))*iw
+    : v=>PM.l+(v-x0)/(x1-x0)*iw;
+  const Y = logY
+    ? v=>PM.t+ih-(Math.log10(Math.max(v,ylo))-Math.log10(ylo))/(Math.log10(yhi)-Math.log10(ylo))*ih
+    : v=>PM.t+ih-(v-ylo)/(yhi-ylo)*ih;
+
+  let s=`<svg viewBox="0 0 ${PW} ${PH}" width="100%" role="img" aria-label="${cfg.aria||"plot"}" style="display:block">`;
+
+  (cfg.regions||[]).forEach(r=>{
+    const xa=clamp(X(r.x0),PM.l,PM.l+iw), xb=clamp(X(r.x1),PM.l,PM.l+iw);
+    s+=`<rect x="${xa.toFixed(1)}" y="${PM.t}" width="${(xb-xa).toFixed(1)}" height="${ih}" fill="${r.fill}"/>`;
+  });
+
+  const yt = logY
+    ? (()=>{const o=[];for(let e=Math.ceil(Math.log10(ylo));e<=Math.log10(yhi);e++)o.push(Math.pow(10,e));return o;})()
+    : ticks(ylo,yhi,4);
+  yt.forEach(t=>{ const y=Y(t).toFixed(1);
+    s+=`<line x1="${PM.l}" y1="${y}" x2="${PM.l+iw}" y2="${y}" stroke="#E4EAF1"/>`;
+    s+=`<text x="${PM.l-8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,1)}</text>`; });
+
+  const xt = logX
+    ? (()=>{const o=[];for(let e=Math.ceil(Math.log10(x0));e<=Math.log10(x1);e++)o.push(Math.pow(10,e));return o;})()
+    : ticks(x0,x1,5);
+  xt.forEach(t=>{ const x=X(t).toFixed(1);
+    s+=`<line x1="${x}" y1="${PM.t+ih}" x2="${x}" y2="${PM.t+ih+4}" stroke="#CBD5E1"/>`;
+    s+=`<text x="${x}" y="${PM.t+ih+17}" text-anchor="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,0)}</text>`; });
+
+  s+=`<line x1="${PM.l}" y1="${PM.t}" x2="${PM.l}" y2="${PM.t+ih}" stroke="#CBD5E1"/>`;
+  s+=`<line x1="${PM.l}" y1="${PM.t+ih}" x2="${PM.l+iw}" y2="${PM.t+ih}" stroke="#CBD5E1"/>`;
+
+  data.forEach(sr=>{
+    if(!sr.pts.length) return;
+    let d="",pen=false;
+    sr.pts.forEach(p=>{ d+=(pen?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)+" "; pen=true; });
+    s+=`<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"${sr.dash?` stroke-dasharray="${sr.dash}"`:""}/>`;
+  });
+
+  (cfg.marks||[]).forEach(mk=>{
+    const x=X(mk.x); if(x<PM.l-1||x>PM.l+iw+1) return;
+    s+=`<line x1="${x.toFixed(1)}" y1="${PM.t}" x2="${x.toFixed(1)}" y2="${PM.t+ih}" stroke="#9AA7B6" stroke-dasharray="2 3"/>`;
+    if(mk.label){
+      // keep the label inside the frame when the mark sits near an edge
+      const anchor = x > PM.l+iw-34 ? "end" : x < PM.l+34 ? "start" : "middle";
+      const tx = anchor==="end" ? PM.l+iw : anchor==="start" ? PM.l : x;
+      s+=`<text x="${tx.toFixed(1)}" y="${PM.t-3}" text-anchor="${anchor}" font-size="10" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${mk.label}</text>`;
+    }
+  });
+
+  if(cfg.cursor!==undefined){
+    const cx=X(cfg.cursor);
+    if(cx>=PM.l-0.5&&cx<=PM.l+iw+0.5){
+      s+=`<line x1="${cx.toFixed(1)}" y1="${PM.t}" x2="${cx.toFixed(1)}" y2="${PM.t+ih}" stroke="#16305C" stroke-width="1.4"/>`;
+      data.forEach(sr=>{
+        if(sr.xmin!==undefined && cfg.cursor<sr.xmin) return;
+        if(sr.xmax!==undefined && cfg.cursor>sr.xmax) return;
+        const v=sr.f(cfg.cursor);
+        if(isFinite(v)&&(!logY||v>0)){ const cy=Y(v);
+          if(cy>=PM.t-1&&cy<=PM.t+ih+1)
+            s+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${sr.color}" stroke="#fff" stroke-width="1.6"/>`; }
+      });
+    }
+  }
+
+  s+=`<text x="${PM.l+iw/2}" y="${PH-5}" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.xLabel}</text>`;
+  s+=`<text transform="translate(13,${PM.t+ih/2}) rotate(-90)" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.yLabel}</text>`;
+  s+=`</svg>`;
+  host.innerHTML=s;
+}
+
+function fitCanvas(cv,cssH){
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.parentElement.clientWidth;
+  cv.style.height=cssH+"px";
+  cv.width=Math.max(1,Math.round(w*dpr));
+  cv.height=Math.round(cssH*dpr);
+  const ctx=cv.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h:cssH};
+}
+function tempColor(t){
+  t=clamp(t,0,1);
+  const stops=[[0,[36,66,124]],[0.5,[233,178,72]],[1,[168,34,38]]];
+  let a=stops[0],b=stops[stops.length-1];
+  for(let i=0;i<stops.length-1;i++){ if(t>=stops[i][0]&&t<=stops[i+1][0]){a=stops[i];b=stops[i+1];break;} }
+  const f=(t-a[0])/((b[0]-a[0])||1);
+  const c=a[1].map((v,i)=>Math.round(v+(b[1][i]-v)*f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/* ================= PANEL A ================= */
+const A={fluid:"water20", V:1, D:20};
+
+function renderA(){
+  const f=FLUIDS[A.fluid], D=A.D*MM;
+  $("aVv").textContent=A.V.toFixed(2)+" m/s";
+  $("aDv").textContent=A.D.toFixed(1)+" mm";
+  $("aV").value=A.V; $("aD").value=A.D;
+  [...$("aFl").querySelectorAll("button")].forEach(b=>
+    b.setAttribute("aria-pressed",String(b.dataset.f===A.fluid)));
+
+  const Pr=PrOf(f), Re=ReOf(f,A.V,D), Nu=NuOf(f,A.V,D), h=hOf(f,A.V,D);
+  const turb=Re>=2000;
+
+  $("aRho").textContent=fmt(f.rho,1)+" kg/m\u00b3";
+  $("aMu").textContent=fmt(f.mu,2)+" Pa\u00b7s";
+  $("aK").textContent=fmt(f.k,3)+" W/m\u00b7K";
+  $("aPr").textContent=fmt(Pr,2);
+  $("aRe").textContent=fmt(Re,0);
+  $("aReg").innerHTML = turb
+    ? '<span class="flag turb">turbulent</span>'
+    : '<span class="flag lam">laminar</span>';
+  $("aNu").textContent=fmt(Nu,1);
+  $("aH").textContent=fmt(h,0)+" W/m\u00b2\u00b7K";
+  $("aVc").textContent=fmt(2000*f.mu/(f.rho*D),3)+" m/s";
+
+  const hV = V => hOf(f,V,D);
+  const Vcrit = 2000*f.mu/(f.rho*D);
+  drawPlot($("plotA1"),{
+    x0:0.01, x1:6, cursor:A.V,
+    regions:[{x0:0.01,x1:Math.min(Vcrit,6),fill:"#EEF2F7"}],
+    marks:[{x:clamp(Vcrit,0.01,6),label:"Re=2000"}],
+    series:[
+      {f:hV, color:"#4A6FA5", xmax:Vcrit},
+      {f:hV, color:"#B3202B", xmin:Vcrit}
+    ],
+    xLabel:"mean velocity \u27e8V\u27e9  (m/s)", yLabel:"h  (W/m\u00b2\u00b7K)",
+    aria:"Heat transfer coefficient against velocity"
+  });
+
+  const NuRe = R => R<2000 ? 3.66 : 0.023*Math.pow(R,0.8)*Math.pow(Pr,0.4);
+  drawPlot($("plotA2"),{
+    x0:10, x1:1e6, logX:true, logY:true, cursor:clamp(Re,10,1e6),
+    regions:[{x0:2000,x1:1e4,fill:"#FBF4E0"}],
+    marks:[{x:2000,label:"2000"}],
+    series:[
+      {f:NuRe, color:"#4A6FA5", xmax:2000},
+      {f:NuRe, color:"#B3202B", xmin:2000}
+    ],
+    xLabel:"Re", yLabel:"Nu", aria:"Nusselt against Reynolds"
+  });
+
+  const stages=[
+    ["Fluid",           f.name],
+    ["Pr = C\u209a\u03bc/k", fmt(Pr,2)+"  (fluid property only)"],
+    ["Re = \u03c1\u27e8V\u27e9D/\u03bc", fmt(Re,0)+(turb?"  \u2192 turbulent":"  \u2192 laminar")],
+    ["Correlation",     turb?"Nu = 0.023 Re\u2070\u00b7\u2078 Pr\u2070\u00b7\u2074":"Nu = 3.66 (fully developed laminar)"],
+    ["Nu",              fmt(Nu,1)],
+    ["h = Nu\u00b7k/D",  fmt(h,0)+" W/m\u00b2\u00b7K"]
+  ];
+  let t='<table class="tbl">';
+  stages.forEach((r,i)=>{ t+=`<tr${i===stages.length-1?' class="on"':''}><td style="width:34%">${r[0]}</td><td>${r[1]}</td></tr>`; });
+  t+='</table>';
+  $("chainA").innerHTML=t;
+
+  $("noteA").innerHTML="<b>What to notice.</b> Nudge the velocity across the dashed line and h <b>jumps</b> \u2014 turbulent mixing is a fundamentally better way to move heat than orderly layers sliding past each other. On the right-hand plot the turbulent branch is a straight line on log axes, which is what Re<sup>0.8</sup> looks like; the laminar branch is flat, because Nu = 3.66 no matter how fast you push it. Switch to oil and watch Re collapse: its viscosity is over two hundred times water's, so it stays laminar at almost any sensible speed.";
+
+  const caution = (Re>=2000&&Re<1e4)
+    ? "<b>Careful here.</b> Re is between 2000 and 10,000 \u2014 the shaded band on the right-hand plot. Flow is transitional, and Dittus\u2013Boelter is strictly only reliable above about 10,000. The lecture's own worked example sits at Re = 12,540, just past the edge. Treat numbers in this band as estimates."
+    : "<b>Reading the regime.</b> The lecture's cut is Re = 2000. Below it, flow is orderly layers and h barely responds to velocity; above it, eddies stir hot fluid away from the wall and h climbs steeply. Dittus\u2013Boelter is a turbulent correlation only \u2014 applying it in the laminar region gives a confident, wrong answer.";
+  $("cautionA").innerHTML=caution;
+}
+
+/* ================= PANEL B ================= */
+const B={shape:"circle", d1:60, d2:30};
+
+const SHAPES={
+  circle:{ lab1:"Diameter D", lab2:null,
+    geom:(a)=>({A:Math.PI*a*a/4, P:Math.PI*a}),
+    formula:"4(\u03c0D\u00b2/4) / (\u03c0D) = D" },
+  square:{ lab1:"Side a", lab2:null,
+    geom:(a)=>({A:a*a, P:4*a}),
+    formula:"4a\u00b2 / 4a = a" },
+  rect:{ lab1:"Width a", lab2:"Height b",
+    geom:(a,b)=>({A:a*b, P:2*(a+b)}),
+    formula:"4ab / 2(a+b) = 2ab/(a+b)" },
+  rod:{ lab1:"Side a", lab2:"Rod diameter D",
+    geom:(a,b)=>({A:a*a-Math.PI*b*b/4, P:4*a+Math.PI*b}),
+    formula:"(4a\u00b2 \u2212 \u03c0D\u00b2) / (4a + \u03c0D)" },
+  annulus:{ lab1:"Outer D\u2092", lab2:"Inner D\u1d62",
+    geom:(a,b)=>({A:Math.PI*(a*a-b*b)/4, P:Math.PI*(a+b)}),
+    formula:"\u03c0(D\u2092\u00b2\u2212D\u1d62\u00b2) / \u03c0(D\u2092+D\u1d62) = D\u2092 \u2212 D\u1d62" }
+};
+
+function renderB(){
+  const sh=SHAPES[B.shape];
+  // keep the inner dimension physically smaller than the outer
+  if(B.shape==="rod")     B.d2=Math.min(B.d2, B.d1*0.95);
+  if(B.shape==="annulus") B.d2=Math.min(B.d2, B.d1-2);
+
+  [...$("bSh").querySelectorAll("button")].forEach(b=>
+    b.setAttribute("aria-pressed",String(b.dataset.s===B.shape)));
+  $("bD1lab").textContent=sh.lab1;
+  $("bD1v").textContent=B.d1.toFixed(0)+" mm";
+  $("bD1").value=B.d1;
+  $("bD2wrap").hidden = !sh.lab2;
+  if(sh.lab2){ $("bD2lab").textContent=sh.lab2; $("bD2v").textContent=B.d2.toFixed(0)+" mm"; $("bD2").value=B.d2; }
+
+  const g=sh.geom(B.d1,B.d2);
+  const Dh=4*g.A/g.P;
+  $("bA").textContent=fmt(g.A,0)+" mm\u00b2";
+  $("bP").textContent=fmt(g.P,0)+" mm";
+  $("bDh").textContent=fmt(Dh,1)+" mm";
+  $("bForm").textContent=sh.formula;
+
+  const {ctx,w,h}=fitCanvas($("cvB"),300);
+  ctx.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2, px=Math.min(w*0.8,h*0.8)/100;
+  const FILL="rgba(15,122,110,0.18)", EDGE="#0F7A6E";
+  ctx.lineWidth=3; ctx.strokeStyle=EDGE; ctx.fillStyle=FILL;
+
+  const a=B.d1*px, b=B.d2*px;
+  if(B.shape==="circle"){
+    ctx.beginPath(); ctx.arc(cx,cy,a/2,0,TAU); ctx.fill(); ctx.stroke();
+  } else if(B.shape==="square"){
+    ctx.beginPath(); ctx.rect(cx-a/2,cy-a/2,a,a); ctx.fill(); ctx.stroke();
+  } else if(B.shape==="rect"){
+    ctx.beginPath(); ctx.rect(cx-a/2,cy-b/2,a,b); ctx.fill(); ctx.stroke();
+  } else if(B.shape==="rod"){
+    ctx.beginPath();
+    ctx.rect(cx-a/2,cy-a/2,a,a);
+    ctx.arc(cx,cy,b/2,0,TAU,true);
+    ctx.fill("evenodd");
+    ctx.beginPath(); ctx.rect(cx-a/2,cy-a/2,a,a); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,cy,b/2,0,TAU); ctx.stroke();
+    ctx.fillStyle="#E4EAF1"; ctx.beginPath(); ctx.arc(cx,cy,b/2,0,TAU); ctx.fill();
+    ctx.strokeStyle=EDGE; ctx.beginPath(); ctx.arc(cx,cy,b/2,0,TAU); ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.arc(cx,cy,a/2,0,TAU);
+    ctx.arc(cx,cy,b/2,0,TAU,true);
+    ctx.fill("evenodd");
+    ctx.beginPath(); ctx.arc(cx,cy,a/2,0,TAU); ctx.stroke();
+    ctx.fillStyle="#E4EAF1"; ctx.beginPath(); ctx.arc(cx,cy,b/2,0,TAU); ctx.fill();
+    ctx.strokeStyle=EDGE; ctx.beginPath(); ctx.arc(cx,cy,b/2,0,TAU); ctx.stroke();
+  }
+
+  // equivalent circular tube, for scale comparison
+  ctx.setLineDash([5,4]); ctx.lineWidth=1.6; ctx.strokeStyle="#16305C";
+  ctx.beginPath(); ctx.arc(cx,cy,Dh*px/2,0,TAU); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.font="12px ui-monospace, Menlo, monospace";
+  ctx.textAlign="center"; ctx.fillStyle="#16305C";
+  ctx.fillText("dashed circle = D\u2095 = "+Dh.toFixed(1)+" mm", cx, h-8);
+
+  const extra = {
+    circle:"For a round tube the definition has to return the diameter itself, and it does \u2014 that is the whole reason for the factor of 4.",
+    square:"A square duct's hydraulic diameter is simply its side length. Neat, and easy to misremember as something more complicated.",
+    rect:"Squash the rectangle and D\u2095 collapses toward twice the narrow gap. A very flat duct behaves like a pair of parallel plates, not like a pipe.",
+    rod:"The rod does damage twice over: it steals flow area <i>and</i> adds wetted perimeter. Forgetting its circumference \u03c0D is the classic exam error.",
+    annulus:"The algebra collapses beautifully: D\u2095 = D\u2092 \u2212 D\u1d62, exactly the gap width. Worth checking by hand \u2014 the \u03c0 and the sum of diameters both cancel."
+  }[B.shape];
+  $("noteB").innerHTML="<b>What to notice.</b> The dashed circle is the round tube that would give the same Reynolds number. "+extra;
+}
+
+/* ================= PANEL C ================= */
+const C={fluid:"water20", V:1, D:20, L:3, T0:20, Ts:100, x:1};
+
+function renderC(){
+  C.x=clamp(C.x,0,C.L);
+  $("cX").max=C.L;
+  const f=FLUIDS[C.fluid], D=C.D*MM;
+
+  $("cVv").textContent=C.V.toFixed(2)+" m/s";
+  $("cDv").textContent=C.D.toFixed(1)+" mm";
+  $("cLv").textContent=C.L.toFixed(1)+" m";
+  $("cT0v").textContent=C.T0+" \u00b0C";
+  $("cTsv").textContent=C.Ts+" \u00b0C";
+  $("cXv").textContent=C.x.toFixed(2)+" m";
+  ["cV","cD","cL","cT0","cTs","cX"].forEach((id,i)=>$(id).value=[C.V,C.D,C.L,C.T0,C.Ts,C.x][i]);
+  [...$("cFl").querySelectorAll("button")].forEach(b=>
+    b.setAttribute("aria-pressed",String(b.dataset.f===C.fluid)));
+
+  const h=hOf(f,C.V,D), Re=ReOf(f,C.V,D);
+  const coef = 4*h/(f.rho*C.V*f.cp*D);          // 1/m
+  const NTU  = coef*C.L;
+  const T = x => C.Ts + (C.T0-C.Ts)*Math.exp(-coef*x);
+  // Work with the driving difference analytically rather than subtracting two
+  // nearly-equal temperatures: for large NTU, Ts - TL underflows to exactly 0
+  // and the naive log-mean formula returns NaN.
+  const dT1 = C.Ts - C.T0;               // driving difference at inlet
+  const dT2 = dT1*Math.exp(-NTU);        // ... at outlet, exact, no cancellation
+  const TL  = C.Ts - dT2;
+  const mdot=f.rho*C.V*Math.PI*D*D/4;
+  const Q1=mdot*f.cp*(TL-C.T0);
+  // ln(dT1/dT2) is exactly NTU, so the log-mean collapses to this stable form
+  const LM = NTU<1e-8 ? dT1 : dT1*(1-Math.exp(-NTU))/NTU;
+  const Area=Math.PI*D*C.L;
+  const Q2=h*Area*LM;
+
+  $("cH").textContent=fmt(h,0)+" W/m\u00b2\u00b7K";
+  $("cRe").textContent=fmt(Re,0)+(Re>=2000?"  (turb)":"  (lam)");
+  $("cNTU").textContent=NTU.toFixed(3);
+  $("cClose").textContent=(100*(1-Math.exp(-NTU))).toFixed(1)+"%";
+  $("cTx").textContent=T(C.x).toFixed(1)+" \u00b0C";
+  $("cTL").textContent=TL.toFixed(1)+" \u00b0C";
+  $("cQ1").textContent=fmt(Q1/1000,2)+" kW";
+  $("cQ2").textContent=fmt(Q2/1000,2)+" kW";
+  $("cLM").textContent=fmt(LM,1)+" K";
+
+  // ---- tube drawing, x-aligned with the plot ----
+  const {ctx,w,hh}=(()=>{const r=fitCanvas($("cvC"),150);return{ctx:r.ctx,w:r.w,hh:r.h};})();
+  ctx.clearRect(0,0,w,hh);
+  const fracL=PM.l/PW, fracR=PM.r/PW;
+  const x0=w*fracL, x1=w*(1-fracR), cy=hh*0.5, half=30;
+
+  const lo=Math.min(C.T0,C.Ts), hi=Math.max(C.T0,C.Ts), span=Math.max(hi-lo,1e-9);
+  const strips=160;
+  for(let i=0;i<strips;i++){
+    const xa=C.L*i/strips, xb=C.L*(i+1)/strips;
+    ctx.fillStyle=tempColor((T((xa+xb)/2)-lo)/span);
+    const pa=x0+(x1-x0)*(xa/C.L), pb=x0+(x1-x0)*(xb/C.L);
+    ctx.fillRect(pa,cy-half,pb-pa+0.8,2*half);
+  }
+  // wall held at Ts
+  ctx.fillStyle=tempColor((C.Ts-lo)/span);
+  ctx.fillRect(x0,cy-half-11,x1-x0,11);
+  ctx.fillRect(x0,cy+half,x1-x0,11);
+  ctx.strokeStyle="#5A6675"; ctx.lineWidth=1.1;
+  ctx.strokeRect(x0,cy-half-11,x1-x0,2*half+22);
+  ctx.beginPath(); ctx.moveTo(x0,cy-half); ctx.lineTo(x1,cy-half);
+  ctx.moveTo(x0,cy+half); ctx.lineTo(x1,cy+half); ctx.stroke();
+
+  // flow arrow
+  ctx.strokeStyle="#FFFFFF"; ctx.fillStyle="#FFFFFF"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x0+12,cy); ctx.lineTo(x0+46,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x0+52,cy); ctx.lineTo(x0+44,cy-4.5); ctx.lineTo(x0+44,cy+4.5);
+  ctx.closePath(); ctx.fill();
+
+  const xp=x0+(x1-x0)*(C.x/C.L);
+  ctx.strokeStyle="#FFFFFF"; ctx.lineWidth=2.4;
+  ctx.beginPath(); ctx.moveTo(xp,cy-half); ctx.lineTo(xp,cy+half); ctx.stroke();
+  ctx.strokeStyle="#16305C"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(xp,cy-half-11); ctx.lineTo(xp,cy+half+11); ctx.stroke();
+
+  ctx.font="11.5px ui-monospace, Menlo, monospace";
+  ctx.textAlign="center"; ctx.fillStyle="#5A6675";
+  ctx.fillText("wall held at "+C.Ts+" \u00b0C", (x0+x1)/2, cy-half-16);
+  ctx.fillText("T = "+T(C.x).toFixed(1)+" \u00b0C", xp, cy+half+24);
+
+  const pad=Math.max(Math.abs(C.Ts-C.T0)*0.10,1);
+  drawPlot($("plotC"),{
+    x0:0, x1:C.L, cursor:C.x,
+    yMin:Math.min(C.T0,C.Ts)-pad, yMax:Math.max(C.T0,C.Ts)+pad,
+    series:[{f:()=>C.Ts,color:"#5A6675",dash:"5 4"},{f:T,color:"#B3202B"}],
+    xLabel:"distance along tube x  (m)", yLabel:"T  (\u00b0C)",
+    aria:"Fluid temperature along the tube"
+  });
+
+  // length needed to close 90% of the gap
+  const L90 = Math.log(10)/coef;
+  const agree=Math.abs(Q1-Q2)/Math.max(Math.abs(Q1),1e-9) < 1e-9;
+  $("noteC").innerHTML="<b>What to notice.</b> The two heat duties \u2014 one from the fluid's own energy gain, one from the wall area times the log-mean driving force \u2014 read <b>"+
+    fmt(Q1/1000,2)+" kW</b> and <b>"+fmt(Q2/1000,2)+" kW</b>"+(agree?", identical":"")+
+    ". They must agree, because the log-mean difference is derived from exactly this exponential curve. Notice also that closing 90% of the temperature gap would take <b>"+
+    (L90<100?L90.toFixed(1)+" m":"over 100 m")+"</b> of tube, against "+C.L.toFixed(1)+
+    " m now: the curve flattens as the fluid nears the wall, so the last few degrees cost far more pipe than the first few.";
+}
+
+/* ================= wiring ================= */
+function bindRange(id,obj,key,after){
+  $(id).addEventListener("input",e=>{ obj[key]=parseFloat(e.target.value); after(); });
+}
+bindRange("aV",A,"V",renderA); bindRange("aD",A,"D",renderA);
+$("aFl").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return;
+  A.fluid=b.dataset.f; renderA(); });
+
+bindRange("bD1",B,"d1",renderB); bindRange("bD2",B,"d2",renderB);
+$("bSh").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return;
+  B.shape=b.dataset.s; renderB(); });
+
+["cV|V","cD|D","cL|L","cT0|T0","cTs|Ts","cX|x"].forEach(s=>{
+  const [id,key]=s.split("|"); bindRange(id,C,key,renderC); });
+$("cFl").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b)return;
+  C.fluid=b.dataset.f; renderC(); });
+
+(function(){
+  const cv=$("cvC"); let down=false;
+  const pick=ev=>{
+    const r=cv.getBoundingClientRect();
+    const a=r.width*(PM.l/PW), b=r.width*(1-PM.r/PW);
+    C.x=clamp((ev.clientX-r.left-a)/(b-a)*C.L,0,C.L); renderC();
+  };
+  cv.addEventListener("pointerdown",e=>{down=true;cv.setPointerCapture(e.pointerId);pick(e);});
+  cv.addEventListener("pointermove",e=>{ if(down) pick(e); });
+  cv.addEventListener("pointerup",()=>{down=false;});
+  cv.addEventListener("keydown",e=>{
+    const st=(e.shiftKey?5:1)*C.L/60;
+    if(e.key==="ArrowRight"){C.x=clamp(C.x+st,0,C.L);renderC();e.preventDefault();}
+    if(e.key==="ArrowLeft"){C.x=clamp(C.x-st,0,C.L);renderC();e.preventDefault();}
+  });
+})();
+
+const panels={"tab-a":"p-a","tab-b":"p-b","tab-c":"p-c"};
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    Object.entries(panels).forEach(([tid,pid])=>{
+      const on=tid===t.id;
+      $(tid).setAttribute("aria-selected",String(on));
+      $(pid).hidden=!on;
+    });
+    renderAll();
+  });
+});
+function renderAll(){
+  if(!$("p-a").hidden) renderA();
+  if(!$("p-b").hidden) renderB();
+  if(!$("p-c").hidden) renderC();
+}
+let rt;
+window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(renderAll,120);});
+renderAll();
+</script>
+</body>
+</html>
