@@ -1,0 +1,776 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Measuring h — ChE 319</title>
+<style>
+  :root{
+    --paper:#F6F8FA; --panel:#FFFFFF; --ink:#101823; --ink-soft:#5A6675;
+    --rule:#CBD5E1; --rule-soft:#E4EAF1; --navy:#16305C;
+    --flux:#0F7A6E; --temp:#B3202B; --gen:#6B4EA8; --clad:#4A6FA5; --focus:#0F7A6E;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding:28px 20px 60px}
+  .wrap{max-width:1120px;margin:0 auto}
+
+  .masthead{border-bottom:2px solid var(--navy);padding-bottom:14px}
+  h1{font-family:Georgia,"Iowan Old Style","Times New Roman",serif;font-weight:600;
+     font-size:clamp(24px,4vw,34px);line-height:1.15;letter-spacing:-.01em;
+     color:var(--navy);margin:0 0 6px}
+  .standfirst{max-width:74ch;color:var(--ink-soft);font-size:15px;margin:0}
+
+  .tabs{display:flex;border-bottom:1px solid var(--rule);margin:0 0 22px;flex-wrap:wrap}
+  .tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;
+    padding:13px 18px 11px;font:inherit;font-size:14.5px;color:var(--ink-soft);
+    cursor:pointer;margin-bottom:-1px}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{color:var(--navy);font-weight:600;border-bottom-color:var(--navy)}
+  .tab:focus-visible{outline:2px solid var(--focus);outline-offset:-3px}
+
+  .lede{max-width:80ch;margin:0 0 20px;color:var(--ink-soft)}
+  .lede strong{color:var(--ink);font-weight:600}
+
+  .stage{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:22px;align-items:start}
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:900px){.stage,.duo{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--rule)}
+  .card>h2{font-family:Georgia,"Iowan Old Style",serif;font-size:15px;font-weight:600;
+    color:var(--navy);margin:0;padding:11px 16px 10px;border-bottom:1px solid var(--rule-soft)}
+  .card .body{padding:16px}
+
+  canvas{display:block;width:100%;height:auto;touch-action:none;cursor:ew-resize}
+  canvas:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .canvhost{padding:12px 0 0}
+  .hint{font-size:12.5px;color:var(--ink-soft);padding:4px 16px 10px}
+
+  .ctl{margin-bottom:14px}
+  .ctl:last-child{margin-bottom:0}
+  .ctl label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    font-size:13.5px;margin-bottom:5px}
+  .ctl .grouplabel{display:block;font-size:13.5px;margin-bottom:5px}
+  .val{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12.5px;
+    font-variant-numeric:tabular-nums;color:var(--navy)}
+  input[type=range]{width:100%;accent-color:var(--navy);margin:0}
+  input[type=range]:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+
+  .seg{display:flex;flex-wrap:wrap;border:1px solid var(--rule)}
+  .seg button{flex:1 1 auto;appearance:none;background:var(--panel);border:0;
+    border-right:1px solid var(--rule);padding:7px 5px;font:inherit;font-size:11.5px;
+    color:var(--ink-soft);cursor:pointer;white-space:nowrap}
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed="true"]{background:var(--navy);color:#fff}
+  .seg button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+  .btn{appearance:none;width:100%;background:var(--navy);color:#fff;border:0;
+    padding:9px;font:inherit;font-size:13px;cursor:pointer}
+  .btn:hover{background:#1d3f75}
+  .btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+  .divider{height:1px;background:var(--rule-soft);margin:15px 0}
+
+  .eqn{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12.5px;
+    font-variant-numeric:tabular-nums;line-height:1.9}
+  .eqn .row{display:flex;justify-content:space-between;gap:12px}
+  .eqn .k{color:var(--ink-soft)}
+  .eqn .v{color:var(--ink);font-weight:600}
+  .eqn .v.flux{color:var(--flux)}
+  .eqn .v.temp{color:var(--temp)}
+  .eqn .v.big{font-size:15px}
+  .fracline{border-top:1px solid var(--rule);margin:6px 0}
+
+  .note{margin-top:22px;padding:14px 18px;background:#EFF4F0;
+    border-left:3px solid var(--flux);max-width:84ch;font-size:14.5px}
+  .note b{color:var(--navy)}
+  .note.caution{background:#FDF6E3;border-left-color:#C9A227}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink-soft);
+    padding:0 16px 12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:16px;height:3px;border-radius:2px}
+  .swatch.box{height:11px;border-radius:1px}
+
+  table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.tbl th{text-align:right;font-weight:600;font-size:11.5px;color:var(--ink-soft);
+    padding:5px 7px;border-bottom:1px solid var(--rule)}
+  table.tbl th:first-child,table.tbl td:first-child{text-align:left}
+  table.tbl td{padding:5px 7px;border-bottom:1px solid var(--rule-soft);
+    font-variant-numeric:tabular-nums;text-align:right}
+  table.tbl tr.on td{background:#EFF4F0;font-weight:600}
+
+  .foot{margin-top:34px;padding-top:12px;border-top:1px solid var(--rule);
+    font-size:12.5px;color:var(--ink-soft);max-width:84ch}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Measuring h</h1>
+    <p class="standfirst">In the lab you know the power and you can read the wall temperature. The fluid temperature you have to work out. These three tabs take you from that bookkeeping to a finished correlation.</p>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-a" aria-controls="p-a" aria-selected="true">Local vs cumulative</button>
+    <button class="tab" role="tab" id="tab-b" aria-controls="p-b" aria-selected="false">Non-uniform heating</button>
+    <button class="tab" role="tab" id="tab-c" aria-controls="p-c" aria-selected="false">Run the experiment</button>
+  </div>
+
+  <!-- ============== PANEL A ============== -->
+  <section id="p-a" role="tabpanel" aria-labelledby="tab-a">
+    <p class="lede">Drag the marker along the tube. <strong>The shaded area under the flux curve is exactly the energy the fluid has absorbed so far</strong> — that is the cumulative quantity. The height of the curve at the marker is the local flux. One picture, both ideas.</p>
+
+    <div class="stage">
+      <div>
+        <div class="card">
+          <h2>The test section, coloured by fluid temperature</h2>
+          <div class="canvhost"><canvas id="cvA" tabindex="0" aria-label="Tube made of heated and unheated sections. Arrow keys move the measuring position."></canvas></div>
+          <p class="hint">Drag, or focus and use ← → &nbsp;·&nbsp; drawn left-to-right; the lecture draws it vertically — same physics</p>
+        </div>
+        <div class="duo" style="margin-top:18px">
+          <div class="card">
+            <h2>Local heat flux q(x)</h2>
+            <div id="plotA1"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--flux)"></i>q(x)</span>
+              <span><i class="swatch box" style="background:#0F7A6E33;border:1px solid var(--flux)"></i>area × πD = energy absorbed</span>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Temperatures</h2>
+            <div id="plotA2"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--temp)"></i>wall (measured)</span>
+              <span><i class="swatch" style="background:var(--clad)"></i>fluid (calculated)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <span class="grouplabel" id="aPreL">Tube layout</span>
+            <div class="seg" id="aPre" role="group" aria-labelledby="aPreL" style="flex-wrap:wrap">
+              <button data-p="uniform" aria-pressed="true">Uniform</button>
+              <button data-p="sixfoot" aria-pressed="false">6-foot tube</button>
+              <button data-p="prob2" aria-pressed="false">Problem 2</button>
+              <button data-p="prob1" aria-pressed="false">Problem 1</button>
+            </div>
+          </div>
+          <div class="ctl">
+            <label for="aM">Mass flow ṁ <span class="val" id="aMv"></span></label>
+            <input type="range" id="aM" min="0.05" max="1.5" step="0.01" value="0.25">
+          </div>
+          <div class="ctl">
+            <label for="aHt">True coefficient h <span class="val" id="aHtv"></span></label>
+            <input type="range" id="aHt" min="300" max="6000" step="50" value="2000">
+          </div>
+          <div class="ctl">
+            <label for="aX">Position x <span class="val" id="aXv"></span></label>
+            <input type="range" id="aX" min="0" max="4" step="0.005" value="1">
+          </div>
+
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">in section</span><span class="v" id="aSec"></span></div>
+            <div class="row"><span class="k">its power</span><span class="v" id="aSecP"></span></div>
+            <div class="row"><span class="k">its length</span><span class="v" id="aSecL"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">LOCAL flux q</span><span class="v flux big" id="aQ"></span></div>
+            <div class="row"><span class="k">CUMULATIVE energy</span><span class="v" id="aE"></span></div>
+            <div class="row"><span class="k">&nbsp;&nbsp;as % of total</span><span class="v" id="aEp"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">T fluid (calculated)</span><span class="v" id="aTf" style="color:var(--clad)"></span></div>
+            <div class="row"><span class="k">T wall (measured)</span><span class="v temp" id="aTw"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">h = q/(Tw−Tf)</span><span class="v flux big" id="aH"></span></div>
+            <div class="row"><span class="k">T outlet</span><span class="v" id="aTo"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteA"></p>
+  </section>
+
+  <!-- ============== PANEL B ============== -->
+  <section id="p-b" role="tabpanel" aria-labelledby="tab-b">
+    <p class="lede">Now the heating varies smoothly instead of in blocks: <strong>q(x) = q₀(x/L)<sup>n</sup></strong>. The lecture's problem is n = 1. Set n = 0 and you are back to a uniform tube. The shaded area is still the absorbed energy — it is just an integral now rather than a sum.</p>
+
+    <div class="stage">
+      <div>
+        <div class="duo">
+          <div class="card">
+            <h2>Flux profile and absorbed energy</h2>
+            <div id="plotB1"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--flux)"></i>q(x)</span>
+              <span><i class="swatch box" style="background:#0F7A6E33;border:1px solid var(--flux)"></i>absorbed so far</span>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Fraction of total energy absorbed</h2>
+            <div id="plotB2"></div>
+            <div class="legend"><span>Equals (x/L)<sup>n+1</sup> — the dashed line is the straight, uniform case.</span></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h2>Temperatures</h2>
+          <div id="plotB3"></div>
+          <div class="legend">
+            <span><i class="swatch" style="background:var(--temp)"></i>wall</span>
+            <span><i class="swatch" style="background:var(--clad)"></i>fluid</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="bN">Exponent n <span class="val" id="bNv"></span></label>
+            <input type="range" id="bN" min="0" max="4" step="0.05" value="1">
+          </div>
+          <div class="ctl">
+            <label for="bQ0">Peak flux q₀ <span class="val" id="bQ0v"></span></label>
+            <input type="range" id="bQ0" min="20" max="400" step="5" value="150">
+          </div>
+          <div class="ctl">
+            <label for="bM">Mass flow ṁ <span class="val" id="bMv"></span></label>
+            <input type="range" id="bM" min="0.05" max="1.5" step="0.01" value="0.25">
+          </div>
+          <div class="ctl">
+            <label for="bX">Position x <span class="val" id="bXv"></span></label>
+            <input type="range" id="bX" min="0" max="2" step="0.005" value="1">
+          </div>
+
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">local q(x)</span><span class="v flux" id="bQ"></span></div>
+            <div class="row"><span class="k">energy absorbed</span><span class="v" id="bE"></span></div>
+            <div class="row"><span class="k">&nbsp;&nbsp;as % of total</span><span class="v big" id="bEp"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">T fluid</span><span class="v" id="bTf" style="color:var(--clad)"></span></div>
+            <div class="row"><span class="k">T wall</span><span class="v temp" id="bTw"></span></div>
+            <div class="row"><span class="k">h = q/(Tw−Tf)</span><span class="v flux" id="bH"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">at the midpoint</span><span class="v" id="bMid"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteB"></p>
+  </section>
+
+  <!-- ============== PANEL C ============== -->
+  <section id="p-c" role="tabpanel" aria-labelledby="tab-c">
+    <p class="lede">This is what the whole lecture was building toward. Run the rig at several flow rates; each run gives one Reynolds number and one measured h. Plot them on log axes, <strong>least-squares fit a straight line</strong>, and you have built your own correlation — then compare it with Dittus–Boelter.</p>
+
+    <div class="stage">
+      <div>
+        <div class="card">
+          <h2>Nu against Re, with the least-squares fit</h2>
+          <div id="plotC"></div>
+          <div class="legend">
+            <span><i class="swatch" style="background:var(--temp)"></i>your measurements</span>
+            <span><i class="swatch" style="background:var(--flux)"></i>your fitted line</span>
+            <span><i class="swatch" style="background:var(--ink-soft)"></i>Dittus–Boelter</span>
+          </div>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h2>The run log</h2>
+          <div class="body"><div id="runTable"></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="cN">Number of runs <span class="val" id="cNv"></span></label>
+            <input type="range" id="cN" min="4" max="12" step="1" value="7">
+          </div>
+          <div class="ctl">
+            <label for="cErr">Measurement scatter <span class="val" id="cErrv"></span></label>
+            <input type="range" id="cErr" min="0" max="20" step="0.5" value="6">
+          </div>
+          <div class="ctl">
+            <label for="cD">Tube diameter D <span class="val" id="cDv"></span></label>
+            <input type="range" id="cD" min="6" max="50" step="1" value="25">
+          </div>
+          <div class="ctl">
+            <button class="btn" id="cNew">Take a fresh set of readings</button>
+          </div>
+
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">your fit</span><span class="v" id="cFit" style="font-size:11.5px"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">exponent b</span><span class="v flux big" id="cB"></span></div>
+            <div class="row"><span class="k">&nbsp;&nbsp;true value</span><span class="v">0.800</span></div>
+            <div class="row"><span class="k">coefficient a</span><span class="v flux big" id="cA"></span></div>
+            <div class="row"><span class="k">&nbsp;&nbsp;true value</span><span class="v">0.0230</span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">R²</span><span class="v" id="cR2"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteC"></p>
+  </section>
+
+  <p class="foot">Companion to the ChE 319 Lecture 6 study guide. Water at 20 °C throughout (ρ = 998 kg/m³, c<sub>p</sub> = 4182 J/kg·K, k = 0.598 W/m·K, μ = 1.00×10⁻³ Pa·s). Every tube is treated as perfectly insulated, so all electrical power enters the fluid. In tabs 1 and 2 the wall temperature is generated from an assumed true h so you can check the method recovers it; in a real rig that curve is what your thermocouples measure.</p>
+</div>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const TAU=Math.PI*2;
+
+const RHO=998, CP=4182, KF=0.598, MU=1.00e-3, TIN=25;
+const PR=CP*MU/KF;
+
+function sup(n){const m={"-":"\u207b","0":"\u2070","1":"\u00b9","2":"\u00b2","3":"\u00b3",
+ "4":"\u2074","5":"\u2075","6":"\u2076","7":"\u2077","8":"\u2078","9":"\u2079"};
+ return String(n).split("").map(c=>m[c]||c).join("");}
+function fmt(v,d){
+  if(!isFinite(v))return "\u2014";
+  if(v===0)return "0";
+  const a=Math.abs(v);
+  if(a>=1e5||a<1e-3){const e=Math.floor(Math.log10(a));
+    return (v/Math.pow(10,e)).toFixed(d===undefined?2:d)+"\u00d710"+sup(e);}
+  if(a>=1000)return v.toFixed(0);
+  if(a>=100)return v.toFixed(d===undefined?0:d);
+  if(a>=10)return v.toFixed(d===undefined?1:d);
+  return v.toFixed(d===undefined?2:d);
+}
+function ticks(lo,hi,c){
+  if(!(hi>lo))return[lo];
+  const raw=(hi-lo)/c,mag=Math.pow(10,Math.floor(Math.log10(raw))),n=raw/mag;
+  const st=(n<1.5?1:n<3?2:n<7?5:10)*mag,o=[];
+  for(let t=Math.ceil(lo/st)*st;t<=hi+st*1e-9;t+=st)o.push(t);
+  return o;
+}
+
+/* ---------- plot ---------- */
+const PW=470,PH=250,PM={l:62,r:16,t:14,b:38};
+function drawPlot(host,cfg){
+  const iw=PW-PM.l-PM.r, ih=PH-PM.t-PM.b, NS=cfg.samples||300;
+  const logX=!!cfg.logX, logY=!!cfg.logY, {x0,x1}=cfg;
+  const xAt=i=>logX?Math.pow(10,Math.log10(x0)+(Math.log10(x1)-Math.log10(x0))*i/NS)
+                   :x0+(x1-x0)*i/NS;
+  const data=(cfg.series||[]).map(s=>{
+    const pts=[];
+    for(let i=0;i<=NS;i++){const x=xAt(i);
+      if(s.xmin!==undefined&&x<s.xmin)continue;
+      if(s.xmax!==undefined&&x>s.xmax)continue;
+      const y=s.f(x); if(isFinite(y)&&(!logY||y>0))pts.push([x,y]);}
+    return {...s,pts};
+  });
+  let ylo=Infinity,yhi=-Infinity;
+  data.forEach(s=>s.pts.forEach(p=>{if(p[1]<ylo)ylo=p[1];if(p[1]>yhi)yhi=p[1];}));
+  (cfg.points||[]).forEach(p=>{if(logY&&p.y<=0)return;if(p.y<ylo)ylo=p.y;if(p.y>yhi)yhi=p.y;});
+  if(!isFinite(ylo)){ylo=0;yhi=1;}
+  if(cfg.yMin!==undefined)ylo=cfg.yMin;
+  if(cfg.yMax!==undefined)yhi=cfg.yMax;
+  else if(logY)yhi*=1.7; else yhi+=(yhi-ylo)*0.12||1;
+  if(!logY&&cfg.yMin===undefined&&ylo>0)ylo=0;
+  if(logY)ylo=Math.max(ylo/1.7,yhi/1e6);
+  if(yhi===ylo)yhi=ylo+1;
+
+  const X=logX?v=>PM.l+(Math.log10(Math.max(v,x0))-Math.log10(x0))/(Math.log10(x1)-Math.log10(x0))*iw
+             :v=>PM.l+(v-x0)/(x1-x0)*iw;
+  const Y=logY?v=>PM.t+ih-(Math.log10(Math.max(v,ylo))-Math.log10(ylo))/(Math.log10(yhi)-Math.log10(ylo))*ih
+             :v=>PM.t+ih-(v-ylo)/(yhi-ylo)*ih;
+
+  let s=`<svg viewBox="0 0 ${PW} ${PH}" width="100%" role="img" aria-label="${cfg.aria||"plot"}" style="display:block">`;
+
+  (cfg.regions||[]).forEach(r=>{
+    const a=clamp(X(r.x0),PM.l,PM.l+iw),b=clamp(X(r.x1),PM.l,PM.l+iw);
+    s+=`<rect x="${a.toFixed(1)}" y="${PM.t}" width="${(b-a).toFixed(1)}" height="${ih}" fill="${r.fill}"/>`;});
+
+  (cfg.areas||[]).forEach(ar=>{
+    const lo=ar.x0!==undefined?ar.x0:x0, hi=ar.x1!==undefined?ar.x1:x1;
+    if(hi<=lo) return;
+    const base=Y(Math.max(ylo,0));
+    let d=`M ${X(lo).toFixed(1)} ${base.toFixed(1)} `;
+    const M=160;
+    for(let i=0;i<=M;i++){const x=lo+(hi-lo)*i/M; d+=`L ${X(x).toFixed(1)} ${Y(ar.f(x)).toFixed(1)} `;}
+    d+=`L ${X(hi).toFixed(1)} ${base.toFixed(1)} Z`;
+    s+=`<path d="${d}" fill="${ar.color}"/>`;});
+
+  const yt=logY?(()=>{const o=[];for(let e=Math.ceil(Math.log10(ylo));e<=Math.log10(yhi);e++)o.push(Math.pow(10,e));return o;})()
+               :ticks(ylo,yhi,4);
+  yt.forEach(t=>{const y=Y(t).toFixed(1);
+    s+=`<line x1="${PM.l}" y1="${y}" x2="${PM.l+iw}" y2="${y}" stroke="#E4EAF1"/>`;
+    s+=`<text x="${PM.l-8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,1)}</text>`;});
+  const xt=logX?(()=>{const o=[];for(let e=Math.ceil(Math.log10(x0));e<=Math.log10(x1);e++)o.push(Math.pow(10,e));return o;})()
+               :ticks(x0,x1,5);
+  xt.forEach(t=>{const x=X(t).toFixed(1);
+    s+=`<line x1="${x}" y1="${PM.t+ih}" x2="${x}" y2="${PM.t+ih+4}" stroke="#CBD5E1"/>`;
+    s+=`<text x="${x}" y="${PM.t+ih+17}" text-anchor="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,0)}</text>`;});
+
+  s+=`<line x1="${PM.l}" y1="${PM.t}" x2="${PM.l}" y2="${PM.t+ih}" stroke="#CBD5E1"/>`;
+  s+=`<line x1="${PM.l}" y1="${PM.t+ih}" x2="${PM.l+iw}" y2="${PM.t+ih}" stroke="#CBD5E1"/>`;
+
+  data.forEach(sr=>{ if(!sr.pts.length)return;
+    let d="",pen=false;
+    sr.pts.forEach(p=>{d+=(pen?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)+" ";pen=true;});
+    s+=`<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"${sr.dash?` stroke-dasharray="${sr.dash}"`:""}/>`;});
+
+  (cfg.vlines||[]).forEach(v=>{
+    const x=X(v.x); if(x<PM.l-1||x>PM.l+iw+1)return;
+    s+=`<line x1="${x.toFixed(1)}" y1="${PM.t}" x2="${x.toFixed(1)}" y2="${PM.t+ih}" stroke="#9AA7B6" stroke-width="1" stroke-dasharray="2 3"/>`;});
+
+  (cfg.points||[]).forEach(p=>{
+    if(logY&&p.y<=0)return;
+    s+=`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="4.5" fill="${p.color}" stroke="#fff" stroke-width="1.5"/>`;});
+
+  if(cfg.cursor!==undefined){
+    const cx=X(cfg.cursor);
+    if(cx>=PM.l-0.5&&cx<=PM.l+iw+0.5){
+      s+=`<line x1="${cx.toFixed(1)}" y1="${PM.t}" x2="${cx.toFixed(1)}" y2="${PM.t+ih}" stroke="#16305C" stroke-width="1.4"/>`;
+      data.forEach(sr=>{
+        if(sr.xmin!==undefined&&cfg.cursor<sr.xmin)return;
+        if(sr.xmax!==undefined&&cfg.cursor>sr.xmax)return;
+        const v=sr.f(cfg.cursor);
+        if(isFinite(v)&&(!logY||v>0)){const cy=Y(v);
+          if(cy>=PM.t-1&&cy<=PM.t+ih+1)
+            s+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${sr.color}" stroke="#fff" stroke-width="1.6"/>`;}});}}
+
+  s+=`<text x="${PM.l+iw/2}" y="${PH-5}" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.xLabel}</text>`;
+  s+=`<text transform="translate(13,${PM.t+ih/2}) rotate(-90)" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.yLabel}</text>`;
+  s+="</svg>";
+  host.innerHTML=s;
+}
+function fitCanvas(cv,cssH){
+  const dpr=window.devicePixelRatio||1, w=cv.parentElement.clientWidth;
+  cv.style.height=cssH+"px"; cv.width=Math.max(1,Math.round(w*dpr)); cv.height=Math.round(cssH*dpr);
+  const ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h:cssH};
+}
+function tempColor(t){
+  t=clamp(t,0,1);
+  const st=[[0,[36,66,124]],[0.5,[233,178,72]],[1,[168,34,38]]];
+  let a=st[0],b=st[st.length-1];
+  for(let i=0;i<st.length-1;i++){if(t>=st[i][0]&&t<=st[i+1][0]){a=st[i];b=st[i+1];break;}}
+  const f=(t-a[0])/((b[0]-a[0])||1);
+  const c=a[1].map((v,i)=>Math.round(v+(b[1][i]-v)*f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/* ================= PANEL A ================= */
+const PRESETS={
+  uniform:{name:"Uniform",D:0.025,
+    secs:[{n:"Heated",len:2.0,pw:20000}]},
+  sixfoot:{name:"6-foot tube",D:0.025,
+    secs:[{n:"1st ft",len:0.3048,pw:2000},{n:"2nd ft",len:0.3048,pw:3000},
+          {n:"3rd ft",len:0.3048,pw:4000},{n:"4th ft",len:0.3048,pw:5000},
+          {n:"5th ft",len:0.3048,pw:4000},{n:"6th ft",len:0.3048,pw:3000}]},
+  prob2:{name:"Problem 2",D:0.025,
+    secs:[{n:"Lower half (Q)",len:1.0,pw:10000},{n:"Upper half (2Q)",len:1.0,pw:20000}]},
+  prob1:{name:"Problem 1",D:0.025,
+    secs:[{n:"Heated #1 (Q)",len:0.4,pw:5000},{n:"Un-heated #1",len:0.8,pw:0},
+          {n:"Heated #2 (2Q)",len:0.2,pw:10000},{n:"Un-heated #2",len:2.0,pw:0},
+          {n:"Heated #3 (5Q)",len:0.6,pw:25000}]}
+};
+const A={preset:"uniform",mdot:0.25,htrue:2000,x:1};
+
+function secGeom(p){
+  let start=0; const out=p.secs.map(s=>{const o={...s,start,end:start+s.len};start+=s.len;return o;});
+  return {secs:out,total:start,totalPw:p.secs.reduce((a,s)=>a+s.pw,0)};
+}
+function secAt(g,x){
+  for(const s of g.secs) if(x<s.end-1e-12) return s;
+  return g.secs[g.secs.length-1];
+}
+function Ecum(g,x){
+  let E=0;
+  for(const s of g.secs){
+    if(x>=s.end) E+=s.pw;
+    else { if(x>s.start) E+=s.pw*(x-s.start)/s.len; break; }
+  }
+  return E;
+}
+const qLocal=(s,D)=>s.pw/(Math.PI*D*s.len);
+
+function renderA(){
+  const p=PRESETS[A.preset], g=secGeom(p), D=p.D;
+  A.x=clamp(A.x,0,g.total);
+  $("aX").max=g.total; $("aX").step=(g.total/400).toFixed(5);
+  $("aMv").textContent=A.mdot.toFixed(2)+" kg/s";
+  $("aHtv").textContent=A.htrue+" W/m\u00b2\u00b7K";
+  $("aXv").textContent=A.x.toFixed(3)+" m";
+  $("aM").value=A.mdot; $("aHt").value=A.htrue; $("aX").value=A.x;
+  [...$("aPre").querySelectorAll("button")].forEach(b=>
+    b.setAttribute("aria-pressed",String(b.dataset.p===A.preset)));
+
+  const Tf=x=>TIN+Ecum(g,x)/(A.mdot*CP);
+  const qf=x=>qLocal(secAt(g,x),D);
+  const Tw=x=>Tf(x)+qf(x)/A.htrue;
+
+  const s=secAt(g,A.x), q=qf(A.x), E=Ecum(g,A.x);
+  const Tfl=Tf(A.x), Twl=Tw(A.x), Tout=Tf(g.total);
+
+  $("aSec").textContent=s.n;
+  $("aSecP").textContent=fmt(s.pw/1000,1)+" kW";
+  $("aSecL").textContent=s.len.toFixed(3)+" m";
+  $("aQ").textContent=fmt(q,0)+" W/m\u00b2";
+  $("aE").textContent=fmt(E/1000,2)+" kW";
+  $("aEp").textContent=g.totalPw>0?(100*E/g.totalPw).toFixed(1)+"%":"\u2014";
+  $("aTf").textContent=Tfl.toFixed(2)+" \u00b0C";
+  $("aTw").textContent=Twl.toFixed(2)+" \u00b0C";
+  $("aH").textContent = q>0 ? fmt(A.htrue,0)+" W/m\u00b2\u00b7K" : "undefined (q = 0)";
+  $("aTo").textContent=Tout.toFixed(2)+" \u00b0C";
+
+  // ---- canvas ----
+  const {ctx,w,h}=fitCanvas($("cvA"),160);
+  ctx.clearRect(0,0,w,h);
+  const fL=PM.l/PW, fR=PM.r/PW;
+  const x0=w*fL, x1=w*(1-fR), cy=h*0.48, half=28;
+  const lo=TIN, hi=Math.max(Tout,TIN+0.01);
+  g.secs.forEach(sec=>{
+    const pa=x0+(x1-x0)*(sec.start/g.total), pb=x0+(x1-x0)*(sec.end/g.total);
+    const N=Math.max(2,Math.round((pb-pa)/3));
+    for(let i=0;i<N;i++){
+      const xa=sec.start+(sec.len)*i/N, xb=sec.start+(sec.len)*(i+1)/N;
+      ctx.fillStyle=tempColor((Tf((xa+xb)/2)-lo)/Math.max(hi-lo,1e-9));
+      const qa=x0+(x1-x0)*(xa/g.total), qb=x0+(x1-x0)*(xb/g.total);
+      ctx.fillRect(qa,cy-half,qb-qa+0.8,2*half);
+    }
+    // heated sections get a hatched jacket; unheated get plain grey
+    ctx.fillStyle = sec.pw>0 ? "#B3202B" : "#C6CEDA";
+    ctx.fillRect(pa,cy-half-9,pb-pa,9);
+    ctx.fillRect(pa,cy+half,pb-pa,9);
+    ctx.strokeStyle="#5A6675"; ctx.lineWidth=1;
+    ctx.strokeRect(pa,cy-half-9,pb-pa,2*half+18);
+  });
+  // flow arrow
+  ctx.strokeStyle="#FFF"; ctx.fillStyle="#FFF"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x0+10,cy); ctx.lineTo(x0+40,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x0+47,cy); ctx.lineTo(x0+39,cy-4.5); ctx.lineTo(x0+39,cy+4.5);
+  ctx.closePath(); ctx.fill();
+  // marker
+  const xp=x0+(x1-x0)*(A.x/g.total);
+  ctx.strokeStyle="#FFF"; ctx.lineWidth=2.6;
+  ctx.beginPath(); ctx.moveTo(xp,cy-half); ctx.lineTo(xp,cy+half); ctx.stroke();
+  ctx.strokeStyle="#16305C"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(xp,cy-half-9); ctx.lineTo(xp,cy+half+9); ctx.stroke();
+  ctx.font="11px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign="center"; ctx.fillStyle="#5A6675";
+  ctx.fillText("red jacket = heated \u00b7 grey = un-heated",(x0+x1)/2,h-5);
+  ctx.fillStyle="#16305C";
+  ctx.fillText(Tfl.toFixed(1)+" \u00b0C",xp,cy-half-14);
+
+  const qmax=Math.max(...g.secs.map(sc=>qLocal(sc,D)),1);
+  drawPlot($("plotA1"),{
+    x0:0,x1:g.total,cursor:A.x,yMin:0,yMax:qmax*1.2,
+    areas:[{f:qf,color:"rgba(15,122,110,0.22)",x0:0,x1:A.x}],
+    vlines:g.secs.slice(1).map(sc=>({x:sc.start})),
+    series:[{f:qf,color:"#0F7A6E"}],
+    xLabel:"position x  (m)",yLabel:"q  (W/m\u00b2)",aria:"Local heat flux along the tube"});
+
+  drawPlot($("plotA2"),{
+    x0:0,x1:g.total,cursor:A.x,
+    vlines:g.secs.slice(1).map(sc=>({x:sc.start})),
+    series:[{f:Tw,color:"#B3202B"},{f:Tf,color:"#4A6FA5"}],
+    xLabel:"position x  (m)",yLabel:"T  (\u00b0C)",aria:"Wall and fluid temperatures"});
+
+  const nSec=g.secs.length;
+  let msg;
+  if(nSec===1){
+    msg="With one uniform section the flux is a flat line \u2014 the same at every station. Only the shaded area grows as you drag. That is why, in Worked Example 1, h at L/3 and at 2L/3 share a numerator but not a denominator.";
+  } else {
+    msg="Watch the two plots as you cross a section boundary. The <b>flux jumps</b> instantly, because it only knows about local heating. The <b>fluid temperature does not</b> \u2014 it is a running total, and a running total cannot jump. The wall temperature jumps with the flux, since it sits q/h above the fluid.";
+  }
+  const un = s.pw===0 ? " You are in an un-heated section right now: q = 0, the fluid temperature is flat, and h is undefined because there is no heat transfer to characterise." : "";
+  $("noteA").innerHTML="<b>What to notice.</b> "+msg+un+
+    " The shaded region is "+fmt(E/1000,2)+" kW of absorbed power, "+
+    (g.totalPw>0?(100*E/g.totalPw).toFixed(0)+"%":"\u2014")+" of the tube's total.";
+}
+
+/* ================= PANEL B ================= */
+const B={n:1,q0:150,mdot:0.25,x:1,L:2.0,D:0.025,htrue:2000};
+
+function renderB(){
+  B.x=clamp(B.x,0,B.L);
+  $("bNv").textContent=B.n.toFixed(2);
+  $("bQ0v").textContent=B.q0+" kW/m\u00b2";
+  $("bMv").textContent=B.mdot.toFixed(2)+" kg/s";
+  $("bXv").textContent=B.x.toFixed(3)+" m";
+  ["bN","bQ0","bM","bX"].forEach((id,i)=>$(id).value=[B.n,B.q0,B.mdot,B.x][i]);
+
+  const q0=B.q0*1000, L=B.L, D=B.D, n=B.n;
+  const qf=x=>q0*Math.pow(x/L,n);
+  // E(x) = pi D q0 L/(n+1) (x/L)^(n+1)
+  const Ecm=x=>Math.PI*D*q0*L/(n+1)*Math.pow(x/L,n+1);
+  const Etot=Ecm(L);
+  const frac=x=>Math.pow(x/L,n+1);
+  const Tf=x=>TIN+Ecm(x)/(B.mdot*CP);
+  const Tw=x=>Tf(x)+qf(x)/B.htrue;
+
+  const q=qf(B.x), E=Ecm(B.x);
+  $("bQ").textContent=fmt(q,0)+" W/m\u00b2";
+  $("bE").textContent=fmt(E/1000,2)+" kW";
+  $("bEp").textContent=(100*frac(B.x)).toFixed(1)+"%";
+  $("bTf").textContent=Tf(B.x).toFixed(2)+" \u00b0C";
+  $("bTw").textContent=Tw(B.x).toFixed(2)+" \u00b0C";
+  $("bH").textContent=q>0?fmt(B.htrue,0)+" W/m\u00b2\u00b7K":"undefined (q = 0)";
+  $("bMid").textContent=(100*Math.pow(0.5,n+1)).toFixed(1)+"% absorbed";
+
+  drawPlot($("plotB1"),{
+    x0:0,x1:L,cursor:B.x,yMin:0,yMax:q0*1.15,
+    areas:[{f:qf,color:"rgba(15,122,110,0.22)",x0:0,x1:B.x}],
+    series:[{f:qf,color:"#0F7A6E"}],
+    xLabel:"position x  (m)",yLabel:"q  (W/m\u00b2)",aria:"Flux profile"});
+
+  drawPlot($("plotB2"),{
+    x0:0,x1:L,cursor:B.x,yMin:0,yMax:1.05,
+    series:[{f:x=>x/L,color:"#5A6675",dash:"5 4"},{f:frac,color:"#6B4EA8"}],
+    xLabel:"position x  (m)",yLabel:"fraction absorbed",aria:"Fraction of energy absorbed"});
+
+  drawPlot($("plotB3"),{
+    x0:0,x1:L,cursor:B.x,
+    series:[{f:Tw,color:"#B3202B"},{f:Tf,color:"#4A6FA5"}],
+    xLabel:"position x  (m)",yLabel:"T  (\u00b0C)",aria:"Temperatures"});
+
+  const half=100*Math.pow(0.5,n+1);
+  let m;
+  if(Math.abs(n)<0.02) m="At n = 0 the heating is uniform: the flux is flat, the fraction-absorbed line is perfectly straight, and the midpoint has taken exactly 50%.";
+  else if(Math.abs(n-1)<0.03) m="This is the lecture's problem, q(x) = q\u2080(x/L). The midpoint has absorbed only <b>25%</b> of the total, not 50% \u2014 the cross-check in the study guide. The heating is weak low down, so the first half contributes less than its share.";
+  else m="The midpoint has absorbed <b>"+half.toFixed(1)+"%</b> of the total, which is (1/2)<sup>n+1</sup>. The larger n is, the more the heating is crowded into the top of the tube and the less the first half contributes.";
+  $("noteB").innerHTML="<b>What to notice.</b> "+m+
+    " Note that the fluid curve is always smooth and always rising, while the wall curve tracks the flux. Where the flux is near zero the two curves touch, because with no heat crossing the wall there is nothing to drive a temperature difference.";
+}
+
+/* ================= PANEL C ================= */
+const C={n:7,err:6,D:25,seed:12345};
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;
+  let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;
+  return ((t^t>>>14)>>>0)/4294967296;};}
+
+function runData(){
+  const D=C.D/1000, rnd=mulberry32(C.seed);
+  const rows=[];
+  for(let i=0;i<C.n;i++){
+    const V=0.6*Math.pow(6.0/0.6,i/(C.n-1));           // log-spaced velocities
+    const Re=RHO*V*D/MU;
+    const NuTrue=0.023*Math.pow(Re,0.8)*Math.pow(PR,0.4);
+    const hTrue=NuTrue*KF/D;
+    const eps=(rnd()*2-1)*(C.err/100);                  // symmetric relative scatter
+    const hMeas=hTrue*(1+eps);
+    rows.push({V,Re,hTrue,hMeas,NuMeas:hMeas*D/KF,NuTrue});
+  }
+  return rows;
+}
+function leastSquares(rows){
+  // fit ln(Nu) = ln(Cc) + b ln(Re)
+  const n=rows.length;
+  let sx=0,sy=0,sxx=0,sxy=0;
+  rows.forEach(r=>{const x=Math.log(r.Re),y=Math.log(r.NuMeas);sx+=x;sy+=y;sxx+=x*x;sxy+=x*y;});
+  const den=n*sxx-sx*sx;
+  const b=(n*sxy-sx*sy)/den, lnC=(sy-b*sx)/n, Cc=Math.exp(lnC);
+  let ssRes=0,ssTot=0; const ybar=sy/n;
+  rows.forEach(r=>{const x=Math.log(r.Re),y=Math.log(r.NuMeas);
+    const yh=lnC+b*x; ssRes+=(y-yh)*(y-yh); ssTot+=(y-ybar)*(y-ybar);});
+  const R2=ssTot>0?1-ssRes/ssTot:1;
+  return {b,Cc,a:Cc/Math.pow(PR,0.4),R2};
+}
+
+function renderC(){
+  $("cNv").textContent=C.n;
+  $("cErrv").textContent="\u00b1"+C.err.toFixed(1)+"%";
+  $("cDv").textContent=C.D+" mm";
+  $("cN").value=C.n; $("cErr").value=C.err; $("cD").value=C.D;
+
+  const rows=runData(), fit=leastSquares(rows);
+  const D=C.D/1000;
+
+  $("cFit").textContent="Nu = "+fit.a.toFixed(4)+" Re"+sup("")+"^"+fit.b.toFixed(3)+" Pr^0.4";
+  $("cB").textContent=fit.b.toFixed(3);
+  $("cA").textContent=fit.a.toFixed(4);
+  $("cR2").textContent=fit.R2.toFixed(4);
+
+  const ReLo=rows[0].Re*0.7, ReHi=rows[rows.length-1].Re*1.4;
+  drawPlot($("plotC"),{
+    x0:ReLo,x1:ReHi,logX:true,logY:true,
+    series:[
+      {f:Re=>0.023*Math.pow(Re,0.8)*Math.pow(PR,0.4),color:"#5A6675",dash:"5 4"},
+      {f:Re=>fit.Cc*Math.pow(Re,fit.b),color:"#0F7A6E"}
+    ],
+    points:rows.map(r=>({x:r.Re,y:r.NuMeas,color:"#B3202B"})),
+    xLabel:"Re",yLabel:"Nu",aria:"Measured Nusselt against Reynolds with fitted line"});
+
+  let t='<table class="tbl"><tr><th>Run</th><th>⟨V⟩ m/s</th><th>Re</th><th>h measured</th><th>Nu</th><th>error</th></tr>';
+  rows.forEach((r,i)=>{
+    const e=100*(r.hMeas-r.hTrue)/r.hTrue;
+    t+=`<tr><td>${i+1}</td><td>${r.V.toFixed(2)}</td><td>${fmt(r.Re,0)}</td>`+
+       `<td>${fmt(r.hMeas,0)}</td><td>${r.NuMeas.toFixed(1)}</td>`+
+       `<td style="color:${Math.abs(e)>8?'#B3202B':'#5A6675'}">${e>=0?"+":""}${e.toFixed(1)}%</td></tr>`;});
+  t+="</table>";
+  $("runTable").innerHTML=t;
+
+  const berr=Math.abs(fit.b-0.8)/0.8*100, aerr=Math.abs(fit.a-0.023)/0.023*100;
+  $("noteC").innerHTML="<b>What to notice.</b> Your seven-ish data points recover an exponent of <b>"+
+    fit.b.toFixed(3)+"</b> against the true 0.800 ("+berr.toFixed(1)+"% off) and a coefficient of <b>"+
+    fit.a.toFixed(4)+"</b> against the true 0.0230 ("+aerr.toFixed(0)+"% off). "+
+    "Notice how much better the <i>exponent</i> survives noisy data than the <i>coefficient</i> does: the slope of a log-log line is pinned down by the wide spread of Reynolds numbers, whereas the intercept has to be extrapolated all the way back to Re = 1, so every bit of scatter is amplified. "+
+    "That is why textbook correlations quote tidy exponents like 0.8 and messier leading constants. Push the scatter to zero and both come back exactly; add runs and the fit steadies.";
+}
+
+/* ================= wiring ================= */
+function bindRange(id,obj,key,after){
+  $(id).addEventListener("input",e=>{obj[key]=parseFloat(e.target.value);after();});}
+
+bindRange("aM",A,"mdot",renderA); bindRange("aHt",A,"htrue",renderA); bindRange("aX",A,"x",renderA);
+$("aPre").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  A.preset=b.dataset.p; const g=secGeom(PRESETS[A.preset]); A.x=g.total*0.5; renderA();});
+
+bindRange("bN",B,"n",renderB); bindRange("bQ0",B,"q0",renderB);
+bindRange("bM",B,"mdot",renderB); bindRange("bX",B,"x",renderB);
+
+bindRange("cN",C,"n",renderC); bindRange("cErr",C,"err",renderC); bindRange("cD",C,"D",renderC);
+$("cNew").addEventListener("click",()=>{C.seed=(C.seed*1103515245+12345)>>>0; renderC();});
+
+(function(){
+  const cv=$("cvA"); let down=false;
+  const pick=ev=>{
+    const g=secGeom(PRESETS[A.preset]), r=cv.getBoundingClientRect();
+    const a=r.width*(PM.l/PW), b=r.width*(1-PM.r/PW);
+    A.x=clamp((ev.clientX-r.left-a)/(b-a)*g.total,0,g.total); renderA();};
+  cv.addEventListener("pointerdown",e=>{down=true;cv.setPointerCapture(e.pointerId);pick(e);});
+  cv.addEventListener("pointermove",e=>{if(down)pick(e);});
+  cv.addEventListener("pointerup",()=>{down=false;});
+  cv.addEventListener("keydown",e=>{
+    const g=secGeom(PRESETS[A.preset]), st=(e.shiftKey?5:1)*g.total/80;
+    if(e.key==="ArrowRight"){A.x=clamp(A.x+st,0,g.total);renderA();e.preventDefault();}
+    if(e.key==="ArrowLeft"){A.x=clamp(A.x-st,0,g.total);renderA();e.preventDefault();}});
+})();
+
+const panels={"tab-a":"p-a","tab-b":"p-b","tab-c":"p-c"};
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    Object.entries(panels).forEach(([tid,pid])=>{
+      const on=tid===t.id; $(tid).setAttribute("aria-selected",String(on)); $(pid).hidden=!on;});
+    renderAll();});});
+function renderAll(){
+  if(!$("p-a").hidden)renderA();
+  if(!$("p-b").hidden)renderB();
+  if(!$("p-c").hidden)renderC();}
+let rt;
+window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(renderAll,120);});
+renderAll();
+</script>
+</body>
+</html>
