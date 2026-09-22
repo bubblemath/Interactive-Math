@@ -1,0 +1,1164 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sample Space Simulator</title>
+<style>
+:root{
+  --paper:#F3F1E7; --sheet:#FBFAF4; --rule:#D8D3C2; --rule-2:#EAE6D9;
+  --ink:#14213D; --ink-soft:#5C6478;
+  --blue:#1F4E9C; --blue-soft:#E4EBF7;
+  --red:#B3221F; --red-soft:#F7E4E3;
+  --turf:#2E6B45; --turf-soft:#E2EFE7;
+  --gold:#B58B15; --gold-soft:#F6EFD8;
+  --plum:#6B3A7A; --plum-soft:#EFE6F3;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
+.wrap{max-width:940px;margin:0 auto;padding:0 18px 80px}
+
+.masthead{border-bottom:3px double var(--ink);padding:26px 0 14px;margin-bottom:20px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.masthead h1{font-family:var(--serif);font-size:clamp(28px,5.6vw,44px);line-height:1;margin:0;letter-spacing:-.015em}
+.masthead p{margin:6px 0 0;color:var(--ink-soft);font-size:15px;max-width:52ch}
+
+.tabs{display:flex;margin:0 0 22px;border:1px solid var(--rule);background:var(--sheet);border-radius:3px;overflow:hidden}
+.tabs button{flex:1;padding:11px 6px;border:0;border-right:1px solid var(--rule-2);background:var(--sheet);color:var(--ink-soft);font-family:var(--sans);font-size:14px;cursor:pointer;line-height:1.2}
+.tabs button:last-child{border-right:0}
+.tabs button:hover{background:#EEEBDE}
+.tabs button.on{background:var(--blue);color:#fff;font-weight:600}
+.tabs button .ic{display:block;font-size:19px;margin-bottom:2px}
+
+.panel{display:none}
+.panel.on{display:block}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:3px;padding:20px 22px 22px;margin-bottom:18px}
+h2{font-family:var(--serif);font-size:24px;margin:0 0 4px;line-height:1.15}
+h3{font-family:var(--serif);font-size:17px;margin:20px 0 6px}
+.lede{color:var(--ink-soft);margin:0 0 16px;max-width:68ch}
+p{max-width:72ch}
+.note{border-left:3px solid var(--blue);background:var(--blue-soft);padding:10px 14px;margin:14px 0;font-size:14.5px;border-radius:0 3px 3px 0}
+.note.gold{border-left-color:var(--gold);background:var(--gold-soft)}
+.note.good{border-left-color:var(--turf);background:var(--turf-soft)}
+.note p{margin:0;max-width:none}
+
+button{font-family:inherit;font-size:15px;cursor:pointer}
+.btn{background:var(--blue);color:#fff;border:1px solid var(--blue);padding:10px 20px;border-radius:3px;font-weight:600}
+.btn:hover:not(:disabled){background:#183E7D}
+.btn:disabled{background:#B9BDC7;border-color:#B9BDC7;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--blue)}
+.btn.ghost:hover:not(:disabled){background:var(--blue-soft)}
+.btn.quiet{background:transparent;color:var(--ink-soft);border-color:var(--rule);font-weight:500}
+.btn.quiet:hover:not(:disabled){background:var(--paper);color:var(--ink)}
+.btn.big{font-size:18px;padding:13px 30px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.hidden{display:none !important}
+
+/* ---- setup controls ---- */
+.setup{background:#fff;border:1px solid var(--rule);border-radius:3px;padding:14px 16px}
+.ctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0}
+.ctl label{font-size:14.5px}
+.stepper{display:inline-flex;align-items:center}
+.stepper button{width:32px;height:32px;border:1px solid var(--rule);background:#fff;color:var(--ink);font-size:18px;line-height:1;padding:0}
+.stepper button:first-child{border-radius:3px 0 0 3px}
+.stepper button:last-child{border-radius:0 3px 3px 0}
+.stepper span{min-width:46px;height:32px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;background:#fff}
+input[type=text],input[type=number],select{padding:7px 9px;border:1px solid var(--rule);border-radius:3px;font-family:var(--sans);font-size:14.5px;background:#fff;color:var(--ink)}
+input[type=text]:focus,input[type=number]:focus,select:focus{outline:2px solid var(--blue);outline-offset:-1px}
+input[type=number]{width:82px;font-family:var(--mono)}
+.chk{display:inline-flex;align-items:center;gap:7px;font-size:14.5px}
+
+/* ---- stage ---- */
+.stage{margin-top:16px;min-height:118px;background:#fff;border:1px dashed var(--rule);border-radius:3px;padding:16px;display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.stage.empty{color:var(--ink-soft);font-size:14.5px;justify-content:center;font-style:italic}
+.summary{font-family:var(--serif);font-size:19px;margin-top:12px}
+.summary b{font-family:var(--mono)}
+
+/* cards */
+.card{width:58px;height:82px;border-radius:5px;background:#fff;border:1.5px solid #B8B2A0;position:relative;flex:0 0 auto;
+  box-shadow:0 1px 3px rgba(20,33,61,.16);display:flex;align-items:center;justify-content:center;font-family:var(--serif)}
+.card .cnr{position:absolute;font-size:12.5px;font-weight:700;line-height:1;font-family:var(--sans)}
+.card .cnr.tl{top:4px;left:5px}
+.card .cnr.br{bottom:4px;right:5px;transform:rotate(180deg)}
+.card .pip{font-size:27px;line-height:1}
+.card.red{color:#C0271F}
+.card.black{color:#17233E}
+.card.joker{background:linear-gradient(135deg,#fff 60%,#F1EAD6)}
+
+/* coins */
+.coin{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-size:21px;font-weight:700;border:2.5px solid;flex:0 0 auto}
+.coin.H{background:#F6E7B5;border-color:#B58B15;color:#6E540B}
+.coin.T{background:#E2E4E8;border-color:#7C8496;color:#3C4457}
+
+/* tickets */
+.ticket{padding:7px 12px;border-radius:3px;border:1.5px dashed;font-size:13.5px;font-family:var(--sans);flex:0 0 auto;
+  font-weight:600;position:relative;background:#fff}
+.ticket.lose{border-color:#A9AEBB;color:#6B7183;background:#F4F4F6;font-weight:500}
+
+/* spinner */
+.spinwrap{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+.wheel{position:relative;width:232px;height:246px;flex:0 0 auto}
+.wheel svg{position:absolute;top:14px;left:0}
+.wheel .rot{transition:transform 1.5s cubic-bezier(.22,.9,.22,1)}
+.pointer{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:2}
+.sectorlist{font-size:14px}
+.sectorlist div{display:flex;align-items:center;gap:8px;margin:3px 0}
+.sw{width:13px;height:13px;border-radius:2px;border:1px solid rgba(0,0,0,.25);display:inline-block}
+
+/* rows of editable items */
+.rows{margin-top:8px}
+.rowitem{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}
+.rowitem .sw{flex:0 0 auto}
+.rowitem input[type=text]{flex:1;min-width:130px}
+.rowitem button.del{width:32px;height:32px;border:1px solid var(--rule);background:#fff;border-radius:3px;color:var(--red);font-size:16px;padding:0}
+.rowitem button.del:hover{background:var(--red-soft)}
+
+/* log */
+.log{margin-top:14px;max-height:150px;overflow-y:auto;border:1px solid var(--rule-2);border-radius:3px;background:#fff;font-family:var(--mono);font-size:12.5px}
+.log div{padding:5px 10px;border-bottom:1px solid var(--rule-2)}
+.log div:last-child{border-bottom:0}
+.log div span{color:var(--ink-soft)}
+
+/* theory panel */
+details.theory{border:1px solid var(--rule);border-radius:3px;background:#fff;margin-top:18px}
+details.theory summary{padding:11px 16px;cursor:pointer;font-weight:600;font-size:14.5px;color:var(--blue)}
+details.theory .body{padding:0 16px 16px}
+.ptable{border-collapse:collapse;font-family:var(--mono);font-size:14px;margin-top:8px}
+.ptable th,.ptable td{border:1px solid var(--rule);padding:6px 11px;text-align:center}
+.ptable th{background:var(--ink);color:#fff;font-size:11.5px;font-weight:600}
+.ptable td.lbl{font-family:var(--sans);text-align:left}
+.bars{margin-top:10px}
+.barrow{display:flex;align-items:center;gap:9px;margin:5px 0;font-family:var(--mono);font-size:12.5px}
+.barrow .k{width:74px;text-align:right;flex:0 0 auto}
+.barrow .track{flex:1;min-width:90px}
+.barrow .track i{display:block;height:11px;border-radius:2px;margin:2px 0}
+.barrow .track i.obs{background:var(--blue)}
+.barrow .track i.thy{background:var(--gold);opacity:.75}
+.barrow .n{width:132px;flex:0 0 auto;color:var(--ink-soft);font-size:11.5px}
+.legend{display:flex;gap:16px;font-size:12.5px;color:var(--ink-soft);margin-top:8px;flex-wrap:wrap}
+.legend b{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+textarea{width:100%;min-height:96px;padding:10px;border:1px solid var(--rule);border-radius:3px;font-family:var(--sans);font-size:15px;background:#fff;color:var(--ink);resize:vertical;line-height:1.5}
+textarea:focus{outline:2px solid var(--blue);outline-offset:-1px}
+.footer{margin-top:24px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-soft);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+
+@media print{
+  body{background:#fff}
+  .tabs,.btnrow,.footer,.no-print{display:none !important}
+  .panel{display:block !important;page-break-before:always}
+  .sheet{border-color:#999}
+  details.theory{display:block}
+  details.theory .body{display:block !important}
+}
+@media(prefers-reduced-motion:reduce){.wheel .rot{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div>
+    <h1>Sample Space Simulator</h1>
+    <p>Four chance devices you can set up however your game needs. Each one will also show you the sample space behind it, and what happens when you run it a great many times.</p>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs" aria-label="Chance devices"></nav>
+
+<!-- ===================== CARDS ===================== -->
+<section class="panel" id="p-cards">
+  <div class="sheet">
+    <h2>Deal from a deck</h2>
+    <p class="lede">Set the size of the hand and deal. Turn off reshuffling if your game deals several hands from the same deck.</p>
+    <div class="setup">
+      <div class="ctl">
+        <label for="cardN">Cards in the hand</label>
+        <span class="stepper" id="cardNstep"></span>
+        <span style="font-size:13.5px;color:var(--ink-soft)" id="cardleft"></span>
+      </div>
+      <div class="ctl">
+        <span class="chk"><input type="checkbox" id="cardReshuffle" checked><label for="cardReshuffle">Reshuffle the whole deck before each deal</label></span>
+        <span class="chk"><input type="checkbox" id="cardJokers"><label for="cardJokers">Include 2 jokers</label></span>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn big" id="cardDeal">Deal</button>
+      <button class="btn quiet" id="cardShuffle">Reshuffle deck</button>
+      <button class="btn quiet" id="cardClear">Clear log</button>
+    </div>
+    <div class="stage empty" id="cardStage">No cards dealt yet.</div>
+    <div class="summary" id="cardSummary"></div>
+    <div class="log" id="cardLog"></div>
+
+    <details class="theory" id="cardTheory">
+      <summary>Sample space and long-run behaviour</summary>
+      <div class="body">
+        <p class="lede">Choose something to count in the hand. The simulator will tally how often each count turns up, and show the probability the sample space says you should get.</p>
+        <div class="ctl">
+          <label for="cardFilter">Count how many cards in the hand are</label>
+          <select id="cardFilter"></select>
+        </div>
+        <div id="cardTheoryBody"></div>
+        <div class="btnrow">
+          <button class="btn ghost" id="cardRun100">Deal 100 hands</button>
+          <button class="btn ghost" id="cardRun1000">Deal 1000 hands</button>
+          <button class="btn quiet" id="cardResetTally">Reset the tally</button>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ===================== COINS ===================== -->
+<section class="panel" id="p-coins">
+  <div class="sheet">
+    <h2>Toss coins</h2>
+    <p class="lede">Choose how many coins go in the hand. You can also weight the coin if your game calls for something other than a fair one.</p>
+    <div class="setup">
+      <div class="ctl">
+        <label for="coinN">Coins to toss</label>
+        <span class="stepper" id="coinNstep"></span>
+      </div>
+      <div class="ctl">
+        <label for="coinP">Probability of heads</label>
+        <input type="number" id="coinP" min="0" max="1" step="0.05" value="0.5">
+        <span style="font-size:13.5px;color:var(--ink-soft)">0.5 is a fair coin</span>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn big" id="coinToss">Toss</button>
+      <button class="btn quiet" id="coinClear">Clear log</button>
+    </div>
+    <div class="stage empty" id="coinStage">No coins tossed yet.</div>
+    <div class="summary" id="coinSummary"></div>
+    <div class="log" id="coinLog"></div>
+
+    <details class="theory" id="coinTheory">
+      <summary>Sample space and long-run behaviour</summary>
+      <div class="body">
+        <div id="coinTheoryBody"></div>
+        <div class="btnrow">
+          <button class="btn ghost" id="coinRun100">Toss 100 times</button>
+          <button class="btn ghost" id="coinRun1000">Toss 1000 times</button>
+          <button class="btn quiet" id="coinResetTally">Reset the tally</button>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ===================== SPINNER ===================== -->
+<section class="panel" id="p-spin">
+  <div class="sheet">
+    <h2>Spin a spinner</h2>
+    <p class="lede">Name each section. Leave every weight at 1 for equal sections, or make one bigger than the others if your game wants an unfair spinner.</p>
+    <div class="setup">
+      <div class="ctl">
+        <label>Sections</label>
+        <span class="stepper" id="spinNstep"></span>
+      </div>
+      <div class="rows" id="spinRows"></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn big" id="spinGo">Spin</button>
+      <button class="btn quiet" id="spinEqual">Make all sections equal</button>
+      <button class="btn quiet" id="spinClear">Clear log</button>
+    </div>
+    <div class="stage" id="spinStage"></div>
+    <div class="summary" id="spinSummary"></div>
+    <div class="log" id="spinLog"></div>
+
+    <details class="theory" id="spinTheory">
+      <summary>Sample space and long-run behaviour</summary>
+      <div class="body">
+        <div id="spinTheoryBody"></div>
+        <div class="btnrow">
+          <button class="btn ghost" id="spinRun100">Spin 100 times</button>
+          <button class="btn ghost" id="spinRun1000">Spin 1000 times</button>
+          <button class="btn quiet" id="spinResetTally">Reset the tally</button>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ===================== TICKETS ===================== -->
+<section class="panel" id="p-tix">
+  <div class="sheet">
+    <h2>Draw prize tickets</h2>
+    <p class="lede">Say what the prizes are and how many tickets win each one, then how many tickets win nothing. Draw a handful and see what comes out.</p>
+    <div class="setup">
+      <div class="rows" id="tixRows"></div>
+      <div class="ctl">
+        <button class="btn quiet" id="tixAdd">Add a prize</button>
+      </div>
+      <div class="ctl">
+        <label for="tixLose">Losing tickets</label>
+        <input type="number" id="tixLose" min="0" max="100000" value="94">
+        <span style="font-size:13.5px;color:var(--ink-soft)" id="tixTotal"></span>
+      </div>
+      <div class="ctl">
+        <label>Tickets to draw</label>
+        <span class="stepper" id="tixNstep"></span>
+        <span class="chk"><input type="checkbox" id="tixReplace"><label for="tixReplace">Put each ticket back before the next draw</label></span>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn big" id="tixDraw">Draw tickets</button>
+      <button class="btn quiet" id="tixClear">Clear log</button>
+    </div>
+    <div class="stage empty" id="tixStage">No tickets drawn yet.</div>
+    <div class="summary" id="tixSummary"></div>
+    <div class="log" id="tixLog"></div>
+
+    <details class="theory" id="tixTheory">
+      <summary>Sample space and long-run behaviour</summary>
+      <div class="body">
+        <div class="ctl">
+          <label for="tixFilter">Count how many tickets in the draw win</label>
+          <select id="tixFilter"></select>
+        </div>
+        <div id="tixTheoryBody"></div>
+        <div class="btnrow">
+          <button class="btn ghost" id="tixRun100">Draw 100 times</button>
+          <button class="btn ghost" id="tixRun1000">Draw 1000 times</button>
+          <button class="btn quiet" id="tixResetTally">Reset the tally</button>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<div class="sheet no-print" id="notesheet">
+  <h3 style="margin-top:0">Game design notes</h3>
+  <p class="lede">Somewhere to write down the rules you are testing, what you expected, and what actually happened.</p>
+  <textarea id="notes" placeholder="Rules of our game… what we expect to happen… what the simulator showed…"></textarea>
+  <div class="btnrow">
+    <button class="btn" id="printit">Print or save as PDF</button>
+  </div>
+</div>
+
+<div class="footer">
+  <span>Your set-up and notes save in this browser automatically.</span>
+  <span><button class="btn quiet" id="wipe" style="font-size:12px;padding:4px 10px">Erase my saved work</button></span>
+</div>
+</div>
+
+<script>
+/* ==================================================================
+   ============ CORE LOGIC — START (stress-tested in Node) ==========
+   ================================================================== */
+
+var RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+var SUITS = [
+  {sym:'\u2660', name:'Spades',   color:'black'},
+  {sym:'\u2665', name:'Hearts',   color:'red'},
+  {sym:'\u2666', name:'Diamonds', color:'red'},
+  {sym:'\u2663', name:'Clubs',    color:'black'}
+];
+
+/* A deck is a plain list of cards. 13 ranks x 4 suits, plus two jokers if
+   asked for — one counted red and one black, as most decks print them. */
+function buildDeck(jokers){
+  var d = [], i, j;
+  for(i = 0; i < SUITS.length; i++){
+    for(j = 0; j < RANKS.length; j++){
+      d.push({rank:RANKS[j], suit:SUITS[i].sym, suitName:SUITS[i].name,
+              color:SUITS[i].color, face:(j >= 10), joker:false,
+              id:RANKS[j] + SUITS[i].sym});
+    }
+  }
+  if(jokers){
+    d.push({rank:'JKR', suit:'\u2605', suitName:'Joker', color:'red',   face:false, joker:true, id:'JKR1'});
+    d.push({rank:'JKR', suit:'\u2605', suitName:'Joker', color:'black', face:false, joker:true, id:'JKR2'});
+  }
+  return d;
+}
+/* Fisher-Yates, walking down so every ordering is equally likely */
+function shuffle(arr, rng){
+  var a = arr.slice(), i, j, t;
+  for(i = a.length - 1; i > 0; i--){
+    j = Math.floor(rng() * (i + 1));
+    t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+/* One draw routine for cards and for tickets. Without replacement the item
+   is removed, so the pool shrinks; with replacement the pool never changes. */
+function drawItems(pool, n, replace, rng){
+  var drawn = [], rem = pool.slice(), k, i;
+  for(i = 0; i < n; i++){
+    if(replace){
+      if(!pool.length) break;
+      drawn.push(pool[Math.floor(rng() * pool.length)]);
+    } else {
+      if(!rem.length) break;
+      k = Math.floor(rng() * rem.length);
+      drawn.push(rem[k]);
+      rem.splice(k, 1);
+    }
+  }
+  return {drawn:drawn, remaining:replace ? pool.slice() : rem};
+}
+
+function tossCoins(n, pHeads, rng){
+  var r = [], i;
+  for(i = 0; i < n; i++) r.push(rng() < pHeads ? 'H' : 'T');
+  return r;
+}
+
+/* Weighted pick: lay the weights end to end and see where a uniform point
+   lands. Equal weights give an ordinary spinner. */
+function spin(sectors, rng){
+  var tot = 0, acc = 0, i;
+  for(i = 0; i < sectors.length; i++) tot += Math.max(0, sectors[i].weight);
+  if(tot <= 0) return 0;
+  var x = rng() * tot;
+  for(i = 0; i < sectors.length; i++){
+    acc += Math.max(0, sectors[i].weight);
+    if(x < acc) return i;
+  }
+  return sectors.length - 1;
+}
+/* Degrees clockwise from twelve o'clock, so the drawing and the pointer
+   maths agree on where each section sits. */
+function sectorAngles(sectors){
+  var tot = 0, a = 0, out = [], i;
+  for(i = 0; i < sectors.length; i++) tot += Math.max(0, sectors[i].weight);
+  if(tot <= 0) tot = 1;
+  for(i = 0; i < sectors.length; i++){
+    var sweep = 360 * Math.max(0, sectors[i].weight) / tot;
+    out.push({start:a, end:a + sweep, mid:a + sweep/2, sweep:sweep});
+    a += sweep;
+  }
+  return out;
+}
+/* Rotation that brings section i under the pointer, always turning forwards
+   from wherever the wheel is now. */
+function spinRotation(current, mid, turns){
+  var target = ((360 - mid) % 360 + 360) % 360;
+  var R = current + 360 * (turns || 3);
+  R += ((target - (R % 360)) % 360 + 360) % 360;
+  return R;
+}
+
+function buildTickets(prizes, losers){
+  var pool = [], i, j;
+  for(i = 0; i < prizes.length; i++){
+    for(j = 0; j < Math.max(0, prizes[i].count); j++){
+      pool.push({prize:prizes[i].name, idx:i, win:true});
+    }
+  }
+  for(j = 0; j < Math.max(0, losers); j++) pool.push({prize:'No prize', idx:-1, win:false});
+  return pool;
+}
+
+/* ---------------- exact counting ---------------- */
+/* Multiplicative form keeps every partial product small enough to stay an
+   exact integer in a double for the deck sizes this page uses. */
+function nCr(n, k){
+  if(k < 0 || k > n || n < 0) return 0;
+  k = Math.min(k, n - k);
+  var r = 1, i;
+  for(i = 0; i < k; i++) r = r * (n - i) / (i + 1);
+  return r;
+}
+/* Drawing n from N without replacement, K of which are successes:
+   the chance of getting exactly k of them. */
+function hyperPmf(N, K, n, k){
+  if(k < 0 || k > n || k > K || (n - k) > (N - K) || n > N) return 0;
+  return nCr(K, k) * nCr(N - K, n - k) / nCr(N, n);
+}
+/* The same count when the item goes back each time, so the draws are
+   independent and every one has the same chance p. */
+function binomPmf(n, p, k){
+  if(k < 0 || k > n) return 0;
+  return nCr(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k);
+}
+/* The full distribution of "how many successes", which is what the tally
+   chart is compared against. */
+function successDist(N, K, n, replace){
+  var out = [], k;
+  for(k = 0; k <= n; k++){
+    out.push(replace ? binomPmf(n, K/N, k) : hyperPmf(N, K, n, k));
+  }
+  return out;
+}
+function distMean(dist){
+  var m = 0, k;
+  for(k = 0; k < dist.length; k++) m += k * dist[k];
+  return m;
+}
+
+/* ---------------- card filters ---------------- */
+var CARD_FILTERS = [
+  {id:'hearts',   label:'Hearts',            test:function(c){ return c.suitName === 'Hearts'; }},
+  {id:'spades',   label:'Spades',            test:function(c){ return c.suitName === 'Spades'; }},
+  {id:'diamonds', label:'Diamonds',          test:function(c){ return c.suitName === 'Diamonds'; }},
+  {id:'clubs',    label:'Clubs',             test:function(c){ return c.suitName === 'Clubs'; }},
+  {id:'red',      label:'Red cards',         test:function(c){ return c.color === 'red' && !c.joker; }},
+  {id:'black',    label:'Black cards',       test:function(c){ return c.color === 'black' && !c.joker; }},
+  {id:'aces',     label:'Aces',              test:function(c){ return c.rank === 'A'; }},
+  {id:'face',     label:'Face cards (J Q K)',test:function(c){ return c.face; }},
+  {id:'tenplus',  label:'Ten or higher (10 J Q K A)', test:function(c){ return c.rank==='10'||c.face||c.rank==='A'; }}
+];
+function filterById(id){
+  for(var i = 0; i < CARD_FILTERS.length; i++) if(CARD_FILTERS[i].id === id) return CARD_FILTERS[i];
+  return CARD_FILTERS[0];
+}
+function countMatching(cards, test){
+  var c = 0, i;
+  for(i = 0; i < cards.length; i++) if(test(cards[i])) c++;
+  return c;
+}
+
+/* ---------------- tallies ---------------- */
+/* Tally keys come from the student: a spinner section can be named anything,
+   including "constructor" or "__proto__", which collide with properties every
+   plain object inherits. Prefixing sidesteps the whole class of collision, and
+   own-property checks stop an inherited value being read as a count. */
+function tKey(key){ return 'k' + key; }
+function tallyAdd(t, key){
+  var k = tKey(key);
+  t[k] = (Object.prototype.hasOwnProperty.call(t, k) ? t[k] : 0) + 1;
+  return t;
+}
+function tallyGet(t, key){
+  var k = tKey(key);
+  return Object.prototype.hasOwnProperty.call(t, k) ? t[k] : 0;
+}
+function tallyTotal(t){
+  var s = 0, k;
+  for(k in t) if(Object.prototype.hasOwnProperty.call(t, k)) s += t[k];
+  return s;
+}
+
+/* ==================================================================
+   ============ CORE LOGIC — END ====================================
+   ================================================================== */
+</script>
+
+<script>
+(function(){
+if(typeof document === 'undefined') return;
+
+var KEY = 'sampleSpaceSimV1';
+var TABS = [
+  {id:'p-cards', ic:'\u2660', t:'Cards'},
+  {id:'p-coins', ic:'\u25CF', t:'Coins'},
+  {id:'p-spin',  ic:'\u25D4', t:'Spinner'},
+  {id:'p-tix',   ic:'\u2691', t:'Tickets'}
+];
+var PALETTE = ['#B3221F','#1F4E9C','#2E6B45','#B58B15','#6B3A7A','#2F6E86','#A9622F','#8A6D1F','#4B5A8F','#6E7A22'];
+var LOG_MAX = 40;
+
+var S = {
+  tab:0, notes:'',
+  card:{n:5, reshuffle:true, jokers:false, filter:'hearts', log:[], tally:{}, trials:0},
+  coin:{n:3, p:0.5, log:[], tally:{}, trials:0},
+  spin:{sectors:[{label:'A',weight:1},{label:'B',weight:1},{label:'C',weight:1},{label:'D',weight:1}],
+        log:[], tally:{}, trials:0, rot:0},
+  tix:{prizes:[{name:'Grand prize',count:1},{name:'Small prize',count:5}], losers:94,
+       n:5, replace:false, filter:'0', log:[], tally:{}, trials:0}
+};
+var deck = null;          /* the live deck, so a game can deal without reshuffling */
+
+function $(id){ return document.getElementById(id); }
+function el(t,c,x){ var n=document.createElement(t); if(c)n.className=c; if(x!==undefined)n.textContent=x; return n; }
+function rng(){ return Math.random(); }
+function pct(x){ return (x*100).toFixed(2) + '%'; }
+function p4(x){ return x.toFixed(4); }
+
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(!raw) return;
+    var o = JSON.parse(raw);
+    for(var k in o){
+      if(!o.hasOwnProperty(k)) continue;
+      if(typeof S[k] === 'object' && S[k] && !Array.isArray(S[k]) && typeof o[k] === 'object' && o[k]){
+        for(var j in o[k]) if(o[k].hasOwnProperty(j)) S[k][j] = o[k][j];
+      } else S[k] = o[k];
+    }
+  }catch(e){}
+}
+/* A saved file can be old or hand-edited; put every setting back in range
+   before anything tries to draw with it. */
+function sanitize(){
+  var c = S.card;
+  c.n = clamp(int(c.n, 5), 1, 52); c.reshuffle = !!c.reshuffle; c.jokers = !!c.jokers;
+  if(!filterById(c.filter) || filterById(c.filter).id !== c.filter) c.filter = 'hearts';
+  if(!Array.isArray(c.log)) c.log = [];
+  if(typeof c.tally !== 'object' || !c.tally) c.tally = {};
+
+  var k = S.coin;
+  k.n = clamp(int(k.n, 3), 1, 20);
+  k.p = Math.min(1, Math.max(0, num(k.p, 0.5)));
+  if(!Array.isArray(k.log)) k.log = [];
+  if(typeof k.tally !== 'object' || !k.tally) k.tally = {};
+
+  var s = S.spin;
+  if(!Array.isArray(s.sectors) || s.sectors.length < 2) s.sectors = [{label:'A',weight:1},{label:'B',weight:1}];
+  s.sectors = s.sectors.slice(0, 10).map(function(x, i){
+    return {label:String(x && x.label !== undefined ? x.label : ('Section ' + (i+1))).slice(0,18) || ('Section ' + (i+1)),
+            weight:clamp(int(x && x.weight, 1), 1, 20)};
+  });
+  if(!Array.isArray(s.log)) s.log = [];
+  if(typeof s.tally !== 'object' || !s.tally) s.tally = {};
+
+  var t = S.tix;
+  if(!Array.isArray(t.prizes) || !t.prizes.length) t.prizes = [{name:'Grand prize',count:1}];
+  t.prizes = t.prizes.slice(0, 6).map(function(x, i){
+    return {name:String(x && x.name !== undefined ? x.name : ('Prize ' + (i+1))).slice(0,24) || ('Prize ' + (i+1)),
+            count:clamp(int(x && x.count, 1), 0, 100000)};
+  });
+  t.losers = clamp(int(t.losers, 0), 0, 100000);
+  t.n = clamp(int(t.n, 5), 1, 50);
+  t.replace = !!t.replace;
+  if(!Array.isArray(t.log)) t.log = [];
+  if(typeof t.tally !== 'object' || !t.tally) t.tally = {};
+  var fi = int(t.filter, 0);
+  if(fi < 0 || fi >= t.prizes.length) t.filter = '0'; else t.filter = String(fi);
+
+  S.tab = clamp(int(S.tab, 0), 0, TABS.length - 1);
+}
+function int(v, d){ var n = parseInt(v, 10); return isNaN(n) ? d : n; }
+function num(v, d){ var n = parseFloat(v); return isNaN(n) ? d : n; }
+function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
+
+/* ---------------- tabs ---------------- */
+function drawTabs(){
+  var h = $('tabs'); h.innerHTML = '';
+  TABS.forEach(function(t, i){
+    var b = el('button', i === S.tab ? 'on' : '');
+    b.type = 'button';
+    b.setAttribute('aria-label', t.t);
+    if(i === S.tab) b.setAttribute('aria-current','true');
+    b.appendChild(el('span','ic',t.ic));
+    b.appendChild(document.createTextNode(t.t));
+    b.onclick = function(){ setTab(i); };
+    h.appendChild(b);
+  });
+}
+function setTab(i){
+  S.tab = i;
+  TABS.forEach(function(t, k){ $(t.id).classList.toggle('on', k === i); });
+  drawTabs(); save();
+}
+
+/* ---------------- shared bits ---------------- */
+function stepper(hostId, get, set, lo, hi, what){
+  var h = $(hostId); h.innerHTML = '';
+  var minus = el('button', null, '\u2212');
+  minus.type = 'button';
+  minus.setAttribute('aria-label','one fewer ' + what);
+  minus.onclick = function(){ set(clamp(get() - 1, lo, hi)); };
+  var val = el('span', null, String(get()));
+  var plus = el('button', null, '+');
+  plus.type = 'button';
+  plus.setAttribute('aria-label','one more ' + what);
+  plus.onclick = function(){ set(clamp(get() + 1, lo, hi)); };
+  h.appendChild(minus); h.appendChild(val); h.appendChild(plus);
+}
+function pushLog(arr, text){
+  arr.unshift(text);
+  while(arr.length > LOG_MAX) arr.pop();
+}
+function drawLog(hostId, arr){
+  var h = $(hostId); h.innerHTML = '';
+  if(!arr.length){ h.appendChild(el('div', null, 'Nothing yet.')); return; }
+  arr.forEach(function(line, i){
+    var d = el('div');
+    d.appendChild(el('span', null, '#' + (arr.length - i) + '  '));
+    d.appendChild(document.createTextNode(line));
+    h.appendChild(d);
+  });
+}
+/* observed tally against the theoretical distribution, bar for bar */
+function drawBars(hostId, labels, obs, thy, total){
+  var h = $(hostId);
+  var wrap = el('div','bars');
+  var peak = 0;
+  labels.forEach(function(_, i){
+    peak = Math.max(peak, thy[i] || 0, total ? (obs[i] || 0)/total : 0);
+  });
+  if(peak <= 0) peak = 1;
+  labels.forEach(function(lab, i){
+    var row = el('div','barrow');
+    row.appendChild(el('span','k', lab));
+    var tr = el('span','track');
+    var o = el('i','obs'), t = el('i','thy');
+    o.style.width = (total ? ((obs[i]||0)/total)/peak*100 : 0) + '%';
+    t.style.width = ((thy[i]||0)/peak*100) + '%';
+    tr.appendChild(o); tr.appendChild(t);
+    row.appendChild(tr);
+    row.appendChild(el('span','n',
+      (total ? p4((obs[i]||0)/total) : '—') + ' vs ' + p4(thy[i]||0)));
+    wrap.appendChild(row);
+  });
+  h.appendChild(wrap);
+  var lg = el('div','legend');
+  var a = el('span'); a.innerHTML = '<b style="background:var(--blue)"></b>What actually happened' +
+    (total ? ' (' + total.toLocaleString() + ' runs)' : ' (no runs yet)');
+  var b = el('span'); b.innerHTML = '<b style="background:var(--gold);opacity:.75"></b>What the sample space says';
+  lg.appendChild(a); lg.appendChild(b);
+  h.appendChild(lg);
+}
+
+/* ================= CARDS ================= */
+function freshDeck(){ deck = shuffle(buildDeck(S.card.jokers), rng); }
+function cardSetup(){
+  stepper('cardNstep', function(){ return S.card.n; },
+    function(v){ S.card.n = v; cardSetup(); cardTheory(); save(); }, 1, deckSize(), 'card');
+  $('cardReshuffle').checked = S.card.reshuffle;
+  $('cardJokers').checked = S.card.jokers;
+  $('cardleft').textContent = S.card.reshuffle ? '' : (deck ? deck.length + ' cards left in the deck' : '');
+  var f = $('cardFilter');
+  if(!f.options.length){
+    CARD_FILTERS.forEach(function(x){
+      var o = document.createElement('option'); o.value = x.id; o.textContent = x.label; f.appendChild(o);
+    });
+  }
+  f.value = S.card.filter;
+}
+function deckSize(){ return S.card.jokers ? 54 : 52; }
+function cardDeal(){
+  if(S.card.reshuffle || !deck || deck.length < S.card.n) freshDeck();
+  var res = drawItems(deck, S.card.n, false, rng);
+  deck = res.remaining;
+  showCards(res.drawn);
+  var f = filterById(S.card.filter);
+  var k = countMatching(res.drawn, f.test);
+  tallyAdd(S.card.tally, String(k)); S.card.trials++;
+  pushLog(S.card.log, res.drawn.map(function(c){ return c.id; }).join(' ') + '   (' + k + ' ' + f.label.toLowerCase() + ')');
+  drawLog('cardLog', S.card.log);
+  $('cardSummary').innerHTML = 'That hand holds <b>' + k + '</b> ' + f.label.toLowerCase() + '.';
+  cardSetup(); cardTheory(); save();
+}
+function showCards(cards){
+  var st = $('cardStage'); st.innerHTML = ''; st.classList.remove('empty');
+  cards.forEach(function(c){
+    var d = el('div','card ' + c.color + (c.joker ? ' joker' : ''));
+    d.setAttribute('aria-label', c.joker ? 'Joker' : c.rank + ' of ' + c.suitName);
+    var tl = el('span','cnr tl'); tl.textContent = c.rank + c.suit;
+    var br = el('span','cnr br'); br.textContent = c.rank + c.suit;
+    var pip = el('span','pip', c.suit);
+    d.appendChild(tl); d.appendChild(pip); d.appendChild(br);
+    st.appendChild(d);
+  });
+}
+function cardTheory(){
+  var f = filterById(S.card.filter);
+  var N = deckSize(), K = countMatching(buildDeck(S.card.jokers), f.test), n = S.card.n;
+  var dist = successDist(N, K, n, false);
+  var h = $('cardTheoryBody'); h.innerHTML = '';
+  var note = el('div','note');
+  note.innerHTML = '<p>The deck holds <b>' + K + '</b> ' + f.label.toLowerCase() + ' out of <b>' + N +
+    '</b> cards. Dealing ' + n + ' without replacement, the count follows a hypergeometric distribution with a mean of <b>' +
+    distMean(dist).toFixed(4) + '</b> per hand.</p>';
+  h.appendChild(note);
+  var labels = dist.map(function(_, k){ return k + ' of ' + n; });
+  var obs = dist.map(function(_, k){ return tallyGet(S.card.tally, String(k)); });
+  drawBars('cardTheoryBody', labels, obs, dist, tallyTotal(S.card.tally));
+}
+function cardRun(t){
+  var f = filterById(S.card.filter), full = buildDeck(S.card.jokers), i;
+  for(i = 0; i < t; i++){
+    var hand = drawItems(shuffle(full, rng), S.card.n, false, rng).drawn;
+    tallyAdd(S.card.tally, String(countMatching(hand, f.test)));
+    S.card.trials++;
+  }
+  cardTheory(); save();
+}
+
+/* ================= COINS ================= */
+function coinSetup(){
+  stepper('coinNstep', function(){ return S.coin.n; },
+    function(v){ S.coin.n = v; S.coin.tally = {}; coinSetup(); coinTheory(); save(); }, 1, 20, 'coin');
+  $('coinP').value = S.coin.p;
+}
+function coinToss(){
+  var r = tossCoins(S.coin.n, S.coin.p, rng);
+  var heads = r.filter(function(x){ return x === 'H'; }).length;
+  var st = $('coinStage'); st.innerHTML = ''; st.classList.remove('empty');
+  r.forEach(function(x){
+    var d = el('div','coin ' + x, x);
+    d.setAttribute('aria-label', x === 'H' ? 'heads' : 'tails');
+    st.appendChild(d);
+  });
+  tallyAdd(S.coin.tally, String(heads)); S.coin.trials++;
+  pushLog(S.coin.log, r.join(' ') + '   (' + heads + ' head' + (heads===1?'':'s') + ')');
+  drawLog('coinLog', S.coin.log);
+  $('coinSummary').innerHTML = '<b>' + heads + '</b> head' + (heads===1?'':'s') + ' and <b>' +
+    (S.coin.n - heads) + '</b> tail' + (S.coin.n-heads===1?'':'s') + '.';
+  coinTheory(); save();
+}
+function coinTheory(){
+  var n = S.coin.n, p = S.coin.p;
+  var dist = [], k;
+  for(k = 0; k <= n; k++) dist.push(binomPmf(n, p, k));
+  var h = $('coinTheoryBody'); h.innerHTML = '';
+  var note = el('div','note');
+  note.innerHTML = '<p>Tossing ' + n + ' coin' + (n===1?'':'s') + ' gives <b>' + Math.pow(2, n).toLocaleString() +
+    '</b> equally likely sequence' + (n===1?'':'s') + ' of heads and tails when the coin is fair. ' +
+    'The number of heads follows a binomial distribution, averaging <b>' + (n*p).toFixed(4) + '</b> per toss.</p>';
+  h.appendChild(note);
+  var labels = dist.map(function(_, k2){ return k2 + ' head' + (k2===1?'':'s'); });
+  var obs = dist.map(function(_, k2){ return tallyGet(S.coin.tally, String(k2)); });
+  drawBars('coinTheoryBody', labels, obs, dist, tallyTotal(S.coin.tally));
+}
+function coinRun(t){
+  var i;
+  for(i = 0; i < t; i++){
+    var r = tossCoins(S.coin.n, S.coin.p, rng);
+    tallyAdd(S.coin.tally, String(r.filter(function(x){ return x === 'H'; }).length));
+    S.coin.trials++;
+  }
+  coinTheory(); save();
+}
+
+/* ================= SPINNER ================= */
+function spinSetup(){
+  stepper('spinNstep', function(){ return S.spin.sectors.length; }, function(v){
+    var s = S.spin.sectors;
+    while(s.length > v) s.pop();
+    while(s.length < v) s.push({label:'Section ' + (s.length+1), weight:1});
+    S.spin.tally = {}; spinSetup(); drawWheel(null); spinTheory(); save();
+  }, 2, 10, 'section');
+  var h = $('spinRows'); h.innerHTML = '';
+  S.spin.sectors.forEach(function(sec, i){
+    var row = el('div','rowitem');
+    var sw = el('span','sw'); sw.style.background = PALETTE[i % PALETTE.length];
+    row.appendChild(sw);
+    var name = document.createElement('input');
+    name.type = 'text'; name.value = sec.label; name.maxLength = 18;
+    name.setAttribute('aria-label','name of section ' + (i+1));
+    name.oninput = function(){ sec.label = this.value; S.spin.tally = {}; drawWheelLabels(); spinTheory(); save(); };
+    row.appendChild(name);
+    var wl = el('label', null, 'weight');
+    wl.style.fontSize = '13px'; wl.style.color = 'var(--ink-soft)';
+    row.appendChild(wl);
+    var w = document.createElement('input');
+    w.type = 'number'; w.min = '1'; w.max = '20'; w.value = sec.weight; w.style.width = '68px';
+    w.setAttribute('aria-label','weight of section ' + (i+1));
+    w.oninput = function(){
+      sec.weight = clamp(int(this.value, 1), 1, 20);
+      S.spin.tally = {}; drawWheel(null); spinTheory(); save();
+    };
+    row.appendChild(w);
+    h.appendChild(row);
+  });
+}
+function drawWheel(landed){
+  var st = $('spinStage'); st.innerHTML = ''; st.classList.remove('empty');
+  var wrap = el('div','spinwrap');
+  var wheel = el('div','wheel');
+  var ang = sectorAngles(S.spin.sectors);
+  var cx = 110, cy = 110, r = 96;
+  var s = '<svg width="220" height="220" viewBox="0 0 220 220" role="img" aria-label="spinner">';
+  s += '<g class="rot" id="rotg" style="transform-origin:110px 110px;transform:rotate(' + (S.spin.rot||0) + 'deg)">';
+  S.spin.sectors.forEach(function(sec, i){
+    var a = ang[i];
+    if(a.sweep <= 0) return;
+    var col = PALETTE[i % PALETTE.length];
+    if(a.sweep >= 359.999){
+      s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + col + '" stroke="#FBFAF4" stroke-width="2"/>';
+    } else {
+      var p1 = polar(cx, cy, r, a.start), p2 = polar(cx, cy, r, a.end);
+      s += '<path d="M' + cx + ',' + cy + ' L' + p1.x + ',' + p1.y +
+           ' A' + r + ',' + r + ' 0 ' + (a.sweep > 180 ? 1 : 0) + ',1 ' + p2.x + ',' + p2.y + ' Z" fill="' + col +
+           '" stroke="#FBFAF4" stroke-width="2"/>';
+    }
+    var lp = polar(cx, cy, r*0.62, a.mid);
+    s += '<text x="' + lp.x + '" y="' + (lp.y+4) + '" text-anchor="middle" font-family="' +
+         'system-ui,sans-serif" font-size="12.5" font-weight="600" fill="#fff">' +
+         escapeXml(shortLab(sec.label)) + '</text>';
+  });
+  s += '</g><circle cx="' + cx + '" cy="' + cy + '" r="11" fill="#FBFAF4" stroke="#14213D" stroke-width="2.5"/></svg>';
+  wheel.innerHTML = s;
+  var ptr = el('div','pointer');
+  ptr.innerHTML = '<svg width="26" height="24" viewBox="0 0 26 24"><path d="M13,24 L2,2 L24,2 Z" fill="#14213D"/></svg>';
+  wheel.appendChild(ptr);
+  wrap.appendChild(wheel);
+
+  var list = el('div','sectorlist');
+  S.spin.sectors.forEach(function(sec, i){
+    var d = el('div');
+    var sw = el('span','sw'); sw.style.background = PALETTE[i % PALETTE.length];
+    d.appendChild(sw);
+    d.appendChild(document.createTextNode(sec.label + '  \u2014  ' + p4(sectorProb(i))));
+    if(landed === i){ d.style.fontWeight = '700'; d.style.color = PALETTE[i % PALETTE.length]; }
+    list.appendChild(d);
+  });
+  wrap.appendChild(list);
+  st.appendChild(wrap);
+}
+function drawWheelLabels(){ drawWheel(null); }
+function shortLab(x){ return x.length > 10 ? x.slice(0, 9) + '\u2026' : x; }
+function escapeXml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function polar(cx, cy, r, deg){
+  var t = (deg - 90) * Math.PI / 180;
+  return {x:+(cx + r*Math.cos(t)).toFixed(2), y:+(cy + r*Math.sin(t)).toFixed(2)};
+}
+function sectorProb(i){
+  var tot = 0, j;
+  for(j = 0; j < S.spin.sectors.length; j++) tot += S.spin.sectors[j].weight;
+  return tot > 0 ? S.spin.sectors[i].weight / tot : 0;
+}
+function doSpin(){
+  var i = spin(S.spin.sectors, rng);
+  var ang = sectorAngles(S.spin.sectors);
+  S.spin.rot = spinRotation(S.spin.rot || 0, ang[i].mid, 3);
+  drawWheel(i);
+  var g = document.getElementById('rotg');
+  if(g) g.style.transform = 'rotate(' + S.spin.rot + 'deg)';
+  var lab = S.spin.sectors[i].label;
+  tallyAdd(S.spin.tally, lab); S.spin.trials++;
+  pushLog(S.spin.log, lab);
+  drawLog('spinLog', S.spin.log);
+  $('spinSummary').innerHTML = 'Landed on <b>' + escapeXml(lab) + '</b>.';
+  spinTheory(); save();
+}
+function spinTheory(){
+  var h = $('spinTheoryBody'); h.innerHTML = '';
+  var tot = 0, i;
+  for(i = 0; i < S.spin.sectors.length; i++) tot += S.spin.sectors[i].weight;
+  var note = el('div','note');
+  note.innerHTML = '<p>The sample space is the ' + S.spin.sectors.length + ' section names. ' +
+    'With weights totalling ' + tot + ', each section takes up its own share of the circle, and that share is its probability.</p>';
+  h.appendChild(note);
+  var labels = S.spin.sectors.map(function(s){ return shortLab(s.label); });
+  var thy = S.spin.sectors.map(function(_, i2){ return sectorProb(i2); });
+  var obs = S.spin.sectors.map(function(s){ return tallyGet(S.spin.tally, s.label); });
+  drawBars('spinTheoryBody', labels, obs, thy, tallyTotal(S.spin.tally));
+}
+function spinRun(t){
+  var i;
+  for(i = 0; i < t; i++){
+    tallyAdd(S.spin.tally, S.spin.sectors[spin(S.spin.sectors, rng)].label);
+    S.spin.trials++;
+  }
+  spinTheory(); save();
+}
+
+/* ================= TICKETS ================= */
+function tixTotal(){
+  var t = S.tix.losers, i;
+  for(i = 0; i < S.tix.prizes.length; i++) t += S.tix.prizes[i].count;
+  return t;
+}
+function tixSetup(){
+  var h = $('tixRows'); h.innerHTML = '';
+  S.tix.prizes.forEach(function(pz, i){
+    var row = el('div','rowitem');
+    var sw = el('span','sw'); sw.style.background = PALETTE[i % PALETTE.length];
+    row.appendChild(sw);
+    var name = document.createElement('input');
+    name.type = 'text'; name.value = pz.name; name.maxLength = 24;
+    name.setAttribute('aria-label','name of prize ' + (i+1));
+    name.oninput = function(){ pz.name = this.value; S.tix.tally = {}; tixTheory(); save(); };
+    row.appendChild(name);
+    var cl = el('label', null, 'winning tickets');
+    cl.style.fontSize = '13px'; cl.style.color = 'var(--ink-soft)';
+    row.appendChild(cl);
+    var cnt = document.createElement('input');
+    cnt.type = 'number'; cnt.min = '0'; cnt.max = '100000'; cnt.value = pz.count; cnt.style.width = '90px';
+    cnt.setAttribute('aria-label','tickets that win prize ' + (i+1));
+    cnt.oninput = function(){
+      pz.count = clamp(int(this.value, 0), 0, 100000);
+      S.tix.tally = {}; tixCounts(); tixTheory(); save();
+    };
+    row.appendChild(cnt);
+    if(S.tix.prizes.length > 1){
+      var del = el('button','del','\u00D7');
+      del.type = 'button';
+      del.setAttribute('aria-label','remove prize ' + (i+1));
+      del.onclick = function(){
+        S.tix.prizes.splice(i, 1);
+        S.tix.filter = '0'; S.tix.tally = {};
+        tixSetup(); tixCounts(); tixTheory(); save();
+      };
+      row.appendChild(del);
+    }
+    h.appendChild(row);
+  });
+  $('tixLose').value = S.tix.losers;
+  $('tixReplace').checked = S.tix.replace;
+  stepper('tixNstep', function(){ return S.tix.n; }, function(v){
+    S.tix.n = v; S.tix.tally = {}; tixSetup(); tixTheory(); save();
+  }, 1, 50, 'ticket');
+  var f = $('tixFilter'); f.innerHTML = '';
+  S.tix.prizes.forEach(function(pz, i){
+    var o = document.createElement('option'); o.value = String(i); o.textContent = pz.name || ('Prize ' + (i+1));
+    f.appendChild(o);
+  });
+  f.value = S.tix.filter;
+  tixCounts();
+}
+function tixCounts(){
+  var tot = tixTotal();
+  $('tixTotal').textContent = tot + ' tickets in the drum altogether';
+  $('tixAdd').disabled = S.tix.prizes.length >= 6;
+}
+function tixDraw(){
+  var pool = buildTickets(S.tix.prizes, S.tix.losers);
+  if(!pool.length){ $('tixSummary').textContent = 'There are no tickets in the drum yet.'; return; }
+  var res = drawItems(pool, S.tix.n, S.tix.replace, rng);
+  var st = $('tixStage'); st.innerHTML = ''; st.classList.remove('empty');
+  res.drawn.forEach(function(t){
+    var d = el('div','ticket' + (t.win ? '' : ' lose'), t.prize);
+    if(t.win){
+      d.style.borderColor = PALETTE[t.idx % PALETTE.length];
+      d.style.color = PALETTE[t.idx % PALETTE.length];
+    }
+    st.appendChild(d);
+  });
+  var fi = int(S.tix.filter, 0);
+  var k = res.drawn.filter(function(t){ return t.idx === fi; }).length;
+  tallyAdd(S.tix.tally, String(k)); S.tix.trials++;
+  var wins = res.drawn.filter(function(t){ return t.win; }).length;
+  pushLog(S.tix.log, res.drawn.map(function(t){ return t.win ? t.prize : '\u2014'; }).join(' | '));
+  drawLog('tixLog', S.tix.log);
+  $('tixSummary').innerHTML = '<b>' + wins + '</b> of those ' + res.drawn.length +
+    ' ticket' + (res.drawn.length===1?'':'s') + ' won something.';
+  tixTheory(); save();
+}
+function tixTheory(){
+  var h = $('tixTheoryBody'); h.innerHTML = '';
+  var N = tixTotal(), fi = int(S.tix.filter, 0);
+  var pz = S.tix.prizes[fi] || {name:'', count:0};
+  var K = pz.count, n = Math.min(S.tix.n, S.tix.replace ? S.tix.n : N);
+
+  var tbl = el('table','ptable');
+  var thead = el('thead'), hr = el('tr');
+  ['Outcome on one ticket','Tickets','Probability'].forEach(function(x){ hr.appendChild(el('th',null,x)); });
+  thead.appendChild(hr); tbl.appendChild(thead);
+  var tb = el('tbody');
+  S.tix.prizes.forEach(function(p, i){
+    var tr = el('tr');
+    var td = el('td','lbl', p.name || ('Prize ' + (i+1)));
+    tr.appendChild(td);
+    tr.appendChild(el('td', null, String(p.count)));
+    tr.appendChild(el('td', null, N ? p4(p.count / N) : '—'));
+    tb.appendChild(tr);
+  });
+  var lr = el('tr');
+  lr.appendChild(el('td','lbl','No prize'));
+  lr.appendChild(el('td', null, String(S.tix.losers)));
+  lr.appendChild(el('td', null, N ? p4(S.tix.losers / N) : '—'));
+  tb.appendChild(lr);
+  tbl.appendChild(tb);
+  h.appendChild(tbl);
+
+  if(!N){ return; }
+  var dist = successDist(N, K, n, S.tix.replace);
+  var note = el('div','note');
+  note.innerHTML = '<p>The drum holds <b>' + K + '</b> ticket' + (K===1?'':'s') + ' for ' +
+    (pz.name || 'that prize') + ' out of <b>' + N + '</b>. Drawing ' + n +
+    (S.tix.replace ? ' with each ticket put back, the count is binomial'
+                   : ' without putting any back, the count is hypergeometric') +
+    ', averaging <b>' + distMean(dist).toFixed(4) + '</b> per draw.</p>';
+  h.appendChild(note);
+  var labels = dist.map(function(_, k){ return k + ' of ' + n; });
+  var obs = dist.map(function(_, k){ return tallyGet(S.tix.tally, String(k)); });
+  drawBars('tixTheoryBody', labels, obs, dist, tallyTotal(S.tix.tally));
+}
+function tixRun(t){
+  var pool = buildTickets(S.tix.prizes, S.tix.losers);
+  if(!pool.length) return;
+  var fi = int(S.tix.filter, 0), i;
+  for(i = 0; i < t; i++){
+    var d = drawItems(pool, S.tix.n, S.tix.replace, rng).drawn;
+    tallyAdd(S.tix.tally, String(d.filter(function(x){ return x.idx === fi; }).length));
+    S.tix.trials++;
+  }
+  tixTheory(); save();
+}
+
+/* ---------------- wiring ---------------- */
+function boot(){
+  load(); sanitize();
+  drawTabs(); setTab(S.tab);
+
+  cardSetup(); freshDeck(); cardTheory(); drawLog('cardLog', S.card.log);
+  coinSetup(); coinTheory(); drawLog('coinLog', S.coin.log);
+  spinSetup(); drawWheel(null); spinTheory(); drawLog('spinLog', S.spin.log);
+  tixSetup(); tixTheory(); drawLog('tixLog', S.tix.log);
+
+  $('cardDeal').onclick = cardDeal;
+  $('cardShuffle').onclick = function(){ freshDeck(); cardSetup(); };
+  $('cardClear').onclick = function(){ S.card.log = []; drawLog('cardLog', S.card.log); save(); };
+  $('cardReshuffle').onchange = function(){ S.card.reshuffle = this.checked; cardSetup(); save(); };
+  $('cardJokers').onchange = function(){
+    S.card.jokers = this.checked; S.card.tally = {};
+    S.card.n = clamp(S.card.n, 1, deckSize());
+    freshDeck(); cardSetup(); cardTheory(); save();
+  };
+  $('cardFilter').onchange = function(){ S.card.filter = this.value; S.card.tally = {}; cardTheory(); save(); };
+  $('cardRun100').onclick = function(){ cardRun(100); };
+  $('cardRun1000').onclick = function(){ cardRun(1000); };
+  $('cardResetTally').onclick = function(){ S.card.tally = {}; S.card.trials = 0; cardTheory(); save(); };
+
+  $('coinToss').onclick = coinToss;
+  $('coinClear').onclick = function(){ S.coin.log = []; drawLog('coinLog', S.coin.log); save(); };
+  $('coinP').onchange = function(){
+    S.coin.p = Math.min(1, Math.max(0, num(this.value, 0.5)));
+    this.value = S.coin.p; S.coin.tally = {}; coinTheory(); save();
+  };
+  $('coinRun100').onclick = function(){ coinRun(100); };
+  $('coinRun1000').onclick = function(){ coinRun(1000); };
+  $('coinResetTally').onclick = function(){ S.coin.tally = {}; S.coin.trials = 0; coinTheory(); save(); };
+
+  $('spinGo').onclick = doSpin;
+  $('spinEqual').onclick = function(){
+    S.spin.sectors.forEach(function(s){ s.weight = 1; });
+    S.spin.tally = {}; spinSetup(); drawWheel(null); spinTheory(); save();
+  };
+  $('spinClear').onclick = function(){ S.spin.log = []; drawLog('spinLog', S.spin.log); save(); };
+  $('spinRun100').onclick = function(){ spinRun(100); };
+  $('spinRun1000').onclick = function(){ spinRun(1000); };
+  $('spinResetTally').onclick = function(){ S.spin.tally = {}; S.spin.trials = 0; spinTheory(); save(); };
+
+  $('tixDraw').onclick = tixDraw;
+  $('tixAdd').onclick = function(){
+    if(S.tix.prizes.length >= 6) return;
+    S.tix.prizes.push({name:'Prize ' + (S.tix.prizes.length + 1), count:1});
+    S.tix.tally = {}; tixSetup(); tixTheory(); save();
+  };
+  $('tixLose').oninput = function(){
+    S.tix.losers = clamp(int(this.value, 0), 0, 100000);
+    S.tix.tally = {}; tixCounts(); tixTheory(); save();
+  };
+  $('tixReplace').onchange = function(){ S.tix.replace = this.checked; S.tix.tally = {}; tixTheory(); save(); };
+  $('tixFilter').onchange = function(){ S.tix.filter = this.value; S.tix.tally = {}; tixTheory(); save(); };
+  $('tixClear').onclick = function(){ S.tix.log = []; drawLog('tixLog', S.tix.log); save(); };
+  $('tixRun100').onclick = function(){ tixRun(100); };
+  $('tixRun1000').onclick = function(){ tixRun(1000); };
+  $('tixResetTally').onclick = function(){ S.tix.tally = {}; S.tix.trials = 0; tixTheory(); save(); };
+
+  $('notes').value = S.notes || '';
+  $('notes').oninput = function(){ S.notes = this.value; save(); };
+  $('printit').onclick = function(){ window.print(); };
+  $('wipe').onclick = function(){
+    if(confirm('Erase every set-up and note saved in this browser?')){
+      try{ localStorage.removeItem(KEY); }catch(e){}
+      location.reload();
+    }
+  };
+}
+boot();
+})();
+</script>
+</body>
+</html>
