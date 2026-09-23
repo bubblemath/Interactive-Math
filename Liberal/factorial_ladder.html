@@ -1,0 +1,815 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Cancel Ladder — never compute the top</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --ft:#4A4A8C;
+    --ft-bg:#EBEBF6;
+    --keep:#1B7A4B;
+    --keep-bg:#E7F4EC;
+    --gone:#A8A8B4;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--ft)}
+  :focus-visible{outline:3px solid var(--ft); outline-offset:2px; border-radius:3px}
+
+  .frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.15; margin:0 4px}
+  .frac .den{border-top:2px solid currentColor; padding-top:3px}
+  .frac .num{padding-bottom:1px}
+  .keep{color:var(--keep); font-weight:700}
+  .gone{color:var(--gone); text-decoration:line-through; text-decoration-thickness:1.5px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--ft)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:16ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:660px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.2; text-align:center}
+  .eq .res{color:var(--ft); font-weight:700}
+  .eq .bad{color:var(--wrong)}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+  .expand{font-family:var(--serif); font-size:clamp(13px,2.7vw,18px); white-space:nowrap}
+  table.ft{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:15px}
+  table.ft th,table.ft td{border:1px solid var(--rule); padding:4px 16px; text-align:right; white-space:nowrap}
+  table.ft th{background:var(--ft-bg); color:var(--ft); font-weight:700; font-size:13px; text-align:center}
+  table.ft td.lab{text-align:left; font-weight:700}
+  table.ft tr.hi td{background:var(--ft-bg); outline:2px solid var(--ft); outline-offset:-2px}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--ft); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--ft); background:var(--ft-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--ft)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .scene{max-width:54ch; margin:0 auto 14px; background:var(--ft-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(20px,5vw,32px); background:var(--ft-bg); border-radius:12px; padding:12px 30px; margin:0 auto 16px}
+  .work{max-width:640px; margin:0 auto 16px; font-family:var(--serif); font-size:clamp(13px,2.7vw,18px); overflow-x:auto; white-space:nowrap}
+  .tblwrap{margin:0 auto 14px; overflow-x:auto}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:19px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>n!</span> The Cancel Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 17 · factorial notation</p>
+    <h1>Never compute the top.</h1>
+    <p class="lede">A quotient of factorials always collapses. Write both out and the whole bottom row appears again inside the top, cancels away, and leaves a short run of the largest numbers — nothing else survives. That is why these can be done without a calculator, and why <b>100!</b> ÷ <b>99!</b> is a question you can answer in your head while 100! itself has 158 digits.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>9! ÷ 6! is not 3!.</b> Factorials do not subtract like exponents do. 3! is 6; the real answer is <b>504</b>. What cancels is the shared <i>tail</i> — the 6·5·4·3·2·1 sitting inside both — and what is left is the run from 9 down to 7, which is three factors but nothing like 3!. If the answer to a factorial quotient looks small, the cancelling went wrong.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 define n! and drill the small values. Rungs 3–5 rule out the subtraction shortcut, cancel the shared tail, and count how many factors survive. Rungs 6–8 evaluate quotients, handle a gap of one, and generalise to n!/(n−r)!. Rungs 9–10 diagnose bad cancelling and mix everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Count the survivors first</h3><p>Before multiplying anything, work out how many factors are left. That number alone rules out most wrong answers.</p></div>
+    </div>
+    <p class="note2"><b>A note on scale.</b> Every quotient here is computed as the short run that survives cancelling, never by working out the factorials themselves — which is both the method being taught and the only way a machine can handle 100!/99! at all.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>The shortcut is the point</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Factorials outrun everything</h3><p>20! already exceeds two quintillion. Cancelling first is not a convenience, it is the only route.</p></div>
+      <div class="step"><span class="n">02</span><h3>The survivors are a falling run</h3><p>What is left always starts at the top number and steps down. Knowing how many steps is half the answer.</p></div>
+      <div class="step"><span class="n">03</span><h3>This is the permutation formula</h3><p>nPr is n!/(n−r)!, which is exactly this cancelling with r factors surviving. Get this and the next ladder is arithmetic.</p></div>
+    </div>
+    <p class="closing">The shared tail cancels. What is left runs down from the top, one factor for each step of the gap.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Cancel Ladder · n! = n(n−1)(n−2)···(3)(2)(1) · n!/m! leaves the run from n down to m+1 · never 9!/6! = 3!</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+
+/* ================= factorials, never computed whole ================= */
+/* n! itself, for the small values the worksheet asks for */
+function fact(n){ let p=1; for(let k=2;k<=n;k++) p*=k; return p; }
+/* n!/m! as the short run that survives cancelling: (m+1)(m+2)...(n).
+   This is the method being taught, and the only way 100!/99! can be
+   evaluated at all - 100! has 158 digits and overflows any ordinary number. */
+function quot(n,m){ let p=1; for(let k=m+1;k<=n;k++) p*=k; return p; }
+/* the surviving factors themselves, largest first */
+function survivors(n,m){ const a=[]; for(let k=n;k>m;k--) a.push(k); return a; }
+/* how many of them there are */
+function gap(n,m){ return n-m; }
+
+/* ================= rendering ================= */
+function fr(a,b){ return '<span class="frac"><span class="num">'+a+'</span><span class="den">'+b+"</span></span>"; }
+/* n! written out in full, with the part that cancels struck through */
+function expandHTML(n,m,o){
+  o=o||{};
+  const parts=[];
+  for(let k=n;k>=1;k--){
+    const cancels=(k<=m);
+    parts.push('<span class="'+(cancels?"gone":(o.plain?"":"keep"))+'">'+k+"</span>");
+  }
+  return parts.join(" \u00b7 ");
+}
+function denomHTML(m,o){
+  o=o||{};
+  const parts=[];
+  for(let k=m;k>=1;k--) parts.push('<span class="'+(o.plain?"":"gone")+'">'+k+"</span>");
+  return parts.length?parts.join(" \u00b7 "):"1";
+}
+/* m! abbreviated the same way, so the leading number is always the real one */
+function denomShort(m){
+  if(m<=6) return denomHTML(m);
+  return '<span class="gone">'+m+" \u00b7 "+(m-1)+" \u00b7 \u00b7 \u00b7 2 \u00b7 1</span>";
+}
+/* for large gaps, an abbreviated expansion so the line still fits */
+function expandShort(n,m){
+  if(n-m<=4&&m<=6) return null;
+  const top=survivors(n,m).map(function(k){return '<span class="keep">'+k+"</span>";}).join(" \u00b7 ");
+  return top+" \u00b7 <span class=\"gone\">"+m+" \u00b7 "+(m-1)+" \u00b7 \u00b7 \u00b7 2 \u00b7 1</span>";
+}
+function runHTML(n,m){ return survivors(n,m).join(" \u00d7 "); }
+function factsHTML(rows){
+  return '<div class="scene">'+rows+"</div>";
+}
+
+/* ================= banks ================= */
+/* pairs kept small enough that the surviving run is exact in ordinary
+   arithmetic, and short enough to be worth doing by hand */
+function makePair(o){
+  o=o||{};
+  const g=o.g||pick([1,2,2,3,3,4,5]);
+  const lo=o.nLo||Math.max(g+1,6), hi=o.nHi||20;
+  let n,tries=0;
+  do{ n=ri(lo,hi); tries++; }while(n-g===g&&tries<60);   /* keep m different from g */
+  return {n:n, m:n-g, g:g, val:quot(n,n-g), run:survivors(n,n-g)};
+}
+const SMALL=[1,2,3,4,5,6,7,8];
+
+/* ================= options ================= */
+function numOpts(ans,cands,note){
+  const seen={}; seen[grp(ans)]=1;
+  const opts=[{label:grp(ans), correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.v===null||!Number.isFinite(x.v)||x.v<=0)return;
+    const L=grp(x.v); if(seen[L])return; seen[L]=1;
+    opts.push({label:L, note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* the wrong values people actually produce */
+function quotPool(p){
+  const n=p.n, m=p.m, g=p.g;
+  return [
+    {v:fact(g), w:"That is "+g+"!, from subtracting the factorials as if they were exponents. Factorials do not work that way \u2014 what cancels is the shared tail, not the numbers themselves."},
+    {v:g, w:"That is just "+n+" \u2212 "+m+", the size of the gap. It tells you how many factors survive, not what they multiply to."},
+    {v:quot(n,m-1), w:"That keeps one factor too many \u2014 it runs down to "+m+" instead of stopping at "+(m+1)+"."},
+    {v:quot(n-1,m), w:"That drops the largest factor. The run starts at "+n+"."},
+    {v:n*m, w:"That multiplies the two numbers in the question, which is not what the cancelling leaves."},
+    {v:n+m, w:"That adds them."}
+  ];
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"What n! means",
+ sub:"Every whole number from n down to 1, multiplied together.",
+ gen:function(){
+   const forms=[
+     {q:"<b>What does n! mean?</b>",
+      ans:"The product of every whole number from n down to 1",
+      bad:[["n multiplied by itself n times","That is n<sup>n</sup>, which grows even faster."],
+        ["The sum of every whole number from n down to 1","Factorial multiplies; adding gives a much smaller number."],
+        ["n multiplied by the next number up","Factorials count downwards, and they do not stop after two."]],
+      note:"So 5! is 5 \u00b7 4 \u00b7 3 \u00b7 2 \u00b7 1 = "+grp(fact(5))+"."},
+     {q:"Your worksheet computes 8 \u00b7 7 \u00b7 6 \u00b7 5 \u00b7 4 \u00b7 3 \u00b7 2 \u00b7 1 for eight books on a shelf. <b>How is that written?</b>",
+      ans:"8!",
+      bad:[["8<sup>8</sup>","That is 8 multiplied by itself eight times, a far larger number."],
+        ["8 \u00d7 8","That is 64."],
+        ["!8","The mark goes after the number, not before it."]],
+      note:"Pronounced \u201ceight factorial\u201d, and it comes to "+grp(fact(8))+"."},
+     {q:"<b>Why is n! the number of ways to arrange n items in a row?</b>",
+      ans:"There are n choices for the first place, n \u2212 1 left for the second, and so on down to 1",
+      bad:[["Because each item can go in any of the n places independently","That would be n<sup>n</sup>; an item already placed cannot be used again."],
+        ["Because the items are identical","If they were identical there would be only one arrangement."],
+        ["Because order does not matter","Order is exactly what n! counts."]],
+      note:"It is the counting principle with one fewer choice at every step."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"The small ones",
+ sub:"Worth knowing by heart. They come up constantly.",
+ gen:function(){
+   const n=pick(SMALL);
+   const cands=SMALL.filter(function(k){return k!==n;})
+     .map(function(k){return {v:fact(k), w:"That is "+k+"!."};});
+   cands.push({v:n*n, w:"That is "+n+" squared, not "+n+" factorial."});
+   cands.push({v:n*(n-1), w:"That stops after two factors. The product runs all the way down to 1."});
+   return {q:"<b>What is "+n+"! ?</b>", big:n+"!",
+     opts:shuffle(numOpts(fact(n),cands,
+       n+"! = "+survivors(n,0).join(" \u00b7 ")+" = "+grp(fact(n))+"."))};
+ }
+},
+{
+ title:"Not a subtraction",
+ sub:"9!/6! is not 3!. Factorials are not exponents.",
+ gen:function(){
+   const p=makePair({g:pick([2,3,4])});
+   const forms=["compare","why","which"];
+   const f=pick(forms);
+   if(f==="compare"){
+     return {q:"<b>Is "+p.n+"!/"+p.m+"! equal to "+p.g+"! ?</b>",
+       big:fr(p.n+"!",p.m+"!"),
+       opts:shuffle([
+         {label:"No \u2014 it is "+grp(p.val)+", not "+grp(fact(p.g)), correct:true,
+          note:p.g+"! is only "+grp(fact(p.g))+". Cancelling the shared tail leaves "+runHTML(p.n,p.m)+" = "+grp(p.val)+"."},
+         {label:"Yes \u2014 the factorials subtract",
+          note:"Exponents subtract when you divide. Factorials do not: nothing in the definition allows it."},
+         {label:"No \u2014 it is "+grp(p.g),
+          note:"That is the gap between the two numbers, which counts the surviving factors rather than multiplying them."},
+         {label:"Only when the gap is small",
+          note:"It is never equal, for any gap. "+p.g+"! is a product of small numbers; the quotient is a product of large ones."}
+       ]), one:true};
+   }
+   if(f==="why"){
+     return {q:"<b>Why does "+p.n+"!/"+p.m+"! not equal "+p.g+"! ?</b>",
+       opts:shuffle([
+         {label:"What cancels is the shared tail, leaving the largest factors behind", correct:true,
+          note:"The bottom row appears inside the top row and cancels. What is left is "+runHTML(p.n,p.m)+" = "+grp(p.val)+", which starts at "+p.n+", not at "+p.g+"."},
+         {label:"Because the subtraction rule only works for exponents of the same base",
+          note:"There is no subtraction rule for factorials at all, with any base."},
+         {label:"Because "+p.n+" and "+p.m+" are not consecutive",
+          note:"It fails for consecutive numbers too \u2014 100!/99! is 100, not 1!."},
+         {label:"Because factorials are always even",
+          note:"1! and 3! are odd, and it would make no difference here anyway."}
+       ]), one:true};
+   }
+   return {q:"<b>Which of these is "+p.n+"!/"+p.m+"! ?</b>", big:fr(p.n+"!",p.m+"!"),
+     opts:shuffle([
+       {label:runHTML(p.n,p.m), correct:true,
+        note:"The run from "+p.n+" down to "+(p.m+1)+", which is "+p.g+" factor"+(p.g===1?"":"s")+", coming to "+grp(p.val)+"."},
+       {label:survivors(p.g,0).join(" \u00d7 "),
+        note:"That is "+p.g+"!, which comes from subtracting. It gives "+grp(fact(p.g))+"."},
+       {label:survivors(p.n,p.m-1).join(" \u00d7 "),
+        note:"That keeps one factor too many \u2014 it goes down to "+p.m+", which should have cancelled."},
+       {label:survivors(p.n-1,p.m).join(" \u00d7 "),
+        note:"That drops the "+p.n+". The run starts at the top number."}
+     ]), two:true};
+ }
+},
+{
+ title:"Cancel the tail",
+ sub:"Write both out and the bottom row appears inside the top.",
+ gen:function(){
+   const p=makePair({g:pick([2,3]), nLo:6, nHi:9});
+   const forms=["what","left"];
+   if(pick(forms)==="what"){
+     return {q:"<b>What cancels between the top and the bottom?</b>",
+       work:fr(expandHTML(p.n,p.m,{plain:true}),denomHTML(p.m,{plain:true})),
+       opts:shuffle([
+         {label:"Everything from "+p.m+" down to 1", correct:true,
+          note:"The whole of "+p.m+"! sits inside "+p.n+"!, so it divides out completely, leaving "+runHTML(p.n,p.m)+"."},
+         {label:"Everything from "+p.n+" down to "+(p.m+1),
+          note:"Those are the factors that <i>survive</i> \u2014 they appear on top only."},
+         {label:"Only the 1",
+          note:"Every number from "+p.m+" downwards appears in both rows, not just the 1."},
+         {label:"Nothing \u2014 the rows have no factors in common",
+          note:"They share a great many: the entire bottom row is inside the top."}
+       ]), two:true};
+   }
+   return {q:"After cancelling, <b>what is left?</b>",
+     work:fr(expandHTML(p.n,p.m),denomHTML(p.m)),
+     opts:shuffle([
+       {label:runHTML(p.n,p.m), correct:true,
+        note:"Only the factors above "+p.m+" survive: "+runHTML(p.n,p.m)+" = "+grp(p.val)+"."},
+       {label:survivors(p.m,0).join(" \u00d7 "),
+        note:"That is what cancelled, not what remains."},
+       {label:survivors(p.g,0).join(" \u00d7 "),
+        note:"That is "+p.g+"!, from subtracting the numbers rather than cancelling the tail."},
+       {label:survivors(p.n,p.m-1).join(" \u00d7 "),
+        note:"That keeps the "+p.m+", which cancels."}
+     ]), two:true};
+ }
+},
+{
+ title:"How many survive",
+ sub:"Count the factors before multiplying any of them.",
+ gen:function(){
+   const p=makePair();
+   const cands=[
+     {v:p.n, w:"That is the top number, not the count of surviving factors."},
+     {v:p.m, w:"That is the bottom number."},
+     {v:p.g+1, w:"One too many \u2014 the run stops at "+(p.m+1)+", not at "+p.m+"."},
+     {v:Math.max(1,p.g-1), w:"One too few \u2014 the run starts at "+p.n+"."},
+     {v:p.n+p.m, w:"That adds the two numbers."}
+   ];
+   return {q:"<b>How many factors survive in "+p.n+"!/"+p.m+"! ?</b>", big:fr(p.n+"!",p.m+"!"),
+     opts:shuffle(numOpts(p.g,cands,
+       "The run goes from "+p.n+" down to "+(p.m+1)+", which is "+p.n+" \u2212 "+p.m+" = "+p.g+" factor"+(p.g===1?"":"s")+": "+runHTML(p.n,p.m)+"."))};
+ }
+},
+{
+ title:"Evaluate the quotient",
+ sub:"Cancel first, then multiply what is left.",
+ gen:function(){
+   const p=makePair();
+   const sh=expandShort(p.n,p.m);
+   return {q:"<b>Evaluate without a factorial button.</b>", big:fr(p.n+"!",p.m+"!"),
+     work:sh?fr(sh,denomShort(p.m)):fr(expandHTML(p.n,p.m),denomHTML(p.m)),
+     opts:shuffle(numOpts(p.val,quotPool(p),
+       runHTML(p.n,p.m)+" = "+grp(p.val)+"."))};
+ }
+},
+{
+ title:"When the gap is one",
+ sub:"100!/99! looks impossible and takes no work at all.",
+ gen:function(){
+   const forms=["big","rule","which"];
+   const f=pick(forms);
+   if(f==="big"){
+     const n=pick([100,50,75,60,99,20,40]);
+     return {q:"<b>Evaluate "+n+"!/"+(n-1)+"! .</b>", big:fr(n+"!",(n-1)+"!"),
+       opts:shuffle(numOpts(n,
+         [{v:1, w:"That would be the answer if the two factorials were equal. They differ by one factor \u2014 the "+n+" itself."},
+          {v:n-1, w:"That is the bottom number. The surviving factor is the top one."},
+          {v:n*(n-1), w:"That keeps two factors. Only one survives when the gap is one."},
+          {v:fact(1), w:"That is 1!, from subtracting the numbers."},
+          {v:2*n, w:"Check the cancelling again."}],
+         n+"! is "+n+" \u00b7 "+(n-1)+"!, so dividing by "+(n-1)+"! leaves just "+n+". No large numbers need computing at all."))};
+   }
+   if(f==="rule"){
+     return {q:"<b>What is n!/(n \u2212 1)! in general?</b>",
+       opts:shuffle([
+         {label:"n", correct:true,
+          note:"n! is n multiplied by (n \u2212 1)!, so dividing by (n \u2212 1)! leaves n on its own."},
+         {label:"1", note:"That would need the two factorials to be equal."},
+         {label:"n \u2212 1", note:"The surviving factor is the larger number, not the smaller."},
+         {label:"1!", note:"Subtracting the numbers gives 1! = 1, which is the error this ladder is about."}
+       ]), two:true};
+   }
+   const n=ri(12,60);
+   return {q:"<b>Why can "+n+"!/"+(n-1)+"! be done without a calculator?</b>",
+     opts:shuffle([
+       {label:"Everything below "+n+" cancels, leaving a single factor", correct:true,
+        note:n+"! = "+n+" \u00b7 "+(n-1)+"!, so the answer is "+n+". Neither factorial is ever worked out."},
+       {label:"Because "+n+"! is small enough to compute",
+        note:n+"! is astronomically large. The point is that it never has to be computed."},
+       {label:"Because the two factorials are nearly equal",
+        note:"They differ by a factor of "+n+", which is not nearly equal."},
+       {label:"Because factorials of consecutive numbers are always 1 apart",
+        note:"They are a factor of "+n+" apart, not 1."}
+     ]), one:true};
+ }
+},
+{
+ title:"The general form",
+ sub:"n!/(n − r)! leaves r factors, running down from n.",
+ gen:function(){
+   const forms=["count","form","apply"];
+   const f=pick(forms);
+   if(f==="count"){
+     const r=ri(2,5);
+     return {q:"<b>How many factors survive in n!/(n \u2212 "+r+")! ?</b>",
+       opts:shuffle([
+         {label:String(r), correct:true,
+          note:"The gap between n and n \u2212 "+r+" is "+r+", so "+r+" factors survive: n, n \u2212 1, and so on for "+r+" terms."},
+         {label:"n \u2212 "+r, note:"That is the bottom number, not the number of survivors."},
+         {label:"n", note:"That would be the whole of n!, with nothing cancelling."},
+         {label:String(r+1), note:"One too many \u2014 the run stops at n \u2212 "+r+" + 1."}
+       ]), two:true};
+   }
+   if(f==="form"){
+     const r=ri(2,4);
+     return {q:"<b>What does n!/(n \u2212 "+r+")! come to?</b>",
+       opts:shuffle([
+         {label:"n(n \u2212 1)"+(r>2?"(n \u2212 2)":"")+(r>3?"(n \u2212 3)":""), correct:true,
+          note:r+" factors, starting at n and stepping down. The last one is n \u2212 "+(r-1)+"."},
+         {label:r+"!", note:"That is the subtraction error. It ignores which numbers are actually cancelling."},
+         {label:"n \u2212 "+r, note:"That is the bottom number of the original quotient."},
+         {label:"n(n \u2212 1)"+(r>2?"(n \u2212 2)":"")+(r>3?"(n \u2212 3)":"")+"(n \u2212 "+r+")",
+          note:"That keeps one factor too many \u2014 the n \u2212 "+r+" cancels."}
+       ]), two:true};
+   }
+   const p=makePair();
+   return {q:"Writing "+p.n+"!/"+p.m+"! as n!/(n \u2212 r)!, <b>what are n and r?</b>",
+     big:fr(p.n+"!",p.m+"!"),
+     opts:shuffle([
+       {label:"n = "+p.n+", r = "+p.g, correct:true,
+        note:"n is the top number and r is the gap, so n \u2212 r = "+p.n+" \u2212 "+p.g+" = "+p.m+" matches the bottom."},
+       {label:"n = "+p.n+", r = "+p.m,
+        note:"That would make n \u2212 r = "+(p.n-p.m)+", which is not the bottom number."},
+       {label:"n = "+p.m+", r = "+p.g,
+        note:"n is the larger of the two \u2014 the one on top."},
+       {label:"n = "+p.g+", r = "+p.n,
+        note:"Those are the gap and the top number, in the wrong roles."}
+     ]), two:true};
+ }
+},
+{
+ title:"Spot the wrong cancelling",
+ sub:"Someone simplifies. Say what went wrong.",
+ gen:function(){
+   const p=makePair({g:pick([2,3,4])});
+   const kinds=["ok","subtract","onemore","oneless"];
+   const k=pick(kinds);
+   const shown={
+     ok:runHTML(p.n,p.m),
+     subtract:survivors(p.g,0).join(" \u00d7 "),
+     onemore:survivors(p.n,p.m-1).join(" \u00d7 "),
+     oneless:survivors(p.n-1,p.m).join(" \u00d7 ")
+   }[k];
+   const L={
+     ok:"It is correct",
+     subtract:"The numbers were subtracted instead of cancelling",
+     onemore:"One factor too many was kept",
+     oneless:"The largest factor was dropped"
+   };
+   const notes={
+     ok:"The run from "+p.n+" down to "+(p.m+1)+", which is what survives after "+p.m+"! cancels.",
+     subtract:"That is "+p.g+"! = "+grp(fact(p.g))+", from treating factorials like exponents. The answer is "+runHTML(p.n,p.m)+" = "+grp(p.val)+".",
+     onemore:"The "+p.m+" belongs to the bottom row and cancels. The run should stop at "+(p.m+1)+", giving "+grp(p.val)+".",
+     oneless:"The run starts at the top number, "+p.n+". As written it gives "+grp(quot(p.n-1,p.m))+" instead of "+grp(p.val)+"."
+   };
+   const wrongNotes={
+     ok:"Check which factors should cancel \u2014 something does not match.",
+     subtract:"These are the actual surviving factors, not a factorial of the difference.",
+     onemore:"The run stops in the right place here.",
+     oneless:"The largest factor is present here."
+   };
+   const opts=kinds.map(function(x){
+     return {label:L[x], correct:x===k, note:x===k?notes[x]:wrongNotes[x]};
+   });
+   return {q:"Is this simplification of "+p.n+"!/"+p.m+"! correct?",
+     big:shown, opts:shuffle(opts), one:true};
+ }
+},
+{
+ title:"Any factorial, any quotient",
+ sub:"Values, counts and quotients together.",
+ gen:function(){
+   const t=pick(["quot","quot","small","count","gapone"]);
+   if(t==="small"){
+     const n=pick(SMALL);
+     const cands=SMALL.filter(function(k){return k!==n;})
+       .map(function(k){return {v:fact(k), w:"That is "+k+"!."};});
+     cands.push({v:n*n, w:"That is "+n+" squared."});
+     return {q:"<b>What is "+n+"! ?</b>", big:n+"!",
+       opts:shuffle(numOpts(fact(n),cands,
+         survivors(n,0).join(" \u00b7 ")+" = "+grp(fact(n))+"."))};
+   }
+   if(t==="count"){
+     const p=makePair();
+     return {q:"<b>How many factors survive in "+p.n+"!/"+p.m+"! ?</b>", big:fr(p.n+"!",p.m+"!"),
+       opts:shuffle(numOpts(p.g,
+         [{v:p.n, w:"That is the top number."},{v:p.m, w:"That is the bottom number."},
+          {v:p.g+1, w:"One too many."},{v:Math.max(1,p.g-1), w:"One too few."},
+          {v:p.n+p.m, w:"That adds them."}],
+         p.n+" \u2212 "+p.m+" = "+p.g+" factor"+(p.g===1?"":"s")+"."))};
+   }
+   if(t==="gapone"){
+     const n=pick([100,80,50,45,30,25]);
+     return {q:"<b>Evaluate "+n+"!/"+(n-1)+"! .</b>", big:fr(n+"!",(n-1)+"!"),
+       opts:shuffle(numOpts(n,
+         [{v:1, w:"That would need the two factorials to be equal."},
+          {v:n-1, w:"The surviving factor is the top number."},
+          {v:n*(n-1), w:"Only one factor survives when the gap is one."},
+          {v:2*n, w:"Check the cancelling again."}],
+         n+"! = "+n+" \u00b7 "+(n-1)+"!, so the answer is simply "+n+"."))};
+   }
+   const p=makePair();
+   return {q:"<b>Evaluate without a factorial button.</b>", big:fr(p.n+"!",p.m+"!"),
+     opts:shuffle(numOpts(p.val,quotPool(p),
+       runHTML(p.n,p.m)+" = "+grp(p.val)+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {kind:"books", lbl:"eight books"},
+  {kind:"table", lbl:"1! through 8!"},
+  {kind:"nine",  lbl:"9!/6!"},
+  {kind:"trap",  lbl:"why not 3!"},
+  {kind:"sixteen", lbl:"16!/11!"},
+  {kind:"hundred", lbl:"100!/99!"}
+];
+/* every note is built from the same figures its panel draws */
+const HNOTES={
+  books:function(){ return "Your worksheet's opening arrangement. Eight choices for the first place, seven left for the second, and so on down to one \u2014 "
+    +"the counting principle with one fewer option at every step. The product is "+grp(fact(8))+", and 8! is the shorthand for it."; },
+  table:function(){ return "Worth knowing by heart. Notice how fast they climb: 6! is already "+grp(fact(6))+", and 8! passes forty thousand. "
+    +"Two steps further and 10! exceeds three million."; },
+  nine:function(){ return "Your worksheet's first quotient, written out in full. The whole of 6! reappears inside 9! and divides away, "
+    +"leaving the run from 9 down to 7: "+grp(quot(9,6))+". Nothing above 9 and nothing below 7 is involved."; },
+  trap:function(){ return "The error worth naming. Exponents subtract when you divide, and factorials do not \u2014 3! is "+grp(fact(3))
+    +", while the real answer is "+grp(quot(9,6))+". The 3 tells you how many factors survive, not what they multiply to."; },
+  sixteen:function(){ return "Your worksheet's second quotient. Five factors survive, from 16 down to 12, giving "+grp(quot(16,11))
+    +". Working out 16! first would mean handling a thirteen-digit number to reach a six-digit answer."; },
+  hundred:function(){ return "Your worksheet's third, and the one that settles the argument. 100! has 158 digits and no calculator will display it \u2014 "
+    +"yet 100! is simply 100 \u00b7 99!, so dividing by 99! leaves "+grp(100)+". Cancelling is not the quick way here; it is the only way."; }
+};
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="books"){
+    body='<div class="eq">'
+      +"8 \u00b7 7 \u00b7 6 \u00b7 5 \u00b7 4 \u00b7 3 \u00b7 2 \u00b7 1"
+      +'<span class="lbl">choices for the 1st place, then the 2nd, and so on</span>'
+      +"= <span class=\"res\">8! = "+grp(fact(8))+"</span>"
+      +'<span class="lbl">pronounced \u201ceight factorial\u201d</span></div>';
+  }else if(h.kind==="table"){
+    let rows="";
+    for(let k=1;k<=8;k++){
+      rows+='<tr'+(k===6?' class="hi"':"")+'><td class="lab">'+k+"!</td><td>"
+        +survivors(k,0).join(" \u00b7 ")+"</td><td>"+grp(fact(k))+"</td></tr>";
+    }
+    body='<table class="ft"><thead><tr><th></th><th>written out</th><th>value</th></tr></thead><tbody>'+rows+"</tbody></table>";
+  }else if(h.kind==="nine"){
+    body='<div class="eq">'+fr('<span class="expand">'+expandHTML(9,6)+"</span>",'<span class="expand">'+denomHTML(6)+"</span>")
+      +'<span class="lbl">the whole of 6! sits inside 9! and cancels</span>'
+      +"= 9 \u00d7 8 \u00d7 7 = <span class=\"res\">"+grp(quot(9,6))+"</span></div>";
+  }else if(h.kind==="trap"){
+    body='<div class="eq">'
+      +fr("9!","6!")+" = 9 \u00d7 8 \u00d7 7 = <span class=\"res\">"+grp(quot(9,6))+"</span>"
+      +'<span class="lbl">cancel the shared tail</span>'
+      +'<span class="bad">'+fr("9!","6!")+" = 3! = "+grp(fact(3))+"</span>"
+      +'<span class="lbl">subtracting, as if factorials were exponents</span>'
+      +'<span class="lbl" style="margin-top:12px">the 3 is how many factors survive, not the answer</span></div>';
+  }else if(h.kind==="sixteen"){
+    body='<div class="eq">'+fr('<span class="expand">'+expandShort(16,11)+"</span>",'<span class="expand">'+denomHTML(11)+"</span>")
+      +'<span class="lbl">five factors survive, from 16 down to 12</span>'
+      +"= 16 \u00d7 15 \u00d7 14 \u00d7 13 \u00d7 12 = <span class=\"res\">"+grp(quot(16,11))+"</span></div>";
+  }else{
+    body='<div class="eq">'
+      +fr("100!","99!")+" = "+fr('<span class="expand">100 \u00b7 <span class="gone">99 \u00b7 98 \u00b7 \u00b7 \u00b7 2 \u00b7 1</span></span>','<span class="expand"><span class="gone">99 \u00b7 98 \u00b7 \u00b7 \u00b7 2 \u00b7 1</span></span>')
+      +" = <span class=\"res\">100</span>"
+      +'<span class="lbl">100! is just 100 \u00b7 99!</span>'
+      +'<span class="lbl" style="margin-top:12px">100! itself has 158 digits \u2014 and never needs to be written down</span></div>';
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.work?'<div class="work">'+q.work+"</div>":"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
