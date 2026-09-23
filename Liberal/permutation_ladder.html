@@ -1,0 +1,847 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Order Ladder — order matters, and you stop after r</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --pm:#7A2E2E;
+    --pm-bg:#F7E9E9;
+    --keep:#1B7A4B;
+    --gone:#A8A8B4;
+    --g1:#B8860B; --g2:#8A8A96; --g3:#A0622D;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--pm)}
+  :focus-visible{outline:3px solid var(--pm); outline-offset:2px; border-radius:3px}
+
+  .frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.15; margin:0 4px}
+  .frac .den{border-top:2px solid currentColor; padding-top:3px}
+  .keep{color:var(--keep); font-weight:700}
+  .gone{color:var(--gone); text-decoration:line-through; text-decoration-thickness:1.5px}
+  .npr{font-family:var(--serif); white-space:nowrap}
+  .npr sub{font-size:.66em; vertical-align:sub; line-height:0}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--pm)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:17ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:660px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.2; text-align:center}
+  .eq .res{color:var(--pm); font-weight:700}
+  .eq .bad{color:var(--wrong)}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+  .expand{font-family:var(--serif); font-size:clamp(12.5px,2.6vw,17px); white-space:nowrap}
+  .podium{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:0 auto 6px}
+  .place{text-align:center}
+  .place .medal{width:clamp(50px,12vw,74px); height:clamp(50px,12vw,74px); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-family:var(--serif);
+    font-size:clamp(18px,4.2vw,26px); font-weight:700; color:#fff}
+  .place .cap{font-size:12px; color:var(--muted); margin-top:5px}
+  .g1{background:var(--g1)} .g2{background:var(--g2)} .g3{background:var(--g3)}
+  .orders{max-width:440px; margin:0 auto; font-family:var(--serif); font-size:clamp(14px,2.9vw,17px)}
+  .orders div{display:flex; justify-content:space-between; padding:4px 14px; border-radius:6px; margin-bottom:3px; background:#EDF0F3}
+  .orders div span:last-child{color:var(--muted); font-size:.88em}
+  table.pt{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:14.5px}
+  table.pt th,table.pt td{border:1px solid var(--rule); padding:5px 14px; text-align:right; white-space:nowrap}
+  table.pt th{background:var(--pm-bg); color:var(--pm); font-weight:700; font-size:13px; text-align:center}
+  table.pt td.lab{text-align:left}
+  table.pt tr.hi td{background:var(--pm-bg); outline:2px solid var(--pm); outline-offset:-2px}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--pm); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--pm); background:var(--pm-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--pm)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .scene{max-width:54ch; margin:0 auto 14px; background:var(--pm-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:40ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(19px,4.6vw,30px); background:var(--pm-bg); border-radius:12px; padding:11px 28px; margin:0 auto 16px}
+  .work{max-width:640px; margin:0 auto 16px; font-family:var(--serif); font-size:clamp(13px,2.7vw,18px); overflow-x:auto; white-space:nowrap}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:19px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span class="npr"><sub>n</sub>P<sub>r</sub></span> The Order Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 17 · permutations</p>
+    <h1>Order matters, and you stop after r.</h1>
+    <p class="lede">A permutation is an ordered arrangement where nothing is used twice. Count it exactly as the counting principle says — n choices for the first place, one fewer for the next — but <b>stop once r places are filled</b>. Three medals means three factors, not eight. That single habit is most of this topic.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Order mattering is what makes it a permutation.</b> Gold to Amara and silver to Ben is a different result from gold to Ben and silver to Amara — the same two people, counted twice, because they finished differently. If swapping two of the chosen items gives a genuinely different outcome, you are counting permutations. If it gives the same outcome, you are not, and this formula is the wrong tool.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 define a permutation and pull n and r out of a sentence. Rungs 3–5 build nPr as a falling product, count the factors, and connect it to the factorial formula. Rungs 6–7 arrange everything rather than some. Rungs 8–10 test whether order matters at all, then compute and mix.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Count the factors first</h3><p>r places means r factors. Write them out before multiplying and the commonest error disappears.</p></div>
+    </div>
+    <p class="note2"><b>A note on scope.</b> Every problem here has r strictly smaller than n, or asks for a full arrangement written as n! directly. Nothing relies on 0!.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Two questions to ask, every time</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Can anything repeat?</h3><p>If it can, each slot keeps all n choices and the count is n<sup>r</sup>. If not, the choices fall away one at a time.</p></div>
+      <div class="step"><span class="n">02</span><h3>Does the order matter?</h3><p>Medals, rankings and offices care about order. A committee does not, and needs a different count.</p></div>
+      <div class="step"><span class="n">03</span><h3>The formula is just cancelling</h3><p>n!/(n − r)! is the previous ladder's quotient, and it leaves exactly r factors running down from n.</p></div>
+    </div>
+    <p class="closing">Start at n, step down one at a time, and stop when r places are full.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Order Ladder · nPr = n!/(n − r)! · r places means r factors, running down from n · order matters and nothing repeats</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+
+/* ================= the permutation count ================= */
+/* n! for the small values only - full arrangements are written as n! directly */
+function fact(n){ let p=1; for(let k=2;k<=n;k++) p*=k; return p; }
+/* nPr as the falling product: n(n-1)...(n-r+1), exactly r factors.
+   Built this way rather than as n!/(n-r)! so nothing large is ever computed. */
+function nPr(n,r){ let p=1; for(let k=0;k<r;k++) p*=(n-k); return p; }
+/* the factors themselves, largest first */
+function factors(n,r){ const a=[]; for(let k=0;k<r;k++) a.push(n-k); return a; }
+function runHTML(n,r){ return factors(n,r).join(" \u00d7 "); }
+function nprHTML(n,r){ return '<span class="npr"><sub>'+n+"</sub>P<sub>"+r+"</sub></span>"; }
+function fr(a,b){ return '<span class="frac"><span class="num">'+a+'</span><span class="den">'+b+"</span></span>"; }
+/* n! written out with the (n-r)! tail struck through */
+function cancelHTML(n,r){
+  const m=n-r, parts=[];
+  for(let k=n;k>=1;k--) parts.push('<span class="'+(k<=m?"gone":"keep")+'">'+k+"</span>");
+  return parts.join(" \u00b7 ");
+}
+function tailHTML(n,r){
+  const m=n-r, parts=[];
+  for(let k=m;k>=1;k--) parts.push('<span class="gone">'+k+"</span>");
+  return parts.length?parts.join(" \u00b7 "):"1";
+}
+/* abbreviated forms, so a long line still fits */
+function cancelShort(n,r){
+  const m=n-r;
+  if(m<=6) return cancelHTML(n,r);
+  return factors(n,r).map(function(k){return '<span class="keep">'+k+"</span>";}).join(" \u00b7 ")
+    +' \u00b7 <span class="gone">'+m+" \u00b7 "+(m-1)+" \u00b7 \u00b7 \u00b7 2 \u00b7 1</span>";
+}
+function tailShort(n,r){
+  const m=n-r;
+  if(m<=6) return tailHTML(n,r);
+  return '<span class="gone">'+m+" \u00b7 "+(m-1)+" \u00b7 \u00b7 \u00b7 2 \u00b7 1</span>";
+}
+
+/* ================= scenarios ================= */
+/* every one of these is an ordered arrangement with no repeats */
+const ORDERED=[
+  {s:"@N swimmers reach the final. Gold, silver and bronze medals are awarded.", n:[6,12], r:3,
+   what:"possible medal results", roles:"gold, silver and bronze"},
+  {s:"A board has @N members. It must elect a president, a vice-president, a secretary and a treasurer.", n:[6,12], r:4,
+   what:"ways of filling the four offices", roles:"the four offices"},
+  {s:"You saw @N films this year and must list your three favourites in order of preference.", n:[10,20], r:3,
+   what:"possible top-three rankings", roles:"first, second and third"},
+  {s:"@N athletes run a race, and the first four places are recorded.", n:[7,14], r:4,
+   what:"possible finishing orders for the first four", roles:"the first four places"},
+  {s:"A club of @N people must choose a captain and a vice-captain.", n:[8,18], r:2,
+   what:"ways of filling the two posts", roles:"captain and vice-captain"},
+  {s:"@N songs are available and a playlist of five is to be made, in order.", n:[8,15], r:5,
+   what:"possible playlists", roles:"the five positions"},
+  {s:"A lock takes a @R-digit code from the digits 0 to 9, and no digit may repeat.", n:[10,10], r:3,
+   what:"possible codes", roles:"the code's positions", digits:true}
+];
+/* arranging every item, written as n! */
+const ALLOF=[
+  {s:"@N comedy acts are to be scheduled one after another on the same evening.", n:[4,7], what:"possible schedules"},
+  {s:"@N books are placed on a shelf from left to right.", n:[4,8], what:"possible arrangements"},
+  {s:"@N runners line up on the starting grid.", n:[4,7], what:"possible starting grids"},
+  {s:"@N paintings are hung in a row along a corridor.", n:[4,7], what:"possible hangings"}
+];
+/* situations where order does NOT matter, for the judgement rung */
+const UNORDERED=[
+  "A club of 12 people must choose a committee of 3, with no particular roles.",
+  "A pizza comes with 3 toppings chosen from a list of 10, and the order they are added makes no difference.",
+  "A teacher picks 4 students from a class of 20 to form a study group.",
+  "Five cards are dealt from a deck, and the order they arrive in does not change the hand."
+];
+
+function makeCase(o){
+  o=o||{};
+  const S=o.S||pick(ORDERED);
+  const r=S.r;
+  let n,tries=0;
+  do{ n=S.digits?10:ri(S.n[0],S.n[1]); tries++; }while(n===2*r&&tries<60);   /* keep n - r different from r */
+  return {n:n, r:r, S:S, val:nPr(n,r),
+    text:S.s.replace("@N",n).replace("@R",r), what:S.what, roles:S.roles};
+}
+function makeAll(){
+  const A=pick(ALLOF);
+  const n=ri(A.n[0],A.n[1]);
+  return {n:n, A:A, val:fact(n), text:A.s.replace("@N",n), what:A.what};
+}
+
+/* ================= options ================= */
+function numOpts(ans,cands,note){
+  const seen={}; seen[grp(ans)]=1;
+  const opts=[{label:grp(ans), correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.v===null||!Number.isFinite(x.v)||x.v<=0)return;
+    const L=grp(x.v); if(seen[L])return; seen[L]=1;
+    opts.push({label:L, note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* the wrong counts people actually produce */
+function nprPool(c){
+  const n=c.n, r=c.r;
+  return [
+    {v:Math.pow(n,r), w:"That is n<sup>r</sup>, which allows the same item to be used more than once. In a permutation each choice removes an option."},
+    {v:fact(n), w:"That arranges all "+n+" of them. Only "+r+" places are being filled, so the product stops after "+r+" factors."},
+    {v:fact(r), w:"That is "+r+"!, which arranges "+r+" items among themselves. The choices come from all "+n+"."},
+    {v:nPr(n,r+1), w:"That keeps one factor too many \u2014 "+(r+1)+" factors instead of "+r+"."},
+    {v:r<=1?null:nPr(n,r-1), w:"That stops one factor early \u2014 "+(r-1)+" instead of "+r+"."},
+    {v:n*r, w:"That multiplies the two numbers once. Each place is a separate factor."},
+    {v:Math.round(nPr(n,r)/fact(r)), w:"That divides by "+r+"!, which is what you would do if the order did <i>not</i> matter. Here it does."}
+  ];
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"What makes it a permutation",
+ sub:"Ordered, and nothing used twice.",
+ gen:function(){
+   const forms=[
+     {q:"<b>A permutation is an ordered arrangement of items that occur when…</b>",
+      ans:"no item is used more than once, and the order of arrangement matters",
+      bad:[["items may repeat, and the order matters","If items may repeat, every slot keeps all n choices and the count is n<sup>r</sup> instead."],
+        ["no item is used more than once, and the order does not matter","If the order does not matter, swapping two chosen items gives the same outcome and this formula overcounts."],
+        ["items may repeat, and the order does not matter","Neither condition holds for a permutation."]],
+      note:"Both conditions together. Drop either one and a different count is needed."},
+     {q:"<b>Why does swapping two chosen items give a new permutation?</b>",
+      ans:"Because the order of the arrangement is part of what is being counted",
+      bad:[["Because the items are different from each other","They are, but that alone would not make the order matter."],
+        ["Because the items cannot repeat","That is the other condition, and it is about reuse rather than order."],
+        ["It does not \u2014 a swap gives the same permutation","A swap gives a different arrangement, and both are counted."]],
+      note:"Gold to A and silver to B is a different result from gold to B and silver to A."},
+     {q:"Items <b>may</b> repeat and the order matters. <b>What counts the arrangements?</b>",
+      ans:"n<sup>r</sup>",
+      bad:[["nPr","That is for when items cannot repeat, so each choice removes an option."],
+        ["n!","That arranges all n items with none left over."],
+        ["r!","That arranges r items among themselves."]],
+      note:"With repeats allowed every slot keeps all n choices, which is the counting principle with the same number each time."},
+     {q:"<b>Which of these is a permutation problem?</b>",
+      ans:"Choosing a president and a treasurer from a club",
+      bad:[["Choosing a committee of two from a club","The two members have no distinct roles, so swapping them changes nothing."],
+        ["Choosing three toppings for a pizza","The order the toppings go on makes no difference to the pizza."],
+        ["Dealing five cards from a deck","The order they arrive in does not change the hand."]],
+      note:"Two named offices means A-as-president is a different outcome from A-as-treasurer."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Find n and r",
+ sub:"n is what you choose from, r is how many places there are.",
+ gen:function(){
+   const c=makeCase();
+   const forms=["both","one"];
+   if(pick(forms)==="one"){
+     const wantN=Math.random()<.5;
+     const cands=[
+       {v:wantN?c.r:c.n, w:wantN?("That is r, the number of places being filled."):("That is n, the number of items to choose from.")},
+       {v:c.n-c.r, w:"That is n \u2212 r, which appears in the formula's denominator but is neither n nor r."},
+       {v:c.n+c.r, w:"That adds the two numbers."},
+       {v:wantN?c.n-1:c.r+1, w:"One away \u2014 read the sentence again."}
+     ];
+     return {q:"<b>What is "+(wantN?"n":"r")+" here?</b>", scene:c.text,
+       opts:shuffle(numOpts(wantN?c.n:c.r,cands,
+         wantN?("There are "+c.n+" to choose from, so n = "+c.n+".")
+              :("There are "+c.r+" places to fill \u2014 "+c.roles+" \u2014 so r = "+c.r+".")))};
+   }
+   return {q:"<b>Which permutation counts this?</b>", scene:c.text,
+     opts:shuffle([
+       {label:nprHTML(c.n,c.r), correct:true,
+        note:c.n+" to choose from and "+c.r+" places to fill, so it is "+nprHTML(c.n,c.r)+" = "+grp(c.val)+"."},
+       {label:nprHTML(c.r,c.n),
+        note:"That has n and r swapped. You cannot fill "+c.n+" places from "+c.r+" items."},
+       {label:nprHTML(c.n,c.n-c.r),
+        note:"That uses n \u2212 r as the number of places. r is the number being filled, which is "+c.r+"."},
+       {label:nprHTML(c.n+c.r,c.r),
+        note:"That adds the two numbers to get n. There are only "+c.n+" to choose from."}
+     ]), two:true};
+ }
+},
+{
+ title:"The falling product",
+ sub:"Start at n and step down. One factor per place.",
+ gen:function(){
+   const c=makeCase();
+   const forms=["which","first"];
+   if(pick(forms)==="first"){
+     const i=ri(0,c.r-1);
+     const ord=["first","second","third","fourth","fifth"];
+     const cands=[
+       {v:c.n, w:"That is how many are available for the <i>first</i> place, before anyone has been chosen."},
+       {v:c.n-c.r, w:"That is how many would be left after all "+c.r+" places are filled."},
+       {v:c.r, w:"That is the number of places, not the number of choices."},
+       {v:c.n-i+1, w:"One too many \u2014 "+i+" "+(i===1?"has":"have")+" already been used."},
+       {v:Math.max(1,c.n-i-1), w:"One too few."}
+     ];
+     return {q:"<b>How many choices are left for the "+ord[i]+" place?</b>", scene:c.text,
+       facts:'<div class="facts"><div><span class="lb">n</span><span>'+c.n+'</span></div><div><span class="lb">r</span><span>'+c.r+"</span></div></div>",
+       opts:shuffle(numOpts(c.n-i,cands,
+         i===0?("Nothing has been chosen yet, so all "+c.n+" are available.")
+              :(i+" "+(i===1?"place has":"places have")+" already been filled, and nobody can be used twice, so "+(c.n-i)+" remain.")))};
+   }
+   return {q:"<b>Which product is "+nprHTML(c.n,c.r)+"?</b>", scene:c.text,
+     opts:shuffle([
+       {label:runHTML(c.n,c.r), correct:true,
+        note:c.r+" factors, starting at "+c.n+" and stepping down one at a time. It comes to "+grp(c.val)+"."},
+       {label:runHTML(c.n,c.r+1),
+        note:"That is "+(c.r+1)+" factors. Only "+c.r+" places are being filled."},
+       {label:factors(c.n,1).concat(["\u2026","1"]).join(" \u00d7 "),
+        note:"That runs all the way to 1, which arranges every one of the "+c.n+" items."},
+       {label:factors(c.r,c.r).join(" \u00d7 "),
+        note:"That starts at "+c.r+" instead of "+c.n+". The choices come from all "+c.n+" items."}
+     ]), two:true};
+ }
+},
+{
+ title:"How many factors",
+ sub:"r places means r factors. Count before multiplying.",
+ gen:function(){
+   const c=makeCase();
+   const cands=[
+     {v:c.n, w:"That is how many items there are to choose from."},
+     {v:c.n-c.r, w:"That is how many are left over, which is the formula's denominator."},
+     {v:c.r+1, w:"One too many \u2014 the product stops when the places run out."},
+     {v:Math.max(1,c.r-1), w:"One too few \u2014 every place contributes a factor."},
+     {v:c.n+c.r, w:"That adds the two numbers."}
+   ];
+   return {q:"<b>How many factors does "+nprHTML(c.n,c.r)+" have?</b>", scene:c.text,
+     opts:shuffle(numOpts(c.r,cands,
+       "One factor for each place being filled, so "+c.r+": "+runHTML(c.n,c.r)+"."))};
+ }
+},
+{
+ title:"From the formula",
+ sub:"n!/(n − r)! is last ladder's cancelling, with r survivors.",
+ gen:function(){
+   const c=makeCase();
+   const forms=["denom","cancel","agree"];
+   const f=pick(forms);
+   if(f==="denom"){
+     const cands=[
+       {v:c.n, w:"That is n, the top of the fraction."},
+       {v:c.r, w:"That is r, the number of places."},
+       {v:c.n+c.r, w:"The formula subtracts, it does not add."},
+       {v:c.n*c.r, w:"That multiplies the two numbers. The denominator subtracts them."},
+       {v:c.n-c.r+1, w:"One too many \u2014 it is n \u2212 r exactly."}
+     ];
+     return {q:"In "+nprHTML(c.n,c.r)+" = n!/(n \u2212 r)!, <b>what goes in the denominator?</b>", scene:c.text,
+       opts:shuffle(numOpts(c.n-c.r,cands,
+         "n \u2212 r = "+c.n+" \u2212 "+c.r+" = "+(c.n-c.r)+", so the denominator is "+(c.n-c.r)+"!."))};
+   }
+   if(f==="cancel"){
+     return {q:"After cancelling in "+fr(c.n+"!",(c.n-c.r)+"!")+", <b>what is left?</b>",
+       scene:c.text,
+       work:fr('<span class="expand">'+cancelShort(c.n,c.r)+"</span>",'<span class="expand">'+tailShort(c.n,c.r)+"</span>"),
+       opts:shuffle([
+         {label:runHTML(c.n,c.r), correct:true,
+          note:"The whole of "+(c.n-c.r)+"! cancels, leaving "+c.r+" factors from "+c.n+" down to "+(c.n-c.r+1)+": "+grp(c.val)+"."},
+         {label:runHTML(c.n,c.r+1),
+          note:"That keeps one factor too many \u2014 the "+(c.n-c.r)+" cancels."},
+         {label:factors(c.n-c.r,c.n-c.r).join(" \u00d7 "),
+          note:"That is what cancelled away, not what remains."},
+         {label:factors(c.r,c.r).join(" \u00d7 "),
+          note:"That is "+c.r+"!, from subtracting the numbers rather than cancelling."}
+       ]), two:true};
+   }
+   return {q:"<b>Why do the falling product and the formula give the same answer?</b>",
+     scene:c.text,
+     opts:shuffle([
+       {label:"Cancelling (n \u2212 r)! out of n! leaves exactly the r factors from n downwards", correct:true,
+        note:"n! is "+c.n+" \u00b7 "+(c.n-1)+" \u00b7 … \u00b7 1, and the bottom "+(c.n-c.r)+" of those divide out, leaving "+runHTML(c.n,c.r)+"."},
+       {label:"Because n! and (n \u2212 r)! are nearly equal",
+        note:"They differ by a factor of "+grp(c.val)+", which is not nearly equal."},
+       {label:"They do not always agree \u2014 the formula is an approximation",
+        note:"Both are exact, and identical for every n and r."},
+       {label:"Because r! divides out of both",
+        note:"r! does not appear in this calculation at all."}
+     ]), one:true};
+ }
+},
+{
+ title:"Arranging all of them",
+ sub:"When every item gets a place, it is simply n!.",
+ gen:function(){
+   const a=makeAll();
+   const cands=[
+     {v:Math.pow(a.n,a.n), w:"That allows an item to be used more than once. Each one goes in exactly one place."},
+     {v:nPr(a.n,a.n-1), w:"That stops one place short. All "+a.n+" are being placed."},
+     {v:a.n*a.n, w:"That multiplies "+a.n+" by itself once. There are "+a.n+" factors, falling away one at a time."},
+     {v:fact(a.n-1), w:"That arranges only "+(a.n-1)+" of them."},
+     {v:a.n*2, w:"Check the count again \u2014 every place is a separate factor."}
+   ];
+   return {q:"<b>How many "+a.what+" are there?</b>", scene:a.text,
+     opts:shuffle(numOpts(a.val,cands,
+       a.n+" choices for the first place, "+(a.n-1)+" for the next, and so on down to 1: "+a.n+"! = "+grp(a.val)+"."))};
+ }
+},
+{
+ title:"All of them, or some",
+ sub:"The same items, two different questions.",
+ gen:function(){
+   const c=makeCase();
+   const forms=["compare","which"];
+   if(pick(forms)==="which"){
+     const wantAll=Math.random()<.5;
+     return {q:wantAll?("<b>How many ways could all "+c.n+" be arranged in order?</b>")
+                      :("<b>How many ways could just the "+c.r+" places be filled?</b>"),
+       scene:c.text,
+       opts:shuffle(numOpts(wantAll?fact(c.n):c.val,
+         [{v:wantAll?c.val:fact(c.n), w:wantAll?("That fills only "+c.r+" places, stopping after "+c.r+" factors.")
+                                               :("That arranges all "+c.n+", running the product down to 1.")},
+          {v:Math.pow(c.n,c.r), w:"That allows repeats."},
+          {v:fact(c.r), w:"That arranges "+c.r+" items among themselves."},
+          {v:nPr(c.n,c.r+1), w:"That uses "+(c.r+1)+" factors."}],
+         wantAll?(c.n+"! = "+grp(fact(c.n))+", the product running all the way down to 1.")
+                :(runHTML(c.n,c.r)+" = "+grp(c.val)+", stopping after "+c.r+" factors.")))};
+   }
+   return {q:"<b>How many times larger is arranging all "+c.n+" than filling "+c.r+" places?</b>",
+     scene:c.text,
+     facts:'<div class="facts"><div><span class="lb">all '+c.n+' in order</span><span>'+grp(fact(c.n))+'</span></div>'
+       +'<div><span class="lb">'+nprHTML(c.n,c.r)+'</span><span>'+grp(c.val)+"</span></div></div>",
+     opts:shuffle(numOpts(fact(c.n-c.r),
+       [{v:fact(c.r), w:"That is "+c.r+"!, which is not the ratio here."},
+        {v:c.n-c.r, w:"That is how many are left over, not how many ways they can be ordered."},
+        {v:fact(c.n), w:"That is the larger figure itself."},
+        {v:c.val, w:"That is the smaller figure itself."}],
+       "The leftovers can be arranged in ("+c.n+" \u2212 "+c.r+")! = "+(c.n-c.r)+"! = "+grp(fact(c.n-c.r))
+       +" ways, and that is exactly the factor between them."))};
+ }
+},
+{
+ title:"Does order matter",
+ sub:"Swap two of the chosen items. Is it a different outcome?",
+ gen:function(){
+   const ordered=Math.random()<.5;
+   const c=ordered?makeCase():null;
+   const text=ordered?c.text:pick(UNORDERED);
+   return {q:"<b>Is this a permutation?</b>", scene:text,
+     opts:shuffle(distinctOpts([
+       {label:"Yes \u2014 swapping two chosen items gives a different outcome", correct:ordered,
+        note:ordered?("The places are distinct \u2014 "+c.roles+" \u2014 so who gets which one changes the result. The count is "+nprHTML(c.n,c.r)+" = "+grp(c.val)+".")
+                    :("Here the chosen items have no distinct roles, so swapping two of them leaves the same selection.")},
+       {label:"No \u2014 swapping two chosen items gives the same outcome", correct:!ordered,
+        note:!ordered?("Nothing distinguishes the positions, so the same items in a different order are the same result. This needs a count that does not care about order.")
+                     :("The positions here are distinct, so a swap genuinely changes the outcome.")},
+       {label:"No \u2014 items are allowed to repeat here",
+        note:"Nothing in either kind of problem here allows an item to be used twice."},
+       {label:"It cannot be decided without knowing how many items there are",
+        note:"Whether order matters is decided by the wording, not by the numbers."}
+     ]).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Compute it",
+ sub:"Write the factors out, then multiply.",
+ gen:function(){
+   const c=makeCase();
+   return {q:"<b>How many "+c.what+" are there?</b>", scene:c.text,
+     facts:'<div class="facts"><div><span class="lb">n</span><span>'+c.n+'</span></div>'
+       +'<div><span class="lb">r</span><span>'+c.r+'</span></div>'
+       +'<div><span class="lb">factors</span><span>'+runHTML(c.n,c.r)+"</span></div></div>",
+     opts:shuffle(numOpts(c.val,nprPool(c),
+       nprHTML(c.n,c.r)+" = "+runHTML(c.n,c.r)+" = "+grp(c.val)+"."))};
+ }
+},
+{
+ title:"Any arrangement, any count",
+ sub:"Some places or all of them, from the sentence.",
+ gen:function(){
+   const t=pick(["npr","npr","all","nr","factors"]);
+   if(t==="all"){
+     const a=makeAll();
+     return {q:"<b>How many "+a.what+" are there?</b>", scene:a.text,
+       opts:shuffle(numOpts(a.val,
+         [{v:Math.pow(a.n,a.n), w:"That allows repeats."},
+          {v:nPr(a.n,a.n-1), w:"That stops one place short."},
+          {v:fact(a.n-1), w:"That arranges only "+(a.n-1)+"."},
+          {v:a.n*a.n, w:"Every place is a separate factor."}],
+         a.n+"! = "+grp(a.val)+"."))};
+   }
+   const c=makeCase();
+   if(t==="nr"){
+     return {q:"<b>Which permutation counts this?</b>", scene:c.text,
+       opts:shuffle([
+         {label:nprHTML(c.n,c.r), correct:true, note:c.n+" to choose from, "+c.r+" places: "+grp(c.val)+"."},
+         {label:nprHTML(c.r,c.n), note:"n and r swapped."},
+         {label:nprHTML(c.n,c.n-c.r), note:"That uses n \u2212 r as the number of places."},
+         {label:nprHTML(c.n-1,c.r), note:"That is one item short."}
+       ]), two:true};
+   }
+   if(t==="factors"){
+     return {q:"<b>How many factors does "+nprHTML(c.n,c.r)+" have?</b>", scene:c.text,
+       opts:shuffle(numOpts(c.r,
+         [{v:c.n, w:"That is the number to choose from."},
+          {v:c.n-c.r, w:"That is how many are left over."},
+          {v:c.r+1, w:"One too many."},
+          {v:Math.max(1,c.r-1), w:"One too few."}],
+         "One factor per place: "+c.r+"."))};
+   }
+   return {q:"<b>How many "+c.what+" are there?</b>", scene:c.text,
+     opts:shuffle(numOpts(c.val,nprPool(c),
+       runHTML(c.n,c.r)+" = "+grp(c.val)+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {kind:"swim",  lbl:"8 swimmers, 3 medals"},
+  {kind:"order", lbl:"why order matters"},
+  {kind:"two",   lbl:"two routes to the same answer"},
+  {kind:"acts",  lbl:"5 acts, all of them"},
+  {kind:"stop",  lbl:"where to stop"},
+  {kind:"table", lbl:"the worksheet's four"}
+];
+/* every note is built from the same figures its panel draws */
+const HNOTES={
+  swim:function(){ return "Your worksheet's swimmers. Eight could take gold, seven are left for silver, six for bronze \u2014 and then you stop, because there are only three medals. "
+    +"Three places, three factors, "+grp(nPr(8,3))+" ways."; },
+  order:function(){ return "The same three swimmers, six different results. Nothing about who was chosen has changed; only who finished where. "
+    +"That is what makes this a permutation, and it is why "+grp(nPr(8,3))+" is so much larger than the number of ways to pick three swimmers."; },
+  two:function(){ return "The falling product and the formula are the same calculation. Cancelling 5! out of 8! removes everything from 5 downwards, "
+    +"leaving exactly the three factors the medals need. This is the previous ladder's cancelling, doing the work."; },
+  acts:function(){ return "Your worksheet's comedy club. Every act gets a slot, so the product runs all the way down to 1 \u2014 that is 5! = "
+    +grp(fact(5))+". When r would equal n, write it as n! and the awkward denominator never arises."; },
+  stop:function(){ return "The error this ladder exists for. Running on past the third medal gives "+grp(fact(8))
+    +", which counts full orderings of all eight swimmers. Stopping at three gives "+grp(nPr(8,3))
+    +" \u2014 and the ratio between them, "+grp(fact(5))+", is exactly the 5! that should have cancelled."; },
+  table:function(){ return "All four of your worksheet's permutation questions. Notice the pattern: the number of factors always matches the number of places, "
+    +"and the lock is the same shape as the rest \u2014 ten digits, three positions, no repeats."; }
+};
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="swim"){
+    body='<div class="podium">'
+      +'<div class="place"><div class="medal g1">8</div><div class="cap">gold<br>any of 8</div></div>'
+      +'<div class="place"><div class="medal g2">7</div><div class="cap">silver<br>7 left</div></div>'
+      +'<div class="place"><div class="medal g3">6</div><div class="cap">bronze<br>6 left</div></div>'
+      +"</div>"
+      +'<div class="eq" style="margin-top:12px">'+nprHTML(8,3)+" = 8 \u00d7 7 \u00d7 6 = <span class=\"res\">"+grp(nPr(8,3))+"</span>"
+      +'<span class="lbl">three medals, three factors, then stop</span></div>';
+  }else if(h.kind==="order"){
+    const names=["Amara","Ben","Chi"];
+    const perms=[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
+    let rows="";
+    perms.forEach(function(p,i){
+      rows+="<div><span>"+names[p[0]]+" \u00b7 "+names[p[1]]+" \u00b7 "+names[p[2]]+"</span><span>result "+(i+1)+"</span></div>";
+    });
+    body='<div class="eq" style="margin-bottom:10px">the same three swimmers, in gold \u00b7 silver \u00b7 bronze order</div>'
+      +'<div class="orders">'+rows+"</div>"
+      +'<div class="eq" style="margin-top:12px"><span class="res">6 different outcomes</span>'
+      +'<span class="lbl">3! ways to order the same three people</span></div>';
+  }else if(h.kind==="two"){
+    body='<div class="eq">'
+      +nprHTML(8,3)+" = 8 \u00d7 7 \u00d7 6 = <span class=\"res\">"+grp(nPr(8,3))+"</span>"
+      +'<span class="lbl">the falling product \u2014 one factor per medal</span>'
+      +nprHTML(8,3)+" = "+fr("8!","(8 \u2212 3)!")+" = "+fr("8!","5!")+" = "
+      +fr('<span class="expand">'+cancelHTML(8,3)+"</span>",'<span class="expand">'+tailHTML(8,3)+"</span>")
+      +" = <span class=\"res\">"+grp(nPr(8,3))+"</span>"
+      +'<span class="lbl">the formula \u2014 5! cancels and leaves the same three factors</span></div>';
+  }else if(h.kind==="acts"){
+    body='<div class="eq">'
+      +"5 \u00d7 4 \u00d7 3 \u00d7 2 \u00d7 1"
+      +'<span class="lbl">every act gets a slot, so the product runs to the end</span>'
+      +"= <span class=\"res\">5! = "+grp(fact(5))+"</span>"
+      +'<span class="lbl">written as n! rather than as a quotient</span></div>';
+  }else if(h.kind==="stop"){
+    body='<div class="eq">'
+      +"8 \u00d7 7 \u00d7 6 = <span class=\"res\">"+grp(nPr(8,3))+"</span>"
+      +'<span class="lbl">three medals \u2014 stop after three factors</span>'
+      +'<span class="bad">8 \u00d7 7 \u00d7 6 \u00d7 5 \u00d7 4 \u00d7 3 \u00d7 2 \u00d7 1 = '+grp(fact(8))+"</span>"
+      +'<span class="lbl">running on \u2014 this orders all eight swimmers</span>'
+      +'<span class="lbl" style="margin-top:12px">the two differ by exactly 5! = '+grp(fact(5))+"</span></div>";
+  }else{
+    const rows=[[8,3,"swimmers, three medals"],[7,4,"directors, four offices"],
+                [20,3,"films, top three ranked"],[10,3,"digits, a three-digit code"]];
+    let tr="";
+    rows.forEach(function(r){
+      tr+='<tr><td class="lab">'+r[2]+"</td><td>"+nprHTML(r[0],r[1])+"</td><td>"+runHTML(r[0],r[1])+"</td><td>"+grp(nPr(r[0],r[1]))+"</td></tr>";
+    });
+    tr+='<tr class="hi"><td class="lab">acts, all scheduled</td><td>5!</td><td>'+factors(5,5).join(" \u00d7 ")+"</td><td>"+grp(fact(5))+"</td></tr>";
+    body='<table class="pt"><thead><tr><th>problem</th><th></th><th>factors</th><th>count</th></tr></thead><tbody>'+tr+"</tbody></table>";
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.work?'<div class="work">'+q.work+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
