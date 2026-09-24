@@ -1,0 +1,922 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Committee Ladder — choose within each group, then multiply</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --cm:#4A7A2E;
+    --cm-bg:#EBF3E5;
+    --gA:#2E5F9E; --gA-bg:#E6EDF6;
+    --gB:#9E3A3A; --gB-bg:#F7E9E9;
+    --gC:#8A5E1E; --gC-bg:#F6EFE2;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--cm)}
+  :focus-visible{outline:3px solid var(--cm); outline-offset:2px; border-radius:3px}
+
+  .frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.15; margin:0 4px}
+  .frac .den{border-top:2px solid currentColor; padding-top:3px}
+  .npr{font-family:var(--serif); white-space:nowrap}
+  .npr sub{font-size:.66em; vertical-align:sub; line-height:0}
+  .gA{color:var(--gA); font-weight:700}
+  .gB{color:var(--gB); font-weight:700}
+  .gC{color:var(--gC); font-weight:700}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--cm)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:18ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:680px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.2; text-align:center}
+  .eq .res{color:var(--cm); font-weight:700}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+  .groups{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:0 auto}
+  .grp{border-radius:11px; padding:13px 18px; text-align:center; min-width:150px}
+  .grp.a{background:var(--gA-bg)} .grp.b{background:var(--gB-bg)} .grp.c{background:var(--gC-bg)}
+  .grp .nm{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:6px}
+  .grp.a .nm{color:var(--gA)} .grp.b .nm{color:var(--gB)} .grp.c .nm{color:var(--gC)}
+  .grp .ask{font-family:var(--serif); font-size:clamp(14px,2.8vw,16px); color:var(--muted)}
+  .grp .cnt{font-family:var(--serif); font-size:clamp(19px,4.2vw,26px); font-weight:700; margin-top:4px}
+  .grp.a .cnt{color:var(--gA)} .grp.b .cnt{color:var(--gB)} .grp.c .cnt{color:var(--gC)}
+  .grp.out{background:#EDF0F3} .grp.out .nm{color:var(--muted)} .grp.out .cnt{color:var(--muted)}
+  .xsign{display:flex; align-items:center; font-family:var(--serif); font-size:clamp(19px,4vw,26px); color:var(--muted)}
+  .listing{max-width:560px; margin:0 auto; font-family:var(--serif)}
+  .listing .row{display:flex; gap:10px; align-items:center; padding:4px 12px; border-radius:7px; margin-bottom:3px; background:var(--cm-bg)}
+  .listing .row .n{font-family:var(--mono); font-size:.8em; color:var(--muted); min-width:18px}
+  table.mt{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:14.5px}
+  table.mt th,table.mt td{border:1px solid var(--rule); padding:5px 15px; text-align:right; white-space:nowrap}
+  table.mt th{background:var(--cm-bg); color:var(--cm); font-weight:700; font-size:13px; text-align:center}
+  table.mt td.lab{text-align:left}
+  table.mt tr.tot td{background:var(--cm-bg); color:var(--cm); font-weight:700; border-top:2px solid var(--cm)}
+  table.mt tr.out td{color:var(--muted)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--cm); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--cm); background:var(--cm-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--cm)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .scene{max-width:56ch; margin:0 auto 14px; background:var(--cm-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:44ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(17px,4vw,26px); background:var(--cm-bg); border-radius:12px; padding:11px 26px; margin:0 auto 16px}
+  .grpwrap{margin:0 auto 16px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:18px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>× </span>The Committee Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 18 · committees with a required make-up</p>
+    <h1>Choose inside each group, then multiply.</h1>
+    <p class="lede">When a committee has to contain a set number from each of several groups, the two ideas you already have do the whole job. Within a group, order makes no difference, so each group's count is a plain <b>combination</b>. Between groups, the choices are made one after another, so the counts <b>multiply</b> — the counting principle from Lesson 17, applied to combinations instead of single picks.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Do not put the groups into one pool.</b> Your worksheet's Senate has 100 members, but choosing any 5 of them gives 75,287,520 committees — most of which have the wrong make-up. The requirement of exactly 2 Democrats and 3 Republicans is what splits the problem: <b>46C2 × 52C3</b>, which is <b>22,873,500</b>. A required composition is an instruction to count each group separately.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–3 pull the groups and their quotas out of the wording and count one group. Rungs 4–6 explain why the counts multiply, put two groups together, and check that the quotas add to the committee size. Rungs 7–8 handle groups nobody is taken from, and three groups at once. Rungs 9–10 diagnose bad setups and mix everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Write the quotas down first</h3><p>How many from each group, and do they add to the committee size? Settle that before computing anything.</p></div>
+    </div>
+    <p class="note2"><b>A note on scope.</b> Every quota here is at least one, and every group is drawn from in full or left out entirely. A group nobody is taken from is simply dropped from the multiplication rather than written as a combination, so 0! never appears. Sizes are capped so every product is exact.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Two lessons meeting</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Within: a combination</h3><p>The members taken from one group have no roles, so their order never matters.</p></div>
+      <div class="step"><span class="n">02</span><h3>Between: the counting principle</h3><p>Each way of filling the first quota pairs with every way of filling the second, so the counts multiply.</p></div>
+      <div class="step"><span class="n">03</span><h3>The requirement is the structure</h3><p>Without a required make-up there is one pool and one combination. With one, there are as many combinations as groups.</p></div>
+    </div>
+    <p class="closing">One combination per group, multiplied together, and the quotas must add to the size.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Committee Ladder · one nCr per group, multiplied · quotas must sum to the committee size · a group with no quota is left out</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function prod(a){return a.reduce(function(x,y){return x*y;},1);}
+function sum(a){return a.reduce(function(x,y){return x+y;},0);}
+
+/* ================= the counts ================= */
+function fact(n){ let p=1; for(let k=2;k<=n;k++) p*=k; return p; }
+function nPr(n,r){ let p=1; for(let k=0;k<r;k++) p*=(n-k); return p; }
+/* nCr one factor at a time, so the running product stays a whole number and
+   nothing large is ever computed */
+function nCr(n,r){
+  if(r<0||r>n) return 0;
+  r=Math.min(r,n-r);
+  let p=1;
+  for(let k=1;k<=r;k++) p=p*(n-r+k)/k;
+  return Math.round(p);
+}
+function ncrHTML(n,r){ return '<span class="npr"><sub>'+n+"</sub>C<sub>"+r+"</sub></span>"; }
+function nprHTML(n,r){ return '<span class="npr"><sub>'+n+"</sub>P<sub>"+r+"</sub></span>"; }
+
+/* ================= scenarios ================= */
+/* Each family names its groups and the thing being formed. Quotas are drawn
+   per case, always at least 1 from every group that is used. */
+const FAMILIES=[
+  {what:"committee", unit:"person", groups:["Democrats","Republicans","Independents"],
+   sing:["Democrat","Republican","Independent"],
+   sizes:[[40,52],[44,56],[2,4]], lead:"A legislature consists of @0 @g0, @1 @g1 and @2 @g2."},
+  {what:"committee", unit:"person", groups:["juniors","seniors","sophomores"],
+   sing:["junior","senior","sophomore"],
+   sizes:[[8,16],[9,18],[5,10]], lead:"A student council has @0 @g0, @1 @g1 and @2 @g2."},
+  {what:"panel", unit:"person", groups:["professors","lecturers","tutors"],
+   sing:["professor","lecturer","tutor"],
+   sizes:[[7,15],[8,16],[4,9]], lead:"A department employs @0 @g0, @1 @g1 and @2 @g2."},
+  {what:"team", unit:"player", groups:["forwards","defenders","goalkeepers"],
+   sing:["forward","defender","goalkeeper"],
+   sizes:[[8,14],[9,15],[3,5]], lead:"A squad contains @0 @g0, @1 @g1 and @2 @g2."},
+  {what:"working group", unit:"person", groups:["engineers","designers","analysts"],
+   sing:["engineer","designer","analyst"],
+   sizes:[[9,18],[6,12],[5,11]], lead:"A firm employs @0 @g0, @1 @g1 and @2 @g2."},
+  {what:"selection", unit:"book", groups:["novels","biographies","atlases"],
+   sing:["novel","biography","atlas"],
+   sizes:[[8,16],[6,14],[4,8]], lead:"A shelf holds @0 @g0, @1 @g1 and @2 @g2."}
+];
+/* "1 Democrat", but "2 Democrats" - and "biography", not "biographys" */
+function qty(F,i,r){ return r+" "+(r===1?F.sing[i]:F.groups[i]); }
+
+/* Build a case with `k` groups actually drawn from (2 or 3). The remaining
+   group, if any, is named but has no quota - it is simply left out of the
+   product rather than written as a combination of none. */
+function makeCase(o){
+  o=o||{};
+  const F=o.F||pick(FAMILIES);
+  const k=o.k||pick([2,2,2,3]);
+  let n=[],r=[],total=0,tries=0;
+  do{
+    n=F.sizes.map(function(s){return ri(s[0],s[1]);});
+    r=[];
+    for(let i=0;i<3;i++) r.push(i<k?ri(1,Math.min(3,n[i]-1)):0);
+    total=prod(n.map(function(v,i){return r[i]>0?nCr(v,r[i]):1;}));
+    tries++;
+  }while((total>1e12||total<10||(o.distinctR&&r[0]===r[1]))&&tries<300);
+  const used=[];
+  for(let i=0;i<3;i++) if(r[i]>0) used.push(i);
+  const counts=used.map(function(i){return nCr(n[i],r[i]);});
+  let lead=F.lead;
+  for(let i=0;i<3;i++) lead=lead.replace("@"+i,n[i]).replace("@g"+i,F.groups[i]);
+  const askParts=used.map(function(i){return qty(F,i,r[i]);});
+  const ask="How many "+(sum(r))+"-"+F.unit+" "+F.what+"s can be formed with exactly "
+    +askParts.slice(0,-1).join(", ")+(askParts.length>1?" and ":"")+askParts[askParts.length-1]+"?";
+  return {F:F, k:k, n:n, r:r, used:used, counts:counts,
+    total:prod(counts), size:sum(r), lead:lead, ask:ask,
+    unused:[0,1,2].filter(function(i){return r[i]===0;}),
+    pool:sum(n)};
+}
+/* a used group whose quota is at least 2, so nCr and nPr differ there */
+function pickBigR(c){
+  const big=c.used.filter(function(i){return c.r[i]>=2;});
+  return big.length?pick(big):null;
+}
+function caseWithBigR(o){
+  let c,tries=0;
+  do{ c=makeCase(o); tries++; }while(pickBigR(c)===null&&tries<200);
+  return c;
+}
+function gcls(i){ return ["a","b","c"][i]; }
+function gtag(F,i){ return '<span class="g'+["A","B","C"][i]+'">'+F.groups[i]+"</span>"; }
+
+/* ================= options ================= */
+function numOpts(ans,cands,note){
+  const seen={}; seen[grp(ans)]=1;
+  const opts=[{label:grp(ans), correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.v===null||!Number.isFinite(x.v)||x.v<=0)return;
+    const L=grp(x.v); if(seen[L])return; seen[L]=1;
+    opts.push({label:L, note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* the wrong totals people actually produce */
+function totalPool(c){
+  const F=c.F, u=c.used;
+  const out=[
+    {v:sum(c.counts), w:"That adds the group counts instead of multiplying them. Each way of filling one quota pairs with <i>every</i> way of filling the others."},
+    {v:nCr(c.pool,c.size), w:"That pours everyone into one pool and chooses "+c.size+". Most of those "+c.F.what+"s would have the wrong make-up."},
+    {v:c.counts[0], w:"That is the "+F.groups[u[0]]+" alone, with the other group"+(u.length>2?"s":"")+" left out."},
+    {v:c.counts[u.length-1], w:"That is the "+F.groups[u[u.length-1]]+" alone."},
+    {v:prod(u.map(function(i){return nPr(c.n[i],c.r[i]);})),
+     w:"That uses permutations inside each group. The members taken from one group have no roles, so their order makes no difference."}
+  ];
+  /* swapping the quotas between the first two groups, when that is a different sum */
+  if(c.r[u[0]]!==c.r[u[1]]){
+    const sw=c.used.map(function(i,idx){
+      if(idx===0) return nCr(c.n[u[0]],c.r[u[1]]);
+      if(idx===1) return nCr(c.n[u[1]],c.r[u[0]]);
+      return c.counts[idx];
+    });
+    out.push({v:prod(sw), w:"That swaps the two quotas, taking "+qty(F,u[0],c.r[u[1]])+" and "+qty(F,u[1],c.r[u[0]])+"."});
+  }
+  return out;
+}
+function groupsHTML(c,o){
+  o=o||{};
+  let s='<div class="groups">';
+  c.used.forEach(function(i,idx){
+    if(idx>0) s+='<div class="xsign">\u00d7</div>';
+    const hide=(o.hide===idx);
+    s+='<div class="grp '+gcls(i)+'"><div class="nm">'+c.F.groups[i]+"</div>"
+      +'<div class="ask">choose '+c.r[i]+" of "+c.n[i]+"</div>"
+      +'<div class="cnt">'+(hide?"?":grp(c.counts[idx]))+"</div></div>";
+  });
+  if(o.showUnused) c.unused.forEach(function(i){
+    s+='<div class="xsign" style="opacity:.3">\u00b7</div>'
+      +'<div class="grp out"><div class="nm">'+c.F.groups[i]+"</div>"
+      +'<div class="ask">none required</div><div class="cnt">\u2014</div></div>';
+  });
+  return s+"</div>";
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Read the quotas",
+ sub:"How many from each group, before anything else.",
+ gen:function(){
+   const c=makeCase({distinctR:true});
+   const u=c.used, i=pick(u);
+   const idx=u.indexOf(i);
+   const cands=[
+     {v:c.n[i], w:"That is how many "+c.F.groups[i]+" there are, not how many are wanted."},
+     {v:c.size, w:"That is the size of the whole "+c.F.what+"."},
+     {v:c.r[u[(idx+1)%u.length]], w:"That is the quota for a different group."},
+     {v:c.r[i]+1, w:"One too many \u2014 read the requirement again."},
+     {v:c.pool, w:"That is everyone available, across all the groups."}
+   ];
+   return {q:"<b>How many "+c.F.groups[i]+" must the "+c.F.what+" contain?</b>",
+     scene:c.lead+" "+c.ask,
+     opts:shuffle(numOpts(c.r[i],cands,
+       "The requirement asks for exactly "+qty(c.F,i,c.r[i])+", chosen from the "+c.n[i]+" available."))};
+ }
+},
+{
+ title:"One group at a time",
+ sub:"Within a group it is an ordinary combination.",
+ gen:function(){
+   const c=caseWithBigR();
+   const i=pickBigR(c);
+   const cands=[
+     {v:nPr(c.n[i],c.r[i]), w:"That is "+nprHTML(c.n[i],c.r[i])+", which counts the orderings. The "+qty(c.F,i,c.r[i])+(c.r[i]===1?" has":" have")+" no role to distinguish them."},
+     {v:c.n[i]*c.r[i], w:"That multiplies the two numbers once."},
+     {v:nCr(c.n[i],c.r[i]+1), w:"That chooses "+(c.r[i]+1)+" rather than "+c.r[i]+"."},
+     {v:nCr(c.n[i],c.r[i]-1), w:"That chooses "+(c.r[i]-1)+" rather than "+c.r[i]+"."},
+     {v:nCr(c.n[i]-1,c.r[i]), w:"That takes the group as "+(c.n[i]-1)+" strong."},
+     {v:nCr(c.n[i]+1,c.r[i]), w:"That takes the group as "+(c.n[i]+1)+" strong."},
+     {v:c.total, w:"That is the whole "+c.F.what+" count, not this group's share."}
+   ];
+   return {q:"<b>In how many ways can the "+qty(c.F,i,c.r[i])+" be chosen?</b>",
+     scene:c.lead+" "+c.ask,
+     facts:factsHTML([[c.F.groups[i]+" available",String(c.n[i])],["required",String(c.r[i])]]),
+     opts:shuffle(numOpts(nCr(c.n[i],c.r[i]),cands,
+       ncrHTML(c.n[i],c.r[i])+" = "+grp(nCr(c.n[i],c.r[i]))+". Order makes no difference inside a group."))};
+ }
+},
+{
+ title:"Which count goes where",
+ sub:"Match each group to its own combination.",
+ gen:function(){
+   const c=makeCase({distinctR:true});
+   const u=c.used;
+   const right=u.map(function(i){return ncrHTML(c.n[i],c.r[i]);}).join(" \u00d7 ");
+   const swapped=u.map(function(i,idx){
+     if(idx===0) return ncrHTML(c.n[u[0]],c.r[u[1]]);
+     if(idx===1) return ncrHTML(c.n[u[1]],c.r[u[0]]);
+     return ncrHTML(c.n[i],c.r[i]);
+   }).join(" \u00d7 ");
+   const flipped=u.map(function(i){return ncrHTML(c.r[i],c.n[i]);}).join(" \u00d7 ");
+   return {q:"<b>Which expression sets this up correctly?</b>", scene:c.lead+" "+c.ask,
+     opts:shuffle(distinctOpts([
+       {label:right, correct:true,
+        note:"Each group supplies its own combination: "+u.map(function(i,idx){
+          return grp(c.counts[idx]);}).join(" \u00d7 ")+" = "+grp(c.total)+"."},
+       {label:swapped,
+        note:"The quotas are attached to the wrong groups."},
+       {label:ncrHTML(c.pool,c.size),
+        note:"That treats all "+c.pool+" as one pool, which ignores the required make-up."},
+       {label:flipped,
+        note:"Each pair is upside down \u2014 the pool size goes first, then the number chosen."}
+     ]).slice(0,4)), two:true};
+ }
+},
+{
+ title:"Multiply, do not add",
+ sub:"Each way of filling one quota meets every way of filling the next.",
+ gen:function(){
+   const c=makeCase();
+   const forms=["why","which","small"];
+   const f=pick(forms);
+   if(f==="small"){
+     return {q:"Three "+c.F.groups[0]+" choose 2, and two "+c.F.groups[1]+" choose 1. <b>How many "+c.F.what+"s?</b>",
+       facts:factsHTML([["ways to pick the "+c.F.groups[0],"3"],["ways to pick the "+c.F.groups[1],"2"]]),
+       opts:shuffle(numOpts(6,
+         [{v:5, w:"That adds them. Each of the 3 pairings can be joined by either of the 2, so they multiply."},
+          {v:3, w:"That is one group's count alone."},
+          {v:2, w:"That is the other group's count alone."},
+          {v:12, w:"That doubles the answer \u2014 there are 3 \u00d7 2 = 6 in all."}],
+         "3 \u00d7 2 = 6. Small enough to list: each of the three pairs can be joined by either of the two, giving six."))};
+   }
+   if(f==="why"){
+     return {q:"<b>Why do the group counts multiply?</b>", scene:c.lead+" "+c.ask,
+       opts:shuffle([
+         {label:"Every way of filling one quota can be joined with every way of filling the others", correct:true,
+          note:"That is the counting principle: "+c.counts.join(" \u00d7 ")+" = "+grp(c.total)+"."},
+         {label:"Because the groups are the same size",
+          note:"They need not be, and here they are not."},
+         {label:"Because order matters between the groups",
+          note:"It does not \u2014 a "+c.F.what+" is the same whichever group was picked first. The multiplying comes from pairing, not ordering."},
+         {label:"Because nobody may be chosen twice",
+          note:"True, but that is what makes each group's own count a combination; it is not why they multiply."}
+       ]), one:true};
+   }
+   return {q:"<b>Which operation combines the group counts?</b>",
+     facts:factsHTML(c.used.map(function(i,idx){
+       return [c.F.groups[i]+": "+ncrHTML(c.n[i],c.r[i]), grp(c.counts[idx])];})),
+     opts:shuffle(numOpts(c.total,
+       [{v:sum(c.counts), w:"Adding counts the ways of filling a single quota, not the ways of filling them all together."},
+        {v:c.counts[0], w:"That is one group's count on its own."},
+        {v:Math.abs(c.counts[0]-c.counts[1])||c.counts[0]+1, w:"Nothing here calls for a subtraction."},
+        {v:nCr(c.pool,c.size), w:"That is one pool of "+c.pool+", ignoring the required make-up."}],
+       c.counts.join(" \u00d7 ")+" = "+grp(c.total)+"."))};
+ }
+},
+{
+ title:"Put them together",
+ sub:"One combination per group, multiplied.",
+ gen:function(){
+   const c=makeCase();
+   return {q:"<b>How many such "+c.F.what+"s can be formed?</b>", scene:c.lead+" "+c.ask,
+     groups:groupsHTML(c),
+     opts:shuffle(numOpts(c.total,totalPool(c),
+       c.used.map(function(i){return ncrHTML(c.n[i],c.r[i]);}).join(" \u00d7 ")+" = "
+       +c.counts.join(" \u00d7 ")+" = "+grp(c.total)+"."))};
+ }
+},
+{
+ title:"Do the quotas add up",
+ sub:"The numbers from each group must total the committee size.",
+ gen:function(){
+   const c=makeCase();
+   const forms=["sum","bad","size"];
+   const f=pick(forms);
+   if(f==="size"){
+     const cands=[
+       {v:c.pool, w:"That is everyone available across all the groups."},
+       {v:c.used.length, w:"That is the number of groups being drawn from."},
+       {v:c.size+1, w:"One too many \u2014 add the quotas again."},
+       {v:prod(c.r.filter(function(x){return x>0;})), w:"That multiplies the quotas. The size is their sum."}
+     ];
+     return {q:"<b>How many "+c.F.unit+"s are in the "+c.F.what+" altogether?</b>", scene:c.lead+" "+c.ask,
+       opts:shuffle(numOpts(c.size,cands,
+         c.used.map(function(i){return c.r[i];}).join(" + ")+" = "+c.size+". The quotas always add to the size."))};
+   }
+   if(f==="bad"){
+     const wrongSize=c.size+ri(1,2);
+     return {q:"A student writes that this forms a <b>"+wrongSize+"-"+c.F.unit+"</b> "+c.F.what+". <b>What went wrong?</b>",
+       scene:c.lead+" "+c.ask,
+       opts:shuffle([
+         {label:"The quotas add to "+c.size+", not "+wrongSize, correct:true,
+          note:c.used.map(function(i){return qty(c.F,i,c.r[i]);}).join(" + ")+" makes "+c.size+" "+c.F.unit+"s."},
+         {label:"The groups were multiplied instead of added",
+          note:"The quotas do add \u2014 it is the <i>counts</i> that multiply."},
+         {label:"A group was left out of the requirement",
+          note:"Leaving a group out does not change the size, only which groups contribute."},
+         {label:"Nothing \u2014 "+wrongSize+" is right",
+          note:"Adding the quotas gives "+c.size+"."}
+       ]), one:true};
+   }
+   const badR=c.size+1;
+   return {q:"<b>Could this requirement produce a "+badR+"-"+c.F.unit+" "+c.F.what+"?</b>", scene:c.lead+" "+c.ask,
+     opts:shuffle([
+       {label:"No \u2014 the quotas fix the size at "+c.size, correct:true,
+        note:"Exactly "+c.used.map(function(i){return c.r[i];}).join(" + ")+" = "+c.size+" "+c.F.unit+"s are taken, every time."},
+       {label:"Yes \u2014 an extra member could come from any group",
+        note:"The requirement says <i>exactly</i> those numbers, so nothing extra is allowed."},
+       {label:"Yes \u2014 if the "+c.F.groups[c.unused.length?c.unused[0]:2]+" are included",
+        note:"Only the groups with a stated quota contribute members."},
+       {label:"It depends on how many are available",
+        note:"The size follows from the quotas alone, whatever the group sizes are."}
+     ]), one:true};
+ }
+},
+{
+ title:"Groups nobody is taken from",
+ sub:"A group with no quota drops out of the multiplication.",
+ gen:function(){
+   const c=makeCase({k:2});
+   const left=c.unused[0];
+   const forms=["which","why","count"];
+   const f=pick(forms);
+   if(f==="count"){
+     return {q:"<b>How many such "+c.F.what+"s can be formed?</b>", scene:c.lead+" "+c.ask,
+       groups:groupsHTML(c,{showUnused:true}),
+       opts:shuffle(numOpts(c.total,totalPool(c).concat([
+         {v:c.total*c.n[left], w:"That multiplies by the "+c.n[left]+" "+c.F.groups[left]+", none of whom is being chosen."},
+         {v:nCr(c.n[c.used[0]]+c.n[left],c.r[c.used[0]])*c.counts[1], w:"That folds the "+c.F.groups[left]+" into the "+c.F.groups[c.used[0]]+" pool."}
+       ]),
+       "The "+c.F.groups[left]+" have no quota, so they contribute no factor at all: "+c.counts.join(" \u00d7 ")+" = "+grp(c.total)+"."))};
+   }
+   if(f==="why"){
+     return {q:"No "+c.F.groups[left]+" are required. <b>What does that do to the calculation?</b>",
+       scene:c.lead+" "+c.ask,
+       opts:shuffle([
+         {label:"Nothing \u2014 that group contributes no factor at all", correct:true,
+          note:"There is exactly one way to take none of them, so they are simply left out. The answer stays "+c.counts.join(" \u00d7 ")+" = "+grp(c.total)+"."},
+         {label:"It multiplies the answer by "+c.n[left],
+          note:"That would be right if one of them were being chosen. None is."},
+         {label:"It adds "+c.n[left]+" to the answer",
+          note:"Nothing is added \u2014 they take no part in the count."},
+         {label:"They must be added to another group's pool",
+          note:"They cannot be: the requirement names which group each member comes from."}
+       ]), one:true};
+   }
+   return {q:"<b>Which groups appear in the calculation?</b>", scene:c.lead+" "+c.ask,
+     opts:shuffle(distinctOpts([
+       {label:"Only the "+c.F.groups[c.used[0]]+" and the "+c.F.groups[c.used[1]], correct:true,
+        note:"Those are the two with a stated quota. The "+c.F.groups[left]+" have none, so they contribute nothing."},
+       {label:"All three groups",
+        note:"The "+c.F.groups[left]+" have no quota, so there is no factor for them."},
+       {label:"Only the "+c.F.groups[c.used[0]],
+        note:"Both groups with a quota contribute a factor."},
+       {label:"All three, with the "+c.F.groups[left]+" added to the pool",
+        note:"They are a separate group, and nobody is being taken from it."}
+     ]).slice(0,4)), two:true};
+ }
+},
+{
+ title:"Three groups",
+ sub:"The same method, one more factor.",
+ gen:function(){
+   const c=makeCase({k:3});
+   const forms=["count","setup"];
+   if(pick(forms)==="setup"){
+     return {q:"<b>Which expression sets this up?</b>", scene:c.lead+" "+c.ask,
+       opts:shuffle(distinctOpts([
+         {label:c.used.map(function(i){return ncrHTML(c.n[i],c.r[i]);}).join(" \u00d7 "), correct:true,
+          note:"Three groups, three combinations, multiplied: "+c.counts.join(" \u00d7 ")+" = "+grp(c.total)+"."},
+         {label:c.used.map(function(i){return ncrHTML(c.n[i],c.r[i]);}).join(" + "),
+          note:"Adding counts only one quota's worth of choices."},
+         {label:ncrHTML(c.pool,c.size),
+          note:"One pool of "+c.pool+" ignores the required make-up."},
+         {label:c.used.slice(0,2).map(function(i){return ncrHTML(c.n[i],c.r[i]);}).join(" \u00d7 "),
+          note:"That leaves the "+c.F.groups[c.used[2]]+" out."}
+       ]).slice(0,4)), two:true};
+   }
+   return {q:"<b>How many such "+c.F.what+"s can be formed?</b>", scene:c.lead+" "+c.ask,
+     groups:groupsHTML(c),
+     opts:shuffle(numOpts(c.total,totalPool(c),
+       c.counts.join(" \u00d7 ")+" = "+grp(c.total)+"."))};
+ }
+},
+{
+ title:"Spot the wrong setup",
+ sub:"Someone writes an expression. Say what is wrong with it.",
+ gen:function(){
+   const c=makeCase({distinctR:true});
+   const u=c.used;
+   const kinds=["ok","added","pooled","perm"];
+   const k=pick(kinds);
+   const shown={
+     ok:u.map(function(i){return ncrHTML(c.n[i],c.r[i]);}).join(" \u00d7 "),
+     added:u.map(function(i){return ncrHTML(c.n[i],c.r[i]);}).join(" + "),
+     pooled:ncrHTML(c.pool,c.size),
+     perm:u.map(function(i){return nprHTML(c.n[i],c.r[i]);}).join(" \u00d7 ")
+   }[k];
+   const L={
+     ok:"It is correct",
+     added:"The group counts were added instead of multiplied",
+     pooled:"Everyone was put into one pool",
+     perm:"Permutations were used inside the groups"
+   };
+   const notes={
+     ok:"One combination per group, multiplied: "+c.counts.join(" \u00d7 ")+" = "+grp(c.total)+".",
+     added:"Adding gives "+grp(sum(c.counts))+" and counts one quota's worth of choices. Multiplying gives "+grp(c.total)+".",
+     pooled:"That gives "+grp(nCr(c.pool,c.size))+" "+c.F.what+"s of any make-up, when only "+grp(c.total)+" have the required one.",
+     perm:"Inside a group the members have no roles, so order makes no difference. Using combinations gives "+grp(c.total)+"."
+   };
+   const wrongNotes={
+     ok:"Compare it against one combination per group, multiplied \u2014 something does not match.",
+     added:"These are multiplied here, not added.",
+     pooled:"The groups are kept separate here.",
+     perm:"These are combinations, not permutations."
+   };
+   const opts=kinds.map(function(x){
+     return {label:L[x], correct:x===k, note:x===k?notes[x]:wrongNotes[x]};
+   });
+   return {q:"Is this setup correct?", scene:c.lead+" "+c.ask,
+     big:shown, opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Any committee",
+ sub:"Two groups or three, quotas and totals.",
+ gen:function(){
+   const t=pick(["total","total","one","size","setup"]);
+   const c=(t==="one")?caseWithBigR():makeCase();
+   if(t==="one"){
+     const i=pickBigR(c);
+     return {q:"<b>In how many ways can the "+qty(c.F,i,c.r[i])+" be chosen?</b>",
+       scene:c.lead+" "+c.ask,
+       opts:shuffle(numOpts(nCr(c.n[i],c.r[i]),
+         [{v:nPr(c.n[i],c.r[i]), w:"That counts orderings inside the group."},
+          {v:c.n[i]*c.r[i], w:"That multiplies the two numbers."},
+          {v:c.total, w:"That is the whole count."},
+          {v:nCr(c.n[i],c.r[i]+1), w:"That chooses one more."},
+          {v:nCr(c.n[i],c.r[i]-1), w:"That chooses one fewer."},
+          {v:nCr(c.n[i]-1,c.r[i]), w:"That takes the group as one smaller."}],
+         ncrHTML(c.n[i],c.r[i])+" = "+grp(nCr(c.n[i],c.r[i]))+"."))};
+   }
+   if(t==="size"){
+     return {q:"<b>How many "+c.F.unit+"s are in the "+c.F.what+"?</b>", scene:c.lead+" "+c.ask,
+       opts:shuffle(numOpts(c.size,
+         [{v:c.pool, w:"That is everyone available."},
+          {v:c.used.length, w:"That is the number of groups."},
+          {v:c.size+1, w:"One too many."},
+          {v:prod(c.r.filter(function(x){return x>0;})), w:"That multiplies the quotas instead of adding them."}],
+         c.used.map(function(i){return c.r[i];}).join(" + ")+" = "+c.size+"."))};
+   }
+   if(t==="setup"){
+     return {q:"<b>Which expression sets this up?</b>", scene:c.lead+" "+c.ask,
+       opts:shuffle(distinctOpts([
+         {label:c.used.map(function(i){return ncrHTML(c.n[i],c.r[i]);}).join(" \u00d7 "), correct:true,
+          note:"One combination per group, multiplied: "+grp(c.total)+"."},
+         {label:c.used.map(function(i){return ncrHTML(c.n[i],c.r[i]);}).join(" + "),
+          note:"Adding is the wrong operation here."},
+         {label:ncrHTML(c.pool,c.size),
+          note:"That ignores the required make-up."},
+         {label:c.used.map(function(i){return nprHTML(c.n[i],c.r[i]);}).join(" \u00d7 "),
+          note:"Order makes no difference inside a group."}
+       ]).slice(0,4)), two:true};
+   }
+   return {q:"<b>How many such "+c.F.what+"s can be formed?</b>", scene:c.lead+" "+c.ask,
+     groups:groupsHTML(c),
+     opts:shuffle(numOpts(c.total,totalPool(c),
+       c.counts.join(" \u00d7 ")+" = "+grp(c.total)+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const SEN={D:46, R:52, I:2, rD:2, rR:3};
+SEN.cD=nCr(SEN.D,SEN.rD); SEN.cR=nCr(SEN.R,SEN.rR);
+SEN.total=SEN.cD*SEN.cR; SEN.pool=SEN.D+SEN.R+SEN.I; SEN.size=SEN.rD+SEN.rR;
+SEN.anyFive=nCr(SEN.pool,SEN.size);
+const HERO=[
+  {kind:"senate", lbl:"the Senate committee"},
+  {kind:"steps",  lbl:"one group at a time"},
+  {kind:"list",   lbl:"list every one"},
+  {kind:"pool",   lbl:"why not one pool"},
+  {kind:"indep",  lbl:"the group left out"},
+  {kind:"shape",  lbl:"the shape of it"}
+];
+/* every note is built from the same figures its panel draws */
+const HNOTES={
+  senate:function(){ return "Your worksheet's committee. Two Democrats from 46 gives "+grp(SEN.cD)+" ways; three Republicans from 52 gives "
+    +grp(SEN.cR)+". Multiply, and there are "+grp(SEN.total)+" committees with that exact make-up."; },
+  steps:function(){ return "The same problem, one factor at a time. Each group is an ordinary combination \u2014 nothing new \u2014 and the only new idea is that they multiply, "
+    +"which is the counting principle from the last lesson."; },
+  list:function(){ return "A version small enough to check by hand. Two of three engineers gives 3 ways, one of two designers gives 2, and there are 3 \u00d7 2 = 6 working groups in all. "
+    +"All six are listed, so nothing has to be taken on trust."; },
+  pool:function(){ return "Why the groups stay separate. Choosing any 5 of the "+SEN.pool+" members gives "+grp(SEN.anyFive)
+    +" committees, but only "+grp(SEN.total)+" of those have 2 Democrats and 3 Republicans \u2014 about "
+    +(SEN.total/SEN.anyFive*100).toFixed(1)+"% of them."; },
+  indep:function(){ return "The two Independents never enter the arithmetic. Nobody is being taken from that group, so it supplies no factor \u2014 "
+    +"it is left out of the multiplication rather than written down as a choice of none."; },
+  shape:function(){ return "The method in general. One combination for each group with a quota, multiplied together; the quotas add to the size of the committee; "
+    +"and any group with no quota is simply absent."; }
+};
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="senate"){
+    body='<div class="groups">'
+      +'<div class="grp a"><div class="nm">Democrats</div><div class="ask">choose '+SEN.rD+" of "+SEN.D+'</div><div class="cnt">'+grp(SEN.cD)+"</div></div>"
+      +'<div class="xsign">\u00d7</div>'
+      +'<div class="grp b"><div class="nm">Republicans</div><div class="ask">choose '+SEN.rR+" of "+SEN.R+'</div><div class="cnt">'+grp(SEN.cR)+"</div></div>"
+      +'<div class="xsign" style="opacity:.3">\u00b7</div>'
+      +'<div class="grp out"><div class="nm">Independents</div><div class="ask">none required</div><div class="cnt">\u2014</div></div>'
+      +"</div>"
+      +'<div class="eq" style="margin-top:14px">'+grp(SEN.cD)+" \u00d7 "+grp(SEN.cR)+" = <span class=\"res\">"+grp(SEN.total)+"</span>"
+      +'<span class="lbl">'+SEN.size+"-person committees with exactly "+SEN.rD+" Democrats and "+SEN.rR+" Republicans</span></div>";
+  }else if(h.kind==="steps"){
+    body='<table class="mt"><thead><tr><th>group</th><th>available</th><th>required</th><th>ways</th></tr></thead><tbody>'
+      +'<tr><td class="lab"><span class="gA">Democrats</span></td><td>'+SEN.D+"</td><td>"+SEN.rD+"</td><td>"+ncrHTML(SEN.D,SEN.rD)+" = "+grp(SEN.cD)+"</td></tr>"
+      +'<tr><td class="lab"><span class="gB">Republicans</span></td><td>'+SEN.R+"</td><td>"+SEN.rR+"</td><td>"+ncrHTML(SEN.R,SEN.rR)+" = "+grp(SEN.cR)+"</td></tr>"
+      +'<tr class="out"><td class="lab">Independents</td><td>'+SEN.I+"</td><td>0</td><td>no factor</td></tr>"
+      +'<tr class="tot"><td class="lab">multiplied</td><td></td><td>'+SEN.size+"</td><td>"+grp(SEN.total)+"</td></tr>"
+      +"</tbody></table>";
+  }else if(h.kind==="list"){
+    const E=["Ana","Bo","Cal"], D=["Dee","Eli"];
+    const pairs=[[0,1],[0,2],[1,2]];
+    let rows="", k=0;
+    pairs.forEach(function(p){
+      D.forEach(function(d){
+        k++;
+        rows+='<div class="row"><span class="n">'+k+'</span><span class="gA">'+E[p[0]]+" + "+E[p[1]]+'</span><span style="color:var(--muted)">with</span><span class="gB">'+d+"</span></div>";
+      });
+    });
+    body='<div class="eq" style="margin-bottom:10px">2 of 3 <span class="gA">engineers</span> &nbsp;\u00d7&nbsp; 1 of 2 <span class="gB">designers</span></div>'
+      +'<div class="listing">'+rows+"</div>"
+      +'<div class="eq" style="margin-top:12px">'+ncrHTML(3,2)+" \u00d7 "+ncrHTML(2,1)+" = 3 \u00d7 2 = <span class=\"res\">6</span>"
+      +'<span class="lbl">every one of them listed above</span></div>';
+  }else if(h.kind==="pool"){
+    const pct=(SEN.total/SEN.anyFive*100);
+    body='<div class="eq">'
+      +ncrHTML(SEN.pool,SEN.size)+" = "+grp(SEN.anyFive)
+      +'<span class="lbl">any 5 of the '+SEN.pool+" members, make-up ignored</span>"
+      +ncrHTML(SEN.D,SEN.rD)+" \u00d7 "+ncrHTML(SEN.R,SEN.rR)+" = <span class=\"res\">"+grp(SEN.total)+"</span>"
+      +'<span class="lbl">exactly '+SEN.rD+" Democrats and "+SEN.rR+" Republicans</span>"
+      +'<span class="lbl" style="margin-top:12px">only '+pct.toFixed(1)+"% of all 5-person committees have the required make-up</span></div>";
+  }else if(h.kind==="indep"){
+    body='<div class="eq">'
+      +"<span class=\"res\">"+grp(SEN.cD)+" \u00d7 "+grp(SEN.cR)+"</span>"
+      +'<span class="lbl">two factors, for the two groups with a quota</span>'
+      +"the "+SEN.I+" Independents contribute no factor"
+      +'<span class="lbl">nobody is chosen from that group, so it is left out entirely</span></div>';
+  }else{
+    body='<div class="eq">'
+      +"one <span class=\"npr\"><sub>n</sub>C<sub>r</sub></span> for each group with a quota, all multiplied"
+      +'<span class="lbl">within a group, order makes no difference</span>'
+      +"the quotas add to the size of the "+"committee"
+      +'<span class="lbl">'+SEN.rD+" + "+SEN.rR+" = "+SEN.size+" people</span>"
+      +"a group with no quota is absent from the product"
+      +'<span class="lbl">not written as a choice of none \u2014 simply not there</span></div>';
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.groups?'<div class="grpwrap">'+q.groups+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
