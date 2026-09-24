@@ -1,0 +1,925 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Swap Ladder — does changing the order change the answer?</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --cb:#1F6B8C;
+    --cb-bg:#E4F0F5;
+    --pm:#7A2E2E;
+    --pm-bg:#F7E9E9;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--cb)}
+  :focus-visible{outline:3px solid var(--cb); outline-offset:2px; border-radius:3px}
+
+  .frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.15; margin:0 4px}
+  .frac .den{border-top:2px solid currentColor; padding-top:3px}
+  .npr{font-family:var(--serif); white-space:nowrap}
+  .npr sub{font-size:.66em; vertical-align:sub; line-height:0}
+  .tagC{color:var(--cb); font-weight:700}
+  .tagP{color:var(--pm); font-weight:700}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--cb)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:18ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:660px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.1; text-align:center}
+  .eq .resC{color:var(--cb); font-weight:700}
+  .eq .resP{color:var(--pm); font-weight:700}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:680px; margin:0 auto}
+  @media (max-width:640px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:15px 16px; text-align:center}
+  .pane.c{background:var(--cb-bg)} .pane.p{background:var(--pm-bg)}
+  .pane .ttl{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:9px}
+  .pane.c .ttl{color:var(--cb)} .pane.p .ttl{color:var(--pm)}
+  .pane .desc{font-family:var(--serif); font-size:clamp(14px,2.8vw,16.5px); line-height:1.45; margin-bottom:10px}
+  .pane .big{font-family:var(--serif); font-size:clamp(21px,4.6vw,29px); font-weight:700}
+  .pane.c .big{color:var(--cb)} .pane.p .big{color:var(--pm)}
+  .pane .sm{font-size:12.5px; color:var(--muted); margin-top:6px}
+  .listing{max-width:640px; margin:0 auto; font-family:var(--serif)}
+  .listing .row{display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:7px; margin-bottom:4px; background:var(--cb-bg); flex-wrap:wrap}
+  .listing .row .set{font-weight:700; color:var(--cb); min-width:62px}
+  .listing .row .arr{color:var(--muted); font-size:.9em}
+  .listing .row .ord{color:var(--pm); font-family:var(--mono); font-size:.86em}
+  table.ct{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:14px}
+  table.ct th,table.ct td{border:1px solid var(--rule); padding:5px 13px; text-align:left; vertical-align:top}
+  table.ct th{background:var(--paper); font-weight:700; font-size:12.5px; text-align:center}
+  table.ct th.c{background:var(--cb-bg); color:var(--cb)}
+  table.ct th.p{background:var(--pm-bg); color:var(--pm)}
+  table.ct td.n{text-align:right; white-space:nowrap}
+  table.ct tr.hi td{background:var(--cb-bg)}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--cb); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--cb); background:var(--cb-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--cb)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .scene{max-width:54ch; margin:0 auto 14px; background:var(--cb-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .pair{display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:640px; margin:0 auto 14px}
+  @media (max-width:640px){.pair{grid-template-columns:1fr}}
+  .pair .side{border-radius:9px; padding:12px 15px; font-family:var(--serif); font-size:clamp(14.5px,2.9vw,16.5px); line-height:1.45; text-align:left; background:var(--paper); border:1px solid var(--rule)}
+  .pair .side .tag{font-family:var(--sans); font-size:11.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:5px}
+  .facts{max-width:40ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(18px,4.4vw,28px); background:var(--cb-bg); border-radius:12px; padding:11px 28px; margin:0 auto 16px}
+  .listwrap{margin:0 auto 14px; max-width:600px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:19px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>C or P</span> The Swap Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 18 · permutations and combinations</p>
+    <h1>Swap two of them and see what changed.</h1>
+    <p class="lede">Both counts select items from one group with nothing used twice. The only difference is whether the <b>order</b> of what you picked is part of the answer. There is a mechanical test for it: take any two of the chosen items and swap them. If you now have a different outcome, order matters and it is a permutation. If you have the same outcome described differently, it is a combination.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>One word can change the answer.</b> Your worksheet's ice cream shop offers the same twelve flavours and the same three scoops twice over. A <i>bowl</i> of three flavours gives <b>220</b> possibilities; a <i>stacked cone</i> of three flavours in your preferred order gives <b>1,320</b>. Nothing changed but the container — and with it, whether the order of the scoops is part of what you ordered.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 fix the definitions and the three conditions. Rungs 3–5 run the swap test, read the wording, and pick the formula. Rungs 6–7 show why a combination is always smaller and by exactly how much. Rungs 8–10 classify your worksheet's situations, separate wordings that cut close, and mix everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Run the swap test out loud</h3><p>Name two of the chosen items, swap them, and say whether the result changed. Do not go by feel.</p></div>
+    </div>
+    <p class="note2"><b>A note on scale.</b> Every count on this page is exact. Where a problem would produce a number too large to hold exactly — your worksheet's committee of 20 from 400 runs to 34 digits — the question asks only which kind of count it is, never its value.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>The wording is the whole question</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Roles make order matter</h3><p>Named posts, medal places and rankings all distinguish the positions. A plain committee does not.</p></div>
+      <div class="step"><span class="n">02</span><h3>The gap is enormous</h3><p>Choosing 5 from 52 gives 2,598,960 hands. Ordering those same 5 gives 120 times as many.</p></div>
+      <div class="step"><span class="n">03</span><h3>Everything else is identical</h3><p>Same pool, no repeats, same n and r. Getting the classification right is most of getting the answer right.</p></div>
+    </div>
+    <p class="closing">Swap two of the chosen. If nothing changed, divide by r!.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Swap Ladder · combinations ignore order, permutations count it · nCr = nPr ÷ r! · same pool, no repeats, one question apart</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+
+/* ================= the two counts ================= */
+function fact(n){ let p=1; for(let k=2;k<=n;k++) p*=k; return p; }
+/* nPr as a falling product - r factors, nothing large ever computed */
+function nPr(n,r){ let p=1; for(let k=0;k<r;k++) p*=(n-k); return p; }
+/* nCr built one factor at a time. After step k the running product is exactly
+   C(n-r+k, k), always a whole number, so this stays exact where computing
+   n! first would overflow long before. */
+function nCr(n,r){
+  r=Math.min(r,n-r);
+  let p=1;
+  for(let k=1;k<=r;k++) p=p*(n-r+k)/k;
+  return Math.round(p);
+}
+function nprHTML(n,r){ return '<span class="npr"><sub>'+n+"</sub>P<sub>"+r+"</sub></span>"; }
+function ncrHTML(n,r){ return '<span class="npr"><sub>'+n+"</sub>C<sub>"+r+"</sub></span>"; }
+function fr(a,b){ return '<span class="frac"><span class="num">'+a+'</span><span class="den">'+b+"</span></span>"; }
+
+/* ================= scenarios ================= */
+/* Each entry supplies both readings of the same situation, so the pool, the
+   no-repeat condition, n and r are identical and only the order differs. */
+const PAIRS=[
+  {pool:"flavours of ice cream", n:[8,14], r:3,
+   c:"One of its items is a bowl of @R flavours, each one different. How many such bowls are possible?",
+   p:"One of its items is a stacked cone of @R flavours, each one different, in your preferred order. How many such cones are possible?",
+   lead:"An ice cream shop offers @N assorted flavours.",
+   cWhat:"bowls", pWhat:"cones", roles:"the order of the scoops"},
+  {pool:"club members", n:[8,16], r:3,
+   c:"A subcommittee of @R members is to be chosen, with no particular roles. How many subcommittees are possible?",
+   p:"A president, a secretary and a treasurer are to be elected. How many outcomes are possible?",
+   lead:"A club has @N members.",
+   cWhat:"subcommittees", pWhat:"sets of officers", roles:"which post each person holds"},
+  {pool:"runners", n:[8,20], r:3,
+   c:"@R of them are picked at random for a drugs test. How many groups could be picked?",
+   p:"Gold, silver and bronze are awarded to the first @R. How many outcomes are possible?",
+   lead:"@N runners enter a race.",
+   cWhat:"groups", pWhat:"medal results", roles:"which medal each runner gets"},
+  {pool:"films", n:[10,18], r:3,
+   c:"You must pick @R of them to watch this weekend. How many selections are possible?",
+   p:"You must list your @R favourites in order of preference. How many rankings are possible?",
+   lead:"You have @N films on your shelf.",
+   cWhat:"selections", pWhat:"rankings", roles:"which film is ranked first"},
+  {pool:"books", n:[9,16], r:4,
+   c:"You choose @R of them to take on holiday. How many choices are possible?",
+   p:"You place @R of them on a shelf, left to right. How many arrangements are possible?",
+   lead:"A shelf holds @N books.",
+   cWhat:"choices", pWhat:"arrangements", roles:"which book sits leftmost"},
+  {pool:"songs", n:[8,15], r:4,
+   c:"You pick @R of them for a party, to be shuffled. How many sets of @R are possible?",
+   p:"You build a playlist of @R, played in that order. How many playlists are possible?",
+   lead:"@N songs are available.",
+   cWhat:"sets", pWhat:"playlists", roles:"which song plays first"},
+  {pool:"students", n:[10,20], r:3,
+   c:"@R of them are chosen to form a study group. How many groups are possible?",
+   p:"@R of them are chosen and seated in a row at the front. How many seatings are possible?",
+   lead:"A class has @N students.",
+   cWhat:"groups", pWhat:"seatings", roles:"who sits where"}
+];
+/* the worksheet's own four, for the classification rung */
+const SHEET=[
+  {t:"Medals are given at a race for first, second and third place. Thirty people ran. How many different outcomes are possible for these three positions?",
+   kind:"P", n:30, r:3, why:"First, second and third are distinct places, so swapping two runners changes who won."},
+  {t:"How many ways can you select 6 free DVDs from a list of 200?",
+   kind:"C", n:200, r:6, why:"The six DVDs arrive as a set. Swapping two of them leaves the same six."},
+  {t:"A committee of 20 students is formed from a school of 400. How many different committees could be formed?",
+   kind:"C", n:400, r:20, why:"No roles are named, so the committee is just a group of twenty.", huge:true},
+  {t:"A math club of 12 is voting on a President, Vice President, Secretary and Treasurer. How many different sets of officers could be formed?",
+   kind:"P", n:12, r:4, why:"Four named posts, so who holds which one is part of the outcome."}
+];
+
+function makePair(o){
+  o=o||{};
+  const S=o.S||pick(PAIRS);
+  const n=ri(S.n[0],S.n[1]);
+  const r=S.r;
+  return {S:S, n:n, r:r, C:nCr(n,r), P:nPr(n,r),
+    lead:S.lead.replace("@N",n),
+    cText:S.lead.replace("@N",n)+" "+S.c.replace(/@R/g,r),
+    pText:S.lead.replace("@N",n)+" "+S.p.replace(/@R/g,r)};
+}
+
+/* ================= options ================= */
+function numOpts(ans,cands,note){
+  const seen={}; seen[grp(ans)]=1;
+  const opts=[{label:grp(ans), correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.v===null||!Number.isFinite(x.v)||x.v<=0)return;
+    const L=grp(x.v); if(seen[L])return; seen[L]=1;
+    opts.push({label:L, note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+function pairHTML(a,b,la,lb){
+  return '<div class="pair"><div class="side"><span class="tag">'+la+"</span>"+a+"</div>"
+    +'<div class="side"><span class="tag">'+lb+"</span>"+b+"</div></div>";
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"The two words",
+ sub:"A combination ignores order. A permutation counts it.",
+ gen:function(){
+   const forms=[
+     {q:"<b>What is a combination?</b>",
+      ans:"A group of items taken without regard to their order",
+      bad:[["A group of items arranged in a particular order","That is a permutation."],
+        ["A group of items in which repeats are allowed","Neither count allows repeats."],
+        ["Any selection of items from two or more different groups","Both counts draw from a single group."]],
+      note:"Which is why the same n and r give a smaller answer for a combination than for a permutation."},
+     {q:"<b>What do permutations and combinations have in common?</b>",
+      ans:"Items come from one group and none is used twice",
+      bad:[["Both count the order of the selection","Only permutations do."],
+        ["Both allow an item to be chosen more than once","Neither does."],
+        ["Both give the same answer for the same n and r","They differ by a factor of r!."]],
+      note:"Two of the three conditions are shared. Only the third \u2014 whether order matters \u2014 separates them."},
+     {q:"<b>Which notation counts selections where order makes no difference?</b>",
+      ans:'<span class="npr"><sub>n</sub>C<sub>r</sub></span>',
+      bad:[['<span class="npr"><sub>n</sub>P<sub>r</sub></span>',"That counts arrangements, where the order is part of the outcome."],
+        ["n!","That arranges every item in the group, with none left out."],
+        ["n<sup>r</sup>","That allows repeats, which neither count permits."]],
+      note:"C for combination, and it is always the smaller of the two."},
+     {q:"<b>For the same n and r, which is larger?</b>",
+      ans:'<span class="npr"><sub>n</sub>P<sub>r</sub></span>, always',
+      bad:[['<span class="npr"><sub>n</sub>C<sub>r</sub></span>, always',"The combination is the smaller one \u2014 it treats many orderings as a single outcome."],
+        ["It depends on n and r","The permutation is larger for every r greater than 1, and they are equal only when r is 1."],
+        ["They are always equal","They differ by a factor of r!."]],
+      note:"Each combination corresponds to r! different permutations, so the permutation count is r! times bigger."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"The three conditions",
+ sub:"Two are shared. Only the third tells them apart.",
+ gen:function(){
+   const forms=["which","shared","fail"];
+   const f=pick(forms);
+   if(f==="which"){
+     return {q:"<b>Which condition separates a combination from a permutation?</b>",
+       opts:shuffle([
+         {label:"Whether the order of the items makes a difference", correct:true,
+          note:"The other two \u2014 one pool, no repeats \u2014 hold for both."},
+         {label:"Whether the items come from the same group",
+          note:"Both draw from a single group."},
+         {label:"Whether an item can be used more than once",
+          note:"Neither allows an item to be used twice."},
+         {label:"Whether r is smaller than n",
+          note:"That is true of both, and says nothing about order."}
+       ]), one:true};
+   }
+   if(f==="shared"){
+     return {q:"<b>Which of these is true of both counts?</b>",
+       opts:shuffle([
+         {label:"No item is used more than once", correct:true,
+          note:"Each selection removes an item from the pool, in both cases."},
+         {label:"The order of the items makes a difference",
+          note:"That is true of permutations only."},
+         {label:"The order of the items makes no difference",
+          note:"That is true of combinations only."},
+         {label:"Every item in the group is used",
+          note:"Both choose r out of n, leaving the rest unused."}
+       ]), one:true};
+   }
+   return {q:"Items <b>may</b> be reused. <b>Which count applies?</b>",
+     opts:shuffle([
+       {label:"Neither \u2014 both require that no item is used twice", correct:true,
+        note:"With repeats allowed and order mattering the count is n<sup>r</sup>, which is the counting principle rather than either of these."},
+       {label:"A permutation",
+        note:"A permutation requires that nothing is used twice."},
+       {label:"A combination",
+        note:"A combination requires that too."},
+       {label:"Both, depending on the order",
+        note:"Both are ruled out by repeats, whatever the order does."}
+     ]), one:true};
+ }
+},
+{
+ title:"The swap test",
+ sub:"Name two chosen items, swap them, say what changed.",
+ gen:function(){
+   const c=makePair();
+   const isP=Math.random()<.5;
+   const text=isP?c.pText:c.cText;
+   return {q:"You swap two of the chosen "+c.S.pool+". <b>What happens?</b>", scene:text,
+     opts:shuffle(distinctOpts([
+       {label:"The outcome changes \u2014 order matters here", correct:isP,
+        note:isP?("A swap changes "+c.S.roles+", so the two versions are counted separately. This is a permutation: "+nprHTML(c.n,c.r)+" = "+grp(c.P)+".")
+                :("Nothing distinguishes the chosen "+c.S.pool+" from one another here, so a swap leaves the same result.")},
+       {label:"The outcome is the same \u2014 order makes no difference", correct:!isP,
+        note:!isP?("The same "+c.r+" "+c.S.pool+" in a different order give the same result, so they are counted once. This is a combination: "+ncrHTML(c.n,c.r)+" = "+grp(c.C)+".")
+                 :("Here a swap changes "+c.S.roles+", so the outcome is genuinely different.")},
+       {label:"It depends on which two are swapped",
+        note:"The wording settles it for every pair at once, not one pair at a time."},
+       {label:"The swap is not allowed, since nothing may repeat",
+        note:"Swapping two already-chosen items does not reuse anything \u2014 it only reorders them."}
+     ]).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Read the wording",
+ sub:"Two versions of one situation, a single word apart.",
+ gen:function(){
+   const c=makePair();
+   const wantC=Math.random()<.5;
+   const left=Math.random()<.5;
+   const A=left?c.cText:c.pText, B=left?c.pText:c.cText;
+   const aIsC=left;
+   return {q:"<b>Which of these is the "+(wantC?"combination":"permutation")+"?</b>",
+     pair:pairHTML(A,B,"version A","version B"),
+     opts:shuffle(distinctOpts([
+       {label:"Version A", correct:wantC?aIsC:!aIsC,
+        note:(wantC?aIsC:!aIsC)
+          ?("Version A is the "+(wantC?"combination":"permutation")+": "+(wantC?ncrHTML(c.n,c.r)+" = "+grp(c.C):nprHTML(c.n,c.r)+" = "+grp(c.P))+".")
+          :("Version A is the other one. "+c.S.roles.charAt(0).toUpperCase()+c.S.roles.slice(1)+" is what decides it.")},
+       {label:"Version B", correct:wantC?!aIsC:aIsC,
+        note:(wantC?!aIsC:aIsC)
+          ?("Version B is the "+(wantC?"combination":"permutation")+": "+(wantC?ncrHTML(c.n,c.r)+" = "+grp(c.C):nprHTML(c.n,c.r)+" = "+grp(c.P))+".")
+          :("Version B is the other one.")},
+       {label:"Both of them",
+        note:"They differ by exactly one idea \u2014 whether "+c.S.roles+" is part of the answer."},
+       {label:"Neither of them",
+        note:"One of the two must be it: both draw "+c.r+" from "+c.n+" with no repeats."}
+     ]).slice(0,4)), two:true};
+ }
+},
+{
+ title:"Which formula",
+ sub:"Once you know the kind, the notation follows.",
+ gen:function(){
+   const c=makePair();
+   const isP=Math.random()<.5;
+   return {q:"<b>Which expression counts this?</b>", scene:isP?c.pText:c.cText,
+     opts:shuffle([
+       {label:isP?nprHTML(c.n,c.r):ncrHTML(c.n,c.r), correct:true,
+        note:(isP?("Order matters, so it is "+nprHTML(c.n,c.r)+" = "+grp(c.P)+".")
+                 :("Order makes no difference, so it is "+ncrHTML(c.n,c.r)+" = "+grp(c.C)+"."))},
+       {label:isP?ncrHTML(c.n,c.r):nprHTML(c.n,c.r),
+        note:isP?("That ignores "+c.S.roles+", giving "+grp(c.C)+" \u2014 too small by a factor of "+c.r+"!.")
+                :("That counts "+c.S.roles+" as part of the answer, giving "+grp(c.P)+" \u2014 too large by a factor of "+c.r+"!.")},
+       {label:isP?nprHTML(c.r,c.n):ncrHTML(c.r,c.n),
+        note:"That has n and r swapped. There are "+c.n+" to choose from and "+c.r+" being chosen."},
+       {label:"<span class=\"npr\">"+c.n+"<sup>"+c.r+"</sup></span>",
+        note:"That allows the same one to be chosen more than once, which is ruled out here."}
+     ]), two:true};
+ }
+},
+{
+ title:"Which is bigger",
+ sub:"The combination is always the smaller of the two.",
+ gen:function(){
+   const c=makePair();
+   const forms=["which","why","values"];
+   const f=pick(forms);
+   if(f==="values"){
+     return {q:"<b>Which pair of values is right?</b>", scene:c.lead+" "+c.r+" are to be chosen.",
+       opts:shuffle([
+         {label:ncrHTML(c.n,c.r)+" = "+grp(c.C)+", "+nprHTML(c.n,c.r)+" = "+grp(c.P), correct:true,
+          note:"The permutation is larger, by a factor of "+c.r+"! = "+grp(fact(c.r))+"."},
+         {label:ncrHTML(c.n,c.r)+" = "+grp(c.P)+", "+nprHTML(c.n,c.r)+" = "+grp(c.C),
+          note:"Those are the right numbers with the labels swapped. The combination is the smaller one."},
+         {label:ncrHTML(c.n,c.r)+" = "+grp(c.C)+", "+nprHTML(c.n,c.r)+" = "+grp(c.C),
+          note:"They are never equal for r greater than 1."},
+         {label:ncrHTML(c.n,c.r)+" = "+grp(c.P)+", "+nprHTML(c.n,c.r)+" = "+grp(c.P),
+          note:"They are never equal for r greater than 1."}
+       ]), one:true};
+   }
+   if(f==="why"){
+     return {q:"<b>Why is a combination count smaller than a permutation count?</b>",
+       opts:shuffle([
+         {label:"Many different orderings of the same items count as one outcome", correct:true,
+          note:"Every group of "+c.r+" can be arranged in "+c.r+"! = "+grp(fact(c.r))+" ways, and the combination count treats all of them as a single selection."},
+         {label:"Because fewer items are chosen",
+          note:"The same "+c.r+" are chosen in both. Only the counting differs."},
+         {label:"Because combinations allow repeats",
+          note:"Neither allows repeats. Repeats would make the count larger, not smaller."},
+         {label:"Because the pool is smaller",
+          note:"Both draw from the same "+c.n+"."}
+       ]), one:true};
+   }
+   return {q:"<b>Which is larger here?</b>", scene:c.lead+" "+c.r+" are to be chosen.",
+     opts:shuffle([
+       {label:nprHTML(c.n,c.r)+", at "+grp(c.P), correct:true,
+        note:"The permutation counts each group of "+c.r+" once for every way of ordering it, so it is "+grp(fact(c.r))+" times the combination's "+grp(c.C)+"."},
+       {label:ncrHTML(c.n,c.r)+", at "+grp(c.C),
+        note:"That is the smaller one. Ignoring order collapses many arrangements into one."},
+       {label:"They are equal",
+        note:"They are equal only when r is 1. Here r is "+c.r+"."},
+       {label:"It depends on whether n is large",
+        note:"The permutation is larger for every n, whenever r is more than 1."}
+     ]), two:true};
+ }
+},
+{
+ title:"The factor is r!",
+ sub:"Exactly how much larger, and why.",
+ gen:function(){
+   const c=makePair();
+   const forms=["ratio","from","check"];
+   const f=pick(forms);
+   if(f==="ratio"){
+     return {q:"<b>How many times larger is "+nprHTML(c.n,c.r)+" than "+ncrHTML(c.n,c.r)+"?</b>",
+       facts:'<div class="facts"><div><span class="lb">'+ncrHTML(c.n,c.r)+'</span><span>'+grp(c.C)+'</span></div>'
+         +'<div><span class="lb">'+nprHTML(c.n,c.r)+'</span><span>'+grp(c.P)+"</span></div></div>",
+       opts:shuffle(numOpts(fact(c.r),
+         [{v:c.r, w:"That is r itself. Each group of "+c.r+" can be ordered in "+c.r+"! ways, not "+c.r+"."},
+          {v:c.n, w:"That is the size of the pool."},
+          {v:fact(c.r+1), w:"That is ("+c.r+" + 1)!, one step too far."},
+          {v:fact(c.n-c.r), w:"That is (n \u2212 r)!, which is the permutation formula's denominator, not this ratio."},
+          {v:c.n-c.r, w:"That is how many are left unchosen."}],
+         "Each selection of "+c.r+" can be arranged in "+c.r+"! = "+grp(fact(c.r))+" ways, so "+grp(c.C)+" \u00d7 "+grp(fact(c.r))+" = "+grp(c.P)+"."))};
+   }
+   if(f==="from"){
+     return {q:"You know "+nprHTML(c.n,c.r)+" = <b>"+grp(c.P)+"</b>. <b>What is "+ncrHTML(c.n,c.r)+"?</b>",
+       opts:shuffle(numOpts(c.C,
+         [{v:c.P*fact(c.r), w:"That multiplies by "+c.r+"! instead of dividing. The combination is the smaller one."},
+          {v:Math.round(c.P/c.r), w:"That divides by "+c.r+" rather than by "+c.r+"!."},
+          {v:c.P, w:"That is the permutation count unchanged."},
+          {v:Math.round(c.P/fact(c.n-c.r)), w:"That divides by (n \u2212 r)!, which belongs to the permutation formula."}],
+         "Divide by "+c.r+"! to stop counting the orderings: "+grp(c.P)+" \u00f7 "+grp(fact(c.r))+" = "+grp(c.C)+"."))};
+   }
+   return {q:"<b>Why is the factor exactly r! ?</b>",
+     opts:shuffle([
+       {label:"Any r chosen items can be arranged among themselves in r! ways", correct:true,
+        note:"So each combination of "+c.r+" corresponds to "+grp(fact(c.r))+" permutations, and dividing by "+c.r+"! collapses them back to one."},
+       {label:"Because r! is the number of items left unchosen",
+        note:"That count is n \u2212 r, which is "+(c.n-c.r)+" here."},
+       {label:"Because the pool has r! orderings",
+        note:"The pool of "+c.n+" has "+c.n+"! orderings. It is the chosen "+c.r+" that matter."},
+       {label:"It is not exact \u2014 r! is only an approximation",
+        note:"It is exact for every n and r."}
+     ]), one:true};
+ }
+},
+{
+ title:"The worksheet's four",
+ sub:"Classify each, without computing anything.",
+ gen:function(){
+   const S=pick(SHEET);
+   return {q:"<b>Is this a permutation or a combination?</b>", scene:S.t,
+     opts:shuffle(distinctOpts([
+       {label:"A permutation", correct:S.kind==="P",
+        note:S.kind==="P"?(S.why+" The count is "+nprHTML(S.n,S.r)+(S.n<=30?" = "+grp(nPr(S.n,S.r)):"")+".")
+                         :("Order plays no part here. "+S.why)},
+       {label:"A combination", correct:S.kind==="C",
+        note:S.kind==="C"?(S.why+" The count is "+ncrHTML(S.n,S.r)+(S.huge?", a number with 34 digits":"")+".")
+                         :("The positions here are distinct. "+S.why)},
+       {label:"Neither \u2014 items may repeat",
+        note:"Nothing is chosen twice in this situation."},
+       {label:"Either, depending on how you count",
+        note:"The wording settles it. "+S.why}
+     ]).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Wordings that cut close",
+ sub:"The phrase that decides it is usually a short one.",
+ gen:function(){
+   const forms=["phrase","alike"];
+   if(pick(forms)==="phrase"){
+     const cues=[
+       {t:"in order of preference", kind:"P", w:"Ranking is ordering, so first place differs from second."},
+       {t:"each a different flavour, in your preferred order", kind:"P", w:"\u201cIn your preferred order\u201d makes the sequence part of the choice."},
+       {t:"a president and a treasurer", kind:"P", w:"Two named posts, so who holds which is part of the outcome."},
+       {t:"with no particular roles", kind:"C", w:"Without roles the chosen people are interchangeable."},
+       {t:"the order in which they are received does not matter", kind:"C", w:"It says so outright."},
+       {t:"seated in a row", kind:"P", w:"A row has a first seat and a last, so positions differ."},
+       {t:"to be shuffled afterwards", kind:"C", w:"If they are shuffled, the order they were picked in is lost."},
+       {t:"assuming order doesn't matter", kind:"C", w:"Stated directly in the wording."},
+       {t:"first, second and third place", kind:"P", w:"Three distinct places."},
+       {t:"a group of three, all equal members", kind:"C", w:"Equal members means no position to distinguish."}
+     ];
+     const cu=pick(cues);
+     return {q:"A problem contains the phrase <b>\u201c"+cu.t+"\u201d</b>. <b>What does it tell you?</b>",
+       opts:shuffle(distinctOpts([
+         {label:"Order matters \u2014 it is a permutation", correct:cu.kind==="P", note:cu.w},
+         {label:"Order makes no difference \u2014 it is a combination", correct:cu.kind==="C", note:cu.w},
+         {label:"Items may be repeated",
+          note:"Nothing in that phrase allows an item to be used twice."},
+         {label:"Nothing \u2014 the phrase is not relevant",
+          note:"It is the deciding phrase. "+cu.w}
+       ]).slice(0,4)), one:true};
+   }
+   const c=makePair();
+   return {q:"<b>What is the same in both versions?</b>",
+     pair:pairHTML(c.cText,c.pText,"version A","version B"),
+     opts:shuffle([
+       {label:"The pool of "+c.n+", the "+c.r+" chosen, and that nothing repeats", correct:true,
+        note:"All three of those are shared. Only "+c.S.roles+" differs, and that is what separates "+grp(c.C)+" from "+grp(c.P)+"."},
+       {label:"Everything, including the answer",
+        note:"The answers differ by a factor of "+c.r+"! \u2014 "+grp(c.C)+" against "+grp(c.P)+"."},
+       {label:"Only the number of items in the pool",
+        note:"The number chosen and the no-repeat rule are shared too."},
+       {label:"Nothing \u2014 they are unrelated problems",
+        note:"They are the same situation asked two ways."}
+     ]), one:true};
+ }
+},
+{
+ title:"Any situation, which is it",
+ sub:"Classify, then name the count.",
+ gen:function(){
+   const t=pick(["which","formula","value","sheet"]);
+   if(t==="sheet"){
+     const S=pick(SHEET);
+     return {q:"<b>Is this a permutation or a combination?</b>", scene:S.t,
+       opts:shuffle(distinctOpts([
+         {label:"A permutation", correct:S.kind==="P", note:S.why},
+         {label:"A combination", correct:S.kind==="C", note:S.why},
+         {label:"Neither \u2014 items may repeat", note:"Nothing repeats here."},
+         {label:"Either, depending on how you count", note:"The wording settles it. "+S.why}
+       ]).slice(0,4)), one:true};
+   }
+   const c=makePair();
+   const isP=Math.random()<.5;
+   const text=isP?c.pText:c.cText;
+   if(t==="which"){
+     return {q:"<b>Is this a permutation or a combination?</b>", scene:text,
+       opts:shuffle(distinctOpts([
+         {label:"A permutation", correct:isP,
+          note:isP?("Swapping two changes "+c.S.roles+", so the order counts.")
+                  :("Swapping two leaves the same result, so the order does not count.")},
+         {label:"A combination", correct:!isP,
+          note:!isP?("Swapping two leaves the same result, so the order does not count.")
+                   :("Swapping two changes "+c.S.roles+", so the order counts.")},
+         {label:"Neither \u2014 items may repeat", note:"Each one is used at most once."},
+         {label:"Both at once", note:"A situation is one or the other, decided by whether order is part of the outcome."}
+       ]).slice(0,4)), two:true};
+   }
+   if(t==="formula"){
+     return {q:"<b>Which expression counts this?</b>", scene:text,
+       opts:shuffle([
+         {label:isP?nprHTML(c.n,c.r):ncrHTML(c.n,c.r), correct:true,
+          note:(isP?"Order matters: ":"Order does not: ")+grp(isP?c.P:c.C)+"."},
+         {label:isP?ncrHTML(c.n,c.r):nprHTML(c.n,c.r),
+          note:"That is the other kind, giving "+grp(isP?c.C:c.P)+"."},
+         {label:isP?nprHTML(c.r,c.n):ncrHTML(c.r,c.n), note:"n and r swapped."},
+         {label:"<span class=\"npr\">"+c.n+"<sup>"+c.r+"</sup></span>", note:"That allows repeats."}
+       ]), two:true};
+   }
+   return {q:"<b>How many are possible?</b>", scene:text,
+     opts:shuffle(numOpts(isP?c.P:c.C,
+       [{v:isP?c.C:c.P, w:isP?("That ignores the order, which matters here \u2014 too small by "+c.r+"!.")
+                             :("That counts the order, which does not matter here \u2014 too large by "+c.r+"!.")},
+        {v:Math.pow(c.n,c.r), w:"That allows repeats."},
+        {v:fact(c.r), w:"That arranges "+c.r+" items among themselves."},
+        {v:c.n*c.r, w:"That multiplies the two numbers once."}],
+       (isP?nprHTML(c.n,c.r):ncrHTML(c.n,c.r))+" = "+grp(isP?c.P:c.C)+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HI={n:12, r:3};
+HI.C=nCr(HI.n,HI.r); HI.P=nPr(HI.n,HI.r);
+const HL={n:4, r:2};                       /* small enough to list in full */
+HL.C=nCr(HL.n,HL.r); HL.P=nPr(HL.n,HL.r);
+const NAMES=["mint","peach","cocoa","lime"];
+function allPairs(){
+  const out=[];
+  for(let i=0;i<4;i++) for(let j=i+1;j<4;j++) out.push([i,j]);
+  return out;
+}
+const HERO=[
+  {kind:"bowl",  lbl:"the bowl and the cone"},
+  {kind:"list",  lbl:"list every one"},
+  {kind:"swap",  lbl:"the swap test"},
+  {kind:"ratio", lbl:"the factor is r!"},
+  {kind:"table", lbl:"the three conditions"},
+  {kind:"four",  lbl:"the worksheet's four"}
+];
+/* every note is built from the same figures its panel draws */
+const HNOTES={
+  bowl:function(){ return "Your worksheet's ice cream shop, asked twice. Same twelve flavours, same three scoops, nothing repeated either time \u2014 "
+    +"and the answers are "+grp(HI.C)+" and "+grp(HI.P)+". The word \u201cstacked\u201d is doing all of the work."; },
+  list:function(){ return "Four flavours, choose two, written out in full. There are "+HL.C+" combinations, and each one can be ordered "
+    +"two ways, giving "+HL.P+" permutations. Nothing is hidden here \u2014 you can count both columns by eye and see exactly where the factor of 2! comes from."; },
+  swap:function(){ return "The test, applied to both versions. Swapping peach and cocoa in a bowl gives the same bowl; swapping them on a cone gives a different cone. "
+    +"Run this on any two of the chosen items and the classification follows."; },
+  ratio:function(){ return "Why the gap is exactly "+HI.r+"!. Each bowl of three can be stacked "+grp(fact(HI.r))+" different ways, so the cone count is "
+    +grp(HI.C)+" \u00d7 "+grp(fact(HI.r))+" = "+grp(HI.P)+". Dividing by "+HI.r+"! is what turns one into the other."; },
+  table:function(){ return "Your worksheet's table. The first two rows are identical for both counts \u2014 one pool, nothing reused. "
+    +"Only the third row differs, and it is the whole of the distinction."; },
+  four:function(){ return "Your worksheet's four situations, classified. Notice that the two permutations both name distinct positions \u2014 medal places, and four separate offices \u2014 "
+    +"while the two combinations describe a set with nothing to tell its members apart. The committee of 20 from 400 runs to 34 digits, which is why it asks only which kind it is."; }
+};
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="bowl"){
+    body='<div class="duo">'
+      +'<div class="pane c"><div class="ttl">a bowl of 3 flavours</div>'
+        +'<div class="desc">Three different flavours in a bowl. Scooped in any order, it is the same bowl.</div>'
+        +'<div class="big">'+grp(HI.C)+"</div>"
+        +'<div class="sm">'+ncrHTML(HI.n,HI.r)+" \u00b7 order makes no difference</div></div>"
+      +'<div class="pane p"><div class="ttl">a stacked cone of 3 flavours</div>'
+        +'<div class="desc">Three different flavours stacked, in your preferred order. A different stack is a different cone.</div>'
+        +'<div class="big">'+grp(HI.P)+"</div>"
+        +'<div class="sm">'+nprHTML(HI.n,HI.r)+" \u00b7 order is part of the order</div></div></div>"
+      +'<div class="eq" style="margin-top:14px">'+grp(HI.C)+" \u00d7 3! = <span class=\"resP\">"+grp(HI.P)+"</span>"
+      +'<span class="lbl">every bowl can be stacked six ways</span></div>';
+  }else if(h.kind==="list"){
+    let rows="";
+    allPairs().forEach(function(p){
+      rows+='<div class="row"><span class="set">'+NAMES[p[0]]+" + "+NAMES[p[1]]+"</span>"
+        +'<span class="arr">stacks as</span>'
+        +'<span class="ord">'+NAMES[p[0]]+" on "+NAMES[p[1]]+" &nbsp;|&nbsp; "+NAMES[p[1]]+" on "+NAMES[p[0]]+"</span></div>";
+    });
+    body='<div class="eq" style="margin-bottom:10px">four flavours &nbsp;&middot;&nbsp; choose two</div>'
+      +'<div class="listing">'+rows+"</div>"
+      +'<div class="eq" style="margin-top:12px"><span class="resC">'+HL.C+" bowls</span> &nbsp;\u00b7&nbsp; <span class=\"resP\">"+HL.P+" cones</span>"
+      +'<span class="lbl">each bowl stacks 2! = 2 ways</span></div>';
+  }else if(h.kind==="swap"){
+    body='<div class="duo">'
+      +'<div class="pane c"><div class="ttl">in a bowl</div>'
+        +'<div class="desc">peach \u00b7 cocoa \u00b7 mint<br><span style="color:var(--muted)">swap peach and cocoa</span><br>cocoa \u00b7 peach \u00b7 mint</div>'
+        +'<div class="big" style="font-size:clamp(16px,3.4vw,20px)">the same bowl</div>'
+        +'<div class="sm">counted once \u2014 a combination</div></div>'
+      +'<div class="pane p"><div class="ttl">on a cone</div>'
+        +'<div class="desc">peach on cocoa on mint<br><span style="color:var(--muted)">swap peach and cocoa</span><br>cocoa on peach on mint</div>'
+        +'<div class="big" style="font-size:clamp(16px,3.4vw,20px)">a different cone</div>'
+        +'<div class="sm">counted twice \u2014 a permutation</div></div></div>'
+      +'<div class="eq" style="margin-top:14px">swap two of the chosen, and ask whether anything changed'
+      +'<span class="lbl">the test works on any problem, without computing anything</span></div>';
+  }else if(h.kind==="ratio"){
+    body='<div class="eq">'
+      +ncrHTML(HI.n,HI.r)+" = <span class=\"resC\">"+grp(HI.C)+"</span> bowls"
+      +'<span class="lbl">each one a set of three flavours</span>'
+      +"\u00d7 "+HI.r+"! = "+grp(fact(HI.r))+" ways to stack each bowl"
+      +'<span class="lbl">mint-peach-cocoa, mint-cocoa-peach, and four more</span>'
+      +"= <span class=\"resP\">"+grp(HI.P)+"</span> cones = "+nprHTML(HI.n,HI.r)
+      +'<span class="lbl">so '+ncrHTML(HI.n,HI.r)+" = "+nprHTML(HI.n,HI.r)+" \u00f7 "+HI.r+"!</span></div>";
+  }else if(h.kind==="table"){
+    body='<table class="ct"><thead><tr><th></th><th class="c">combinations</th><th class="p">permutations</th></tr></thead><tbody>'
+      +"<tr><td>the items come from</td><td>the same group</td><td>the same group</td></tr>"
+      +"<tr><td>no item is used more than</td><td>once</td><td>once</td></tr>"
+      +'<tr class="hi"><td>the order of the items</td><td><b>makes no difference</b></td><td><b>does make a difference</b></td></tr>'
+      +"<tr><td>notation</td><td>"+ncrHTML("n","r")+"</td><td>"+nprHTML("n","r")+"</td></tr>"
+      +"</tbody></table>";
+  }else{
+    let rows="";
+    SHEET.forEach(function(S){
+      const tag=S.kind==="P"?'<span class="tagP">permutation</span>':'<span class="tagC">combination</span>';
+      const notation=S.kind==="P"?nprHTML(S.n,S.r):ncrHTML(S.n,S.r);
+      const val=S.huge?"34 digits":grp(S.kind==="P"?nPr(S.n,S.r):nCr(S.n,S.r));
+      rows+="<tr><td>"+S.t.replace(/\.\s.*$/,".")+"</td><td>"+tag+"</td><td class=\"n\">"+notation+"</td><td class=\"n\">"+val+"</td></tr>";
+    });
+    body='<table class="ct"><thead><tr><th>situation</th><th>which</th><th>count</th><th>value</th></tr></thead><tbody>'+rows+"</tbody></table>";
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" \u00b7 "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.pair||"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> \u2014 rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
