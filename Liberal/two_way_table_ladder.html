@@ -1,0 +1,997 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Table Ladder — the denominator is the one in the corner</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --tb:#9E6B1E;
+    --tb-bg:#F8F0E2;
+    --cell:#1B7A4B;
+    --cell-bg:#E7F4EC;
+    --marg:#2E5F9E;
+    --marg-bg:#E6EDF6;
+    --grand:#9E2E4A;
+    --grand-bg:#F8E9ED;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--tb)}
+  :focus-visible{outline:3px solid var(--tb); outline-offset:2px; border-radius:3px}
+
+  .frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.15; margin:0 3px}
+  .frac .den{border-top:2px solid currentColor; padding-top:2px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--tb)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:18ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:660px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.1; text-align:center}
+  .eq .res{color:var(--tb); font-weight:700}
+  .eq .bad{color:var(--wrong)}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+
+  table.tw{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:clamp(13.5px,2.9vw,16px)}
+  table.tw th,table.tw td{border:1px solid var(--rule); padding:7px 16px; text-align:right; white-space:nowrap}
+  table.tw th{background:var(--paper); color:var(--muted); font-weight:700; font-size:.88em; text-align:center}
+  table.tw th.rh{text-align:left}
+  table.tw td.tot{background:var(--marg-bg); color:var(--marg); font-weight:700}
+  table.tw td.grand{background:var(--grand-bg); color:var(--grand); font-weight:700}
+  table.tw td.hit{background:var(--cell-bg); color:var(--cell); font-weight:700; outline:2px solid var(--cell); outline-offset:-2px}
+  table.tw td.den{outline:2px dashed var(--grand); outline-offset:-2px}
+  table.tw td.q{background:var(--tb-bg); color:var(--tb); font-weight:700}
+  .legend{display:flex; gap:16px; justify-content:center; flex-wrap:wrap; font-size:12.5px; color:var(--muted); margin-top:10px}
+  .legend i{display:inline-block; width:11px; height:11px; border-radius:2px; margin-right:5px; vertical-align:-1px}
+
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:660px; margin:0 auto}
+  @media (max-width:620px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:14px 16px; text-align:center}
+  .pane.ok{background:var(--cell-bg)} .pane.no{background:var(--wrong-bg)}
+  .pane .ttl{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:8px}
+  .pane.ok .ttl{color:var(--cell)} .pane.no .ttl{color:var(--wrong)}
+  .pane .vl{font-family:var(--serif); font-size:clamp(20px,4.6vw,28px); font-weight:700}
+  .pane.ok .vl{color:var(--cell)} .pane.no .vl{color:var(--wrong)}
+  .pane .wk{font-size:13px; color:var(--muted); margin-top:7px; line-height:1.4}
+
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--tb); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--tb); background:var(--tb-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--tb)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .scene{max-width:54ch; margin:0 auto 14px; background:var(--tb-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:40ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(17px,4vw,26px); background:var(--tb-bg); border-radius:12px; padding:11px 26px; margin:0 auto 16px}
+  .tbl{margin:0 auto 16px; overflow-x:auto}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:19px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>／56</span> The Table Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 19 · empirical probability and two-way tables</p>
+    <h1>The denominator is the one in the corner.</h1>
+    <p class="lede">Empirical probability counts what actually happened rather than what could happen, but the fraction has the same shape: observed occurrences over total observations. In a survey table the numerator is whichever cells the question describes — and the denominator, unless the question says otherwise, is the <b>grand total</b> in the bottom-right corner, not the row or column the numerator happens to sit in.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>A male who prefers action is 10 out of 56, not 10 out of 27.</b> Your worksheet picks one person at random from everybody surveyed, so every one of the 56 is a candidate and the denominator is 56 — giving <b>5/28</b>. Dividing by the 27 males answers a different question: <i>given</i> that the person is male, how likely are they to prefer action. Both are sensible; only one was asked.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 separate empirical from theoretical and compute one from observations. Rungs 3–5 read cells, margins and the grand total. Rungs 6–7 turn a whole row and a single cell into probabilities. Rungs 8–10 check that a table is consistent, diagnose the wrong denominator, and mix everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>The cells are colour-coded</h3><p>Green marks the numerator, a dashed outline marks the denominator. Read them off before you answer.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Every answer is an exact fraction in lowest terms. Unless a question names a smaller group, one person is picked at random from everyone surveyed, so the denominator is the grand total.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Same fraction, different source</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Theory needs no data</h3><p>A fair die gives 1/6 before anything is rolled. Empirical probability needs the rolls to have happened.</p></div>
+      <div class="step"><span class="n">02</span><h3>More trials, closer agreement</h3><p>Eight tosses can land far from a half. Eight thousand rarely do.</p></div>
+      <div class="step"><span class="n">03</span><h3>The question sets the denominator</h3><p>"Pick a person" means everybody. "Pick a male" means the males. Read which one is being picked from.</p></div>
+    </div>
+    <p class="closing">Count the cells the question names, then divide by whoever could have been picked.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Table Ladder · empirical P(E) = times observed ÷ total observations · in a survey, the denominator is the grand total unless a smaller group is named</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function sum(a){return a.reduce(function(x,y){return x+y;},0);}
+
+/* ================= exact fractions ================= */
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){const t=a%b;a=b;b=t;}return a;}
+function frac(num,den){
+  if(den===0) return null;
+  if(num===0) return {n:0,d:1,txt:"0"};
+  const g=gcd(num,den)||1;
+  const n=num/g, d=den/g;
+  return {n:n,d:d,txt:(d===1?String(n):n+"/"+d)};
+}
+function fracText(num,den){ const f=frac(num,den); return f?f.txt:"—"; }
+function fracHTML(num,den){
+  const f=frac(num,den);
+  if(!f) return "—";
+  if(f.d===1) return String(f.n);
+  return '<span class="frac"><span class="num">'+f.n+'</span><span class="den">'+f.d+"</span></span>";
+}
+
+/* ================= survey tables ================= */
+const SURVEYS=[
+  {q:"a movie preference survey", rows:["Male","Female"], cols:["Action movies","Comedies"],
+   who:"person", rowWord:"", colWord:"prefers "},
+  {q:"a commuting survey", rows:["Staff","Students"], cols:["Bus","Car","Bicycle"],
+   who:"person", rowWord:"", colWord:"travels by "},
+  {q:"a drinks survey at a cafe", rows:["Morning shift","Evening shift"], cols:["Coffee","Tea"],
+   who:"customer", rowWord:"", colWord:"orders "},
+  {q:"a sports survey", rows:["Year 10","Year 11"], cols:["Football","Netball","Swimming"],
+   who:"pupil", rowWord:"is in ", colWord:"chose "},
+  {q:"a holiday survey", rows:["Under 30","30 and over"], cols:["Beach","Mountains"],
+   who:"traveller", rowWord:"is ", colWord:"prefers the "},
+  {q:"a breakfast survey", rows:["Weekday","Weekend"], cols:["Cereal","Cooked","Nothing"],
+   who:"diner", rowWord:"", colWord:"had "}
+];
+function makeTable(o){
+  o=o||{};
+  const S=o.S||pick(SURVEYS);
+  const R=S.rows.length, C=S.cols.length;
+  const cells=[];
+  for(let i=0;i<R;i++){
+    const row=[];
+    for(let j=0;j<C;j++) row.push(ri(5,30));
+    cells.push(row);
+  }
+  const rowT=cells.map(sum);
+  const colT=[];
+  for(let j=0;j<C;j++){ let t=0; for(let i=0;i<R;i++) t+=cells[i][j]; colT.push(t); }
+  const G=sum(rowT);
+  return {S:S, R:R, C:C, cells:cells, rowT:rowT, colT:colT, G:G};
+}
+/* the worksheet's own survey, exactly as printed */
+const SHEET={S:SURVEYS[0], R:2, C:2, cells:[[10,17],[9,20]], rowT:[27,29], colT:[19,37], G:56};
+
+/* naming a row or a column in plain words */
+function rowPhrase(T,i){ return T.S.rowWord+T.S.rows[i].toLowerCase(); }
+function colPhrase(T,j){ return T.S.colWord+T.S.cols[j].toLowerCase(); }
+
+/* ================= table rendering ================= */
+/* mark: {hit:[[i,j],...], hitRow:i, hitCol:j, den:"grand"|"row:i"|"col:j", q:[i,j]} */
+function tableHTML(T,mk){
+  mk=mk||{};
+  const hit={};
+  (mk.hit||[]).forEach(function(p){ hit[p[0]+","+p[1]]=1; });
+  let s='<table class="tw"><thead><tr><th></th>';
+  T.S.cols.forEach(function(c){ s+="<th>"+c+"</th>"; });
+  s+="<th>Total</th></tr></thead><tbody>";
+  for(let i=0;i<T.R;i++){
+    s+='<tr><th class="rh">'+T.S.rows[i]+"</th>";
+    for(let j=0;j<T.C;j++){
+      const cls=[];
+      if(hit[i+","+j]||mk.hitRow===i||mk.hitCol===j) cls.push("hit");
+      if(mk.q&&mk.q[0]===i&&mk.q[1]===j) cls.push("q");
+      s+='<td class="'+cls.join(" ")+'">'+(mk.q&&mk.q[0]===i&&mk.q[1]===j?"?":T.cells[i][j])+"</td>";
+    }
+    const rc=["tot"];
+    if(mk.den==="row:"+i) rc.push("den");
+    if(mk.hitRowTotal===i) rc.push("hit");
+    s+='<td class="'+rc.join(" ")+'">'+T.rowT[i]+"</td></tr>";
+  }
+  s+='<tr><th class="rh">Total</th>';
+  for(let j=0;j<T.C;j++){
+    const cc=["tot"];
+    if(mk.den==="col:"+j) cc.push("den");
+    if(mk.hitColTotal===j) cc.push("hit");
+    s+='<td class="'+cc.join(" ")+'">'+T.colT[j]+"</td>";
+  }
+  const gc=["grand"];
+  if(mk.den==="grand") gc.push("den");
+  s+='<td class="'+gc.join(" ")+'">'+T.G+"</td></tr></tbody></table>";
+  if(mk.legend) s+='<div class="legend"><span><i style="background:var(--cell)"></i>counted on top</span>'
+    +'<span><i style="background:transparent;border:2px dashed var(--grand)"></i>the denominator</span></div>';
+  return s;
+}
+
+/* ================= options ================= */
+function numOpts(ans,cands,note){
+  const seen={}; seen[grp(ans)]=1;
+  const opts=[{label:grp(ans), correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.v===null||!Number.isFinite(x.v)||x.v<0)return;
+    const L=grp(x.v); if(seen[L])return; seen[L]=1;
+    opts.push({label:L, note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* fraction options compared by value, so an equal-but-unreduced twin never
+   appears beside the answer */
+function fracOpts(an,ad,cands,note){
+  const ans=frac(an,ad);
+  const seen={}; seen[ans.txt]=1;
+  const opts=[{label:fracHTML(an,ad), correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.n===null||x.d===null||x.d===0||x.n<0)return;
+    const f=frac(x.n,x.d); if(!f||seen[f.txt])return; seen[f.txt]=1;
+    opts.push({label:fracHTML(x.n,x.d), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* options shown as "a / b" rather than reduced. Text alone is not enough to
+   tell them apart - 17/34 and 34/68 read differently and are the same number -
+   so they are de-duplicated by value, keeping the correct one. */
+function ratioOpts(list){
+  const seen={}, out=[];
+  list.forEach(function(o){
+    const f=frac(o.num,o.den);
+    if(!f||seen[f.txt])return;
+    seen[f.txt]=1;
+    out.push({label:o.num+" / "+o.den, correct:!!o.correct, note:o.note});
+  });
+  return out.slice(0,4);
+}
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Empirical or theoretical",
+ sub:"Worked out in advance, or counted from what happened.",
+ gen:function(){
+   const forms=[
+     {q:"<b>What is empirical probability?</b>",
+      ans:"The number of times the event was observed, over the total number of observations",
+      bad:[["The number of favourable outcomes over the total possible outcomes","That is theoretical probability, which needs no observations at all."],
+        ["The probability the event is expected to have","That is the theoretical value the empirical one is compared against."],
+        ["The number of trials divided by the number of successes","That is upside down."]],
+      note:"It requires the experiment to have actually been performed."},
+     {q:"<b>Which one can be worked out without performing the experiment?</b>",
+      ans:"Theoretical probability",
+      bad:[["Empirical probability","It counts what was observed, so the observations have to exist first."],
+        ["Both of them","Empirical probability has no value until trials are run."],
+        ["Neither of them","A fair die gives 1/6 before anything is rolled."]],
+      note:"Equally likely outcomes are enough — you count the sample space, not the trials."},
+     {q:"A coin is tossed 8 times and lands heads 5 times. <b>Which is the empirical probability of heads?</b>",
+      ans:"5/8",
+      bad:[["1/2","That is the theoretical probability. The empirical one comes from the 8 tosses."],
+        ["5/3","That divides by the tails. The denominator is every toss."],
+        ["8/5","That is upside down."]],
+      note:"Observed heads over total tosses — whatever the coin ought to do."},
+     {q:"<b>Why might an empirical probability differ from the theoretical one?</b>",
+      ans:"A finite run of trials rarely splits exactly as the theory predicts",
+      bad:[["Because the theoretical value is only a guess","It is exact, given equally likely outcomes."],
+        ["Because the experiment was performed wrongly","Ordinary variation is enough; nothing need have gone wrong."],
+        ["They can never differ","Eight tosses give heads 5 times often enough, and 5/8 is not 1/2."]],
+      note:"The gap tends to close as the number of trials grows, but it need not vanish."},
+     {q:"<b>As the number of trials grows, what happens to the empirical probability?</b>",
+      ans:"It tends to settle near the theoretical value",
+      bad:[["It moves further from the theoretical value","More data does not make agreement worse."],
+        ["It stays wherever the first few trials put it","Later trials keep pulling the fraction, and early results count for less and less."],
+        ["It becomes exactly the theoretical value","It tends towards it, but need never land on it exactly."]],
+      note:"Eight tosses can land far from a half; eight thousand rarely do."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"From observations",
+ sub:"Times it happened, over times you looked.",
+ gen:function(){
+   const CTX=[
+     {t:"A coin is tossed @N times and lands heads @K times.", e:"heads", th:[1,2]},
+     {t:"A die is rolled @N times and shows a six @K times.", e:"a six", th:[1,6]},
+     {t:"@N patients are tested and @K of them test positive.", e:"a positive test", th:null},
+     {t:"A machine makes @N parts and @K of them are faulty.", e:"a faulty part", th:null},
+     {t:"@N shoppers are watched and @K of them use a loyalty card.", e:"a loyalty card being used", th:null}
+   ];
+   const C=pick(CTX);
+   let n,k,tries=0;
+   do{
+     n=pick([8,10,12,20,24,25,40,50,60,80]);
+     k=ri(1,n-1);
+     tries++;
+   }while(C.th&&k*C.th[1]===n*C.th[0]&&tries<80);   /* keep the observed fraction off the theoretical one */
+   const forms=["value","which"];
+   if(pick(forms)==="which"&&C.th){
+     return {q:"<b>Which of these is the <i>theoretical</i> probability of "+C.e+"?</b>",
+       scene:C.t.replace("@N",n).replace("@K",k),
+       opts:shuffle(fracOpts(C.th[0],C.th[1],
+         [{n:k, d:n, w:"That is the <i>empirical</i> probability, taken from the "+n+" trials just described."},
+          {n:n-k, d:n, w:"That is the empirical probability of the event not happening."},
+          {n:k, d:n-k, w:"That divides by the trials where it did not happen."},
+          {n:1, d:n, w:"That is one trial out of "+n+", which is neither value."},
+          {n:C.th[0], d:C.th[1]+1, w:"Check the equally likely outcomes again."},
+          {n:C.th[1], d:C.th[1]+C.th[0], w:"That is not the ratio the outcomes give."}],
+         "It follows from the equally likely outcomes alone, whatever the "+n+" trials happened to show."))};
+   }
+   return {q:"<b>What is the empirical probability of "+C.e+"?</b>",
+     scene:C.t.replace("@N",n).replace("@K",k),
+     opts:shuffle(fracOpts(k,n,
+       [{n:n-k, d:n, w:"That is the probability of it <i>not</i> happening."},
+        {n:k, d:n-k, w:"That divides by the trials where it did not happen. The denominator is every trial."},
+        {n:n, d:k, w:"That is upside down."},
+        {n:1, d:2, w:"That is a theoretical value, not what was observed."},
+        {n:k+1, d:n, w:"One observation too many."},
+        {n:k-1, d:n, w:"One observation too few."},
+        {n:k, d:n+1, w:"One trial too many in the denominator."}],
+       k+" out of "+n+" = "+fracText(k,n)+"."))};
+ }
+},
+{
+ title:"Read a cell",
+ sub:"One row and one column meeting.",
+ gen:function(){
+   const T=Math.random()<.35?SHEET:makeTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const cands=[
+     {v:T.rowT[i], w:"That is the total for the whole "+T.S.rows[i].toLowerCase()+" row."},
+     {v:T.colT[j], w:"That is the total for the whole "+T.S.cols[j].toLowerCase()+" column."},
+     {v:T.G, w:"That is the grand total — everyone surveyed."},
+     {v:T.cells[(i+1)%T.R][j], w:"That is the cell in the other row of the same column."},
+     {v:T.cells[i][(j+1)%T.C], w:"That is the cell in the other column of the same row."},
+     {v:T.rowT[i]-T.cells[i][j], w:"That is the rest of the row, not this cell."},
+     {v:T.colT[j]-T.cells[i][j], w:"That is the rest of the column."},
+     {v:T.cells[i][j]+1, w:"One too many — read the cell again."}
+   ];
+   return {q:"<b>How many are "+rowPhrase(T,i)+" and "+colPhrase(T,j)+"?</b>",
+     scene:"The table shows the results of "+T.S.q+".",
+     tbl:tableHTML(T,{q:[i,j]}),
+     opts:shuffle(numOpts(T.cells[i][j],cands,
+       "Read across the "+T.S.rows[i].toLowerCase()+" row to the "+T.S.cols[j].toLowerCase()+" column: "+T.cells[i][j]+"."))};
+ }
+},
+{
+ title:"Row and column totals",
+ sub:"The margins, and what each one sums.",
+ gen:function(){
+   const T=Math.random()<.35?SHEET:makeTable();
+   const useRow=Math.random()<.5;
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   if(useRow){
+     const cands=[
+       {v:T.G, w:"That is everybody, not just the "+T.S.rows[i].toLowerCase()+"."},
+       {v:T.cells[i][0], w:"That is one cell of the row, not the whole row."},
+       {v:T.colT[0], w:"That is a column total."},
+       {v:T.rowT[(i+1)%T.R], w:"That is the other row's total."},
+       {v:T.rowT[i]+1, w:"One too many — add the row again."}
+     ];
+     return {q:"<b>How many "+T.S.rows[i].toLowerCase()+" were surveyed altogether?</b>",
+       scene:"The table shows the results of "+T.S.q+".",
+       tbl:tableHTML(T,{hitRow:i}),
+       opts:shuffle(numOpts(T.rowT[i],cands,
+         T.cells[i].join(" + ")+" = "+T.rowT[i]+", which is the row total."))};
+   }
+   const col=[]; for(let r=0;r<T.R;r++) col.push(T.cells[r][j]);
+   const cands=[
+     {v:T.G, w:"That is everybody, across every column."},
+     {v:T.cells[0][j], w:"That is one cell of the column, not the whole column."},
+     {v:T.rowT[0], w:"That is a row total."},
+     {v:T.colT[(j+1)%T.C], w:"That is another column's total."},
+     {v:T.colT[j]+1, w:"One too many — add the column again."}
+   ];
+   return {q:"<b>How many "+colPhrase(T,j)+" altogether?</b>",
+     scene:"The table shows the results of "+T.S.q+".",
+     tbl:tableHTML(T,{hitCol:j}),
+     opts:shuffle(numOpts(T.colT[j],cands,
+       col.join(" + ")+" = "+T.colT[j]+", which is the column total."))};
+ }
+},
+{
+ title:"The grand total",
+ sub:"Every row adds to it, and so does every column.",
+ gen:function(){
+   const T=Math.random()<.35?SHEET:makeTable();
+   const forms=["value","which","why"];
+   const f=pick(forms);
+   if(f==="why"){
+     return {q:"<b>Why does the grand total appear twice over in the margins?</b>",
+       scene:"The table shows the results of "+T.S.q+".",
+       tbl:tableHTML(T,{den:"grand"}),
+       opts:shuffle([
+         {label:"The row totals and the column totals each count everybody once", correct:true,
+          note:T.rowT.join(" + ")+" = "+T.G+" and "+T.colT.join(" + ")+" = "+T.G+". Both add up every "+T.S.who+" surveyed, just grouped differently."},
+         {label:"Because the table is square",
+          note:"It holds for any shape of table — this one is "+T.R+" by "+T.C+"."},
+         {label:"Because each "+T.S.who+" was counted twice",
+          note:"Each appears in exactly one cell. The two sums group those cells two different ways."},
+         {label:"It is a coincidence of these particular numbers",
+          note:"It is true of every correctly filled table."}
+       ]), one:true};
+   }
+   if(f==="which"){
+     return {q:"<b>Which number is the denominator when one "+T.S.who+" is picked at random from everyone surveyed?</b>",
+       scene:"The table shows the results of "+T.S.q+".",
+       tbl:tableHTML(T),
+       opts:shuffle(numOpts(T.G,
+         [{v:T.rowT[0], w:"That is the "+T.S.rows[0].toLowerCase()+" row only. Everybody could be picked, not just that row."},
+          {v:T.colT[0], w:"That is the "+T.S.cols[0].toLowerCase()+" column only."},
+          {v:T.rowT[T.R-1], w:"That is another row only."},
+          {v:T.colT[T.C-1], w:"That is another column only."},
+          {v:T.R*T.C, w:"That counts the cells in the table, not the people in them."},
+          {v:T.cells[0][0], w:"That is a single cell."},
+          {v:T.G-1, w:"One too few."},
+          {v:T.G+1, w:"One too many."}],
+         "Everyone surveyed could be the one picked, so the denominator is the grand total, "+T.G+"."))};
+   }
+   const cands=[
+     {v:T.rowT[0], w:"That is one row's total."},
+     {v:T.colT[0], w:"That is one column's total."},
+     {v:T.rowT[T.R-1], w:"That is another row's total."},
+     {v:T.colT[T.C-1], w:"That is another column's total."},
+     {v:T.G-T.cells[0][0], w:"That leaves one cell out."},
+     {v:T.R*T.C, w:"That counts cells, not people."},
+     {v:T.G+1, w:"One too many — add the margins again."},
+     {v:T.G-1, w:"One too few."}
+   ];
+   return {q:"<b>How many were surveyed altogether?</b>",
+     scene:"The table shows the results of "+T.S.q+".",
+     tbl:tableHTML(T,{den:"grand"}),
+     opts:shuffle(numOpts(T.G,cands,
+       T.rowT.join(" + ")+" = "+T.G+", and the columns give the same: "+T.colT.join(" + ")+" = "+T.G+"."))};
+ }
+},
+{
+ title:"A whole row or column",
+ sub:"The margin on top, the grand total underneath.",
+ gen:function(){
+   const T=Math.random()<.35?SHEET:makeTable();
+   const useRow=Math.random()<.5;
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const top=useRow?T.rowT[i]:T.colT[j];
+   const phrase=useRow?("is "+T.S.rows[i].toLowerCase()).replace("is is ","is "):colPhrase(T,j);
+   const mk=useRow?{hitRowTotal:i, hitRow:i, den:"grand", legend:true}
+                  :{hitColTotal:j, hitCol:j, den:"grand", legend:true};
+   const cands=[
+     {n:T.G-top, d:T.G, w:"That is the probability of <i>not</i> being in that group."},
+     {n:top, d:T.G-top, w:"That divides by everybody else. The denominator is everybody."},
+     {n:T.G, d:top, w:"That is upside down, and larger than 1."},
+     {n:useRow?T.cells[i][0]:T.cells[0][j], d:T.G, w:"That is a single cell, not the whole "+(useRow?"row":"column")+"."},
+     {n:top, d:useRow?T.colT[0]:T.rowT[0], w:"That divides by a margin from the other direction."}
+   ];
+   return {q:"<b>One "+T.S.who+" is picked at random. What is the probability that the "+T.S.who+" "+phrase+"?</b>",
+     scene:"The table shows the results of "+T.S.q+".",
+     tbl:tableHTML(T,mk),
+     opts:shuffle(fracOpts(top,T.G,cands,
+       top+" out of "+T.G+" = "+fracText(top,T.G)+"."))};
+ }
+},
+{
+ title:"One cell as a probability",
+ sub:"Still over the grand total, not over the row.",
+ gen:function(){
+   const T=Math.random()<.35?SHEET:makeTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const c=T.cells[i][j];
+   const forms=["value","which"];
+   if(pick(forms)==="which"){
+     return {q:"<b>Which fraction gives the probability that a randomly picked "+T.S.who+" is "
+       +rowPhrase(T,i)+" and "+colPhrase(T,j)+"?</b>",
+       scene:"The table shows the results of "+T.S.q+".",
+       tbl:tableHTML(T,{hit:[[i,j]]}),
+       opts:shuffle(ratioOpts([
+         {num:c, den:T.G, correct:true,
+          note:"Everybody surveyed could be picked, so the denominator is the grand total: "+fracText(c,T.G)+"."},
+         {num:c, den:T.rowT[i],
+          note:"That divides by the "+T.S.rows[i].toLowerCase()+" row. It answers a different question — given that the "+T.S.who+" is "+rowPhrase(T,i)+", how likely they are to be counted here."},
+         {num:c, den:T.colT[j],
+          note:"That divides by the "+T.S.cols[j].toLowerCase()+" column, which is again a smaller group than the question names."},
+         {num:T.rowT[i], den:T.G,
+          note:"That is the whole "+T.S.rows[i].toLowerCase()+" row, not just the ones who also "+colPhrase(T,j)+"."},
+         {num:T.colT[j], den:T.G,
+          note:"That is the whole "+T.S.cols[j].toLowerCase()+" column."},
+         {num:T.G, den:c,
+          note:"That is upside down, and larger than 1."},
+         {num:T.G-c, den:T.G,
+          note:"That counts everyone the description does not fit."}
+       ])), two:true};
+   }
+   const cands=[
+     {n:c, d:T.rowT[i], w:"That divides by the "+T.S.rows[i].toLowerCase()+" row. The question picks from everybody, so the denominator is "+T.G+"."},
+     {n:c, d:T.colT[j], w:"That divides by the "+T.S.cols[j].toLowerCase()+" column rather than by everybody."},
+     {n:T.rowT[i], d:T.G, w:"That is the whole row, not the single cell."},
+     {n:T.colT[j], d:T.G, w:"That is the whole column."},
+     {n:T.G-c, d:T.G, w:"That counts everyone the description does not fit."},
+     {n:T.rowT[i]-c, d:T.G, w:"That is the rest of the row."},
+     {n:c+1, d:T.G, w:"One person too many on top."},
+     {n:c, d:T.G-c, w:"That divides by everybody else."}
+   ];
+   return {q:"<b>One "+T.S.who+" is picked at random. What is the probability that the "+T.S.who+" is "
+     +rowPhrase(T,i)+" and "+colPhrase(T,j)+"?</b>",
+     scene:"The table shows the results of "+T.S.q+".",
+     tbl:tableHTML(T,{hit:[[i,j]], den:"grand", legend:true}),
+     opts:shuffle(fracOpts(c,T.G,cands,
+       c+" out of "+T.G+" = "+fracText(c,T.G)+"."))};
+ }
+},
+{
+ title:"Does the table add up",
+ sub:"A missing entry is fixed by the margins.",
+ gen:function(){
+   const T=Math.random()<.3?SHEET:makeTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const c=T.cells[i][j];
+   const others=[]; for(let k=0;k<T.C;k++) if(k!==j) others.push(T.cells[i][k]);
+   const cands=[
+     {v:T.rowT[i], w:"That is the whole row total, before the other entries are taken off."},
+     {v:T.colT[j], w:"That is the column total."},
+     {v:sum(others), w:"That is the rest of the row, which is what gets subtracted."},
+     {v:T.colT[j]-c, w:"That is the rest of the column."},
+     {v:T.G-T.rowT[i], w:"That is everybody outside this row."},
+     {v:T.G-T.colT[j], w:"That is everybody outside this column."},
+     {v:c+1, w:"One too many — check the subtraction."},
+     {v:c-1, w:"One too few."}
+   ];
+   return {q:"<b>One entry has been rubbed out. What was it?</b>",
+     scene:"The table shows the results of "+T.S.q+". The totals are still correct.",
+     tbl:tableHTML(T,{q:[i,j]}),
+     opts:shuffle(numOpts(c,cands,
+       "The "+T.S.rows[i].toLowerCase()+" row totals "+T.rowT[i]+", and the other entries make "+sum(others)
+       +", so the missing one is "+T.rowT[i]+" − "+sum(others)+" = "+c+". The column checks too: "+T.colT[j]+" − "
+       +(T.colT[j]-c)+" = "+c+"."))};
+ }
+},
+{
+ title:"Which denominator",
+ sub:"Read who is being picked from.",
+ gen:function(){
+   const T=Math.random()<.35?SHEET:makeTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const c=T.cells[i][j];
+   const forms=["compare","spot"];
+   if(pick(forms)==="spot"){
+     return {q:"Someone answers <b>"+c+"/"+T.rowT[i]+"</b>. <b>What went wrong?</b>",
+       scene:"One "+T.S.who+" is picked at random from everyone in "+T.S.q+". What is the probability that the "+T.S.who+" is "+rowPhrase(T,i)+" and "+colPhrase(T,j)+"?",
+       tbl:tableHTML(T,{hit:[[i,j]], den:"row:"+i}),
+       opts:shuffle([
+         {label:"They divided by the row instead of by everybody", correct:true,
+          note:"The pick is from all "+T.G+", so the answer is "+fracText(c,T.G)+". Their fraction answers what the chance would be if the pick were known to be "+rowPhrase(T,i)+"."},
+         {label:"They used the wrong cell on top",
+          note:"The numerator is right — it is the denominator that is too small."},
+         {label:"They should have added the row and the column",
+          note:"Nothing here calls for adding two margins."},
+         {label:"Nothing — that is correct",
+          note:"The denominator should be the grand total, "+T.G+", not the row total "+T.rowT[i]+"."}
+       ]), one:true};
+   }
+   return {q:"<b>Which question does "+c+"/"+T.rowT[i]+" answer?</b>",
+     scene:"The table shows the results of "+T.S.q+".",
+     tbl:tableHTML(T,{hit:[[i,j]], den:"row:"+i}),
+     opts:shuffle(distinctOpts([
+       {label:"Of the "+T.S.rows[i].toLowerCase()+", how many "+colPhrase(T,j)+"?", correct:true,
+        note:"The denominator names the group being picked from. Here it is the "+T.rowT[i]+" "+T.S.rows[i].toLowerCase()+", not all "+T.G+"."},
+       {label:"Of everybody, how many are "+rowPhrase(T,i)+" and "+colPhrase(T,j)+"?",
+        note:"That one divides by the grand total: "+fracText(c,T.G)+"."},
+       {label:"Of the "+T.S.cols[j].toLowerCase()+" group, how many are "+rowPhrase(T,i)+"?",
+        note:"That would divide by the column total, "+T.colT[j]+"."},
+       {label:"Of everybody, how many are "+rowPhrase(T,i)+"?",
+        note:"That is the whole row over the grand total: "+fracText(T.rowT[i],T.G)+"."}
+     ]).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Any table, any question",
+ sub:"Cells, margins, totals and empirical runs.",
+ gen:function(){
+   const t=pick(["cell","cell","row","total","emp"]);
+   if(t==="emp"){
+     const n=pick([8,10,20,25,40,50]);
+     const k=ri(1,n-1);
+     return {q:"<b>What is the empirical probability?</b>",
+       scene:"An experiment is run "+n+" times and the event happens "+k+" times.",
+       opts:shuffle(fracOpts(k,n,
+         [{n:n-k, d:n, w:"That is the event not happening."},
+          {n:k, d:n-k, w:"That divides by the trials where it did not happen."},
+          {n:n, d:k, w:"That is upside down."},
+          {n:1, d:2, w:"That is a theoretical value, not an observed one."},
+          {n:k+1, d:n, w:"One observation too many."},
+          {n:k-1, d:n, w:"One observation too few."},
+          {n:k, d:n+1, w:"One trial too many in the denominator."}],
+         k+" out of "+n+" = "+fracText(k,n)+"."))};
+   }
+   const T=Math.random()<.35?SHEET:makeTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   if(t==="total"){
+     return {q:"<b>How many were surveyed altogether?</b>",
+       scene:"The table shows the results of "+T.S.q+".",
+       tbl:tableHTML(T),
+       opts:shuffle(numOpts(T.G,
+         [{v:T.rowT[i], w:"That is one row."},
+          {v:T.colT[j], w:"That is one column."},
+          {v:T.cells[i][j], w:"That is one cell."},
+          {v:T.G-T.cells[0][0], w:"That leaves a cell out."}],
+         "The rows give "+T.rowT.join(" + ")+" = "+T.G+"."))};
+   }
+   if(t==="row"){
+     const useRow=Math.random()<.5;
+     const top=useRow?T.rowT[i]:T.colT[j];
+     const phrase=useRow?("is "+T.S.rows[i].toLowerCase()):colPhrase(T,j);
+     return {q:"<b>One "+T.S.who+" is picked at random. What is the probability that the "+T.S.who+" "+phrase+"?</b>",
+       scene:"The table shows the results of "+T.S.q+".",
+       tbl:tableHTML(T,useRow?{hitRow:i,hitRowTotal:i}:{hitCol:j,hitColTotal:j}),
+       opts:shuffle(fracOpts(top,T.G,
+         [{n:T.G-top, d:T.G, w:"That is the rest of the table."},
+          {n:top, d:T.G-top, w:"That divides by everybody else."},
+          {n:T.cells[i][j], d:T.G, w:"That is a single cell."},
+          {n:T.G, d:top, w:"That is upside down."},
+          {n:useRow?T.colT[j]:T.rowT[i], d:T.G, w:"That is a margin from the other direction."},
+          {n:top+1, d:T.G, w:"One person too many on top."},
+          {n:top, d:T.G+1, w:"One person too many underneath."}],
+         top+" out of "+T.G+" = "+fracText(top,T.G)+"."))};
+   }
+   const c=T.cells[i][j];
+   return {q:"<b>One "+T.S.who+" is picked at random. What is the probability that the "+T.S.who+" is "
+     +rowPhrase(T,i)+" and "+colPhrase(T,j)+"?</b>",
+     scene:"The table shows the results of "+T.S.q+".",
+     tbl:tableHTML(T,{hit:[[i,j]], den:"grand"}),
+     opts:shuffle(fracOpts(c,T.G,
+       [{n:c, d:T.rowT[i], w:"That divides by the row rather than by everybody."},
+        {n:c, d:T.colT[j], w:"That divides by the column."},
+        {n:T.rowT[i], d:T.G, w:"That is the whole row."},
+        {n:T.colT[j], d:T.G, w:"That is the whole column."},
+        {n:T.G-c, d:T.G, w:"That counts everyone else."},
+        {n:c+1, d:T.G, w:"One person too many on top."},
+        {n:c, d:T.G-c, w:"That divides by everybody else."}],
+       c+" out of "+T.G+" = "+fracText(c,T.G)+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const RUN=[[8,5],[80,43],[800,408],[8000,4032]];
+const HERO=[
+  {kind:"survey", lbl:"the survey"},
+  {kind:"grand",  lbl:"the corner number"},
+  {kind:"trap",   lbl:"10/56 or 10/27"},
+  {kind:"emp",    lbl:"empirical vs theoretical"},
+  {kind:"run",    lbl:"as the trials grow"},
+  {kind:"adds",   lbl:"does it add up"}
+];
+/* every note is built from the same figures its panel draws */
+const HNOTES={
+  survey:function(){ return "Your worksheet's movie survey, with its three questions answered. Comedies is a whole column, "
+    +fracText(37,56)+"; female is a whole row, "+fracText(29,56)+"; and male-and-action is a single cell, "+fracText(10,56)
+    +". All three divide by the same 56."; },
+  grand:function(){ return "Why 56 keeps appearing. The rows add to it and so do the columns — "
+    +"27 + 29 and 19 + 37 both give 56 — because each is a different way of grouping the same "
+    +"people. Pick one at random and any of the 56 could be it."; },
+  trap:function(){ return "The one to get right. Both fractions are legitimate arithmetic on this table, but only one answers "
+    +"the question asked. Picking from everybody gives "+fracText(10,56)+"; picking from the males gives "+fracText(10,27)
+    +". The wording decides which."; },
+  emp:function(){ return "Your worksheet's coin. The theoretical value is settled before a single toss; the empirical one "
+    +"cannot exist until the tossing is done. Five heads in eight gives "+fracText(5,8)+", which is not "+fracText(1,2)
+    +" — and nothing has gone wrong."; },
+  run:function(){ return "One run of tosses, carried further. The empirical value drifts towards a half without ever being obliged to land on it: "
+    +RUN.map(function(r){return fracText(r[1],r[0]);}).join(", ")+". Eight tosses tell you little; eight thousand tell you a good deal."; },
+  adds:function(){ return "The check worth running before anything else. Every row must add to its total, every column to its own, "
+    +"and both sets of totals must meet at the corner. If they do not, the table is wrong and no probability from it is worth computing."; }
+};
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="survey"){
+    body=tableHTML(SHEET,{})
+      +'<div class="eq" style="margin-top:14px">'
+      +"prefers comedies: "+fracHTML(37,56)
+      +'<span class="lbl">a whole column, over the grand total</span>'
+      +"is female: "+fracHTML(29,56)
+      +'<span class="lbl">a whole row, over the grand total</span>'
+      +"male and prefers action: <span class=\"res\">"+fracHTML(10,56)+"</span>"
+      +'<span class="lbl">a single cell, over the grand total</span></div>';
+  }else if(h.kind==="grand"){
+    body=tableHTML(SHEET,{den:"grand"})
+      +'<div class="eq" style="margin-top:14px">'
+      +"27 + 29 = <span class=\"res\">56</span> &nbsp;&middot;&nbsp; 19 + 37 = <span class=\"res\">56</span>"
+      +'<span class="lbl">rows and columns each count everybody once</span>'
+      +"any of the 56 could be the one picked"
+      +'<span class="lbl">so 56 is the denominator, unless the question names a smaller group</span></div>';
+  }else if(h.kind==="trap"){
+    body=tableHTML(SHEET,{hit:[[0,0]]})
+      +'<div class="duo" style="margin-top:14px">'
+      +'<div class="pane ok"><div class="ttl">picked from everybody</div>'
+        +'<div class="vl">'+fracHTML(10,56)+"</div>"
+        +'<div class="wk">“One person is picked at random. Find P(male and prefers action).”</div></div>'
+      +'<div class="pane no"><div class="ttl">picked from the males</div>'
+        +'<div class="vl">'+fracHTML(10,27)+"</div>"
+        +'<div class="wk">“Of the males, what fraction prefer action?” — a different question</div></div></div>'
+      +'<div class="eq" style="margin-top:12px">same 10 on top, two different denominators'
+      +'<span class="lbl">read who is being picked from</span></div>';
+  }else if(h.kind==="emp"){
+    body='<div class="duo">'
+      +'<div class="pane ok" style="background:var(--marg-bg)"><div class="ttl" style="color:var(--marg)">theoretical</div>'
+        +'<div class="vl" style="color:var(--marg)">'+fracHTML(1,2)+"</div>"
+        +'<div class="wk">two equally likely outcomes — known before any toss</div></div>'
+      +'<div class="pane ok" style="background:var(--tb-bg)"><div class="ttl" style="color:var(--tb)">empirical</div>'
+        +'<div class="vl" style="color:var(--tb)">'+fracHTML(5,8)+"</div>"
+        +'<div class="wk">5 heads observed in 8 tosses — known only afterwards</div></div></div>'
+      +'<div class="eq" style="margin-top:14px">observed heads ÷ total tosses'
+      +'<span class="lbl">a short run need not match the theory, and usually does not</span></div>';
+  }else if(h.kind==="run"){
+    body='<table class="tw"><thead><tr><th class="rh">tosses</th><th>heads</th><th>empirical P(H)</th><th>as a decimal</th></tr></thead><tbody>'
+      +RUN.map(function(r){
+        return '<tr><th class="rh">'+grp(r[0])+"</th><td>"+grp(r[1])+"</td><td>"+fracHTML(r[1],r[0])
+          +"</td><td>"+(r[1]/r[0]).toFixed(4)+"</td></tr>";
+      }).join("")
+      +'<tr><th class="rh">theoretical</th><td>—</td><td class="grand">'+fracHTML(1,2)+"</td><td class=\"grand\">0.5000</td></tr>"
+      +"</tbody></table>"
+      +'<div class="eq" style="margin-top:12px"><span class="lbl">one run of tosses, carried further each time</span></div>';
+  }else{
+    body=tableHTML(SHEET,{})
+      +'<div class="eq" style="margin-top:14px">'
+      +"10 + 17 = 27 &nbsp;&middot;&nbsp; 9 + 20 = 29"
+      +'<span class="lbl">each row adds to its own total</span>'
+      +"10 + 9 = 19 &nbsp;&middot;&nbsp; 17 + 20 = 37"
+      +'<span class="lbl">each column adds to its own total</span>'
+      +"27 + 29 = <span class=\"res\">56</span> = 19 + 37"
+      +'<span class="lbl">and the two sets of totals meet at the corner</span></div>';
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.tbl?'<div class="tbl">'+q.tbl+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
