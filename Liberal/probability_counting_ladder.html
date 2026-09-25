@@ -1,0 +1,994 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Counting Ladder — count the favourable, count the total, divide</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --pc:#8C3A6B;
+    --pc-bg:#F7EAF2;
+    --top:#1B7A4B;
+    --top-bg:#E7F4EC;
+    --bot:#2E5F9E;
+    --bot-bg:#E6EDF6;
+    --perm:#7A2E2E;
+    --comb:#1F6B8C;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--pc)}
+  :focus-visible{outline:3px solid var(--pc); outline-offset:2px; border-radius:3px}
+
+  .frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.15; margin:0 4px}
+  .frac .den{border-top:2px solid currentColor; padding-top:3px}
+  .npr{font-family:var(--serif); white-space:nowrap}
+  .npr sub{font-size:.66em; vertical-align:sub; line-height:0}
+  .tp{color:var(--top); font-weight:700}
+  .bt{color:var(--bot); font-weight:700}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--pc)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:18ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:680px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.1; text-align:center}
+  .eq .res{color:var(--pc); font-weight:700}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+  .steps{max-width:560px; margin:0 auto}
+  .steps .row{display:flex; align-items:center; gap:12px; padding:9px 15px; border-radius:9px; margin-bottom:6px; font-family:var(--serif); font-size:clamp(14px,2.9vw,17px)}
+  .steps .row .nm{font-family:var(--sans); font-size:11.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); min-width:74px}
+  .steps .row .bd{flex:1; text-align:left}
+  .steps .row .vl{font-weight:700; white-space:nowrap}
+  .steps .row.t{background:var(--top-bg)} .steps .row.t .vl{color:var(--top)}
+  .steps .row.b{background:var(--bot-bg)} .steps .row.b .vl{color:var(--bot)}
+  .steps .row.p{background:var(--pc-bg)} .steps .row.p .vl{color:var(--pc)}
+  .slots{display:flex; gap:7px; justify-content:center; flex-wrap:wrap; margin:0 auto}
+  .slot{text-align:center}
+  .slot .box{width:clamp(40px,9vw,56px); height:clamp(40px,9vw,56px); border:2px solid var(--rule); border-radius:9px;
+    display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:clamp(16px,3.6vw,22px);
+    font-weight:700; color:var(--muted); background:var(--card)}
+  .slot .box.fix{border-color:var(--pc); background:var(--pc-bg); color:var(--pc)}
+  .slot .cap{font-size:11px; color:var(--muted); margin-top:4px; max-width:70px; line-height:1.25}
+  table.pt{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:clamp(13px,2.7vw,15px)}
+  table.pt th,table.pt td{border:1px solid var(--rule); padding:5px 13px; text-align:right; white-space:nowrap}
+  table.pt th{background:var(--pc-bg); color:var(--pc); font-weight:700; font-size:12.5px; text-align:center}
+  table.pt td.lab{text-align:left}
+  table.pt td.p{color:var(--pc); font-weight:700}
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--pc); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--pc); background:var(--pc-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--pc)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .scene{max-width:56ch; margin:0 auto 14px; background:var(--pc-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:44ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(16px,3.6vw,24px); background:var(--pc-bg); border-radius:12px; padding:11px 24px; margin:0 auto 16px}
+  .vis{margin:0 auto 16px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:17.5px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>n(E)/n(S)</span> The Counting Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 19 · probability with permutations and combinations</p>
+    <h1>Count the favourable, count the total, divide.</h1>
+    <p class="lede">When the sample space is far too large to write out, the fraction does not change — only the way each half is counted. Permutations and combinations arrive to do exactly that. Settle which one the situation needs, use it <b>twice</b> (once for n(S), once for n(E)), and the probability falls out of the division.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>The same tool has to count both halves.</b> If n(S) counts arrangements, n(E) must count arrangements too; if n(S) counts selections, so must n(E). Mixing them gives a fraction whose halves are measured in different units, and the answer means nothing. Your worksheet's sales team is the clean case: <b>12C4</b> underneath and <b>8C2 × 4C2</b> on top — combinations in both places, giving <b>56/165</b>.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rung 1 decides which tool the situation needs. Rungs 2–3 count the total and then the favourable outcomes. Rungs 4–7 work the four shapes in your worksheet: a line-up with fixed ends, a group with a required make-up, a lottery, and a card hand. Rungs 8–10 reduce, diagnose bad setups, and mix everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Write both counts before dividing</h3><p>n(S) first, n(E) second, division last. Most wrong answers are a wrong count, not wrong arithmetic.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Every answer is an exact fraction in lowest terms. Sizes are capped so that both counts, and the fraction itself, stay exact.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Three lessons, one fraction</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Lesson 17 counts the slots</h3><p>Stages multiply, and a fixed position simply has fewer choices in it.</p></div>
+      <div class="step"><span class="n">02</span><h3>Lesson 18 counts the groups</h3><p>A required make-up means one combination per group, multiplied together.</p></div>
+      <div class="step"><span class="n">03</span><h3>Lesson 19 divides them</h3><p>Nothing new is needed. The counting was always the work; the division takes a second.</p></div>
+    </div>
+    <p class="closing">Same tool twice, once on top and once underneath.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Counting Ladder · P(E) = n(E) ÷ n(S) · count both halves with the same tool · answers in lowest terms</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+
+/* ================= exact fractions ================= */
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){const t=a%b;a=b;b=t;}return a;}
+function frac(num,den){
+  if(den===0) return null;
+  if(num===0) return {n:0,d:1,txt:"0"};
+  const g=gcd(num,den)||1;
+  const n=num/g, d=den/g;
+  return {n:n,d:d,txt:(d===1?String(n):n+"/"+d)};
+}
+function fracText(num,den){ const f=frac(num,den); return f?f.txt:"—"; }
+function fracHTML(num,den){
+  const f=frac(num,den);
+  if(!f) return "—";
+  if(f.d===1) return String(f.n);
+  return '<span class="frac"><span class="num">'+grp(f.n)+'</span><span class="den">'+grp(f.d)+"</span></span>";
+}
+
+/* ================= the two counts ================= */
+function fact(n){ let p=1; for(let k=2;k<=n;k++) p*=k; return p; }
+/* nPr as a falling product - r factors, nothing large ever computed */
+function nPr(n,r){ let p=1; for(let k=0;k<r;k++) p*=(n-k); return p; }
+/* nCr one factor at a time, so the running product stays a whole number */
+function nCr(n,r){
+  if(r<0||r>n) return 0;
+  r=Math.min(r,n-r);
+  let p=1;
+  for(let k=1;k<=r;k++) p=p*(n-r+k)/k;
+  return Math.round(p);
+}
+function ncrHTML(n,r){ return '<span class="npr"><sub>'+n+"</sub>C<sub>"+r+"</sub></span>"; }
+function nprHTML(n,r){ return '<span class="npr"><sub>'+n+"</sub>P<sub>"+r+"</sub></span>"; }
+
+/* ================= the four problem shapes ================= */
+/* --- 1. a line-up with the two ends fixed by type (a permutation) --- */
+const LINEUPS=[
+  {aN:"girls", aS:"girl", bN:"boys", bS:"boy", where:"line up at the classroom door"},
+  {aN:"women", aS:"woman", bN:"men", bS:"man", where:"queue at the counter"},
+  {aN:"seniors", aS:"senior", bN:"juniors", bS:"junior", where:"line up for the photograph"},
+  {aN:"violinists", aS:"violinist", bN:"cellists", bS:"cellist", where:"take their seats in a row"}
+];
+function lineCase(o){
+  o=o||{};
+  const L=o.L||pick(LINEUPS);
+  const a=ri(2,4), b=ri(2,4);
+  const n=a+b;
+  const nS=fact(n);
+  const nE=a*b*fact(n-2);
+  return {kind:"line", L:L, a:a, b:b, n:n, nS:nS, nE:nE,
+    text:a+" "+L.aN+" and "+b+" "+L.bN+" "+L.where+".",
+    ask:"the first in line is a "+L.aS+" and the last is a "+L.bS,
+    tool:"permutation"};
+}
+/* --- 2. a group with a required make-up (a combination) --- */
+const TEAMS=[
+  {aN:"women", aS:"woman", bN:"men", bS:"man", what:"sales team", sel:"attend a strategy meeting"},
+  {aN:"seniors", aS:"senior", bN:"juniors", bS:"junior", what:"club", sel:"form a committee"},
+  {aN:"engineers", aS:"engineer", bN:"designers", bS:"designer", what:"department", sel:"join a project group"},
+  {aN:"novels", aS:"novel", bN:"biographies", bS:"biography", what:"shelf", sel:"be taken on holiday"}
+];
+/* "1 woman", but "2 women" */
+function qtyA(T,r){ return r+" "+(r===1?T.aS:T.aN); }
+function qtyB(T,r){ return r+" "+(r===1?T.bS:T.bN); }
+function teamCase(o){
+  o=o||{};
+  const T=o.T||pick(TEAMS);
+  let a,b,ra,rb,tries=0;
+  do{
+    a=ri(5,10); b=ri(3,7);
+    ra=ri(1,3); rb=ri(1,3);
+    tries++;
+  }while((ra>=a||rb>=b)&&tries<120);
+  const k=ra+rb;
+  const nS=nCr(a+b,k);
+  const nE=nCr(a,ra)*nCr(b,rb);
+  return {kind:"team", T:T, a:a, b:b, ra:ra, rb:rb, k:k, nS:nS, nE:nE,
+    text:"A "+T.what+" consists of "+a+" "+T.aN+" and "+b+" "+T.bN+". "+k+" are chosen at random to "+T.sel+".",
+    ask:"the group has exactly "+qtyA(T,ra)+" and "+qtyB(T,rb),
+    tool:"combination"};
+}
+/* --- 3. a lottery: choose r from N, plus one from M --- */
+function lottoCase(o){
+  o=o||{};
+  const N=pick([20,25,30,35,40]);
+  const r=pick([4,5]);
+  const M=pick([10,12,15,20,25]);
+  const nS=nCr(N,r)*M;
+  return {kind:"lotto", N:N, r:r, M:M, nS:nS, nE:1,
+    text:"Players pick "+r+" different numbers from 1 to "+N+", and one number from 1 to "+M+".",
+    ask:"a single ticket matches all "+r+" of the first set and the one from the second",
+    tool:"combination"};
+}
+/* --- 4. a card hand (a combination) --- */
+const HANDS=[
+  {t:"all @R are hearts", suit:true},
+  {t:"all @R are spades", suit:true},
+  {t:"all @R are clubs", suit:true},
+  {t:"all @R are diamonds", suit:true}
+];
+function handCase(o){
+  o=o||{};
+  const style=o.style||pick(["suit","suit","rank"]);
+  if(style==="rank"){
+    /* four of one rank plus one of another - the worksheet's four aces and a king */
+    const nS=nCr(52,5);
+    const nE=nCr(4,4)*nCr(4,1);
+    const A=pick(["aces","kings","queens","jacks","tens"]);
+    let B=pick(["kings","queens","jacks","tens","nines"]);
+    while(B===A) B=pick(["kings","queens","jacks","tens","nines"]);
+    return {kind:"hand", style:"rank", nS:nS, nE:nE, r:5, A:A, B:B,
+      text:"A poker hand consists of 5 cards dealt from a standard 52-card deck.",
+      ask:"the hand contains four "+A+" and one "+B,
+      tool:"combination"};
+  }
+  const r=pick([2,3,4,5]);
+  const H=pick(HANDS);
+  const nS=nCr(52,r);
+  const nE=nCr(13,r);
+  return {kind:"hand", style:"suit", nS:nS, nE:nE, r:r, H:H,
+    text:"You are dealt "+r+" cards from a shuffled deck of 52.",
+    ask:H.t.replace("@R","" +r+" cards").replace("all "+r+" cards","all "+r),
+    tool:"combination"};
+}
+function anyCase(){
+  const r=Math.random();
+  if(r<.27) return lineCase();
+  if(r<.56) return teamCase();
+  if(r<.72) return lottoCase();
+  return handCase();
+}
+
+/* how each count is written out, for the feedback */
+function sExpr(c){
+  if(c.kind==="line") return c.n+"! = "+grp(c.nS);
+  if(c.kind==="team") return ncrHTML(c.a+c.b,c.k)+" = "+grp(c.nS);
+  if(c.kind==="lotto") return ncrHTML(c.N,c.r)+" × "+c.M+" = "+grp(nCr(c.N,c.r))+" × "+c.M+" = "+grp(c.nS);
+  return ncrHTML(52,c.r)+" = "+grp(c.nS);
+}
+function eExpr(c){
+  if(c.kind==="line") return c.a+" × "+c.b+" × "+(c.n-2)+"! = "+grp(c.nE);
+  if(c.kind==="team") return ncrHTML(c.a,c.ra)+" × "+ncrHTML(c.b,c.rb)+" = "+grp(nCr(c.a,c.ra))+" × "+grp(nCr(c.b,c.rb))+" = "+grp(c.nE);
+  if(c.kind==="lotto") return "1 — only one set of numbers wins";
+  if(c.style==="rank") return ncrHTML(4,4)+" × "+ncrHTML(4,1)+" = 1 × 4 = "+grp(c.nE);
+  return ncrHTML(13,c.r)+" = "+grp(c.nE);
+}
+function askFull(c){ return "Find the probability that "+c.ask+"."; }
+
+/* ================= options ================= */
+function numOpts(ans,cands,note){
+  const seen={}; seen[grp(ans)]=1;
+  const opts=[{label:grp(ans), correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.v===null||!Number.isFinite(x.v)||x.v<=0||!Number.isInteger(x.v))return;
+    const L=grp(x.v); if(seen[L])return; seen[L]=1;
+    opts.push({label:L, note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* fraction options compared by value, so an equal-but-unreduced twin never
+   appears beside the answer */
+function fracOpts(an,ad,cands,note){
+  const ans=frac(an,ad);
+  const seen={}; seen[ans.txt]=1;
+  const opts=[{label:fracHTML(an,ad), correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.n===null||x.d===null||!Number.isFinite(x.n)||!Number.isFinite(x.d))return;
+    if(x.d<=0||x.n<0||!Number.isInteger(x.n)||!Number.isInteger(x.d))return;
+    const f=frac(x.n,x.d); if(!f||seen[f.txt])return; seen[f.txt]=1;
+    opts.push({label:fracHTML(x.n,x.d), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* the wrong n(S) counts people actually produce */
+function sPool(c){
+  const out=[{v:c.nE, w:"That is n(E), the favourable outcomes — the numerator, not the denominator."}];
+  if(c.kind==="line"){
+    out.push({v:fact(c.n-1), w:"That arranges only "+(c.n-1)+" of them."});
+    out.push({v:fact(c.n-2), w:"That arranges the middle "+(c.n-2)+" only."});
+    out.push({v:nPr(c.n,2), w:"That fills only the two ends."});
+    out.push({v:Math.pow(c.n,c.n), w:"That lets a person stand in more than one place."});
+  }else if(c.kind==="team"){
+    out.push({v:nPr(c.a+c.b,c.k), w:"That is "+nprHTML(c.a+c.b,c.k)+", which counts the order the group was picked in. Order makes no difference here."});
+    out.push({v:nCr(c.a+c.b,c.k+1), w:"That chooses "+(c.k+1)+" rather than "+c.k+"."});
+    out.push({v:nCr(c.a,c.k)*nCr(c.b,c.k), w:"That takes "+c.k+" from each side separately."});
+    out.push({v:c.a+c.b, w:"That is the number of people, not the number of groups."});
+  }else if(c.kind==="lotto"){
+    out.push({v:nCr(c.N,c.r), w:"That counts the first set only, leaving out the "+c.M+" choices for the second."});
+    out.push({v:nCr(c.N,c.r)+c.M, w:"That adds the two stages instead of multiplying them."});
+    out.push({v:nPr(c.N,c.r)*c.M, w:"That counts the order the first "+c.r+" numbers were drawn in, which does not matter."});
+    out.push({v:nCr(c.N+c.M,c.r+1), w:"That pools the two sets of balls, which are drawn separately."});
+  }else{
+    out.push({v:nPr(52,c.r), w:"That is "+nprHTML(52,c.r)+", which counts the order the cards arrived in."});
+    out.push({v:nCr(52,c.r+1), w:"That deals "+(c.r+1)+" cards."});
+    out.push({v:Math.pow(52,c.r), w:"That lets the same card be dealt twice."});
+    out.push({v:nCr(13,c.r), w:"That is a count within one suit, not the whole deck."});
+  }
+  return out;
+}
+/* the wrong n(E) counts people actually produce */
+function ePool(c){
+  const out=[{v:c.nS, w:"That is n(S), every outcome — the denominator, not the numerator."}];
+  if(c.kind==="line"){
+    out.push({v:c.a*c.b, w:"That fills the two ends but forgets the "+(c.n-2)+"! ways of arranging the middle."});
+    out.push({v:fact(c.n-2), w:"That arranges the middle but forgets the choices for the two ends."});
+    out.push({v:(c.a+c.b)*fact(c.n-2), w:"That allows anybody at the front, rather than only the "+c.a+" "+c.L.aN+"."});
+    out.push({v:c.a*c.b*fact(c.n-1), w:"That arranges "+(c.n-1)+" in the middle, when only "+(c.n-2)+" are left."});
+  }else if(c.kind==="team"){
+    out.push({v:nCr(c.a,c.ra)+nCr(c.b,c.rb), w:"That adds the two group counts instead of multiplying them."});
+    out.push({v:nCr(c.a,c.ra), w:"That counts the "+c.T.aN+" only."});
+    out.push({v:nCr(c.b,c.rb), w:"That counts the "+c.T.bN+" only."});
+    out.push({v:nCr(c.a,c.rb)*nCr(c.b,c.ra), w:"That attaches each quota to the wrong group."});
+  }else if(c.kind==="lotto"){
+    out.push({v:c.r+1, w:"That counts the numbers on the ticket, not the winning outcomes."});
+    out.push({v:c.M, w:"That is the choices for the second number. Only one full ticket wins."});
+    out.push({v:nCr(c.N,c.r), w:"That is every possible first set, not the one that wins."});
+  }else if(c.style==="rank"){
+    out.push({v:4, w:null});
+    out.push({v:nCr(4,4), w:"That is the four "+c.A+" only, with no king chosen."});
+    out.push({v:nCr(4,1)*nCr(4,1), w:"That takes one of each rank rather than all four of the first."});
+    out.push({v:nCr(8,5), w:"That pools the two ranks into one group of eight."});
+  }else{
+    out.push({v:nCr(13,c.r)*4, w:"That multiplies by the four suits, but the question names one suit."});
+    out.push({v:nCr(13,c.r-1), w:"That takes "+(c.r-1)+" cards from the suit."});
+    out.push({v:nPr(13,c.r), w:"That counts the order within the suit."});
+    out.push({v:13*c.r, w:"That multiplies the two numbers once."});
+  }
+  return out.filter(function(x){return x.w!==null;});
+}
+/* the wrong probabilities people actually produce */
+function pPool(c){
+  return [
+    {n:c.nS-c.nE, d:c.nS, w:"That is the probability of the event <i>not</i> happening."},
+    {n:c.nS, d:c.nE, w:"That is upside down, and larger than 1."},
+    {n:1, d:c.nS, w:"That counts a single outcome, when "+grp(c.nE)+" qualify."},
+    {n:c.nE, d:c.nE+c.nS, w:"That divides by the favourable outcomes plus all of them."},
+    {n:c.nE*2, d:c.nS, w:"That is twice the number of favourable outcomes."}
+  ];
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+/* the line-up drawn as slots */
+function lineSlots(c){
+  const mid=[];
+  for(let k=0;k<c.n-2;k++) mid.push(c.n-2-k);
+  let s='<div class="slots">';
+  s+='<div class="slot"><div class="box fix">'+c.a+'</div><div class="cap">'+c.L.aS+"<br>first</div></div>";
+  mid.forEach(function(v,i){
+    s+='<div class="slot"><div class="box">'+v+'</div><div class="cap">'+(i+2)+"th</div></div>";
+  });
+  s+='<div class="slot"><div class="box fix">'+c.b+'</div><div class="cap">'+c.L.bS+"<br>last</div></div>";
+  return s+"</div>";
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Which tool",
+ sub:"Order matters, or it does not. Decide before counting.",
+ gen:function(){
+   const c=(Math.random()<.5)?lineCase():pick([teamCase(),lottoCase(),handCase()]);
+   const isP=c.tool==="permutation";
+   return {q:"<b>Does this need a permutation or a combination?</b>",
+     scene:c.text+" "+askFull(c),
+     opts:shuffle(distinctOpts([
+       {label:"A permutation", correct:isP,
+        note:isP?("The positions in the line are distinct, so who stands where changes the outcome.")
+                :("Nothing here distinguishes the chosen items from one another, so swapping two leaves the same outcome.")},
+       {label:"A combination", correct:!isP,
+        note:!isP?("The chosen items have no order between them, so swapping two gives the same outcome.")
+                 :("Here the order is part of the outcome — first and last are different positions.")},
+       {label:"Neither — items may repeat",
+        note:"Nothing is used twice in this situation."},
+       {label:"Both, one for each half of the fraction",
+        note:"Both halves use the <i>same</i> tool. Mixing them would make the fraction meaningless."}
+     ]).slice(0,4)), two:true};
+ }
+},
+{
+ title:"Count the total",
+ sub:"n(S) first, from the experiment alone.",
+ gen:function(){
+   const c=anyCase();
+   return {q:"<b>What is n(S)?</b>", scene:c.text+" "+askFull(c),
+     vis:c.kind==="line"?null:null,
+     opts:shuffle(numOpts(c.nS,sPool(c),"n(S) = "+sExpr(c)+"."))};
+ }
+},
+{
+ title:"Count the favourable",
+ sub:"n(E), using the same tool as n(S).",
+ gen:function(){
+   const c=anyCase();
+   return {q:"<b>What is n(E)?</b>", scene:c.text+" "+askFull(c),
+     vis:c.kind==="line"?lineSlots(c):null,
+     opts:shuffle(numOpts(c.nE,ePool(c),"n(E) = "+eExpr(c)+"."))};
+ }
+},
+{
+ title:"The line-up",
+ sub:"Two ends fixed, the middle free.",
+ gen:function(){
+   const c=lineCase();
+   const forms=["prob","ends","middle"];
+   const f=pick(forms);
+   if(f==="ends"){
+     return {q:"<b>How many choices are there for the two fixed ends together?</b>",
+       scene:c.text+" "+askFull(c),
+       vis:lineSlots(c),
+       opts:shuffle(numOpts(c.a*c.b,
+         [{v:c.a+c.b, w:"That adds them. Each of the "+c.a+" "+c.L.aN+" can pair with any of the "+c.b+" "+c.L.bN+"."},
+          {v:c.n, w:"That is everybody in the line."},
+          {v:c.a, w:"That is the choices for the front only."},
+          {v:c.b, w:"That is the choices for the back only."},
+          {v:nPr(c.n,2), w:"That allows anybody at either end."},
+          {v:c.a*c.b*2, w:"That is twice the number of pairings."},
+          {v:c.a*c.b+1, w:"One too many — count the pairings again."},
+          {v:fact(c.n-2), w:"That is the arrangements of the middle, not the choices for the ends."}],
+         c.a+" choices for the front × "+c.b+" for the back = "+(c.a*c.b)+"."))};
+   }
+   if(f==="middle"){
+     return {q:"<b>In how many ways can the middle "+(c.n-2)+" be arranged?</b>",
+       scene:c.text+" "+askFull(c),
+       vis:lineSlots(c),
+       opts:shuffle(numOpts(fact(c.n-2),
+         [{v:fact(c.n), w:"That arranges all "+c.n+", including the two ends."},
+          {v:fact(c.n-1), w:"That arranges "+(c.n-1)+". Two are already placed, so "+(c.n-2)+" remain."},
+          {v:c.n-2, w:"That is how many are left, not how many orders they have."},
+          {v:c.a*c.b, w:"That is the choices for the two ends."},
+          {v:nPr(c.n,c.n-2), w:"That draws the middle from everybody, including the two already placed."}],
+         "Once the ends are filled, "+(c.n-2)+" people remain for "+(c.n-2)+" places: "+(c.n-2)+"! = "+grp(fact(c.n-2))+"."))};
+   }
+   return {q:"<b>What is the probability that "+c.ask+"?</b>", scene:c.text,
+     vis:lineSlots(c),
+     facts:factsHTML([["n(S)",grp(c.nS)],["n(E)",grp(c.nE)]]),
+     opts:shuffle(fracOpts(c.nE,c.nS,pPool(c),
+       grp(c.nE)+"/"+grp(c.nS)+" = "+fracText(c.nE,c.nS)
+       +". The "+(c.n-2)+"! cancels, leaving "+c.a+" × "+c.b+" ÷ ("+c.n+" × "+(c.n-1)+")."))};
+ }
+},
+{
+ title:"The required make-up",
+ sub:"One combination per group, multiplied.",
+ gen:function(){
+   const c=teamCase();
+   const forms=["prob","top","bottom"];
+   const f=pick(forms);
+   if(f==="bottom"){
+     return {q:"<b>How many different groups of "+c.k+" could be formed altogether?</b>",
+       scene:c.text+" "+askFull(c),
+       opts:shuffle(numOpts(c.nS,sPool(c),
+         "Any "+c.k+" of the "+(c.a+c.b)+": "+ncrHTML(c.a+c.b,c.k)+" = "+grp(c.nS)+"."))};
+   }
+   if(f==="top"){
+     return {q:"<b>How many groups have exactly "+qtyA(c.T,c.ra)+" and "+qtyB(c.T,c.rb)+"?</b>",
+       scene:c.text+" "+askFull(c),
+       facts:factsHTML([[c.T.aN,c.a+", choose "+c.ra],[c.T.bN,c.b+", choose "+c.rb]]),
+       opts:shuffle(numOpts(c.nE,ePool(c),
+         ncrHTML(c.a,c.ra)+" × "+ncrHTML(c.b,c.rb)+" = "+grp(nCr(c.a,c.ra))+" × "+grp(nCr(c.b,c.rb))+" = "+grp(c.nE)+"."))};
+   }
+   return {q:"<b>What is the probability that "+c.ask+"?</b>", scene:c.text,
+     facts:factsHTML([["n(S) = "+ncrHTML(c.a+c.b,c.k),grp(c.nS)],
+       ["n(E) = "+ncrHTML(c.a,c.ra)+" × "+ncrHTML(c.b,c.rb),grp(c.nE)]]),
+     opts:shuffle(fracOpts(c.nE,c.nS,pPool(c),
+       grp(c.nE)+"/"+grp(c.nS)+" = "+fracText(c.nE,c.nS)+"."))};
+ }
+},
+{
+ title:"The lottery",
+ sub:"Two draws, multiplied, and exactly one winner.",
+ gen:function(){
+   const c=lottoCase();
+   const forms=["prob","total","why"];
+   const f=pick(forms);
+   if(f==="why"){
+     return {q:"<b>Why is n(E) equal to 1?</b>", scene:c.text+" "+askFull(c),
+       opts:shuffle([
+         {label:"Only one ticket matches every drawn number", correct:true,
+          note:"Out of the "+grp(c.nS)+" possible tickets, exactly one is the winning combination."},
+         {label:"Because only one ticket was bought",
+          note:"Buying more tickets would change n(E), but n(E) = 1 describes a single ticket's chance."},
+         {label:"Because the numbers must be different",
+          note:"That affects how n(S) is counted, not how many tickets win."},
+         {label:"Because the order of the numbers does not matter",
+          note:"That too affects n(S). Even with order mattering, one arrangement would still be the winner."}
+       ]), one:true};
+   }
+   if(f==="total"){
+     return {q:"<b>How many different tickets are possible?</b>", scene:c.text+" "+askFull(c),
+       facts:factsHTML([["first set",ncrHTML(c.N,c.r)+" = "+grp(nCr(c.N,c.r))],["second number",String(c.M)]]),
+       opts:shuffle(numOpts(c.nS,sPool(c),
+         grp(nCr(c.N,c.r))+" × "+c.M+" = "+grp(c.nS)+". The two draws are successive choices, so they multiply."))};
+   }
+   return {q:"<b>What is the probability of winning with one ticket?</b>", scene:c.text,
+     facts:factsHTML([["n(S)",grp(c.nS)],["n(E)","1"]]),
+     opts:shuffle(fracOpts(1,c.nS,
+       [{n:1, d:nCr(c.N,c.r), w:"That leaves out the "+c.M+" choices for the second number."},
+        {n:1, d:c.M, w:"That is the second number alone."},
+        {n:c.r, d:c.N, w:"That is a ratio of the numbers picked to the numbers available, which is not a probability of winning."},
+        {n:1, d:nCr(c.N,c.r)+c.M, w:"That adds the two stages instead of multiplying them."},
+        {n:1, d:nPr(c.N,c.r)*c.M, w:"That counts the order the first "+c.r+" were drawn in."}],
+       "One winning ticket out of "+grp(c.nS)+": "+fracText(1,c.nS)+"."))};
+ }
+},
+{
+ title:"The card hand",
+ sub:"Both halves as combinations of the deck.",
+ gen:function(){
+   const c=handCase();
+   const forms=["prob","top","bottom"];
+   const f=pick(forms);
+   if(f==="bottom"){
+     return {q:"<b>How many different "+c.r+"-card hands are possible?</b>",
+       scene:c.text+" "+askFull(c),
+       opts:shuffle(numOpts(c.nS,sPool(c),
+         ncrHTML(52,c.r)+" = "+grp(c.nS)+". The order the cards arrive in makes no difference to the hand."))};
+   }
+   if(f==="top"){
+     return {q:"<b>How many hands satisfy the description?</b>", scene:c.text+" "+askFull(c),
+       opts:shuffle(numOpts(c.nE,ePool(c),"n(E) = "+eExpr(c)+"."))};
+   }
+   return {q:"<b>What is the probability that "+c.ask+"?</b>", scene:c.text,
+     facts:factsHTML([["n(S) = "+ncrHTML(52,c.r),grp(c.nS)],["n(E)",grp(c.nE)]]),
+     opts:shuffle(fracOpts(c.nE,c.nS,pPool(c),
+       grp(c.nE)+"/"+grp(c.nS)+" = "+fracText(c.nE,c.nS)+"."))};
+ }
+},
+{
+ title:"Divide and reduce",
+ sub:"Both counts in hand, the fraction in lowest terms.",
+ gen:function(){
+   const c=anyCase();
+   return {q:"<b>What is the probability that "+c.ask+"?</b>", scene:c.text,
+     facts:factsHTML([["n(E)",grp(c.nE)],["n(S)",grp(c.nS)]]),
+     opts:shuffle(fracOpts(c.nE,c.nS,pPool(c),
+       grp(c.nE)+"/"+grp(c.nS)+" = "+fracText(c.nE,c.nS)+"."))};
+ }
+},
+{
+ title:"Spot the wrong setup",
+ sub:"Someone writes the fraction. Say what is wrong.",
+ gen:function(){
+   const c=pick([teamCase(),handCase({style:"suit"}),lineCase()]);
+   const kinds=["ok","flip","mix","half"];
+   const k=pick(kinds);
+   let shown, notes;
+   if(c.kind==="team"){
+     const mixed=nPr(c.a+c.b,c.k);
+     shown={ok:grp(c.nE)+" / "+grp(c.nS),
+            flip:grp(c.nS)+" / "+grp(c.nE),
+            mix:grp(c.nE)+" / "+grp(mixed),
+            half:grp(nCr(c.a,c.ra))+" / "+grp(c.nS)}[k];
+     notes={ok:"n(E) over n(S), both counted with combinations: "+fracText(c.nE,c.nS)+".",
+            flip:"The favourable count belongs on top. As written it exceeds 1, which no probability can.",
+            mix:"The denominator uses "+nprHTML(c.a+c.b,c.k)+", a permutation, while the numerator uses combinations. Both halves must use the same tool.",
+            half:"Only the "+c.T.aN+" have been counted on top; the "+ncrHTML(c.b,c.rb)+" for the "+c.T.bN+" is missing."}[k];
+   }else if(c.kind==="hand"){
+     const mixed=nPr(52,c.r);
+     shown={ok:grp(c.nE)+" / "+grp(c.nS),
+            flip:grp(c.nS)+" / "+grp(c.nE),
+            mix:grp(c.nE)+" / "+grp(mixed),
+            half:grp(c.nE*4)+" / "+grp(c.nS)}[k];
+     notes={ok:"n(E) over n(S), both as combinations of the deck: "+fracText(c.nE,c.nS)+".",
+            flip:"Upside down — and larger than 1.",
+            mix:"The denominator is "+nprHTML(52,c.r)+", which counts the order the cards arrived in. The numerator does not.",
+            half:"That multiplies by the four suits, but the question names one suit only."}[k];
+   }else{
+     shown={ok:grp(c.nE)+" / "+grp(c.nS),
+            flip:grp(c.nS)+" / "+grp(c.nE),
+            mix:grp(c.a*c.b)+" / "+grp(c.nS),
+            half:grp(c.nE)+" / "+grp(fact(c.n-1))}[k];
+     notes={ok:"n(E) over n(S), both counting arrangements: "+fracText(c.nE,c.nS)+".",
+            flip:"Upside down — and larger than 1.",
+            mix:"The numerator fills the two ends but forgets the "+(c.n-2)+"! ways of arranging the middle.",
+            half:"The denominator arranges only "+(c.n-1)+" people. All "+c.n+" are in the line."}[k];
+   }
+   const L={ok:"It is correct",
+            flip:"The two counts are the wrong way round",
+            mix:"The halves were counted with different tools",
+            half:c.kind==="line"?"The denominator leaves someone out":"Part of the count is missing"};
+   const wrongNotes={ok:"Compare it against n(E) over n(S) — something does not match.",
+            flip:"The favourable count is on top here, as it should be.",
+            mix:"Both halves use the same tool here.",
+            half:"Nothing is missing from this one."};
+   const opts=kinds.map(function(x){
+     return {label:L[x], correct:x===k, note:x===k?notes:wrongNotes[x]};
+   });
+   return {q:"Is this setup correct?", scene:c.text+" "+askFull(c),
+     big:shown, opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Any problem, end to end",
+ sub:"Line-ups, groups, lotteries and hands.",
+ gen:function(){
+   const t=pick(["prob","prob","s","e","tool"]);
+   const c=anyCase();
+   if(t==="s"){
+     return {q:"<b>What is n(S)?</b>", scene:c.text+" "+askFull(c),
+       opts:shuffle(numOpts(c.nS,sPool(c),"n(S) = "+sExpr(c)+"."))};
+   }
+   if(t==="e"){
+     return {q:"<b>What is n(E)?</b>", scene:c.text+" "+askFull(c),
+       vis:c.kind==="line"?lineSlots(c):null,
+       opts:shuffle(numOpts(c.nE,ePool(c),"n(E) = "+eExpr(c)+"."))};
+   }
+   if(t==="tool"){
+     const tc=(Math.random()<.5)?lineCase():pick([teamCase(),lottoCase(),handCase()]);
+     const isP=tc.tool==="permutation";
+     /* the scene must be the case the answer is about, not the one drawn above */
+     return {q:"<b>Permutation or combination?</b>", scene:tc.text+" "+askFull(tc),
+       opts:shuffle(distinctOpts([
+         {label:"A permutation", correct:isP, note:isP?"The positions are distinct, so order counts.":"Order makes no difference here."},
+         {label:"A combination", correct:!isP, note:!isP?"Order makes no difference here.":"The positions are distinct, so order counts."},
+         {label:"Neither — items may repeat", note:"Nothing is used twice."},
+         {label:"Both, one per half", note:"Both halves use the same tool."}
+       ]).slice(0,4)), two:true};
+   }
+   return {q:"<b>What is the probability that "+c.ask+"?</b>", scene:c.text,
+     facts:factsHTML([["n(E)",grp(c.nE)],["n(S)",grp(c.nS)]]),
+     opts:shuffle(fracOpts(c.nE,c.nS,pPool(c),
+       grp(c.nE)+"/"+grp(c.nS)+" = "+fracText(c.nE,c.nS)+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const H={
+  line:{a:3,b:4,n:7, nS:fact(7), nE:3*4*fact(5)},
+  team:{a:8,b:4,ra:2,rb:2,k:4, nS:nCr(12,4), nE:nCr(8,2)*nCr(4,2)},
+  lotto:{N:25,r:5,M:15, nS:nCr(25,5)*15, nE:1},
+  poker:{nS:nCr(52,5), nE:nCr(4,4)*nCr(4,1)},
+  hearts:{r:4, nS:nCr(52,4), nE:nCr(13,4)}
+};
+const HERO=[
+  {kind:"line",   lbl:"the line-up"},
+  {kind:"team",   lbl:"the sales team"},
+  {kind:"lotto",  lbl:"the lottery"},
+  {kind:"poker",  lbl:"four aces and a king"},
+  {kind:"hearts", lbl:"four hearts"},
+  {kind:"shape",  lbl:"the recipe"}
+];
+/* every note is built from the same figures its panel draws */
+const HNOTES={
+  line:function(){ return "Your worksheet's line-up. Seven children give 7! = "+grp(H.line.nS)
+    +" orders altogether; fixing a girl at the front and a boy at the back leaves 3 × 4 × 5! = "+grp(H.line.nE)
+    +". The 5! cancels, and the answer is just 3 × 4 over 7 × 6 — "+fracText(H.line.nE,H.line.nS)+"."; },
+  team:function(){ return "Your worksheet's sales team, and the cleanest example of the rule. Combinations underneath, combinations on top: "
+    +grp(H.team.nE)+" out of "+grp(H.team.nS)+" = "+fracText(H.team.nE,H.team.nS)
+    +". Neither half counts the order in which the four were picked."; },
+  lotto:function(){ return "Your worksheet's jackpot. The two draws are successive choices, so they multiply: "+grp(nCr(25,5))+" × 15 = "
+    +grp(H.lotto.nS)+" tickets, of which exactly one wins. That is "+fracText(1,H.lotto.nS)
+    +" — a number worth looking at before buying."; },
+  poker:function(){ return "Your worksheet's poker hand, built in pieces. All four aces can be taken in "+nCr(4,4)
+    +" way and one king in "+nCr(4,1)+", so the counting principle gives "+H.poker.nE+" hands out of "+grp(H.poker.nS)
+    +" — "+fracText(H.poker.nE,H.poker.nS)+"."; },
+  hearts:function(){ return "Your worksheet's last question, and the shortest of the five. Four hearts from the thirteen, over any four cards from the deck: "
+    +grp(H.hearts.nE)+" out of "+grp(H.hearts.nS)+" = "+fracText(H.hearts.nE,H.hearts.nS)
+    +", or about one hand in "+Math.round(H.hearts.nS/H.hearts.nE)+"."; },
+  shape:function(){ return "The method, in the order your worksheet asks for it. Decide the tool, count the bottom, count the top, divide. "
+    +"Every one of the five problems above is the same three steps with different counting in the middle."; }
+};
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="line"){
+    const c=H.line;
+    body='<div class="slots">'
+      +'<div class="slot"><div class="box fix">3</div><div class="cap">girl<br>first</div></div>'
+      +[5,4,3,2,1].map(function(v,i){
+        return '<div class="slot"><div class="box">'+v+'</div><div class="cap">'+(i+2)+"th</div></div>";}).join("")
+      +'<div class="slot"><div class="box fix">4</div><div class="cap">boy<br>last</div></div></div>'
+      +'<div class="steps" style="margin-top:14px">'
+      +'<div class="row b"><span class="nm">total</span><span class="bd">7! — every order of the seven</span><span class="vl">'+grp(c.nS)+"</span></div>"
+      +'<div class="row t"><span class="nm">favourable</span><span class="bd">3 × 4 × 5!</span><span class="vl">'+grp(c.nE)+"</span></div>"
+      +'<div class="row p"><span class="nm">probability</span><span class="bd">'+grp(c.nE)+" ÷ "+grp(c.nS)+'</span><span class="vl">'+fracHTML(c.nE,c.nS)+"</span></div></div>";
+  }else if(h.kind==="team"){
+    const c=H.team;
+    body='<div class="steps">'
+      +'<div class="row b"><span class="nm">total</span><span class="bd">'+ncrHTML(12,4)+' — any 4 of the 12</span><span class="vl">'+grp(c.nS)+"</span></div>"
+      +'<div class="row t"><span class="nm">favourable</span><span class="bd">'+ncrHTML(8,2)+" × "+ncrHTML(4,2)+" = "+nCr(8,2)+" × "+nCr(4,2)+'</span><span class="vl">'+grp(c.nE)+"</span></div>"
+      +'<div class="row p"><span class="nm">probability</span><span class="bd">'+grp(c.nE)+" ÷ "+grp(c.nS)+'</span><span class="vl">'+fracHTML(c.nE,c.nS)+"</span></div></div>"
+      +'<div class="eq" style="margin-top:12px">combinations on both halves'
+      +'<span class="lbl">the order the four were picked in never enters either count</span></div>';
+  }else if(h.kind==="lotto"){
+    const c=H.lotto;
+    body='<div class="steps">'
+      +'<div class="row b"><span class="nm">white balls</span><span class="bd">'+ncrHTML(25,5)+' — 5 different from 25</span><span class="vl">'+grp(nCr(25,5))+"</span></div>"
+      +'<div class="row b"><span class="nm">gold ball</span><span class="bd">one number from 15</span><span class="vl">15</span></div>'
+      +'<div class="row b"><span class="nm">total</span><span class="bd">'+grp(nCr(25,5))+' × 15</span><span class="vl">'+grp(c.nS)+"</span></div>"
+      +'<div class="row t"><span class="nm">favourable</span><span class="bd">one winning ticket</span><span class="vl">1</span></div>'
+      +'<div class="row p"><span class="nm">probability</span><span class="bd">one ticket bought</span><span class="vl">'+fracHTML(1,c.nS)+"</span></div></div>";
+  }else if(h.kind==="poker"){
+    const c=H.poker;
+    body='<div class="steps">'
+      +'<div class="row b"><span class="nm">total</span><span class="bd">'+ncrHTML(52,5)+' — any 5 cards</span><span class="vl">'+grp(c.nS)+"</span></div>"
+      +'<div class="row t"><span class="nm">the aces</span><span class="bd">'+ncrHTML(4,4)+' — all four of them</span><span class="vl">'+nCr(4,4)+"</span></div>"
+      +'<div class="row t"><span class="nm">the king</span><span class="bd">'+ncrHTML(4,1)+' — one of four</span><span class="vl">'+nCr(4,1)+"</span></div>"
+      +'<div class="row t"><span class="nm">favourable</span><span class="bd">'+nCr(4,4)+" × "+nCr(4,1)+'</span><span class="vl">'+c.nE+"</span></div>"
+      +'<div class="row p"><span class="nm">probability</span><span class="bd">'+c.nE+" ÷ "+grp(c.nS)+'</span><span class="vl">'+fracHTML(c.nE,c.nS)+"</span></div></div>";
+  }else if(h.kind==="hearts"){
+    const c=H.hearts;
+    body='<div class="steps">'
+      +'<div class="row b"><span class="nm">total</span><span class="bd">'+ncrHTML(52,4)+' — any 4 cards</span><span class="vl">'+grp(c.nS)+"</span></div>"
+      +'<div class="row t"><span class="nm">favourable</span><span class="bd">'+ncrHTML(13,4)+' — 4 of the 13 hearts</span><span class="vl">'+grp(c.nE)+"</span></div>"
+      +'<div class="row p"><span class="nm">probability</span><span class="bd">'+grp(c.nE)+" ÷ "+grp(c.nS)+'</span><span class="vl">'+fracHTML(c.nE,c.nS)+"</span></div></div>"
+      +'<div class="eq" style="margin-top:12px">about one hand in '+Math.round(c.nS/c.nE)
+      +'<span class="lbl">no suit is named until the question names one</span></div>';
+  }else{
+    body='<div class="steps">'
+      +'<div class="row"><span class="nm">step 1</span><span class="bd">Does the order matter? Permutation, or combination.</span><span class="vl"></span></div>'
+      +'<div class="row b"><span class="nm">step 2</span><span class="bd">Count every outcome, with that tool.</span><span class="vl">n(S)</span></div>'
+      +'<div class="row t"><span class="nm">step 3</span><span class="bd">Count the favourable ones, with the same tool.</span><span class="vl">n(E)</span></div>'
+      +'<div class="row p"><span class="nm">step 4</span><span class="bd">Divide, and reduce.</span><span class="vl">n(E) ÷ n(S)</span></div></div>'
+      +'<table class="pt" style="margin-top:16px"><thead><tr><th>problem</th><th>n(S)</th><th>n(E)</th><th>P</th></tr></thead><tbody>'
+      +'<tr><td class="lab">the line-up</td><td>'+grp(H.line.nS)+"</td><td>"+grp(H.line.nE)+'</td><td class="p">'+fracText(H.line.nE,H.line.nS)+"</td></tr>"
+      +'<tr><td class="lab">the sales team</td><td>'+grp(H.team.nS)+"</td><td>"+grp(H.team.nE)+'</td><td class="p">'+fracText(H.team.nE,H.team.nS)+"</td></tr>"
+      +'<tr><td class="lab">the lottery</td><td>'+grp(H.lotto.nS)+"</td><td>1</td><td class=\"p\">"+fracText(1,H.lotto.nS)+"</td></tr>"
+      +'<tr><td class="lab">four aces and a king</td><td>'+grp(H.poker.nS)+"</td><td>"+H.poker.nE+'</td><td class="p">'+fracText(H.poker.nE,H.poker.nS)+"</td></tr>"
+      +'<tr><td class="lab">four hearts</td><td>'+grp(H.hearts.nS)+"</td><td>"+grp(H.hearts.nE)+'</td><td class="p">'+fracText(H.hearts.nE,H.hearts.nS)+"</td></tr>"
+      +"</tbody></table>";
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.vis?'<div class="vis">'+q.vis+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
