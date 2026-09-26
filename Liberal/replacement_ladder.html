@@ -1,0 +1,1084 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Chain Ladder — multiply, and ask whether the pool changed</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --ch:#2D4F8C;
+    --ch-bg:#E7EDF7;
+    --same:#6E7A88;
+    --same-bg:#EDF0F3;
+    --moved:#B5551D;
+    --moved-bg:#FAEEE2;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--ch)}
+  :focus-visible{outline:3px solid var(--ch); outline-offset:2px; border-radius:3px}
+
+  .frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.15; margin:0 3px}
+  .frac .den{border-top:2px solid currentColor; padding-top:2px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--ch)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:18ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:680px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.1; text-align:center}
+  .eq .res{color:var(--ch); font-weight:700}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+
+  /* the chain of draws: one card per draw, with its own fraction */
+  .chain{display:flex; gap:10px; justify-content:center; align-items:flex-start; flex-wrap:wrap; margin:0 auto}
+  .link{text-align:center; min-width:96px}
+  .link .hd{font-size:11.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:5px}
+  .link .bx{border:2px solid var(--rule); border-radius:10px; padding:10px 12px; background:var(--card);
+    font-family:var(--serif); font-size:clamp(17px,3.6vw,23px)}
+  .link .bx.q{border-color:var(--ch); background:var(--ch-bg); color:var(--ch)}
+  .link .pool{font-size:11.5px; color:var(--muted); margin-top:5px; line-height:1.3}
+  .times{display:flex; align-items:center; font-family:var(--serif); font-size:clamp(17px,3.6vw,22px); color:var(--muted); padding-top:34px}
+  .num{color:var(--ink)}
+  .dsame{color:var(--same); font-weight:700}
+  .dmoved{color:var(--moved); font-weight:700}
+
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:680px; margin:0 auto}
+  @media (max-width:640px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:15px 16px; text-align:center}
+  .pane.w{background:var(--same-bg)} .pane.wo{background:var(--moved-bg)}
+  .pane .ttl{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:9px}
+  .pane.w .ttl{color:var(--same)} .pane.wo .ttl{color:var(--moved)}
+  .pane .fm{font-family:var(--serif); font-size:clamp(15px,3vw,19px)}
+  .pane .vl{font-family:var(--serif); font-size:clamp(19px,4.2vw,26px); font-weight:700; margin-top:7px}
+  .pane.w .vl{color:var(--same)} .pane.wo .vl{color:var(--moved)}
+  .pane .wk{font-size:12.5px; color:var(--muted); margin-top:7px; line-height:1.4}
+
+  table.ct{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:clamp(13px,2.7vw,15px)}
+  table.ct th,table.ct td{border:1px solid var(--rule); padding:5px 13px; text-align:right; white-space:nowrap}
+  table.ct th{background:var(--ch-bg); color:var(--ch); font-weight:700; font-size:12.5px; text-align:center}
+  table.ct td.lab{text-align:left}
+  table.ct td.p{color:var(--ch); font-weight:700}
+  table.ct td.m{color:var(--moved); font-weight:700}
+
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--ch); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--ch); background:var(--ch-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--ch)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .scene{max-width:56ch; margin:0 auto 14px; background:var(--ch-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:42ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(16px,3.6vw,25px); background:var(--ch-bg); border-radius:12px; padding:11px 25px; margin:0 auto 16px}
+  .vis{margin:0 auto 16px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:18px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>×</span> The Chain Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 20 · probability involving <i>and</i></p>
+    <h1>Multiply — then ask whether the pool changed.</h1>
+    <p class="lede">For one event <b>and then</b> another, the probabilities multiply. That much never varies. What does vary is the <b>second fraction</b>: if the first item went back, the second draw faces the same pool as the first; if it did not, both the favourable count and the total have dropped by one. Every difference between these problems lives in that one fraction.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>Only the denominators after the first one move.</b> Your worksheet draws two kings both ways: with replacement it is 4/52 × 4/52 = <b>1/169</b>, and without it is 4/52 × 3/51 = <b>1/221</b>. The first fraction is identical in both. Everything that separates the two answers is the single step from 4/52 to 3/51 — one fewer king, one fewer card.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 establish that <i>and</i> multiplies, and decide whether the draws are independent. Rungs 3–5 compute with replacement, without replacement, and then drill the second fraction on its own. Rungs 6–7 extend to three draws and to "at least one" by complement. Rungs 8–10 compare the two settings, diagnose a wrong denominator, and mix everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Watch the colours</h3><p>A grey denominator has not moved since the draw before it. An orange one has, because nothing was put back.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Every answer is an exact fraction in lowest terms. Draws happen in the order stated, and "without replacement" means the item is kept out for every later draw.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>One question decides everything</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Did it go back?</h3><p>Replaced means independent and the fractions repeat. Kept out means dependent and every later fraction shrinks.</p></div>
+      <div class="step"><span class="n">02</span><h3>Both numbers drop, not one</h3><p>Taking a king out leaves 3 kings among 51 cards. Changing only the denominator is the commonest slip.</p></div>
+      <div class="step"><span class="n">03</span><h3>It is conditional probability</h3><p>3/51 is the chance of a king <i>given</i> that a king has already gone. The next ladder gives it that name.</p></div>
+    </div>
+    <p class="closing">One fraction per draw, multiplied, each written for the pool as it stands.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Chain Ladder · P(A and then B) = P(A) × P(B after A) · with replacement the pool resets · without replacement both counts fall by one</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+
+/* ================= exact fractions ================= */
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){const t=a%b;a=b;b=t;}return a;}
+function frac(num,den){
+  if(den===0) return null;
+  if(num===0) return {n:0,d:1,txt:"0"};
+  const g=gcd(num,den)||1;
+  const n=num/g, d=den/g;
+  return {n:n,d:d,txt:(d===1?String(n):n+"/"+d)};
+}
+function fracText(num,den){ const f=frac(num,den); return f?f.txt:"—"; }
+function fracHTML(num,den){
+  const f=frac(num,den);
+  if(!f) return "—";
+  if(f.d===1) return String(f.n);
+  return '<span class="frac"><span class="num">'+grp(f.n)+'</span><span class="den">'+grp(f.d)+"</span></span>";
+}
+/* exact arithmetic on [num,den] pairs. Each result is reduced immediately, so
+   a chain of three draws never builds integers larger than a few thousand. */
+function fr(n,d){ const f=frac(n,d); return f?[f.n,f.d]:[0,1]; }
+function fMul(a,b){ return fr(a[0]*b[0], a[1]*b[1]); }
+function fSub(a,b){ return fr(a[0]*b[1]-b[0]*a[1], a[1]*b[1]); }
+function fProd(list){ let r=[1,1]; list.forEach(function(x){ r=fMul(r,x); }); return r; }
+
+/* ================= the pools ================= */
+/* Each pool names its items and how many of each kind it holds. Every count in
+   a question is derived from these numbers, never typed twice. */
+const POOLS=[
+  {what:"card", plural:"cards", total:52, from:"a standard 52-card deck",
+   kinds:[{t:"king",p:"kings",n:4},{t:"queen",p:"queens",n:4},{t:"ace",p:"aces",n:4},
+          {t:"heart",p:"hearts",n:13},{t:"spade",p:"spades",n:13},
+          {t:"face card",p:"face cards",n:12},{t:"red card",p:"red cards",n:26}],
+   draw:"drawn", back:"put back and the deck reshuffled", backShort:"returned to the deck"},
+  {what:"marble", plural:"marbles", total:12, from:"a bag of 12 marbles — 5 red, 4 blue and 3 green",
+   kinds:[{t:"red marble",p:"red marbles",n:5},{t:"blue marble",p:"blue marbles",n:4},{t:"green marble",p:"green marbles",n:3}],
+   draw:"taken", back:"put back", backShort:"put back"},
+  {what:"counter", plural:"counters", total:15, from:"a box of 15 counters — 6 black, 5 white and 4 yellow",
+   kinds:[{t:"black counter",p:"black counters",n:6},{t:"white counter",p:"white counters",n:5},{t:"yellow counter",p:"yellow counters",n:4}],
+   draw:"taken", back:"put back", backShort:"put back"},
+  {what:"bulb", plural:"bulbs", total:20, from:"a carton of 20 light bulbs, 3 of which are faulty",
+   kinds:[{t:"faulty bulb",p:"faulty bulbs",n:3},{t:"working bulb",p:"working bulbs",n:17}],
+   draw:"tested", back:"returned to the carton", backShort:"returned to the carton"},
+  {what:"pupil", plural:"pupils", total:18, from:"a class of 18 pupils — 10 girls and 8 boys",
+   kinds:[{t:"girl",p:"girls",n:10},{t:"boy",p:"boys",n:8}],
+   draw:"chosen", back:"put back into the pool", backShort:"put back"}
+];
+
+/* a run of r draws all of the same kind, with or without replacement */
+function runCase(o){
+  o=o||{};
+  const P=o.P||pick(POOLS);
+  const r=o.r||pick([2,2,3]);
+  /* the kind must have enough items for r draws without replacement, so that
+     the without-replacement answer is never zero */
+  const ok=P.kinds.filter(function(k){return k.n>=r+1;});
+  const K=o.K||pick(ok.length?ok:P.kinds);
+  const repl=(o.repl!==undefined)?o.repl:(Math.random()<.5);
+  const steps=[];
+  for(let i=0;i<r;i++){
+    steps.push(repl?[K.n,P.total]:[K.n-i,P.total-i]);
+  }
+  return {kind:"run", P:P, K:K, r:r, repl:repl, steps:steps, p:fProd(steps),
+    /* the other setting, for the comparison and distractor pools */
+    other:fProd((function(){ const s=[]; for(let i=0;i<r;i++) s.push(repl?[K.n-i,P.total-i]:[K.n,P.total]); return s; })()),
+    text:(r===2?"Two ":(r===3?"Three ":r+" "))+P.plural+" are "+P.draw+" from "+P.from
+      +(repl?(", each one being "+P.back+" before the next is "+P.draw+".")
+            :", one after another and none is "+P.backShort+".")};
+}
+/* two draws of different kinds, in order */
+function mixCase(o){
+  o=o||{};
+  const P=o.P||pick(POOLS.filter(function(p){return p.kinds.length>=2;}));
+  const ks=shuffle(P.kinds.slice());
+  const A=ks[0], B=ks[1];
+  const repl=(o.repl!==undefined)?o.repl:(Math.random()<.5);
+  /* with different kinds, taking an A out never reduces the count of B */
+  const steps=repl?[[A.n,P.total],[B.n,P.total]]:[[A.n,P.total],[B.n,P.total-1]];
+  return {kind:"mix", P:P, A:A, B:B, r:2, repl:repl, steps:steps, p:fProd(steps),
+    other:fProd(repl?[[A.n,P.total],[B.n,P.total-1]]:[[A.n,P.total],[B.n,P.total]]),
+    text:"A "+P.what+" is "+P.draw+" from "+P.from+(repl?(" and "+P.back):" and kept out")
+      +", then a second is "+P.draw+"."};
+}
+/* two different experiments, always independent */
+const CROSS=[
+  {a:"a coin is tossed",  ae:"heads", ap:[1,2], b:"a die is rolled", be:"a six", bp:[1,6]},
+  {a:"a coin is tossed",  ae:"tails", ap:[1,2], b:"a card is drawn", be:"a heart", bp:[1,4]},
+  {a:"a die is rolled",   ae:"an even number", ap:[1,2], b:"a card is drawn", be:"a king", bp:[1,13]},
+  {a:"a die is rolled",   ae:"a five", ap:[1,6], b:"a coin is tossed", be:"heads", bp:[1,2]},
+  {a:"a card is drawn",   ae:"a spade", ap:[1,4], b:"a die is rolled", be:"a number above 4", bp:[1,3]}
+];
+function crossCase(){
+  const C=pick(CROSS);
+  return {kind:"cross", C:C, r:2, repl:true, steps:[C.ap,C.bp], p:fMul(C.ap,C.bp),
+    text:"First "+C.a+", then "+C.b+"."};
+}
+function anyCase(){
+  const x=Math.random();
+  if(x<.5) return runCase();
+  if(x<.8) return mixCase();
+  return crossCase();
+}
+
+/* the event being asked about, in words */
+/* two of a kind is "both", three is "all three" */
+function runPhrase(r){ return r===2?"both":("all "+r); }
+function evText(c){
+  if(c.kind==="run") return runPhrase(c.r)+" are "+c.K.p;
+  if(c.kind==="mix") return "the first is a "+c.A.t+" and the second is a "+c.B.t;
+  return c.C.ae+" and then "+c.C.be;
+}
+/* "at least one" over a run, by complement: 1 - P(none are K) */
+function atLeastCase(o){
+  o=o||{};
+  const P=o.P||pick(POOLS);
+  /* a kind that is exactly half the pool makes "none are K" and "all are K"
+     identical, which would put two correct-looking options on screen */
+  const fitK=P.kinds.filter(function(k){return k.n>=1&&P.total-k.n>=3&&k.n*2!==P.total;});
+  const K=o.K||pick(fitK.length?fitK:P.kinds.filter(function(k){return k.n>=1&&P.total-k.n>=3;}));
+  const r=o.r||2;
+  const repl=(o.repl!==undefined)?o.repl:(Math.random()<.5);
+  const miss=P.total-K.n;            /* items that are not of this kind */
+  const steps=[];
+  for(let i=0;i<r;i++) steps.push(repl?[miss,P.total]:[miss-i,P.total-i]);
+  const none=fProd(steps);
+  return {P:P, K:K, r:r, repl:repl, miss:miss, steps:steps, none:none,
+    atLeast:fSub([1,1],none),
+    text:(r===2?"Two ":"Three ")+P.plural+" are "+P.draw+" from "+P.from
+      +(repl?(", each "+P.back+" before the next."):", and none is "+P.backShort+".")};
+}
+
+/* ================= rendering ================= */
+/* the chain of fractions, one box per draw. A denominator that has not moved
+   since the previous draw is grey; one that has is orange. */
+function chainHTML(c,o){
+  o=o||{};
+  let s='<div class="chain">';
+  c.steps.forEach(function(st,i){
+    if(i>0) s+='<div class="times">×</div>';
+    const hide=(o.hide===i);
+    const moved=(i>0&&st[1]!==c.steps[i-1][1]);
+    const dcls=moved?"dmoved":"dsame";
+    s+='<div class="link"><div class="hd">draw '+(i+1)+"</div>"
+      +'<div class="bx'+(hide?" q":"")+'">'
+      +(hide?"?":('<span class="frac"><span class="num">'+st[0]+'</span><span class="den '+dcls+'">'+st[1]+"</span></span>"))
+      +"</div>";
+    /* two separate experiments have no shared pool, so the line is omitted */
+    if(o.pool!==false&&c.P){
+      s+='<div class="pool">'+(i===0?"the full pool":(moved?("one fewer "+c.P.what):"pool unchanged"))+"</div>";
+    }
+    s+="</div>";
+  });
+  return s+"</div>";
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+
+/* ================= options ================= */
+function numOpts(ans,cands,note){
+  const seen={}; seen[grp(ans)]=1;
+  const opts=[{label:grp(ans), correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.v===null||!Number.isFinite(x.v)||x.v<0||!Number.isInteger(x.v))return;
+    const L=grp(x.v); if(seen[L])return; seen[L]=1;
+    opts.push({label:L, note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* fraction options compared by value, so an equal-but-unreduced twin can never
+   sit beside the answer */
+function fracOpts(an,ad,cands,note){
+  const ans=frac(an,ad);
+  const seen={}; seen[ans.txt]=1;
+  const opts=[{label:fracHTML(an,ad), correct:true, note:note}];
+  shuffle(cands).forEach(function(x){
+    if(x.n===null||x.d===null||!Number.isFinite(x.n)||!Number.isFinite(x.d))return;
+    if(x.d<=0||x.n<0||!Number.isInteger(x.n)||!Number.isInteger(x.d))return;
+    const f=frac(x.n,x.d); if(!f||seen[f.txt])return; seen[f.txt]=1;
+    opts.push({label:fracHTML(x.n,x.d), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* the wrong products people actually produce */
+function prodPool(c){
+  const out=[
+    {n:c.steps[0][0], d:c.steps[0][1], w:"That is the first draw alone. The draws multiply together."},
+    {n:c.steps[c.steps.length-1][0], d:c.steps[c.steps.length-1][1], w:"That is the last draw alone."}
+  ];
+  /* two separate experiments have no with/without counterpart, so that
+     distractor only exists for cases drawn from a pool */
+  if(c.other){
+    out.push({n:c.other[0], d:c.other[1], w:c.repl
+       ?("That is the answer for draws made <i>without</i> replacement, where both counts fall each time.")
+       :("That is the answer for draws made <i>with</i> replacement, where the pool resets each time.")});
+  }else{
+    out.push({n:fMul(c.steps[0],c.steps[0])[0], d:fMul(c.steps[0],c.steps[0])[1],
+      w:"That squares the first experiment's chance instead of using the second one's."});
+    out.push({n:fMul(c.steps[1],c.steps[1])[0], d:fMul(c.steps[1],c.steps[1])[1],
+      w:"That squares the second experiment's chance."});
+  }
+  /* the classic slip: move only the denominator, leaving the numerator alone */
+  if(!c.repl&&c.kind==="run"){
+    const half=[];
+    for(let i=0;i<c.r;i++) half.push([c.K.n, c.P.total-i]);
+    const h=fProd(half);
+    out.push({n:h[0], d:h[1], w:"That drops the total but keeps the favourable count the same. Removing a "+c.K.t+" leaves one fewer of them too."});
+    const other=[];
+    for(let i=0;i<c.r;i++) other.push([c.K.n-i, c.P.total]);
+    const o2=fProd(other);
+    out.push({n:o2[0], d:o2[1], w:"That drops the favourable count but keeps the total the same. The pool shrinks as well."});
+  }
+  /* adding instead of multiplying */
+  const add=fSub(fProd([[0,1]]),[0,1]);
+  let sum=[0,1];
+  c.steps.forEach(function(st){ sum=fr(sum[0]*st[1]+st[0]*sum[1], sum[1]*st[1]); });
+  out.push({n:sum[0], d:sum[1], w:"That adds the fractions. “And” multiplies — adding belongs to “or”."});
+  return out;
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"What “and” does",
+ sub:"Successive events multiply. Adding belongs to “or”.",
+ gen:function(){
+   const forms=[
+     {q:"<b>For one event and then another, what happens to the probabilities?</b>",
+      ans:"They multiply",
+      bad:[["They add","Adding is the <i>or</i> rule. Two things both happening is less likely than either alone, and multiplying two fractions makes them smaller."],
+        ["They are subtracted","Nothing here calls for a subtraction."],
+        ["The larger one is taken","Both events have to happen, so both must enter the answer."]],
+      note:"Each fraction narrows what is left, which is why the product is smaller than either factor."},
+     {q:"Two events both have probability 1/2. <b>What is the probability of both happening?</b>",
+      ans:"1/4",
+      bad:[["1","That would mean both are certain."],
+        ["1/2","That is the chance of one of them. Requiring both is stricter."],
+        ["0","Both happening is possible, so the answer is not zero."]],
+      note:"1/2 × 1/2 = 1/4 — multiplying two fractions below 1 always gives something smaller than either."},
+     {q:"<b>Why is P(A and B) never larger than P(A)?</b>",
+      ans:"Requiring B as well can only rule outcomes out, never add any",
+      bad:[["Because B is always less likely than A","B may be more likely; the point is that both conditions must hold."],
+        ["Because probabilities cannot exceed 1","True but irrelevant — this holds even for small probabilities."],
+        ["It can be larger, if B is very likely","Even with B almost certain, demanding both cannot beat demanding A alone."]],
+      note:"Every outcome satisfying both already satisfies A, so the count on top can only fall."},
+     {q:"<b>What does “with replacement” mean?</b>",
+      ans:"The item is returned before the next draw, so the pool is the same each time",
+      bad:[["The item is swapped for a different one","Nothing is swapped — the same item goes back."],
+        ["A new pool is used for each draw","The same pool is used; it is simply restored."],
+        ["Only the first draw counts","Every draw counts, and each has the same fractions."]],
+      note:"Because the pool resets, the draws are independent and the same fraction repeats."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Independent or dependent",
+ sub:"Did the first draw change what the second faces?",
+ gen:function(){
+   /* an even split, so the answer cannot be guessed from frequency */
+   const wantIndep=Math.random()<.5;
+   const c=wantIndep
+     ? (Math.random()<.4?crossCase():(Math.random()<.5?runCase({repl:true}):mixCase({repl:true})))
+     : (Math.random()<.5?runCase({repl:false}):mixCase({repl:false}));
+   const indep=c.repl;
+   const forms=["classify","define"];
+   if(pick(forms)==="define"){
+     return {q:"<b>What makes two events dependent?</b>",
+       opts:shuffle([
+         {label:"The first happening changes the probability of the second", correct:true,
+          note:"Drawing a king and keeping it out leaves 3 kings among 51 cards, so the second draw's chance has genuinely moved."},
+         {label:"They happen one after the other",
+          note:"Order alone does not create dependence — replaced draws happen in order and stay independent."},
+         {label:"They come from the same pool",
+          note:"Two replaced draws come from the same pool and are independent."},
+         {label:"They have different probabilities",
+          note:"Different probabilities say nothing about whether one affects the other."}
+       ]), one:true};
+   }
+   return {q:"<b>Are these two draws independent or dependent?</b>", scene:c.text,
+     opts:shuffle(distinctOpts([
+       {label:"Independent", correct:indep,
+        note:indep?(c.kind==="cross"
+            ?"Two separate experiments — a coin or a die has no memory of the other, so neither affects the other."
+            :"Because each item goes back, the second draw faces exactly the pool the first did.")
+          :("The first item is kept out, so the second draw faces a smaller pool — that is dependence.")},
+       {label:"Dependent", correct:!indep,
+        note:!indep?("The first item is not returned, so the pool the second draw faces has changed.")
+          :(c.kind==="cross"?"These are separate experiments; neither can affect the other."
+                           :"The item is put back, so nothing the first draw did survives into the second.")},
+       {label:"Neither — they are mutually exclusive",
+        note:"Mutually exclusive is about events that cannot both happen. Here both do happen, one after the other."},
+       {label:"It cannot be decided from the wording",
+        note:"The wording is exactly what decides it — look for whether the item is returned."}
+     ]).slice(0,4)), two:true};
+ }
+},
+{
+ title:"With replacement",
+ sub:"The pool resets, so the same fraction repeats.",
+ gen:function(){
+   const c=Math.random()<.65?runCase({repl:true}):mixCase({repl:true});
+   const forms=["value","which"];
+   if(pick(forms)==="which"){
+     const same=c.steps.map(function(st){return st[0]+"/"+st[1];}).join(" × ");
+     const wrong=(c.kind==="run")
+       ? c.steps.map(function(st,i){return (c.K.n-i)+"/"+(c.P.total-i);}).join(" × ")
+       : (c.A.n+"/"+c.P.total+" × "+c.B.n+"/"+(c.P.total-1));
+     return {q:"<b>Which product gives the answer?</b>", scene:c.text+" Find the probability that "+evText(c)+".",
+       opts:shuffle(distinctOpts([
+         {label:same, correct:true,
+          note:"Everything goes back, so every draw faces the same pool: "+fracText(c.p[0],c.p[1])+"."},
+         {label:wrong,
+          note:"Those shrinking denominators belong to draws made without replacement. Here the pool is restored each time."},
+         {label:c.steps.map(function(st){return st[0]+"/"+st[1];}).join(" + "),
+          note:"Adding is the <i>or</i> rule. Both events happening calls for a product."},
+         {label:c.steps[0][0]+"/"+c.steps[0][1],
+          note:"That is the first draw alone."}
+       ]).slice(0,4)), two:true};
+   }
+   return {q:"<b>What is the probability that "+evText(c)+"?</b>", scene:c.text,
+     vis:chainHTML(c),
+     opts:shuffle(fracOpts(c.p[0],c.p[1],prodPool(c),
+       c.steps.map(function(st){return st[0]+"/"+st[1];}).join(" × ")+" = "+fracText(c.p[0],c.p[1])
+       +". Nothing changes between draws, because everything is put back."))};
+ }
+},
+{
+ title:"Without replacement",
+ sub:"Both counts fall by one, every time.",
+ gen:function(){
+   const c=Math.random()<.7?runCase({repl:false}):mixCase({repl:false});
+   return {q:"<b>What is the probability that "+evText(c)+"?</b>", scene:c.text,
+     vis:chainHTML(c),
+     opts:shuffle(fracOpts(c.p[0],c.p[1],prodPool(c),
+       c.steps.map(function(st){return st[0]+"/"+st[1];}).join(" × ")+" = "+fracText(c.p[0],c.p[1])+"."))};
+ }
+},
+{
+ title:"The second fraction",
+ sub:"The one place where the two settings differ.",
+ gen:function(){
+   const c=runCase({r:2});
+   const i=1;                                  /* always the second draw */
+   const cands=[
+     {v:c.repl?(c.K.n-1):c.K.n, w:c.repl
+        ?("That would be right if the first "+c.K.t+" had been kept out. Here it went back.")
+        :("That is the count before the first "+c.K.t+" was removed. One has gone.")},
+     {v:c.K.n+1, w:"One too many — no "+c.P.what+" is added to the pool."},
+     {v:c.P.total, w:"That is the size of the whole pool, not the count of "+c.K.p+"."},
+     {v:c.P.total-1, w:"That is the pool after one "+c.P.what+" is removed — a denominator, not a numerator."},
+     {v:Math.max(0,c.K.n-2), w:"That removes two, when only one draw has been made."}
+   ];
+   const forms=["num","den"];
+   if(pick(forms)==="den"){
+     const dcands=[
+       {v:c.repl?(c.P.total-1):c.P.total, w:c.repl
+          ?("That would be right without replacement. Here the "+c.P.what+" is put back, so the pool is whole again.")
+          :("That is the pool before the first draw. One "+c.P.what+" has been kept out.")},
+       {v:c.P.total-2, w:"That removes two, when only one draw has been made."},
+       {v:c.P.total+1, w:"The pool never grows."},
+       {v:c.K.n, w:"That is the count of "+c.K.p+", which belongs on top."},
+       {v:c.K.n-1, w:"That is a numerator, not the size of the pool."}
+     ];
+     return {q:"<b>What is the denominator of the second fraction?</b>", scene:c.text
+       +" Find the probability that both are "+c.K.p+".",
+       vis:chainHTML(c,{hide:1}),
+       opts:shuffle(numOpts(c.steps[1][1],dcands,
+         c.repl
+           ? ("The first "+c.P.what+" is "+c.P.back+", so the second draw faces all "+c.P.total+" again.")
+           : ("One "+c.P.what+" has been taken out and kept out, so "+(c.P.total-1)+" remain.")))};
+   }
+   return {q:"<b>What is the numerator of the second fraction?</b>", scene:c.text
+     +" Find the probability that both are "+c.K.p+".",
+     vis:chainHTML(c,{hide:1}),
+     opts:shuffle(numOpts(c.steps[1][0],cands,
+       c.repl
+         ? ("The first "+c.K.t+" goes back, so all "+c.K.n+" "+c.K.p+" are available again.")
+         : ("One "+c.K.t+" has been drawn and kept, so "+(c.K.n-1)+" remain.")))};
+ }
+},
+{
+ title:"Three draws",
+ sub:"One more fraction, each written for the pool as it stands.",
+ gen:function(){
+   const c=runCase({r:3});
+   const forms=["value","third"];
+   if(pick(forms)==="third"){
+     const cands=[
+       {v:c.repl?(c.K.n-2):c.K.n, w:c.repl
+          ?("That would be right without replacement, after two have been removed.")
+          :("That is the original count. Two "+c.K.p+" have already gone.")},
+       {v:c.repl?(c.K.n-1):(c.K.n-1), w:"That removes only one, when two draws have been made."},
+       {v:Math.max(0,c.K.n-3), w:"That removes three, when only two draws have been made."},
+       {v:c.P.total-2, w:"That is the pool after two are removed — a denominator."},
+       {v:c.K.n+1, w:"The count never rises."}
+     ];
+     return {q:"<b>What is the numerator of the <i>third</i> fraction?</b>", scene:c.text
+       +" Find the probability that all three are "+c.K.p+".",
+       vis:chainHTML(c,{hide:2}),
+       opts:shuffle(numOpts(c.steps[2][0],cands,
+         c.repl
+           ? ("Everything is put back, so the third draw still has all "+c.K.n+" "+c.K.p+" to choose from.")
+           : ("Two "+c.K.p+" have been taken and kept, leaving "+(c.K.n-2)+".")))};
+   }
+   return {q:"<b>What is the probability that all three are "+c.K.p+"?</b>", scene:c.text,
+     vis:chainHTML(c),
+     opts:shuffle(fracOpts(c.p[0],c.p[1],prodPool(c),
+       c.steps.map(function(st){return st[0]+"/"+st[1];}).join(" × ")+" = "+fracText(c.p[0],c.p[1])+"."))};
+ }
+},
+{
+ title:"At least one",
+ sub:"Multiply for “none”, then take it from 1.",
+ gen:function(){
+   const c=atLeastCase();
+   const forms=["value","none","why"];
+   const f=pick(forms);
+   if(f==="none"){
+     return {q:"<b>What is the probability that <i>none</i> is a "+c.K.t+"?</b>", scene:c.text,
+       facts:factsHTML([[c.K.p+" in the pool",String(c.K.n)],["not "+c.K.p,String(c.miss)],["pool size",String(c.P.total)]]),
+       opts:shuffle(fracOpts(c.none[0],c.none[1],
+         [{n:c.atLeast[0], d:c.atLeast[1], w:"That is the chance of at least one, which is what is left after taking this from 1."},
+          {n:c.steps[0][0], d:c.steps[0][1], w:"That is the first draw alone."},
+          {n:c.K.n, d:c.P.total, w:"That is the chance of drawing a "+c.K.t+" on one draw."},
+          {n:c.miss, d:c.P.total-1, w:"That is the second draw alone."},
+          {n:fMul([c.miss,c.P.total],[c.r,1])[0], d:fMul([c.miss,c.P.total],[c.r,1])[1],
+           w:"That multiplies one draw by "+c.r+" rather than multiplying the draws together."},
+          {n:fProd(c.steps.map(function(st,i){return [c.K.n-(c.repl?0:i), c.P.total-(c.repl?0:i)];}))[0],
+           d:fProd(c.steps.map(function(st,i){return [c.K.n-(c.repl?0:i), c.P.total-(c.repl?0:i)];}))[1],
+           w:"That is the chance they are <i>all</i> "+c.K.p+", which is the opposite extreme."}],
+         c.steps.map(function(st){return st[0]+"/"+st[1];}).join(" × ")+" = "+fracText(c.none[0],c.none[1])+"."))};
+   }
+   if(f==="why"){
+     return {q:"<b>Why compute “none” first?</b>", scene:c.text,
+       opts:shuffle([
+         {label:"“At least one” is several cases, while “none” is a single product", correct:true,
+          note:"Counting directly would mean adding the cases for exactly one, exactly two, and so on. “None” is one chain of fractions."},
+         {label:"Because “none” is more likely",
+          note:"It may or may not be — here it is "+fracText(c.none[0],c.none[1])+". Likelihood is not the reason."},
+         {label:"Because the draws are independent",
+          note:"They "+(c.repl?"are":"are not")+" here, and either way the complement is still the shorter route."},
+         {label:"There is no reason — both routes take the same work",
+          note:"The direct route needs "+c.r+" separate cases added together; the complement needs one product."}
+       ]), one:true};
+   }
+   return {q:"<b>What is the probability of at least one "+c.K.t+"?</b>", scene:c.text,
+     facts:factsHTML([["P(none is a "+c.K.t+")",fracText(c.none[0],c.none[1])]]),
+     opts:shuffle(fracOpts(c.atLeast[0],c.atLeast[1],
+       [{n:c.none[0], d:c.none[1], w:"That is P(none), which is the complement. Take it from 1."},
+        {n:c.K.n, d:c.P.total, w:"That is one draw only, ignoring the other "+(c.r-1)+"."},
+        {n:fProd(c.steps.map(function(st,i){return [c.K.n-(c.repl?0:i), c.P.total-(c.repl?0:i)];}))[0],
+         d:fProd(c.steps.map(function(st,i){return [c.K.n-(c.repl?0:i), c.P.total-(c.repl?0:i)];}))[1],
+         w:"That is the chance they are all "+c.K.p+", which is far stricter."},
+        {n:fMul([c.K.n,c.P.total],[c.r,1])[0], d:fMul([c.K.n,c.P.total],[c.r,1])[1],
+         w:"That multiplies one draw's chance by "+c.r+", which double-counts the cases where more than one appears."}],
+       "1 − "+fracText(c.none[0],c.none[1])+" = "+fracText(c.atLeast[0],c.atLeast[1])+"."))};
+ }
+},
+{
+ title:"The two settings compared",
+ sub:"Same pool, same draws, one word apart.",
+ gen:function(){
+   const base=runCase({r:2});
+   const w=runCase({P:base.P, K:base.K, r:base.r, repl:true});
+   const wo=runCase({P:base.P, K:base.K, r:base.r, repl:false});
+   const forms=["which","why","pick"];
+   const f=pick(forms);
+   if(f==="which"){
+     return {q:"<b>Which setting gives the larger probability?</b>",
+       scene:"Two "+base.P.plural+" are "+base.P.draw+" from "+base.P.from
+         +". Compare putting the first one back with keeping it out.",
+       facts:factsHTML([["with replacement",fracText(w.p[0],w.p[1])],["without replacement",fracText(wo.p[0],wo.p[1])]]),
+       opts:shuffle(distinctOpts([
+         {label:"With replacement", correct:true,
+          note:"Keeping the first "+base.K.t+" out leaves fewer of them, so the second fraction shrinks from "
+            +base.K.n+"/"+base.P.total+" to "+(base.K.n-1)+"/"+(base.P.total-1)+" and the product falls."},
+         {label:"Without replacement",
+          note:"Removing one of the "+base.K.p+" makes the second draw harder, not easier."},
+         {label:"They are equal",
+          note:"They differ: "+fracText(w.p[0],w.p[1])+" against "+fracText(wo.p[0],wo.p[1])+"."},
+         {label:"It depends on the pool size",
+          note:"For a run of the same kind the replaced version is always the larger, whatever the pool."}
+       ]).slice(0,4)), two:true};
+   }
+   if(f==="why"){
+     return {q:"Keeping the first "+base.K.t+" out makes the answer <b>smaller</b>. <b>Why?</b>",
+       scene:"Two "+base.P.plural+" are "+base.P.draw+" from "+base.P.from+".",
+       opts:shuffle([
+         {label:"One of the "+base.K.p+" has gone, so the second draw has fewer to hit", correct:true,
+          note:base.K.n+"/"+base.P.total+" becomes "+(base.K.n-1)+"/"+(base.P.total-1)
+            +", and although the pool shrank too, losing one of only "+base.K.n+" "+base.K.p+" matters more."},
+         {label:"The pool is smaller, so every probability falls",
+          note:"A smaller pool alone would <i>raise</i> the fraction. It falls because the favourable count dropped proportionally more."},
+         {label:"Because the draws are no longer in order",
+          note:"The order is unchanged — only what is available on the second draw has changed."},
+         {label:"Because the first draw becomes less likely",
+          note:"The first fraction is identical in both settings."}
+       ]), one:true};
+   }
+   const wantRepl=Math.random()<.5;
+   const target=wantRepl?w:wo;
+   return {q:"<b>Which value belongs to the "+(wantRepl?"replaced":"not-replaced")+" version?</b>",
+     scene:"Two "+base.P.plural+" are "+base.P.draw+" from "+base.P.from
+       +", and both are "+base.K.p+".",
+     opts:shuffle(fracOpts(target.p[0],target.p[1],
+       [{n:(wantRepl?wo:w).p[0], d:(wantRepl?wo:w).p[1], w:wantRepl
+           ?("That is the not-replaced version, where the second fraction is "+(base.K.n-1)+"/"+(base.P.total-1)+".")
+           :("That is the replaced version, where the second fraction stays "+base.K.n+"/"+base.P.total+".")},
+        {n:base.K.n, d:base.P.total, w:"That is one draw only."},
+        {n:base.K.n*2, d:base.P.total, w:"That doubles one draw's chance rather than multiplying two."},
+        {n:base.K.n-1, d:base.P.total-1, w:"That is the second fraction of the not-replaced version, on its own."}],
+       target.steps.map(function(st){return st[0]+"/"+st[1];}).join(" × ")+" = "+fracText(target.p[0],target.p[1])+"."))};
+ }
+},
+{
+ title:"Spot the wrong fraction",
+ sub:"Someone writes the chain. Say what is wrong.",
+ gen:function(){
+   /* always a without-replacement run, since that is where the slips live */
+   const c=runCase({r:pick([2,2,3]), repl:false});
+   const kinds=["ok","noDrop","denOnly","numOnly"];
+   const k=pick(kinds);
+   const chain=function(list){ return list.map(function(st){return st[0]+"/"+st[1];}).join(" × "); };
+   const same=[], denOnly=[], numOnly=[];
+   for(let i=0;i<c.r;i++){
+     same.push([c.K.n, c.P.total]);
+     denOnly.push([c.K.n, c.P.total-i]);
+     numOnly.push([c.K.n-i, c.P.total]);
+   }
+   const shown={ok:chain(c.steps), noDrop:chain(same), denOnly:chain(denOnly), numOnly:chain(numOnly)}[k];
+   const L={
+     ok:"It is correct",
+     noDrop:"Nothing was taken out of the pool",
+     denOnly:"Only the totals were reduced",
+     numOnly:"Only the favourable counts were reduced"
+   };
+   const notes={
+     ok:"Each draw is written for the pool as it stands: "+chain(c.steps)+" = "+fracText(c.p[0],c.p[1])+".",
+     noDrop:"That is the with-replacement chain. Nothing goes back here, so both numbers fall each time: "+fracText(c.p[0],c.p[1])+".",
+     denOnly:"The totals fall correctly, but removing a "+c.K.t+" leaves one fewer of them too. The answer is "+fracText(c.p[0],c.p[1])+".",
+     numOnly:"The "+c.K.p+" fall correctly, but the pool shrinks as well. The answer is "+fracText(c.p[0],c.p[1])+"."
+   };
+   const wrongNotes={
+     ok:"Compare each fraction against the pool at that moment — something does not match.",
+     noDrop:"These fractions do change between draws.",
+     denOnly:"The numerators change here too.",
+     numOnly:"The denominators change here too."
+   };
+   const opts=kinds.map(function(x){
+     return {label:L[x], correct:x===k, note:x===k?notes[x]:wrongNotes[x]};
+   });
+   return {q:"Is this chain for “"+runPhrase(c.r)+" are "+c.K.p+"” correct?",
+     scene:c.text,
+     big:shown, opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Any chain, either way",
+ sub:"Replaced, not replaced, and separate experiments.",
+ gen:function(){
+   const t=pick(["prod","prod","indep","second","least"]);
+   if(t==="indep"){
+     const wantIndep=Math.random()<.5;
+     const c=wantIndep
+       ? (Math.random()<.4?crossCase():runCase({repl:true}))
+       : (Math.random()<.5?runCase({repl:false}):mixCase({repl:false}));
+     return {q:"<b>Independent or dependent?</b>", scene:c.text,
+       opts:shuffle(distinctOpts([
+         {label:"Independent", correct:c.repl,
+          note:c.repl?"Nothing the first draw did survives into the second.":"The first item is kept out, so the second faces a smaller pool."},
+         {label:"Dependent", correct:!c.repl,
+          note:!c.repl?"The pool has changed, so the second draw's chance has moved.":"The pool is restored, so the two draws cannot affect one another."},
+         {label:"Neither — mutually exclusive", note:"Both events happen here, one after the other."},
+         {label:"It cannot be decided", note:"The wording says whether the item goes back."}
+       ]).slice(0,4)), two:true};
+   }
+   if(t==="second"){
+     const c=runCase({r:2});
+     return {q:"<b>What is the second fraction?</b>", scene:c.text+" Both are "+c.K.p+".",
+       vis:chainHTML(c,{hide:1}),
+       opts:shuffle(fracOpts(c.steps[1][0],c.steps[1][1],
+         [{n:c.repl?(c.K.n-1):c.K.n, d:c.repl?(c.P.total-1):c.P.total, w:c.repl
+             ?"That is the not-replaced second fraction. Here the item goes back."
+             :"That is the with-replacement second fraction. Here the item is kept out."},
+          {n:c.K.n, d:c.P.total-1, w:"That drops the total but not the count of "+c.K.p+"."},
+          {n:c.K.n-1, d:c.P.total, w:"That drops the count but not the total."},
+          {n:c.P.total, d:c.K.n, w:"That is upside down."}],
+         c.repl
+           ? ("Everything is put back, so the second draw is again "+c.K.n+"/"+c.P.total+".")
+           : ("One "+c.K.t+" has gone from a pool of "+c.P.total+", leaving "+(c.K.n-1)+"/"+(c.P.total-1)+".")))};
+   }
+   if(t==="least"){
+     const c=atLeastCase();
+     return {q:"<b>What is the probability of at least one "+c.K.t+"?</b>", scene:c.text,
+       facts:factsHTML([["P(none)",fracText(c.none[0],c.none[1])]]),
+       opts:shuffle(fracOpts(c.atLeast[0],c.atLeast[1],
+         [{n:c.none[0], d:c.none[1], w:"That is P(none) — the complement."},
+          {n:c.K.n, d:c.P.total, w:"That is one draw only."},
+          {n:fMul([c.K.n,c.P.total],[c.r,1])[0], d:fMul([c.K.n,c.P.total],[c.r,1])[1],
+           w:"That multiplies one draw by "+c.r+", double-counting the overlaps."},
+          {n:c.miss, d:c.P.total, w:"That is one draw missing."}],
+         "1 − "+fracText(c.none[0],c.none[1])+" = "+fracText(c.atLeast[0],c.atLeast[1])+"."))};
+   }
+   const c=anyCase();
+   return {q:"<b>What is the probability that "+evText(c)+"?</b>", scene:c.text,
+     vis:chainHTML(c),
+     opts:shuffle(fracOpts(c.p[0],c.p[1],prodPool(c),
+       c.steps.map(function(st){return st[0]+"/"+st[1];}).join(" × ")+" = "+fracText(c.p[0],c.p[1])+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const DECK=POOLS[0];
+const KING=DECK.kinds[0];
+const HEART=DECK.kinds[3];
+const HW =runCase({P:DECK, K:KING,  r:2, repl:true});
+const HWO=runCase({P:DECK, K:KING,  r:2, repl:false});
+const H3 =runCase({P:DECK, K:HEART, r:3, repl:false});
+const HC =(function(){ const C=CROSS[0]; return {kind:"cross", C:C, P:DECK, r:2, repl:true, steps:[C.ap,C.bp], p:fMul(C.ap,C.bp)}; })();
+const HL =atLeastCase({P:DECK, K:KING, r:2, repl:false});
+const HERO=[
+  {kind:"pair",  lbl:"two kings, both ways"},
+  {kind:"with",  lbl:"with replacement"},
+  {kind:"wout",  lbl:"without replacement"},
+  {kind:"three", lbl:"three hearts"},
+  {kind:"cross", lbl:"two experiments"},
+  {kind:"table", lbl:"the whole lesson"}
+];
+/* every note is built from the same figures its panel draws */
+const HNOTES={
+  pair:function(){ return "Your worksheet's pair, side by side. The first fraction is 4/52 in both; the second is the only difference, "
+    +"and it takes the answer from "+fracText(HW.p[0],HW.p[1])+" down to "+fracText(HWO.p[0],HWO.p[1])
+    +". Everything in this lesson is that one step."; },
+  with:function(){ return "With the king put back, the deck the second draw faces is the deck the first draw faced. Both denominators stay 52, "
+    +"both numerators stay 4, and the answer is "+fracText(HW.p[0],HW.p[1])+" — the same fraction squared."; },
+  wout:function(){ return "With the king kept out, three kings remain among 51 cards. Note that <i>both</i> numbers fell: the commonest slip is to write 4/51, "
+    +"which would give "+fracText(fProd([[4,52],[4,51]])[0],fProd([[4,52],[4,51]])[1])+" instead of "+fracText(HWO.p[0],HWO.p[1])+"."; },
+  three:function(){ return "Your worksheet's three hearts. Each draw is written for the deck as it stands — 13/52, then 12/51, then 11/50 — "
+    +"giving "+fracText(H3.p[0],H3.p[1])+". The pattern is simply one fewer of each, one step at a time."; },
+  cross:function(){ return "Your worksheet's coin and die. Two separate experiments cannot affect one another, so there is no shrinking pool to think about: "
+    +fracText(HC.C.ap[0],HC.C.ap[1])+" × "+fracText(HC.C.bp[0],HC.C.bp[1])+" = "+fracText(HC.p[0],HC.p[1])
+    +". Independence here comes free rather than from replacement."; },
+  table:function(){ return "Every shape in one place. Read down the last column and the pattern is plain: replacement keeps the fractions identical, "
+    +"keeping items out shrinks them, and “at least one” is always a product subtracted from 1."; }
+};
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="pair"){
+    body='<div class="duo">'
+      +'<div class="pane w"><div class="ttl">with replacement</div>'
+        +'<div class="fm"><span class="frac"><span>4</span><span class="den dsame">52</span></span> × '
+        +'<span class="frac"><span>4</span><span class="den dsame">52</span></span></div>'
+        +'<div class="vl">'+fracHTML(HW.p[0],HW.p[1])+"</div>"
+        +'<div class="wk">the king goes back — the deck is whole again</div></div>'
+      +'<div class="pane wo"><div class="ttl">without replacement</div>'
+        +'<div class="fm"><span class="frac"><span>4</span><span class="den dsame">52</span></span> × '
+        +'<span class="frac"><span>3</span><span class="den dmoved">51</span></span></div>'
+        +'<div class="vl">'+fracHTML(HWO.p[0],HWO.p[1])+"</div>"
+        +'<div class="wk">the king stays out — one fewer king, one fewer card</div></div></div>'
+      +'<div class="eq" style="margin-top:14px">the first fraction is the same in both'
+      +'<span class="lbl">only the second one moves</span></div>';
+  }else if(h.kind==="with"){
+    body=chainHTML(HW)
+      +'<div class="eq" style="margin-top:14px">'
+      +"4/52 × 4/52 = <span class=\"res\">"+fracHTML(HW.p[0],HW.p[1])+"</span>"
+      +'<span class="lbl">independent — the second draw cannot tell the first happened</span></div>';
+  }else if(h.kind==="wout"){
+    const slip=fProd([[4,52],[4,51]]);
+    body=chainHTML(HWO)
+      +'<div class="eq" style="margin-top:14px">'
+      +"4/52 × 3/51 = <span class=\"res\">"+fracHTML(HWO.p[0],HWO.p[1])+"</span>"
+      +'<span class="lbl">dependent — both counts fell by one</span>'
+      +'<span style="color:var(--wrong)">4/52 × 4/51 = '+fracHTML(slip[0],slip[1])+"</span>"
+      +'<span class="lbl">the slip: the total fell but the kings did not</span></div>';
+  }else if(h.kind==="three"){
+    body=chainHTML(H3)
+      +'<div class="eq" style="margin-top:14px">'
+      +"13/52 × 12/51 × 11/50 = <span class=\"res\">"+fracHTML(H3.p[0],H3.p[1])+"</span>"
+      +'<span class="lbl">one fewer heart and one fewer card at every step</span></div>';
+  }else if(h.kind==="cross"){
+    body='<div class="chain">'
+      +'<div class="link"><div class="hd">the coin</div><div class="bx">'+fracHTML(HC.C.ap[0],HC.C.ap[1])+"</div>"
+      +'<div class="pool">'+HC.C.ae+"</div></div>"
+      +'<div class="times">×</div>'
+      +'<div class="link"><div class="hd">the die</div><div class="bx">'+fracHTML(HC.C.bp[0],HC.C.bp[1])+"</div>"
+      +'<div class="pool">'+HC.C.be+"</div></div></div>"
+      +'<div class="eq" style="margin-top:14px">'
+      +fracHTML(HC.C.ap[0],HC.C.ap[1])+" × "+fracHTML(HC.C.bp[0],HC.C.bp[1])
+      +" = <span class=\"res\">"+fracHTML(HC.p[0],HC.p[1])+"</span>"
+      +'<span class="lbl">no pool to shrink — two experiments, always independent</span></div>';
+  }else{
+    body='<table class="ct"><thead><tr><th>situation</th><th>the chain</th><th>value</th></tr></thead><tbody>'
+      +'<tr><td class="lab">two kings, replaced</td><td>4/52 × 4/52</td><td class="p">'+fracText(HW.p[0],HW.p[1])+"</td></tr>"
+      +'<tr><td class="lab">two kings, kept out</td><td>4/52 × 3/51</td><td class="m">'+fracText(HWO.p[0],HWO.p[1])+"</td></tr>"
+      +'<tr><td class="lab">three hearts, kept out</td><td>13/52 × 12/51 × 11/50</td><td class="m">'+fracText(H3.p[0],H3.p[1])+"</td></tr>"
+      +'<tr><td class="lab">heads, then a six</td><td>1/2 × 1/6</td><td class="p">'+fracText(HC.p[0],HC.p[1])+"</td></tr>"
+      +'<tr><td class="lab">no king in two, kept out</td><td>48/52 × 47/51</td><td class="p">'+fracText(HL.none[0],HL.none[1])+"</td></tr>"
+      +'<tr><td class="lab">at least one king</td><td>1 − '+fracText(HL.none[0],HL.none[1])+'</td><td class="p">'+fracText(HL.atLeast[0],HL.atLeast[1])+"</td></tr>"
+      +"</tbody></table>"
+      +'<div class="eq" style="margin-top:12px"><span class="lbl">orange values are the ones a shrinking pool produced</span></div>';
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.vis?'<div class="vis">'+q.vis+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
