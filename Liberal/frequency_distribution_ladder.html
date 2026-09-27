@@ -1,0 +1,1282 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Tally Ladder — a frequency distribution trades the list for a count</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F5F5F3;
+    --card:#FFFFFF;
+    --rule:#DCD9D2;
+    --muted:#62655F;
+    --tl:#A04A14;          /* the accent: frequencies, tallies */
+    --tl-bg:#FBEDE4;
+    --cls:#1F5F7A;         /* class limits and widths */
+    --cls-bg:#E3EFF4;
+    --tot:#1B6B4B;         /* totals and cumulative sums */
+    --tot-bg:#E6F3EC;
+    --dim:#BCBAB4;
+    --round-bg:#FCF1DA;
+    --right:#1B6B4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E6F3EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--tl)}
+  :focus-visible{outline:3px solid var(--tl); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(245,245,243,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--tl); font-family:var(--mono); letter-spacing:-.06em}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:19ch}
+  .lede{max-width:62ch; color:#333630; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:700px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.0; text-align:center}
+  .eq .res{color:var(--tl); font-weight:700}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+
+  /* ---- the raw list, before anyone has counted anything ---- */
+  .raw{max-width:620px; margin:0 auto; font-family:var(--mono); font-size:clamp(12.5px,2.6vw,14.5px);
+       line-height:1.85; letter-spacing:.06em; text-align:center; color:#3B3E38; word-spacing:.15em}
+  .raw b{color:var(--tl); background:var(--tl-bg); border-radius:3px; padding:1px 3px; font-weight:700}
+
+  /* ---- tally marks: four uprights and a diagonal for the fifth ---- */
+  .tally{display:inline-flex; gap:7px; align-items:center; vertical-align:middle}
+  .tgrp{position:relative; display:inline-block; height:15px}
+  .tgrp i{display:inline-block; width:2px; height:15px; background:var(--tl); margin-right:2.5px; vertical-align:top}
+  .tgrp i:last-child{margin-right:0}
+  .tgrp.five::after{content:""; position:absolute; left:-2px; top:6px; width:22px; height:2px;
+    background:var(--tl); transform:rotate(-24deg); transform-origin:left center}
+
+  table.fd{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:clamp(13.5px,2.9vw,16px)}
+  table.fd th,table.fd td{border:1px solid var(--rule); padding:6px 15px; text-align:right; white-space:nowrap}
+  table.fd th{background:var(--paper); color:var(--muted); font-weight:700; font-size:.88em; text-align:center}
+  table.fd td.lab{text-align:left; font-variant-numeric:tabular-nums}
+  table.fd td.tal{text-align:left; padding:4px 12px}
+  table.fd tr.tot td{background:#EDEBE6; color:var(--tot); font-weight:700; border-top:2px solid var(--muted)}
+  table.fd tr.off td{color:var(--dim); background:#FAFAF8}
+  table.fd tr.hit td{background:var(--tl-bg); color:var(--tl); font-weight:700}
+  table.fd tr.hit td.lab{color:var(--tl)}
+  table.fd tr.cum td{background:var(--tot-bg); color:var(--tot); font-weight:700}
+  table.fd td.blank{background:var(--tl-bg); color:var(--tl); font-weight:700; letter-spacing:.2em}
+  table.fd td.lim{background:var(--cls-bg); color:var(--cls); font-weight:700}
+  .tkey{display:flex; gap:16px; justify-content:center; flex-wrap:wrap; font-size:12.5px; color:var(--muted); margin-top:10px}
+  .tkey i{display:inline-block; width:11px; height:11px; border-radius:2px; margin-right:5px; vertical-align:-1px}
+
+  /* ---- one class pulled apart to name its pieces ---- */
+  .anat{display:flex; gap:0; justify-content:center; align-items:stretch; flex-wrap:wrap; margin:0 auto}
+  .acls{border:2px solid var(--cls); border-radius:9px; padding:9px 18px; background:var(--cls-bg);
+    font-family:var(--serif); font-size:clamp(17px,3.6vw,23px); color:var(--cls); text-align:center; min-width:104px}
+  .agap{display:flex; flex-direction:column; justify-content:center; align-items:center; padding:0 6px; min-width:76px}
+  .agap .ar{color:var(--tl); font-size:15px; line-height:1}
+  .agap .wd{font-family:var(--serif); font-size:15px; color:var(--tl); font-weight:700; margin-top:2px}
+  .anote{text-align:center; font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-top:7px}
+
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:660px; margin:0 auto}
+  @media (max-width:640px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:15px 16px; text-align:center; background:var(--tl-bg)}
+  .pane.b{background:var(--cls-bg)}
+  .pane .ttl{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:9px; color:var(--tl)}
+  .pane.b .ttl{color:var(--cls)}
+  .pane .fm{font-family:var(--serif); font-size:clamp(14.5px,2.9vw,17px); line-height:1.5}
+  .pane .vl{font-family:var(--serif); font-size:clamp(20px,4.4vw,27px); font-weight:700; margin-top:7px; color:var(--tl)}
+  .pane.b .vl{color:var(--cls)}
+  .pane .wk{font-size:12.5px; color:var(--muted); margin-top:7px; line-height:1.4}
+
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--tl); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--tl); background:var(--tl-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--tl)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3D403A}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:64ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#333630}
+  .scene{max-width:58ch; margin:0 auto 14px; background:var(--tl-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:44ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(16px,3.6vw,25px); background:var(--tl-bg); border-radius:12px; padding:11px 25px; margin:0 auto 16px}
+  .vis{margin:0 auto 16px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:20px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B2D9C3}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:42ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>||||</span> The Tally Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 21 · sampling and frequency distributions</p>
+    <h1>Trade the list for a count.</h1>
+    <p class="lede">A raw list of forty scores tells you everything and shows you nothing. A <b>frequency distribution</b> keeps one column of values and one column of counts, and the counts always add back to the number of items you started with. When the values are too spread out to list one at a time, you group them into <b>classes</b> of equal width and count those instead. Nothing is invented and nothing is lost — the list is just re-arranged into a shape you can read.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>The class width is not 49 − 40.</b> For the classes 40–49, 50–59, 60–69 … the width is the distance from one <i>lower</i> limit to the next: 50 − 40 = <b>10</b>. Subtracting inside a single class gives 9, which is the count of whole numbers minus one, not the width. Ten numbers fit in 40–49, and ten classes of ten cover 0 through 99 exactly.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3D403A">Rungs 1–2 ask who was counted and whether counting them that way was fair. Rungs 3–4 build a frequency distribution from a raw list and check that it adds back up. Rungs 5–7 name the parts of a grouped table — limits, width, and which class a value falls into. Rungs 8–9 read totals and extremes off a finished table. Rung 10 mixes all of it.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Watch the total</h3><p>The green row is the sum of the frequencies. If it does not match the number of items collected, a count went wrong somewhere.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Class width is the difference between two consecutive <i>lower</i> class limits, as your worksheet defines it. Every grouped table here uses classes that are equally wide and butted up against each other with no gaps, so counting the whole numbers in one class gives the same width — both methods agree on every table you will see. <b>At least</b> means "that value or more"; <b>fewer than</b> means "strictly below".</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Every graph in this chapter starts here</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The table feeds the picture</h3><p>A histogram is this table drawn to scale. Get the classes wrong and every bar after it is wrong too.</p></div>
+      <div class="step"><span class="n">02</span><h3>Grouping costs you something</h3><p>Once a score is filed under 70–79 you can no longer say it was 74. That is the price of a readable table.</p></div>
+      <div class="step"><span class="n">03</span><h3>Who got counted still matters</h3><p>A tidy table built from a bad sample is a tidy table about the wrong people.</p></div>
+    </div>
+    <p class="closing">The counts must add back to the number of things you collected. If they do not, stop and recount.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Tally Ladder · population and sample · frequency and grouped frequency distributions · lower and upper class limits · class width = the gap between consecutive lower limits</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function sum(a){return a.reduce(function(x,y){return x+y;},0);}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+/* drop any option whose visible label repeats one already kept */
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+/* whole-number options, deduplicated by VALUE. `spares` are held back in order
+   and only used when a coincidence knocks one of the main distractors out. */
+function numOpts(ans,cands,note,spares){
+  const seen={}; seen[ans]=1;
+  const opts=[{label:grp(ans), correct:true, note:note}];
+  shuffle(cands.slice()).concat(spares||[]).forEach(function(x){
+    if(x==null||x.v==null||!Number.isFinite(x.v)||!Number.isInteger(x.v)||x.v<0)return;
+    if(seen[x.v])return; seen[x.v]=1;
+    opts.push({label:grp(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* text options (class labels, names, judgements) */
+function textOpts(ans,note,cands){
+  const opts=[{label:ans, correct:true, note:note}];
+  shuffle(cands.slice()).forEach(function(x){ if(x&&x.t!=null) opts.push({label:x.t, note:x.w}); });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= tally marks ================= */
+/* four uprights and a diagonal across them for the fifth, exactly as the
+   worksheet's Tally column is meant to be filled in */
+function tallyHTML(n){
+  if(n<=0) return "";
+  let out='<span class="tally">';
+  let left=n;
+  while(left>0){
+    const g=Math.min(5,left); left-=g;
+    /* a group of five draws four uprights plus the ::after diagonal */
+    const uprights=(g===5)?4:g;
+    out+='<span class="tgrp'+(g===5?" five":"")+'">';
+    for(let i=0;i<uprights;i++) out+="<i></i>";
+    out+="</span>";
+  }
+  return out+"</span>";
+}
+
+/* ================= the worksheet's own data ================= */
+const WEEK=[68,65,68,66,65,67,68];
+const GRADES=["F","A","B","B","C","C","B","C","A","A","C","C","D","C","B","D","C","C","B","C"];
+const SCORES=[82,47,75,64,57,82,63,93,76,68,84,54,88,77,79,80,
+              94,92,94,80,94,66,81,67,75,73,66,87,76,45,43,56,
+              57,74,50,78,71,84,59,76];
+/* counted here rather than typed, so the hero can never drift from the list */
+function countOf(list,v){ let n=0; list.forEach(function(x){ if(x===v)n++; }); return n; }
+const WEEKVALS=[65,66,67,68];
+const WEEKF=WEEKVALS.map(function(v){return countOf(WEEK,v);});
+const GRADEVALS=["A","B","C","D","F"];
+const GRADEF=GRADEVALS.map(function(v){return countOf(GRADES,v);});
+const SHEET=(function(){
+  /* the worksheet's six classes, with the frequencies counted from the list */
+  const lo=[40,50,60,70,80,90], hi=[49,59,69,79,89,99];
+  const f=lo.map(function(L,i){
+    let n=0; SCORES.forEach(function(x){ if(x>=L&&x<=hi[i])n++; }); return n;
+  });
+  return {lo:lo, hi:hi, f:f, n:sum(f), k:lo.length, w:lo[1]-lo[0],
+          label:"Grade", what:"Number of students", who:"student", whoP:"students",
+          lead:"A statistics class of 40 students sat an exam, and every score was recorded.",
+          value:function(v){return "a score of "+v;},
+          atLeast:function(v){return "a score of at least "+v;},
+          below:function(v){return "a score below "+v;},
+          grouped:true};
+})();
+const DISTINCT=(function(){ const s={}; SCORES.forEach(function(x){s[x]=1;}); return Object.keys(s).length; })();
+
+/* ================= generated data sets ================= */
+/* categorical surveys, for ungrouped tables built from a raw list */
+const CATS=[
+  {lead:"A precalculus class recorded the final course grade of every student.",
+   who:"student", whoP:"students", label:"Grade", what:"Frequency",
+   vals:["A","B","C","D","F"], item:"grade"},
+  {lead:"A team shop recorded the size of every T-shirt ordered.",
+   who:"order", whoP:"orders", label:"Size", what:"Frequency",
+   vals:["S","M","L","XL"], item:"size"},
+  {lead:"A donation drive recorded the blood type of every donor.",
+   who:"donor", whoP:"donors", label:"Blood type", what:"Frequency",
+   vals:["O","A","B","AB"], item:"blood type"},
+  {lead:"A school asked every pupil how they travel in each morning.",
+   who:"pupil", whoP:"pupils", label:"Travel", what:"Frequency",
+   vals:["Bus","Car","Walk","Bike"], item:"answer"},
+  {lead:"A neighbourhood survey recorded how many pets each household owns.",
+   who:"household", whoP:"households", label:"Pets", what:"Frequency",
+   vals:["0","1","2","3","4"], item:"count"}
+];
+/* numeric surveys, for grouped tables */
+const NUMS=[
+  {lead:"A statistics class sat an exam, and every score was recorded.",
+   who:"student", whoP:"students", label:"Test score", what:"Number of students",
+   start:[40,50], w:[10],
+   value:function(v){return "a score of "+v;},
+   atLeast:function(v){return "a score of at least "+v;},
+   below:function(v){return "a score below "+v;}},
+  {lead:"A clinic recorded the age of every visitor one morning.",
+   who:"visitor", whoP:"visitors", label:"Age", what:"Number of visitors",
+   start:[0,10,20], w:[10,20],
+   value:function(v){return "an age of "+v;},
+   atLeast:function(v){return "an age of at least "+v;},
+   below:function(v){return "an age below "+v;}},
+  {lead:"A charity 5K recorded the finishing time of every runner.",
+   who:"runner", whoP:"runners", label:"Minutes", what:"Number of runners",
+   start:[20,25,30], w:[5],
+   value:function(v){return "a finishing time of "+v+" minutes";},
+   atLeast:function(v){return "a finishing time of at least "+v+" minutes";},
+   below:function(v){return "a finishing time under "+v+" minutes";}},
+  {lead:"A reading group recorded how many books each member read last year.",
+   who:"member", whoP:"members", label:"Books read", what:"Number of members",
+   start:[0,5], w:[5],
+   value:function(v){return "a total of "+v+" books";},
+   atLeast:function(v){return "read at least "+v+" books";},
+   below:function(v){return "read fewer than "+v+" books";}},
+  {lead:"A weather station recorded the rainfall on each of a run of days.",
+   who:"day", whoP:"days", label:"Rainfall (mm)", what:"Number of days",
+   start:[0,5,10], w:[5,10],
+   value:function(v){return "a rainfall of "+v+" mm";},
+   atLeast:function(v){return "a rainfall of at least "+v+" mm";},
+   below:function(v){return "a rainfall under "+v+" mm";}},
+  {lead:"A small shop recorded the hours each member of staff worked last week.",
+   who:"worker", whoP:"workers", label:"Hours", what:"Number of workers",
+   start:[0,10,20], w:[5,10],
+   value:function(v){return "a week of "+v+" hours";},
+   atLeast:function(v){return "worked at least "+v+" hours";},
+   below:function(v){return "worked fewer than "+v+" hours";}}
+];
+
+/* An ungrouped set: a raw list plus the counts it produces. The counts are
+   drawn first and the list is built from them, so the table can never disagree
+   with the list it came from. */
+function makeUngrouped(){
+  for(let t=0;t<400;t++){
+    const S=pick(CATS);
+    const vals=S.vals.slice();
+    const f=vals.map(function(){ return ri(1,9); });
+    const n=sum(f);
+    const mx=Math.max.apply(null,f), mn=Math.min.apply(null,f);
+    /* one clear winner and one clear loser, so "most" and "least" have an answer */
+    if(f.filter(function(x){return x===mx;}).length!==1) continue;
+    if(f.filter(function(x){return x===mn;}).length!==1) continue;
+    /* keep the item count clear of the row count and of any single frequency */
+    if(n===vals.length||f.indexOf(n)>=0) continue;
+    if(n<12||n>34) continue;
+    const list=[];
+    for(let i=0;i<vals.length;i++) for(let j=0;j<f[i];j++) list.push(vals[i]);
+    /* A fair shuffle of four values over fifteen slots throws up long runs often
+       enough to matter -- nine identical items in a row turns the rung into a
+       glance instead of a scan. Reshuffle until no value repeats more than
+       three times running, so the copies are always scattered. */
+    let ok=false;
+    for(let a=0;a<80&&!ok;a++){
+      shuffle(list);
+      let run=1; ok=true;
+      for(let i=1;i<list.length;i++){
+        run=(list[i]===list[i-1])?run+1:1;
+        if(run>3){ ok=false; break; }
+      }
+    }
+    if(!ok) continue;
+    return {S:S, vals:vals, f:f, n:n, k:vals.length, list:list, grouped:false,
+            label:S.label, what:S.what, who:S.who, whoP:S.whoP, lead:S.lead};
+  }
+  return null;
+}
+
+/* A grouped set. Classes are contiguous and equally wide, so the width by the
+   worksheet's definition (next lower limit minus this one) equals the count of
+   whole numbers inside a class -- a student taught either rule is safe. */
+function makeGrouped(){
+  for(let t=0;t<600;t++){
+    const S=pick(NUMS);
+    const w=pick(S.w);
+    const k=ri(4,6);
+    const L=pick(S.start);
+    const lo=[], hi=[];
+    for(let i=0;i<k;i++){ lo.push(L+i*w); hi.push(L+i*w+w-1); }
+    const f=[];
+    for(let i=0;i<k;i++) f.push(ri(2,15));
+    const n=sum(f);
+    const mx=Math.max.apply(null,f), mn=Math.min.apply(null,f);
+    if(f.filter(function(x){return x===mx;}).length!==1) continue;
+    if(f.filter(function(x){return x===mn;}).length!==1) continue;
+    /* n, k and w must stay three different numbers or the distractors merge */
+    if(n===k||n===w||w===k) continue;
+    if(f.indexOf(n)>=0) continue;
+    return {S:S, lo:lo, hi:hi, f:f, n:n, k:k, w:w, grouped:true,
+            label:S.label, what:S.what, who:S.who, whoP:S.whoP, lead:S.lead,
+            value:S.value, atLeast:S.atLeast, below:S.below};
+  }
+  return null;
+}
+/* the worksheet's own table turns up about a third of the time */
+function someGrouped(){ return Math.random()<.3?SHEET:makeGrouped(); }
+/* a class's printed label, "40 – 49" */
+function clsLabel(T,i){ return T.lo[i]+" – "+T.hi[i]; }
+/* wrong classes to offer, nearest first, so even a four-class table with the
+   answer at one end still supplies three ranges that are not the answer */
+function otherClasses(T,i,v){
+  const out=[];
+  for(let d=1;d<T.k;d++){
+    if(i-d>=0) out.push(i-d);
+    if(i+d<T.k) out.push(i+d);
+  }
+  return out.map(function(j){
+    let w;
+    if(j===i-1) w="That class ends at "+T.hi[j]+", and "+v+" is above it. A value sitting on a limit belongs to the class that prints it.";
+    else if(j===i+1) w="That class starts at "+T.lo[j]+", and "+v+" is below it.";
+    else w="That class runs "+clsLabel(T,j)+", and "+v+" is nowhere inside it.";
+    return {t:clsLabel(T,j), w:w};
+  });
+}
+
+/* ================= rendering a frequency table ================= */
+/* mk.hit   : index of the row to pick out in the accent colour
+   mk.cum   : array of row indices to shade green as a running total
+   mk.off   : array of row indices to fade out
+   mk.blank : index of the row whose frequency is hidden behind a dash
+   mk.lim   : ["lo"|"hi", i] to pick out one limit inside a class label
+   mk.tally : draw the tally column
+   mk.total : draw the total row                                            */
+function ftHTML(T,mk){
+  mk=mk||{};
+  const rows=T.grouped?T.lo.length:T.vals.length;
+  const cum=mk.cum||[], off=mk.off||[];
+  let head='<tr><th>'+T.label+"</th>"+(mk.tally?"<th>Tally</th>":"")+"<th>"+T.what+"</th></tr>";
+  let body="";
+  for(let i=0;i<rows;i++){
+    let cls="";
+    if(off.indexOf(i)>=0) cls="off";
+    if(cum.indexOf(i)>=0) cls="cum";
+    if(mk.hit===i) cls="hit";
+    /* the label cell: a class range, or a single value */
+    let lab;
+    if(T.grouped){
+      if(mk.lim&&mk.lim[1]===i){
+        /* one of the two limits is picked out inside the range */
+        lab=(mk.lim[0]==="lo")
+          ? '<span class="lim" style="padding:1px 5px;border-radius:3px">'+T.lo[i]+"</span> – "+T.hi[i]
+          : T.lo[i]+' – <span class="lim" style="padding:1px 5px;border-radius:3px">'+T.hi[i]+"</span>";
+      }else lab=clsLabel(T,i);
+    }else lab=T.vals[i];
+    const fv=T.f[i];
+    const fcell=(mk.blank===i)?'<td class="blank">?</td>':"<td>"+fv+"</td>";
+    body+='<tr class="'+cls+'"><td class="lab">'+lab+"</td>"
+      +(mk.tally?'<td class="tal">'+tallyHTML(fv)+"</td>":"")
+      +fcell+"</tr>";
+  }
+  if(mk.total){
+    body+='<tr class="tot"><td class="lab">Total</td>'+(mk.tally?"<td></td>":"")
+      +"<td>"+(mk.blankTotal?"?":T.n)+"</td></tr>";
+  }
+  return "<table class=\"fd\"><thead>"+head+"</thead><tbody>"+body+"</tbody></table>";
+}
+function keyHTML(items){
+  return '<div class="tkey">'+items.map(function(x){
+    return '<span><i style="background:'+x[0]+'"></i>'+x[1]+"</span>";
+  }).join("")+"</div>";
+}
+function rawHTML(list,mark){
+  /* the raw list, with every copy of one value picked out when `mark` is given */
+  return '<div class="raw">'+list.map(function(x){
+    return (mark!=null&&x===mark)?"<b>"+x+"</b>":String(x);
+  }).join("&nbsp; ")+"</div>";
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Who was counted",
+ sub:"The population is everyone; the sample is the part you reached.",
+ gen:function(){
+   /* each scenario carries its own population and its own sample, written out,
+      so no wording is assembled by patching one string into another */
+   const SC=[
+     {s:"Board members of a homeowners' association want the opinions of the homeowners in their neighbourhood about new paint colours for the common walls. They survey 25 of the 250 households.",
+      pop:"All 250 households in the neighbourhood",
+      samp:"The 25 households surveyed",
+      other:["The board members who ran the survey","The paint colours being considered"]},
+     {s:"A city government wants to know what the city's homeless think about a rule requiring residence in city shelters from midnight until 6 a.m. Interviewers speak with 60 people.",
+      pop:"All homeless people in the city",
+      samp:"The 60 people interviewed",
+      other:["The staff of the city shelters","The city commissioners who wrote the rule"]},
+     {s:"A college wants to know how many hours its 4,000 students work for pay each week. It emails 300 of them.",
+      pop:"All 4,000 students at the college",
+      samp:"The 300 students who were emailed",
+      other:["The employers the students work for","The college staff who sent the email"]},
+     {s:"A manufacturer wants to know the average lifetime of the batteries it produced this month. It tests 40 batteries from the month's output.",
+      pop:"All the batteries produced this month",
+      samp:"The 40 batteries tested",
+      other:["The machines that made the batteries","Every battery the company has ever made"]},
+     {s:"A hospital wants to know how long its patients wait in the emergency room. It records the wait for every patient who arrives on one Tuesday.",
+      pop:"All patients of the emergency room",
+      samp:"The patients who arrived on that Tuesday",
+      other:["The doctors on duty that Tuesday","The hospital's other departments"]}
+   ];
+   const c=pick(SC);
+   const forms=["pop","samp","def","rel"];
+   const f=pick(forms);
+   if(f==="def"){
+     return {q:"<b>A sample is</b>",
+       opts:shuffle(distinctOpts([
+         {label:"a subset of the population", correct:true,
+          note:"The sample is the part of the population you actually collect data from. It sits inside the population, never outside it."},
+         {label:"the whole group being studied",
+          note:"That is the population. The sample is the smaller piece you reach."},
+         {label:"the person collecting the data",
+          note:"The data collector is not part of what is being measured."},
+         {label:"any group larger than the population",
+          note:"Nothing is larger than the population — it already contains everyone being studied."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="rel"){
+     return {q:"<b>How do a population and a sample fit together?</b>",
+       opts:shuffle(distinctOpts([
+         {label:"The sample sits inside the population", correct:true,
+          note:"Every member of the sample is also a member of the population. That is what makes the sample worth asking."},
+         {label:"The population sits inside the sample",
+          note:"The other way round. The population is the larger set."},
+         {label:"They never overlap",
+          note:"They overlap completely — the sample is drawn from the population."},
+         {label:"They are two names for the same set",
+          note:"Only if you surveyed everyone, which is a census rather than a sample."}
+       ]).slice(0,4)), one:true};
+   }
+   const wantPop=(f==="pop");
+   return {q:"<b>What is the "+(wantPop?"population":"sample")+"?</b>",
+     scene:c.s,
+     opts:shuffle(textOpts(wantPop?c.pop:c.samp,
+       wantPop
+        ? "The population is the whole set whose properties are being described — everyone the study is about, whether or not anyone reached them."
+        : "The sample is the subset actually reached. The findings come from these, and are then used to talk about the population.",
+       [{t:wantPop?c.samp:c.pop,
+         w:wantPop?"That is the sample — the part actually reached. The population is the whole group the study is about."
+                  :"That is the population — everyone the study is about. The sample is only the part reached."},
+        {t:c.other[0], w:"Those people are running the study, not being measured by it."},
+        {t:c.other[1], w:"That is not the set whose properties are being described."}])),
+     one:true};
+ }
+},
+{
+ title:"Was it a fair sample",
+ sub:"Random means equal chance; representative means typical.",
+ gen:function(){
+   const METH=[
+     {s:"The board numbers all 250 houses from 1 to 250, draws 25 numbers at random, and surveys those households.",
+      ok:true, why:"Every house has the same chance of being drawn, so the sample is random, and every household surveyed is a household in the neighbourhood, so it is representative too.",
+      flaw:"Every one of the 250 houses has an equal chance of being drawn"},
+     {s:"Interviewers survey everyone at the city's largest shelter on a Sunday evening.",
+      ok:false, why:"Homeless people who avoid shelters, who use a different shelter, or who were elsewhere that evening had no chance at all of being picked. The sample leans towards people the rule already suits.",
+      flaw:"Homeless people not at that shelter that evening had no chance of being chosen"},
+     {s:"The board surveys the twelve homeowners who came to the last association meeting.",
+      ok:false, why:"People who attend meetings are not typical of everyone — they are the ones who already care enough to show up, and they may well feel differently about the walls.",
+      flaw:"Only homeowners who attend meetings could be picked"},
+     {s:"A college emails a survey to 300 students chosen at random from the full enrolment list.",
+      ok:true, why:"The list covers the whole population and the 300 are drawn at random from it, so every student had the same chance of being selected.",
+      flaw:"Every enrolled student had the same chance of being selected"},
+     {s:"A radio station asks listeners to call in and say whether they support a new tax.",
+      ok:false, why:"Only listeners hear the question, and only listeners who feel strongly enough to call will answer. Nobody else had any chance at all.",
+      flaw:"Only listeners who choose to call in are counted"},
+     {s:"A manufacturer tests the first 40 batteries to come off the line on Monday morning.",
+      ok:false, why:"Batteries made later in the week, on other machines or on other shifts had no chance of being tested, and the start of a run is not typical of the whole month.",
+      flaw:"Batteries made at any other time had no chance of being tested"},
+     {s:"A hospital records the emergency-room wait for every patient arriving on one Tuesday.",
+      ok:false, why:"A single Tuesday is not typical — weekends, evenings and busy seasons are left out entirely, and no patient arriving on another day could be selected.",
+      flaw:"Patients arriving on any other day had no chance of being included"},
+     {s:"A quality inspector picks every tenth item from the day's output, starting from a randomly chosen one of the first ten.",
+      ok:true, why:"The items are spread across the whole day's run and the starting point is random, so the sample reaches every part of the output rather than one corner of it.",
+      flaw:"The sample is spread evenly across the whole day's output"}
+   ];
+   const forms=["judge","why","defR","defV"];
+   const f=pick(forms);
+   if(f==="defR"){
+     return {q:"<b>A sample is called <i>random</i> when</b>",
+       opts:shuffle(distinctOpts([
+         {label:"every member of the population has an equal chance of being selected", correct:true,
+          note:"That is the whole definition. It is about the method of choosing, not about how the sample turns out."},
+         {label:"the people chosen are typical of the population",
+          note:"That is <i>representative</i>. A sample can be representative by luck without having been chosen randomly."},
+         {label:"whoever happens to be nearby is asked",
+          note:"That is a convenience sample. People further away had no chance at all, so it is not random."},
+         {label:"the sample is at least a tenth of the population",
+          note:"Size is not the issue. A large sample chosen badly is still a bad sample."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="defV"){
+     return {q:"<b>A sample is called <i>representative</i> when</b>",
+       opts:shuffle(distinctOpts([
+         {label:"it shows characteristics typical of the target population", correct:true,
+          note:"It looks like a small copy of the population. Choosing at random is the usual way to get there, but the two ideas are not the same."},
+         {label:"every member had an equal chance of being selected",
+          note:"That is <i>random</i>, which describes the method. Representative describes the result."},
+         {label:"everyone in the population was surveyed",
+          note:"That is a census, not a sample."},
+         {label:"the people in it volunteered",
+          note:"Volunteers are usually the least typical people available — they are the ones who feel strongly."}
+       ]).slice(0,4)), one:true};
+   }
+   const flawed=METH.filter(function(x){return !x.ok;});
+   const sound=METH.filter(function(x){return x.ok;});
+   if(f==="why"){
+     /* only a flawed method has a flaw to name, so this branch draws from the
+        flawed ones directly rather than falling through when it drew a good one */
+     const m=pick(flawed);
+     const others=flawed.filter(function(x){return x!==m;});
+     shuffle(others);
+     return {q:"<b>What is wrong with this sample?</b>",
+       scene:m.s,
+       opts:shuffle(textOpts(m.flaw, m.why,
+         [{t:"Nothing — every member of the population had an equal chance",
+           w:"They did not. "+m.why},
+          {t:others[0]?others[0].flaw:"The sample is too small to be worth taking",
+           w:"That is a fault of a different survey, not this one."},
+          {t:"The sample is too large to be practical",
+           w:"Size is not the problem here; who could be chosen is."}])),
+       one:true};
+   }
+   /* verdict first, method second: a 50/50 split so neither answer is a habit */
+   const wantOK=Math.random()<.5;
+   const m=pick(wantOK?sound:flawed);
+   return {q:"<b>Is this a good way to obtain the sample?</b>",
+     scene:m.s,
+     opts:shuffle(distinctOpts([
+       (m.ok
+        ? {label:"Yes — everyone had an equal chance", correct:true, note:m.why}
+        : {label:"No — some of the population could never be chosen", correct:true, note:m.why}),
+       (m.ok
+        ? {label:"No — some of the population could never be chosen", note:"Every member could be chosen here. "+m.why}
+        : {label:"Yes — everyone had an equal chance", note:"Not everyone did. "+m.why}),
+       {label:"It depends only on how many are surveyed",
+        note:"Size does not fix a method that shuts part of the population out, and it does not spoil a method that does not."},
+       {label:"Yes, because the people surveyed are easy to reach",
+        note:"Convenience is the reason bad samples get taken, not a reason they are sound."}
+     ]).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Count one value",
+ sub:"Go through the list once and mark every copy.",
+ gen:function(){
+   const D=makeUngrouped();
+   const i=ri(0,D.k-1);
+   const v=D.vals[i];
+   const f=D.f[i];
+   /* a neighbouring value's count is the mistake people actually make */
+   const nb=D.f[(i+1)%D.k], nb2=D.f[(i+D.k-1)%D.k];
+   return {q:"<b>How many times does "+v+" appear in this list?</b>",
+     scene:D.lead+" Here is the raw list, in the order it was collected.",
+     vis:rawHTML(D.list),
+     opts:shuffle(numOpts(f,
+       [{v:nb,  w:"That is the count for a different "+D.S.item+"."},
+        {v:nb2, w:"That is the count for another "+D.S.item+" in the same list."},
+        {v:f+1, w:"One too many — it is easy to double-count when the copies are scattered."},
+        {v:f-1, w:"One short. Work along the list in order and mark each copy as you pass it."},
+        {v:D.n, w:"That is how many items are in the whole list, not how many are "+v+"."},
+        {v:D.k, w:"That is how many different "+D.S.item+"s appear, not how many times "+v+" does."}],
+       "Marking every copy of "+v+" gives "+f+". The list has "+D.n+" items in all, and "+v+" accounts for "+f+" of them.",
+       [{v:D.n-f, w:"That is everything in the list that is <i>not</i> "+v+"."}]))};
+ }
+},
+{
+ title:"Add the frequencies",
+ sub:"The counts must come back to the number of items collected.",
+ gen:function(){
+   const grouped=Math.random()<.5;
+   const D=grouped?someGrouped():makeUngrouped();
+   const rows=grouped?D.lo.length:D.vals.length;
+   const forms=["total","blank"];
+   if(pick(forms)==="blank"){
+     /* one frequency is hidden and the total is given: subtract to recover it */
+     const i=ri(0,rows-1);
+     const want=D.f[i];
+     const rest=D.n-want;
+     const lab=grouped?clsLabel(D,i):D.vals[i];
+     return {q:"<b>The frequency for "+lab+" has been rubbed out. What was it?</b>",
+       scene:D.lead+" The total is known to be "+D.n+".",
+       vis:ftHTML(D,{blank:i, total:true}),
+       opts:shuffle(numOpts(want,
+         [{v:rest, w:"That is everything <i>except</i> that row. Take it away from "+D.n+" to get the missing count."},
+          {v:D.n,  w:"That is the total for the whole table, not for one row."},
+          {v:rows, w:"That is how many rows the table has."},
+          {v:want+1, w:"One too many — the rows would then add to "+(D.n+1)+" instead of "+D.n+"."},
+          {v:want-1, w:"One short — the rows would then add to "+(D.n-1)+" instead of "+D.n+"."},
+          {v:Math.max.apply(null,D.f), w:"That is the largest frequency in the table, which belongs to a different row."}],
+         "The other rows add to "+rest+", and "+D.n+" − "+rest+" = "+want+". Every frequency in a distribution is fixed once the others and the total are known."))};
+   }
+   return {q:"<b>How many "+D.whoP+" were counted altogether?</b>",
+     scene:D.lead,
+     vis:ftHTML(D,{}),
+     opts:shuffle(numOpts(D.n,
+       [{v:rows, w:"That is how many rows the table has, not how many "+D.whoP+" it describes."},
+        {v:Math.max.apply(null,D.f), w:"That is the single largest frequency. Every row has to be added in."},
+        {v:D.n-Math.min.apply(null,D.f), w:"That leaves out the smallest row. Every row counts."},
+        {v:Math.max.apply(null,D.f)+Math.min.apply(null,D.f), w:"That adds only the largest and smallest rows."},
+        {v:rows*2, w:"The number of rows says nothing about how many items were collected."}],
+       "Adding every frequency gives "+D.f.join(" + ")+" = "+D.n+". The frequency column always adds back to the number of items collected."))};
+ }
+},
+{
+ title:"Lower and upper limits",
+ sub:"Each class has a smaller number and a larger one.",
+ gen:function(){
+   const T=someGrouped();
+   const i=ri(0,T.k-1);
+   const wantLo=Math.random()<.5;
+   const want=wantLo?T.lo[i]:T.hi[i];
+   const other=wantLo?T.hi[i]:T.lo[i];
+   const ord=["first","second","third","fourth","fifth","sixth"][i];
+   /* the neighbouring class's matching limit is the near-miss worth offering */
+   const nbr=(i+1<T.k)?(wantLo?T.lo[i+1]:T.hi[i+1]):(wantLo?T.lo[i-1]:T.hi[i-1]);
+   return {q:"<b>What is the "+(wantLo?"lower":"upper")+" class limit of the "+ord+" class?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{lim:[wantLo?"lo":"hi",i]}),
+     opts:shuffle(numOpts(want,
+       [{v:other, w:"That is the "+(wantLo?"upper":"lower")+" limit of the same class — the "+(wantLo?"larger":"smaller")+" of the two numbers printed."},
+        {v:nbr,   w:"That is the matching limit of a neighbouring class."},
+        {v:T.f[i],w:"That is the frequency of that class, not one of its limits."},
+        {v:T.w,   w:"That is the class width — the distance from one lower limit to the next."},
+        {v:want+T.w, w:"That is one class further along."}],
+       "The "+ord+" class is written "+clsLabel(T,i)+". Its lower limit is "+T.lo[i]+" and its upper limit is "+T.hi[i]
+       +", so the "+(wantLo?"lower":"upper")+" limit is "+want+".",
+       [{v:T.lo[0], w:"That is the lower limit of the very first class, not of the "+ord+"."},
+        {v:T.hi[T.k-1], w:"That is the upper limit of the very last class."},
+        {v:T.n, w:"That is the number of "+T.whoP+" counted, not a class limit."},
+        {v:want-T.w, w:"That is one class back."}]))};
+ }
+},
+{
+ title:"The class width",
+ sub:"The distance from one lower limit to the next.",
+ gen:function(){
+   const T=someGrouped();
+   const forms=["value","which","count"];
+   const f=pick(forms);
+   if(f==="which"){
+     return {q:"<b>Which subtraction gives the class width?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{}),
+       opts:shuffle(distinctOpts([
+         {label:T.lo[1]+" − "+T.lo[0], correct:true,
+          note:"Two consecutive <i>lower</i> limits: "+T.lo[1]+" − "+T.lo[0]+" = "+T.w+". That is the definition, and it is the distance from the start of one class to the start of the next."},
+         {label:T.hi[0]+" − "+T.lo[0],
+          note:"That subtracts inside one class and gives "+(T.hi[0]-T.lo[0])+", one less than the width. There are "+T.w+" whole numbers from "+T.lo[0]+" to "+T.hi[0]+", not "+(T.hi[0]-T.lo[0])+"."},
+         {label:T.lo[1]+" − "+T.hi[0],
+          note:"That is the gap between one class ending and the next beginning, which is always 1 here — the classes butt up against each other."},
+         {label:T.hi[T.k-1]+" − "+T.lo[0],
+          note:"That is the span of the whole table, "+(T.hi[T.k-1]-T.lo[0])+", covering all "+T.k+" classes at once."}
+       ]).slice(0,4)), two:true};
+   }
+   if(f==="count"){
+     return {q:"<b>How many whole numbers does one class hold?</b>",
+       scene:T.lead+" Look at the class "+clsLabel(T,0)+".",
+       vis:ftHTML(T,{hit:0}),
+       opts:shuffle(numOpts(T.w,
+         [{v:T.hi[0]-T.lo[0], w:"Subtracting gives "+(T.hi[0]-T.lo[0])+", but counting the numbers from "+T.lo[0]+" to "+T.hi[0]+" inclusive gives one more than that. Both endpoints belong to the class."},
+          {v:T.k, w:"That is how many classes the table has, not how many numbers are in one of them."},
+          {v:T.f[0], w:"That is how many "+T.whoP+" landed in that class, which is a different thing from how wide the class is."},
+          {v:T.w+1, w:"One too many — "+T.hi[0]+" is the last number in the class and "+(T.hi[0]+1)+" starts the next one."},
+          {v:T.n, w:"That is the number of "+T.whoP+" in the whole survey."}],
+         "From "+T.lo[0]+" to "+T.hi[0]+" inclusive is "+T.w+" whole numbers, which is exactly the class width. Both ways of measuring agree because the classes leave no gaps."))};
+   }
+   return {q:"<b>What is the class width?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{}),
+     opts:shuffle(numOpts(T.w,
+       [{v:T.hi[0]-T.lo[0], w:"That subtracts the two limits of a single class. It always comes out one short, because both "+T.lo[0]+" and "+T.hi[0]+" belong to the class."},
+        {v:1, w:"That is the step from one class's upper limit to the next class's lower limit. The classes touch, so that gap is always 1."},
+        {v:T.k, w:"That is how many classes there are, not how wide each one is."},
+        {v:T.hi[T.k-1]-T.lo[0], w:"That is the span of the whole table across all "+T.k+" classes."},
+        {v:Math.max.apply(null,T.f), w:"That is the largest frequency, which has nothing to do with the width."}],
+       "Two consecutive lower limits are "+T.lo[0]+" and "+T.lo[1]+", so the width is "+T.lo[1]+" − "+T.lo[0]+" = "+T.w
+       +". Every class in the table is "+T.w+" wide.",
+       [{v:T.n, w:"That is the number of "+T.whoP+" counted, not the width of a class."},
+        {v:T.w*T.k, w:"That is the width multiplied by the number of classes — the span of the whole table."}]))};
+ }
+},
+{
+ title:"Which class holds it",
+ sub:"A value belongs to the one class that contains it.",
+ gen:function(){
+   const T=someGrouped();
+   const i=ri(0,T.k-1);
+   /* land on a limit half the time: that is where the mistakes are */
+   const onEdge=Math.random()<.55;
+   const v=onEdge?(Math.random()<.5?T.lo[i]:T.hi[i]):ri(T.lo[i],T.hi[i]);
+   const cands=otherClasses(T,i,v);
+   return {q:"<b>Which class does "+T.value(v)+" fall into?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{}),
+     opts:shuffle(textOpts(clsLabel(T,i),
+       (onEdge
+         ? (v===T.lo[i]
+            ? "It sits exactly on the lower limit, and that limit is printed in this class, so this is where it goes. A limit always belongs to the class that shows it."
+            : "It sits exactly on the upper limit, and that limit is printed in this class, so this is where it goes. The next class does not begin until "+(T.hi[i]+1)+".")
+         : v+" is between "+T.lo[i]+" and "+T.hi[i]+", so it belongs to "+clsLabel(T,i)+"."),
+       cands)), two:true};
+ }
+},
+{
+ title:"At least, fewer than",
+ sub:"Add whole classes, and check which end you are adding from.",
+ gen:function(){
+   const T=someGrouped();
+   /* the end classes make "only that class" equal to one of the running sums,
+      so the cut always falls strictly inside the table */
+   const i=ri(1,T.k-2);
+   const atLeast=Math.random()<.5;
+   const up=sum(T.f.slice(i));           /* this class and everything above  */
+   const below=sum(T.f.slice(0,i));      /* everything strictly below it     */
+   const want=atLeast?up:below;
+   const cutLo=T.lo[i];
+   const rowsUp=[]; for(let j=i;j<T.k;j++) rowsUp.push(j);
+   const rowsDn=[]; for(let j=0;j<i;j++) rowsDn.push(j);
+   const shown=atLeast?rowsUp:rowsDn;
+   const offRows=[]; for(let j=0;j<T.k;j++) if(shown.indexOf(j)<0) offRows.push(j);
+   const termsUp=T.f.slice(i).join(" + ");
+   const termsDn=T.f.slice(0,i).join(" + ");
+   return {q:"<b>How many "+T.whoP+" had "+(atLeast?T.atLeast(cutLo):T.below(cutLo))+"?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{cum:shown, off:offRows, total:true})
+       +keyHTML([["var(--tot)", atLeast?("the classes from "+cutLo+" upwards"):("the classes below "+cutLo)],
+                 ["var(--dim)","not counted"]]),
+     opts:shuffle(numOpts(want,
+       [{v:atLeast?below:up, w:"That counts from the other end of the table. "
+          +(atLeast?("“At least "+cutLo+"” starts at the class "+clsLabel(T,i)+" and runs upwards.")
+                   :("Anything below "+cutLo+" stops before the class "+clsLabel(T,i)+" begins."))},
+        {v:atLeast?sum(T.f.slice(i-1)):sum(T.f.slice(0,i+1)),
+         w:"That takes in the class "+clsLabel(T,atLeast?i-1:i)+" as well, and "
+           +(atLeast?("everything in it falls below "+cutLo+".")
+                    :("everything in it is "+cutLo+" or more, so none of it belongs below "+cutLo+"."))},
+        {v:atLeast?sum(T.f.slice(i+1)):sum(T.f.slice(0,i-1)),
+         w:"That leaves out the class "+clsLabel(T,atLeast?i:i-1)+", which does belong in the count."},
+        {v:T.f[i], w:"That is the one class "+clsLabel(T,i)+" on its own. The question asks for every class on that side of the cut."},
+        {v:T.n, w:"That is everybody in the survey, both sides of "+cutLo+"."},
+        {v:sum(T.f.slice(0,i+1)), w:"That runs the wrong way from the cut."}],
+       (atLeast
+        ? ("Add the class "+clsLabel(T,i)+" and every class above it: "+termsUp+" = "+up+". The remaining "+below+" were below "+cutLo+", and "+up+" + "+below+" = "+T.n+".")
+        : ("Add every class that ends before "+cutLo+": "+termsDn+" = "+below+". The other "+up+" were "+cutLo+" or more, and "+below+" + "+up+" = "+T.n+"."))))};
+ }
+},
+{
+ title:"Most and least frequent",
+ sub:"Name the class, or give its count — read which is wanted.",
+ gen:function(){
+   const T=someGrouped();
+   const f=T.f;
+   const hi=f.indexOf(Math.max.apply(null,f));
+   const lo=f.indexOf(Math.min.apply(null,f));
+   const wantMost=Math.random()<.5;
+   const idx=wantMost?hi:lo;
+   const wantName=Math.random()<.5;
+   const word=wantMost?"most":"least";
+   if(wantName){
+     /* the answer is a class label -- the count is the trap */
+     const cands=[{t:clsLabel(T,wantMost?lo:hi),
+        w:"That is the "+(wantMost?"least":"most")+" frequent class, with "+f[wantMost?lo:hi]+". You want the "+word+"."}];
+     for(let j=0;j<T.k;j++) if(j!==idx&&j!==(wantMost?lo:hi)) cands.push({t:clsLabel(T,j),
+        w:"That class holds "+f[j]+", "+(wantMost?("fewer than the "+f[idx]+" in "+clsLabel(T,idx)):("more than the "+f[idx]+" in "+clsLabel(T,idx)))+"."});
+     return {q:"<b>Which class was the "+word+" frequent?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{hit:idx}),
+       opts:shuffle(textOpts(clsLabel(T,idx),
+         "The frequencies are "+f.join(", ")+". The "+word+" of these is "+f[idx]+", which belongs to the class "+clsLabel(T,idx)+". The question asks which class, so the answer is the range, not the count.",
+         cands)), two:true};
+   }
+   return {q:"<b>How many "+T.whoP+" are in the "+word+" frequent class?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{hit:idx}),
+     opts:shuffle(numOpts(f[idx],
+       [{v:f[wantMost?lo:hi], w:"That is the "+(wantMost?"smallest":"largest")+" frequency in the table. The question asks for the "+word+"."},
+        {v:T.lo[idx], w:"That is the lower limit of that class, not how many "+T.whoP+" are in it."},
+        {v:T.hi[idx], w:"That is the upper limit of that class."},
+        {v:T.n, w:"That is the whole survey added together."},
+        {v:T.k, w:"That is how many classes there are."},
+        {v:idx+1, w:"That is the position of the class in the table, not its frequency."}],
+       "The frequencies are "+f.join(", ")+", and the "+word+" of them is "+f[idx]+", in the class "+clsLabel(T,idx)+"."))};
+ }
+},
+{
+ title:"Read any table",
+ sub:"Limits, width, totals and cut-offs, all mixed.",
+ gen:function(){
+   const T=someGrouped();
+   const t=pick(["width","total","cut","limit","which","blank"]);
+   if(t==="width"){
+     return {q:"<b>What is the class width?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{}),
+       opts:shuffle(numOpts(T.w,
+         [{v:T.hi[0]-T.lo[0], w:"That subtracts within one class and always comes out one short."},
+          {v:1, w:"That is the step between one class ending and the next starting."},
+          {v:T.k, w:"That is the number of classes."},
+          {v:T.hi[T.k-1]-T.lo[0], w:"That is the span of the whole table."}],
+         T.lo[1]+" − "+T.lo[0]+" = "+T.w+", the distance from one lower limit to the next.",
+         [{v:T.n, w:"That is the number of "+T.whoP+" counted."},
+          {v:T.w*T.k, w:"That is the width times the number of classes."}]))};
+   }
+   if(t==="total"){
+     return {q:"<b>How many "+T.whoP+" were counted altogether?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{}),
+       opts:shuffle(numOpts(T.n,
+         [{v:T.k, w:"That is the number of classes."},
+          {v:Math.max.apply(null,T.f), w:"That is the largest single frequency."},
+          {v:T.n-Math.min.apply(null,T.f), w:"That leaves out the smallest class."},
+          {v:T.w, w:"That is the class width."},
+          {v:T.n-Math.max.apply(null,T.f), w:"That leaves out the largest class."}],
+         T.f.join(" + ")+" = "+T.n+"."))};
+   }
+   if(t==="cut"){
+     const i=ri(1,T.k-2);
+     const up=sum(T.f.slice(i)), below=sum(T.f.slice(0,i));
+     const atLeast=Math.random()<.5;
+     const want=atLeast?up:below;
+     const shown=[]; for(let j=(atLeast?i:0);j<(atLeast?T.k:i);j++) shown.push(j);
+     const offRows=[]; for(let j=0;j<T.k;j++) if(shown.indexOf(j)<0) offRows.push(j);
+     return {q:"<b>How many "+T.whoP+" had "+(atLeast?T.atLeast(T.lo[i]):T.below(T.lo[i]))+"?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{cum:shown, off:offRows, total:true}),
+       opts:shuffle(numOpts(want,
+         [{v:atLeast?below:up, w:"That counts from the other end of the table."},
+          {v:atLeast?sum(T.f.slice(i-1)):sum(T.f.slice(0,i+1)), w:"That takes in one class too many."},
+          {v:atLeast?sum(T.f.slice(i+1)):sum(T.f.slice(0,i-1)), w:"That leaves out a class that belongs."},
+          {v:T.f[i], w:"That is one class on its own."},
+          {v:T.n, w:"That is the whole survey."}],
+         (atLeast?T.f.slice(i).join(" + ")+" = "+up:T.f.slice(0,i).join(" + ")+" = "+below)
+         +", and the two sides of the cut add to "+T.n+".",
+         [{v:T.f[i]+T.f[i-1], w:"That adds only the two classes either side of the cut."},
+          {v:Math.max.apply(null,T.f), w:"That is the largest single class."},
+          {v:T.n-T.f[i], w:"That leaves out the class the cut falls on."}]))};
+   }
+   if(t==="limit"){
+     const i=ri(0,T.k-1);
+     const wantLo=Math.random()<.5;
+     const ord=["first","second","third","fourth","fifth","sixth"][i];
+     return {q:"<b>What is the "+(wantLo?"lower":"upper")+" class limit of the "+ord+" class?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{lim:[wantLo?"lo":"hi",i]}),
+       opts:shuffle(numOpts(wantLo?T.lo[i]:T.hi[i],
+         [{v:wantLo?T.hi[i]:T.lo[i], w:"That is the other limit of the same class."},
+          {v:T.f[i], w:"That is the frequency of that class."},
+          {v:T.w, w:"That is the class width."},
+          {v:(wantLo?T.lo[i]:T.hi[i])+T.w, w:"That is one class further along."},
+          {v:T.n, w:"That is the survey total."}],
+         "The "+ord+" class is "+clsLabel(T,i)+", so its "+(wantLo?"lower":"upper")+" limit is "+(wantLo?T.lo[i]:T.hi[i])+".",
+         [{v:T.lo[0], w:"That is the lower limit of the first class."},
+          {v:T.hi[T.k-1], w:"That is the upper limit of the last class."},
+          {v:(wantLo?T.lo[i]:T.hi[i])-T.w, w:"That is one class back."},
+          {v:T.k, w:"That is how many classes there are."}]))};
+   }
+   if(t==="blank"){
+     const i=ri(0,T.k-1);
+     const want=T.f[i], rest=T.n-want;
+     return {q:"<b>What frequency belongs in the missing row?</b>",
+       scene:T.lead+" The total is known to be "+T.n+".",
+       vis:ftHTML(T,{blank:i, total:true}),
+       opts:shuffle(numOpts(want,
+         [{v:rest, w:"That is everything except the missing row."},
+          {v:T.n, w:"That is the whole total."},
+          {v:T.k, w:"That is the number of classes."},
+          {v:want+1, w:"One too many — the table would add to "+(T.n+1)+"."},
+          {v:want-1, w:"One short — the table would add to "+(T.n-1)+"."}],
+         "The visible rows add to "+rest+", and "+T.n+" − "+rest+" = "+want+"."))};
+   }
+   const i=ri(0,T.k-1);
+   const v=ri(T.lo[i],T.hi[i]);
+   const cands=otherClasses(T,i,v);
+   return {q:"<b>Which class does "+T.value(v)+" fall into?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{}),
+     opts:shuffle(textOpts(clsLabel(T,i),
+       v+" lies between "+T.lo[i]+" and "+T.hi[i]+" inclusive.", cands)), two:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {lbl:"a week of highs", kind:"week"},
+  {lbl:"twenty grades",   kind:"grades"},
+  {lbl:"forty scores",    kind:"raw"},
+  {lbl:"into classes",    kind:"classes"},
+  {lbl:"what a class is", kind:"anat"},
+  {lbl:"at least 60",     kind:"cum"}
+];
+let heroSel=0;
+
+/* every figure in a hero note is computed from the lists above, never typed */
+const HNOTES={
+  week:function(){
+    return "Your worksheet's warm-up. The seven readings hold only four different values, so four rows are enough. "
+      +"65 appears "+WEEKF[0]+" times and 68 appears "+WEEKF[3]+", and the frequencies add back to "+sum(WEEKF)+" — the number of readings you started with.";
+  },
+  grades:function(){
+    const c=GRADEF[GRADEVALS.indexOf("C")];
+    return "Twenty grades listed alphabetically by student tell you almost nothing. Counted, they say something at once: "
+      +c+" of the "+sum(GRADEF)+" are C, more than any other grade, and only "+GRADEF[GRADEVALS.indexOf("F")]
+      +" student failed. The order the grades arrived in was never information.";
+  },
+  raw:function(){
+    return "Forty scores, and "+DISTINCT+" of them are different from each other. An ungrouped table would need "+DISTINCT
+      +" rows to describe "+SCORES.length+" students, which is barely shorter than the list and no easier to read. "
+      +"This is the point at which you group.";
+  },
+  classes:function(){
+    const i=SHEET.f.indexOf(Math.max.apply(null,SHEET.f));
+    return "Six classes of width "+SHEET.w+" hold all forty scores. The shape appears immediately: "+clsLabel(SHEET,i)
+      +" is the busiest with "+SHEET.f[i]+", and the frequencies still add to "+SHEET.n
+      +". What is gone is the detail — once a score is filed under "+clsLabel(SHEET,i)+", the table no longer knows whether it was "
+      +SHEET.lo[i]+" or "+SHEET.hi[i]+".";
+  },
+  anat:function(){
+    return "The width is the distance from one lower limit to the next: "+SHEET.lo[1]+" − "+SHEET.lo[0]+" = "+SHEET.w
+      +". Subtracting inside a class gives "+(SHEET.hi[0]-SHEET.lo[0])+", which is wrong, because both "+SHEET.lo[0]+" and "+SHEET.hi[0]
+      +" belong to the class — count them and you get "+SHEET.w+" whole numbers. Every class in this table is "+SHEET.w+" wide.";
+  },
+  cum:function(){
+    const i=SHEET.lo.indexOf(60);
+    const up=sum(SHEET.f.slice(i)), below=sum(SHEET.f.slice(0,i));
+    return "“At least 60” starts at the class "+clsLabel(SHEET,i)+" and runs to the top: "+SHEET.f.slice(i).join(" + ")+" = "+up
+      +". The tempting mistake is to start one class lower and sweep in the "+SHEET.f[i-1]+" students in "+clsLabel(SHEET,i-1)
+      +", none of whom reached 60. The other "+below+" scored below 60, and "+up+" + "+below+" = "+SHEET.n+".";
+  }
+};
+
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="week"){
+    const T={grouped:false, vals:WEEKVALS.map(String), f:WEEKF, n:sum(WEEKF),
+             label:"Temperature high", what:"Frequency"};
+    body='<div class="raw" style="margin-bottom:16px">'+WEEK.join("&nbsp; &nbsp;")+"</div>"
+      +ftHTML(T,{tally:true, total:true})
+      +'<div class="eq" style="margin-top:12px">seven readings, four rows'
+      +'<span class="lbl">the counts add back to the number of readings</span></div>';
+  }else if(h.kind==="grades"){
+    const T={grouped:false, vals:GRADEVALS, f:GRADEF, n:sum(GRADEF), label:"Grade", what:"Frequency"};
+    body='<div class="raw" style="margin-bottom:16px">'+GRADES.join("&nbsp; ")+"</div>"
+      +ftHTML(T,{tally:true, total:true, hit:GRADEVALS.indexOf("C")})
+      +'<div class="eq" style="margin-top:12px">twenty grades, five rows'
+      +'<span class="lbl">the busiest row is the one the list was hiding</span></div>';
+  }else if(h.kind==="raw"){
+    body=rawHTML(SCORES)
+      +'<div class="duo" style="margin-top:18px">'
+        +'<div class="pane"><div class="ttl">items collected</div>'
+          +'<div class="vl">'+SCORES.length+"</div>"
+          +'<div class="wk">forty students sat the exam</div></div>'
+        +'<div class="pane b"><div class="ttl">different values</div>'
+          +'<div class="vl">'+DISTINCT+"</div>"
+          +'<div class="wk">an ungrouped table would need '+DISTINCT+" rows</div></div></div>"
+      +'<div class="eq" style="margin-top:14px">'+DISTINCT+" rows for "+SCORES.length+" students is no simpler than the list"
+      +'<span class="lbl">too spread out to count one value at a time</span></div>';
+  }else if(h.kind==="classes"){
+    body=ftHTML(SHEET,{tally:true, total:true, hit:SHEET.f.indexOf(Math.max.apply(null,SHEET.f))})
+      +'<div class="eq" style="margin-top:12px">six classes, width <span class="res">'+SHEET.w+"</span>, total "
+      +'<span class="res">'+SHEET.n+"</span>"
+      +'<span class="lbl">the same forty scores, now in a shape you can read</span></div>';
+  }else if(h.kind==="anat"){
+    body='<div class="anat">'
+      +'<div><div class="acls">'+SHEET.lo[0]+" – "+SHEET.hi[0]+'</div><div class="anote">first class</div></div>'
+      +'<div class="agap"><span class="ar">◀ &nbsp;'+SHEET.w+'&nbsp; ▶</span><span class="wd">'
+        +SHEET.lo[1]+" − "+SHEET.lo[0]+" = "+SHEET.w+"</span></div>"
+      +'<div><div class="acls">'+SHEET.lo[1]+" – "+SHEET.hi[1]+'</div><div class="anote">second class</div></div>'
+      +'<div class="agap"><span class="ar">◀ &nbsp;'+SHEET.w+'&nbsp; ▶</span><span class="wd">'
+        +SHEET.lo[2]+" − "+SHEET.lo[1]+" = "+SHEET.w+"</span></div>"
+      +'<div><div class="acls">'+SHEET.lo[2]+" – "+SHEET.hi[2]+'</div><div class="anote">third class</div></div>'
+      +"</div>"
+      +'<div class="duo" style="margin-top:20px">'
+        +'<div class="pane b"><div class="ttl">the width</div>'
+          +'<div class="fm">'+SHEET.lo[1]+" − "+SHEET.lo[0]+"</div>"
+          +'<div class="vl">'+SHEET.w+"</div>"
+          +'<div class="wk">one lower limit to the next</div></div>'
+        +'<div class="pane"><div class="ttl">the common mistake</div>'
+          +'<div class="fm">'+SHEET.hi[0]+" − "+SHEET.lo[0]+"</div>"
+          +'<div class="vl">'+(SHEET.hi[0]-SHEET.lo[0])+"</div>"
+          +'<div class="wk">subtracting inside one class, always one short</div></div></div>'
+      +'<div class="eq" style="margin-top:14px">lower limit <span class="res">'+SHEET.lo[0]
+      +"</span>, upper limit <span class=\"res\">"+SHEET.hi[0]+"</span>, width <span class=\"res\">"+SHEET.w+"</span>"
+      +'<span class="lbl">'+SHEET.w+" whole numbers fit from "+SHEET.lo[0]+" to "+SHEET.hi[0]+"</span></div>";
+  }else{
+    const i=SHEET.lo.indexOf(60);
+    const rows=[]; for(let j=i;j<SHEET.k;j++) rows.push(j);
+    const offRows=[]; for(let j=0;j<i;j++) offRows.push(j);
+    const up=sum(SHEET.f.slice(i));
+    body=ftHTML(SHEET,{cum:rows, off:offRows, total:true})
+      +keyHTML([["var(--tot)","counted: 60 and above"],["var(--dim)","below 60, not counted"]])
+      +'<div class="eq" style="margin-top:12px">'+SHEET.f.slice(i).join(" + ")+" = <span class=\"res\">"+up+"</span>"
+      +'<span class="lbl">whole classes only — the cut falls where one class ends</span></div>';
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.vis?'<div class="vis">'+q.vis+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
