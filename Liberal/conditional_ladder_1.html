@@ -1,0 +1,1243 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Given Ladder — the condition becomes the new denominator</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F4F6F8;
+    --card:#FFFFFF;
+    --rule:#D6DDE4;
+    --muted:#5D6B7A;
+    --gv:#7A2E4A;
+    --gv-bg:#F7E9EE;
+    --cond:#1F6B8C;
+    --cond-bg:#E4F0F5;
+    --hit:#1B7A4B;
+    --hit-bg:#E7F4EC;
+    --dim:#B6BCC4;
+    --round-bg:#FCF1DA;
+    --right:#1B7A4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E7F4EC;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--gv)}
+  :focus-visible{outline:3px solid var(--gv); outline-offset:2px; border-radius:3px}
+
+  .frac{display:inline-flex; flex-direction:column; align-items:center; vertical-align:middle; line-height:1.15; margin:0 3px}
+  .frac .den{border-top:2px solid currentColor; padding-top:2px}
+  .bar{font-family:var(--serif); white-space:nowrap}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,246,248,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--gv)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:18ch}
+  .lede{max-width:62ch; color:#31404F; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:680px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.1; text-align:center}
+  .eq .res{color:var(--gv); font-weight:700}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+
+  table.tw{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:clamp(13.5px,2.9vw,16px)}
+  table.tw th,table.tw td{border:1px solid var(--rule); padding:7px 16px; text-align:right; white-space:nowrap}
+  table.tw th{background:var(--paper); color:var(--muted); font-weight:700; font-size:.88em; text-align:center}
+  table.tw th.rh{text-align:left}
+  table.tw td.tot{background:#EDF0F3; color:var(--muted); font-weight:700}
+  /* everything outside the condition fades away - that is the whole idea */
+  table.tw td.off,table.tw th.off{color:var(--dim); background:#FAFBFC}
+  table.tw td.inc{background:var(--cond-bg); color:var(--cond); font-weight:700}
+  table.tw th.inc{background:var(--cond-bg); color:var(--cond)}
+  table.tw td.den{background:var(--cond-bg); color:var(--cond); font-weight:700; outline:2px solid var(--cond); outline-offset:-2px}
+  table.tw td.hit{background:var(--hit-bg); color:var(--hit); font-weight:700; outline:2px solid var(--hit); outline-offset:-2px}
+  .tkey{display:flex; gap:16px; justify-content:center; flex-wrap:wrap; font-size:12.5px; color:var(--muted); margin-top:9px}
+  .tkey i{display:inline-block; width:11px; height:11px; border-radius:2px; margin-right:5px; vertical-align:-1px}
+
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:680px; margin:0 auto}
+  @media (max-width:640px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:15px 16px; text-align:center; background:var(--gv-bg)}
+  .pane.b{background:var(--cond-bg)}
+  .pane .ttl{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:9px; color:var(--gv)}
+  .pane.b .ttl{color:var(--cond)}
+  .pane .fm{font-family:var(--serif); font-size:clamp(14.5px,2.9vw,17px); line-height:1.5}
+  .pane .vl{font-family:var(--serif); font-size:clamp(20px,4.4vw,27px); font-weight:700; margin-top:7px; color:var(--gv)}
+  .pane.b .vl{color:var(--cond)}
+  .pane .wk{font-size:12.5px; color:var(--muted); margin-top:7px; line-height:1.4}
+
+  .chain{display:flex; gap:10px; justify-content:center; align-items:flex-start; flex-wrap:wrap; margin:0 auto}
+  .link{text-align:center; min-width:110px}
+  .link .hd{font-size:11.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:5px}
+  .link .bx{border:2px solid var(--rule); border-radius:10px; padding:10px 12px; background:var(--card);
+    font-family:var(--serif); font-size:clamp(16px,3.4vw,21px)}
+  .link .bx.c{border-color:var(--gv); background:var(--gv-bg); color:var(--gv)}
+  .link .pool{font-size:11.5px; color:var(--muted); margin-top:5px; line-height:1.3}
+  .times{display:flex; align-items:center; font-family:var(--serif); font-size:clamp(17px,3.6vw,22px); color:var(--muted); padding-top:34px}
+
+  table.ct{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:clamp(13px,2.7vw,15px)}
+  table.ct th,table.ct td{border:1px solid var(--rule); padding:5px 13px; text-align:right; white-space:nowrap}
+  table.ct th{background:var(--gv-bg); color:var(--gv); font-weight:700; font-size:12.5px; text-align:center}
+  table.ct td.lab{text-align:left}
+  table.ct td.p{color:var(--gv); font-weight:700}
+  table.ct td.b{color:var(--cond); font-weight:700}
+
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--gv); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--gv); background:var(--gv-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--gv)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3B4956}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:62ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#31404F}
+  .scene{max-width:56ch; margin:0 auto 14px; background:var(--gv-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:44ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(16px,3.6vw,25px); background:var(--gv-bg); border-radius:12px; padding:11px 25px; margin:0 auto 16px}
+  .vis{margin:0 auto 16px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:19px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B6DEC6}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:40ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>P(A | B)</span> The Given Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 20 · conditional probability</p>
+    <h1>The condition becomes the denominator.</h1>
+    <p class="lede">P(A | B) is read "the probability of A <b>given</b> B". Being told that B has happened does not change which outcomes are favourable — it changes which outcomes are still <b>possible</b>. Everything outside B drops out of the sample space, so B's own total takes over as the number you divide by. The numerator is whatever is left of A inside B.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">✋</span>
+      <p><b>P(A | B) and P(B | A) are different numbers.</b> Your worksheet has both on the same table and the same cell. Of the 27 males, 10 prefer action: <b>10/27</b>. But of the 19 who prefer action, 10 are male: <b>10/19</b>. The 10 never moves — the denominator does, and it is the word after "given" that says which total to use.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3B4956">Rungs 1–2 read the notation and find the condition in a sentence. Rungs 3–4 compute from a two-way table and then set P(A | B) against P(B | A). Rungs 5–6 separate conditional from joint and introduce the formula. Rungs 7–8 check that both routes agree and handle the cases that give 0 or 1. Rungs 9–10 rename the without-replacement draws and mix everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Watch the table fade</h3><p>Everything outside the condition is greyed out. What is left in blue is the new sample space; the green cell is the numerator.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Every answer is an exact fraction in lowest terms, with 0 and 1 written as whole numbers. The vertical bar is read "given", and what follows it is always the condition.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Information narrows the world</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The numerator rarely moves</h3><p>It is the same cell, the same overlap. What changes is how much of the table is still in play.</p></div>
+      <div class="step"><span class="n">02</span><h3>Order of the two matters</h3><p>Swapping which event is given changes the answer, sometimes drastically. Read the bar, not the cell.</p></div>
+      <div class="step"><span class="n">03</span><h3>You have used it already</h3><p>The 3/51 from the last ladder was a conditional probability. It now has a name and a notation.</p></div>
+    </div>
+    <p class="closing">Cross out everything the condition rules out, then divide by what is left.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Given Ladder · P(A | B) = n(A and B) ÷ n(B) = P(A and B) ÷ P(B) · what follows the bar is the condition · P(A | B) is not P(B | A)</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function sum(a){return a.reduce(function(x,y){return x+y;},0);}
+
+/* ================= exact fractions ================= */
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){const t=a%b;a=b;b=t;}return a;}
+function frac(num,den){
+  if(den===0) return null;
+  if(num===0) return {n:0,d:1,txt:"0"};
+  const g=gcd(num,den)||1;
+  const n=num/g, d=den/g;
+  return {n:n,d:d,txt:(d===1?String(n):n+"/"+d)};
+}
+function fracText(num,den){ const f=frac(num,den); return f?f.txt:"—"; }
+/* "20/37" when it is already lowest terms, "10/56 = 5/28" when it is not */
+function sumText(num,den){
+  const f=frac(num,den);
+  if(!f) return "—";
+  const raw=num+"/"+den;
+  return (f.txt===raw)?raw:(raw+" = "+f.txt);
+}
+function fracHTML(num,den){
+  const f=frac(num,den);
+  if(!f) return "—";
+  if(f.d===1) return String(f.n);
+  return '<span class="frac"><span class="num">'+grp(f.n)+'</span><span class="den">'+grp(f.d)+"</span></span>";
+}
+
+/* ================= survey tables ================= */
+const SURVEYS=[
+  {q:"a movie preference survey", rows:["Male","Female"], cols:["Action movies","Comedies"],
+   who:"person", whoP:"people",
+   rowP:["is male","is female"], colP:["prefers action movies","prefers comedies"],
+   rowPl:["are male","are female"], colPl:["prefer action movies","prefer comedies"]},
+  {q:"a commuting survey", rows:["Staff","Students"], cols:["Bus","Car","Bicycle"],
+   who:"person", whoP:"people",
+   rowP:["is a staff member","is a student"], colP:["travels by bus","travels by car","travels by bicycle"],
+   rowPl:["are staff","are students"], colPl:["travel by bus","travel by car","travel by bicycle"]},
+  {q:"a sports survey", rows:["Year 10","Year 11"], cols:["Football","Netball","Swimming"],
+   who:"pupil", whoP:"pupils",
+   rowP:["is in Year 10","is in Year 11"], colP:["chose football","chose netball","chose swimming"],
+   rowPl:["are in Year 10","are in Year 11"], colPl:["chose football","chose netball","chose swimming"]},
+  {q:"a holiday survey", rows:["Under 30","30 and over"], cols:["Beach","Mountains"],
+   who:"traveller", whoP:"travellers",
+   rowP:["is under 30","is 30 or over"], colP:["prefers the beach","prefers the mountains"],
+   rowPl:["are under 30","are 30 or over"], colPl:["prefer the beach","prefer the mountains"]},
+  {q:"a drinks survey", rows:["Morning","Evening"], cols:["Coffee","Tea"],
+   who:"customer", whoP:"customers",
+   rowP:["came in the morning","came in the evening"], colP:["ordered coffee","ordered tea"],
+   rowPl:["came in the morning","came in the evening"], colPl:["ordered coffee","ordered tea"]}
+];
+/* a table is only usable if its numbers do not collide with one another. The
+   rule that matters most: no row total may equal a column total. If it did,
+   P(A | B) and P(B | A) would be the same number, and this whole ladder exists
+   to show that they are not. Repeated cells go too, because a table built from
+   one repeated figure makes half the wrong methods land on the right answer. */
+function tableOK(T){
+  const cells=[];
+  T.cells.forEach(function(r){ r.forEach(function(v){ cells.push(v); }); });
+  const tots=T.rowT.concat(T.colT);
+  if(new Set(cells).size!==cells.length) return false;
+  if(new Set(tots).size!==tots.length) return false;
+  for(let a=0;a<cells.length;a++) if(tots.indexOf(cells[a])>=0) return false;
+  if(tots.indexOf(T.G)>=0) return false;
+  return true;
+}
+function makeTable(o){
+  o=o||{};
+  const S=o.S||pick(SURVEYS);
+  const R=S.rows.length, C=S.cols.length;
+  let T=null;
+  for(let tries=0;tries<400;tries++){
+    const cells=[];
+    for(let i=0;i<R;i++){
+      const row=[];
+      for(let j=0;j<C;j++) row.push(ri(5,30));
+      cells.push(row);
+    }
+    const rowT=cells.map(sum);
+    const colT=[];
+    for(let j=0;j<C;j++){ let t=0; for(let i=0;i<R;i++) t+=cells[i][j]; colT.push(t); }
+    T={S:S, R:R, C:C, cells:cells, rowT:rowT, colT:colT, G:sum(rowT)};
+    if(tableOK(T)) return T;
+  }
+  return T;   /* never reached in practice; the worksheet's own table is the shape */
+}
+/* the worksheet's own survey, exactly as printed */
+const SHEET={S:SURVEYS[0], R:2, C:2, cells:[[10,17],[9,20]], rowT:[27,29], colT:[19,37], G:56};
+function someTable(){ return Math.random()<.35?SHEET:makeTable(); }
+
+/* ================= the deck, counted by predicate ================= */
+/* Conditioning on a card description needs exact counts for the event, the
+   condition, and their overlap, so every event is a test over a real deck. */
+const RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
+const SUITS=[{n:"clubs",red:false},{n:"diamonds",red:true},{n:"hearts",red:true},{n:"spades",red:false}];
+const DECK=(function(){
+  const d=[];
+  RANKS.forEach(function(r){ SUITS.forEach(function(s){ d.push({r:r,s:s.n,red:s.red}); }); });
+  return d;
+})();
+const FACE={J:1,Q:1,K:1};
+const CARD_EVENTS=[
+  {t:"a king",      p:"kings",       f:function(c){return c.r==="K";}},
+  {t:"a queen",     p:"queens",      f:function(c){return c.r==="Q";}},
+  {t:"an ace",      p:"aces",        f:function(c){return c.r==="A";}},
+  {t:"a heart",     p:"hearts",      f:function(c){return c.s==="hearts";}},
+  {t:"a spade",     p:"spades",      f:function(c){return c.s==="spades";}},
+  {t:"a red card",  p:"red cards",   f:function(c){return c.red;}},
+  {t:"a black card",p:"black cards", f:function(c){return !c.red;}},
+  {t:"a face card", p:"face cards",  f:function(c){return !!FACE[c.r];}}
+];
+function cardCount(E){ let n=0; DECK.forEach(function(c){ if(E.f(c)) n++; }); return n; }
+function cardBoth(A,B){ let n=0; DECK.forEach(function(c){ if(A.f(c)&&B.f(c)) n++; }); return n; }
+/* a pair whose conditional is strictly between 0 and 1, unless an endpoint is asked for */
+function cardCond(o){
+  o=o||{};
+  let A,B,both,nB,tries=0;
+  do{
+    A=pick(CARD_EVENTS); B=pick(CARD_EVENTS);
+    both=(A===B)?-1:cardBoth(A,B);
+    nB=cardCount(B);
+    tries++;
+  }while((A===B
+        || (o.want==="mid"&&(both===0||both===nB))
+        || (o.want==="one"&&both!==nB)
+        || (o.want==="zero"&&both!==0)
+        || (o.distinct&&cardCount(A)===nB))
+        && tries<500);
+  return {A:A, B:B, nA:cardCount(A), nB:nB, both:both};
+}
+
+/* ================= rendering ================= */
+/* the table with everything outside the condition faded, the condition's total
+   ringed as the new denominator, and the qualifying cell picked out */
+function tableHTML(T,mk){
+  mk=mk||{};
+  const condRow=(mk.cond&&mk.cond[0]==="row")?mk.cond[1]:null;
+  const condCol=(mk.cond&&mk.cond[0]==="col")?mk.cond[1]:null;
+  const inCond=function(i,j){
+    if(condRow!==null) return i===condRow;
+    if(condCol!==null) return j===condCol;
+    return true;
+  };
+  let s='<table class="tw"><thead><tr><th></th>';
+  T.S.cols.forEach(function(c,j){
+    const off=(condCol!==null&&j!==condCol);
+    s+='<th class="'+(off?"off":(condCol===j?"inc":""))+'">'+c+"</th>";
+  });
+  s+='<th class="'+(condCol!==null?"off":"")+'">Total</th></tr></thead><tbody>';
+  for(let i=0;i<T.R;i++){
+    const rowOff=(condRow!==null&&i!==condRow);
+    s+='<tr><th class="rh '+(rowOff?"off":(condRow===i?"inc":""))+'">'+T.S.rows[i]+"</th>";
+    for(let j=0;j<T.C;j++){
+      const cls=[];
+      if(!inCond(i,j)) cls.push("off");
+      else if(mk.hit&&mk.hit[0]===i&&mk.hit[1]===j) cls.push("hit");
+      else cls.push("inc");
+      const q=(mk.q&&mk.q[0]===i&&mk.q[1]===j);
+      s+='<td class="'+cls.join(" ")+'">'+(q?"?":T.cells[i][j])+"</td>";
+    }
+    const rc=["tot"];
+    if(condRow===i) rc.push("den");
+    else if(condRow!==null||condCol!==null) rc.push("off");
+    s+='<td class="'+rc.join(" ")+'">'+T.rowT[i]+"</td></tr>";
+  }
+  s+='<tr><th class="rh '+(condRow!==null||condCol!==null?"off":"")+'">Total</th>';
+  for(let j=0;j<T.C;j++){
+    const cc=["tot"];
+    if(condCol===j) cc.push("den");
+    else if(condRow!==null||condCol!==null) cc.push("off");
+    s+='<td class="'+cc.join(" ")+'">'+T.colT[j]+"</td>";
+  }
+  s+='<td class="tot '+(condRow!==null||condCol!==null?"off":"")+'">'+T.G+"</td></tr></tbody></table>";
+  if(mk.key) s+='<div class="tkey"><span><i style="background:var(--hit)"></i>the numerator</span>'
+    +'<span><i style="background:var(--cond)"></i>what the condition leaves</span>'
+    +'<span><i style="background:var(--dim)"></i>ruled out</span></div>';
+  return s;
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+function barHTML(a,b){ return '<span class="bar">P('+a+" | "+b+")</span>"; }
+
+/* ================= options ================= */
+function numOpts(ans,cands,note,spares){
+  const seen={}; seen[grp(ans)]=1;
+  const opts=[{label:grp(ans), correct:true, note:note}];
+  shuffle(cands).concat(spares||[]).forEach(function(x){
+    if(x.v===null||!Number.isFinite(x.v)||x.v<0||!Number.isInteger(x.v))return;
+    const L=grp(x.v); if(seen[L])return; seen[L]=1;
+    opts.push({label:L, note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* fraction options compared by value, so an equal-but-unreduced twin can never
+   sit beside the answer */
+function fracOpts(an,ad,cands,note,spares){
+  const ans=frac(an,ad);
+  const seen={}; seen[ans.txt]=1;
+  const opts=[{label:fracHTML(an,ad), correct:true, note:note}];
+  /* the main pool is shuffled for variety; `spares` are held back in order and
+     only used when a coincidence has knocked out one of the main distractors */
+  shuffle(cands).concat(spares||[]).forEach(function(x){
+    if(x.n===null||x.d===null||!Number.isFinite(x.n)||!Number.isFinite(x.d))return;
+    if(x.d<=0||x.n<0||!Number.isInteger(x.n)||!Number.isInteger(x.d))return;
+    const f=frac(x.n,x.d); if(!f||seen[f.txt])return; seen[f.txt]=1;
+    opts.push({label:fracHTML(x.n,x.d), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* options written unreduced, as "a / b", because the point of the rung is which
+   two numbers go where. Deduplicated by VALUE all the same: 40/65 and 24/39 read
+   differently but are the same number, and two options must never be one number. */
+function ratioOpts(an,ad,cands,note){
+  const seen={}; const a0=frac(an,ad); if(a0) seen[a0.txt]=1;
+  const opts=[{label:grp(an)+" / "+grp(ad), correct:true, note:note}];
+  cands.forEach(function(x){
+    if(!x||x.d<=0||x.n<0||!Number.isInteger(x.n)||!Number.isInteger(x.d))return;
+    const f=frac(x.n,x.d); if(!f||seen[f.txt])return; seen[f.txt]=1;
+    opts.push({label:grp(x.n)+" / "+grp(x.d), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* the wrong conditionals people actually produce. `cell` is the overlap,
+   `cond` the condition's total, `other` the other total through that cell. */
+function condPool(cell,cond,other,G,names){
+  names=names||{};
+  return [
+    {n:cell, d:other, w:"That divides by "+(names.other||"the other total")+". The condition names "
+       +(names.cond||"this group")+", so "+cond+" is what is left to divide by."},
+    {n:cell, d:G, w:"That divides by everybody, which is the <i>joint</i> probability. Being told the condition rules most of them out."},
+    {n:cond, d:G, w:"That is the probability of the condition itself, not of the event given it."},
+    {n:cond, d:cell===0?1:cell, w:"That is upside down."},
+    {n:cond-cell, d:cond, w:"That counts the part of the condition where the event does <i>not</i> happen."},
+    {n:other, d:G, w:"That is the other event's own probability."}
+  ];
+}
+/* held in reserve: used only when two of the six above land on the same value */
+function condSpares(cell,cond,other,G){
+  return [
+    {n:G-cond, d:G, w:"That is the probability of <i>not</i> being in the group named by the condition."},
+    {n:other-cell, d:other===0?1:other, w:"That works inside the other total instead of the condition's."},
+    {n:cell, d:G-cond===0?1:G-cond, w:"That divides by everybody outside the condition, which is exactly the group ruled out."},
+    {n:cond, d:other===0?1:other, w:"That compares the two totals with each other instead of counting inside the condition."}
+  ];
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Reading the bar",
+ sub:"What follows the bar is what you have been told.",
+ gen:function(){
+   const forms=[
+     {q:"<b>How is P(A | B) read?</b>",
+      ans:"The probability of A given B",
+      bad:[["The probability of B given A","That is P(B | A), which is a different number."],
+        ["The probability of A or B","“Or” has no bar — it is written P(A or B)."],
+        ["The probability of A and B","“And” has no bar either. The bar means one is already known."]],
+      note:"The bar means “knowing that”, and what follows it is the condition."},
+     {q:"In P(A | B), <b>which event is already known to have happened?</b>",
+      ans:"B",
+      bad:[["A","A is the one whose probability is being asked for."],
+        ["Both of them","If both were known there would be nothing left to compute."],
+        ["Neither — both are uncertain","The whole point of the bar is that one of them is settled."]],
+      note:"Knowing B shrinks the sample space to B, and B's total becomes the denominator."},
+     {q:"<b>What does being told the condition change?</b>",
+      ans:"Which outcomes are still possible",
+      bad:[["Which outcomes are favourable","The favourable ones are the same — they are just measured against a smaller pool now."],
+        ["Nothing — the probability is unchanged","It usually changes, sometimes a great deal."],
+        ["The number of favourable outcomes only","The numerator changes only by dropping the part outside the condition; it is the denominator that is replaced."]],
+      note:"Everything outside the condition leaves the sample space, so the denominator becomes the condition's own total."},
+     {q:"<b>Which formula gives P(A | B)?</b>",
+      ans:"P(A and B) ÷ P(B)",
+      bad:[["P(A and B) ÷ P(A)","That divides by the wrong event — it would give P(B | A)."],
+        ["P(A) ÷ P(B)","The numerator must be the part of A that lies inside B, not all of A."],
+        ["P(A) × P(B)","That is the product rule for independent events, not a conditional."]],
+      note:"Both parts are measured against the same sample space, so it reduces to n(A and B) ÷ n(B)."}
+   ];
+   const f=pick(forms);
+   const opts=[{label:f.ans,correct:true,note:f.note}]
+     .concat(f.bad.map(function(x){return {label:x[0],note:x[1]};}));
+   return {q:f.q, opts:shuffle(distinctOpts(opts).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Find the condition",
+ sub:"The words “given”, “if” and “of the” all point at it.",
+ gen:function(){
+   const T=someTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const useRow=Math.random()<.5;
+   const condName=useRow?T.S.rows[i]:T.S.cols[j];
+   const condTot=useRow?T.rowT[i]:T.colT[j];
+   const otherName=useRow?T.S.cols[j]:T.S.rows[i];
+   const otherTot=useRow?T.colT[j]:T.rowT[i];
+   /* three wordings that all mean the same conditional */
+   const cP =useRow?T.S.rowP[i] :T.S.colP[j];    /* the condition, singular */
+   const eP =useRow?T.S.colP[j] :T.S.rowP[i];    /* the event, singular */
+   const cPl=useRow?T.S.rowPl[i]:T.S.colPl[j];   /* the condition, plural */
+   const ePl=useRow?T.S.colPl[j]:T.S.rowPl[i];   /* the event, plural */
+   const phrasings=[
+     "Given that the "+T.S.who+" "+cP+", find the probability that the "+T.S.who+" "+eP+".",
+     "Of the "+T.S.whoP+" who "+cPl+", what fraction "+ePl+"?",
+     "A "+T.S.who+" is picked at random from those who "+cPl+". Find the probability that the "
+       +T.S.who+" "+eP+"."
+   ];
+   const forms=["which","denom"];
+   if(pick(forms)==="denom"){
+     return {q:"<b>What number will the answer be divided by?</b>",
+       scene:"The table shows "+T.S.q+". "+pick(phrasings),
+       vis:tableHTML(T),
+       opts:shuffle(numOpts(condTot,
+         [{v:T.G, w:"That is everybody. The condition has already ruled most of them out."},
+          {v:otherTot, w:"That is the total for "+otherName.toLowerCase()+", which is the event being asked about, not the condition."},
+          {v:T.cells[i][j], w:"That is a single cell — the numerator, not the denominator."},
+          {v:condTot-T.cells[i][j], w:"That is the rest of the condition group."},
+          {v:T.G-condTot, w:"That is everybody outside the condition."}],
+         "The condition is “"+condName.toLowerCase()+"”, and there are "+condTot+" of them, so "+condTot+" is the new denominator.",
+         [{v:T.G-otherTot, w:"That is everybody outside "+otherName.toLowerCase()+", which is neither group here."},
+          {v:otherTot-T.cells[i][j], w:"That is the rest of the "+otherName.toLowerCase()+" group."}]))};
+   }
+   return {q:"<b>Which event is the condition?</b>",
+     scene:"The table shows "+T.S.q+". "+pick(phrasings),
+     opts:shuffle(distinctOpts([
+       {label:condName, correct:true,
+        note:"That is what you have been told. It replaces the sample space, so its total of "+condTot+" becomes the denominator."},
+       {label:otherName,
+        note:"That is the event whose probability is being asked for — the part on the left of the bar."},
+       {label:"Both of them",
+        note:"Only one can be the condition; the other is what is being computed."},
+       {label:"Neither — the whole survey is the condition",
+        note:"The whole survey is the condition only when nothing has been given. Here something has."}
+     ]).slice(0,4)), two:true};
+ }
+},
+{
+ title:"From the table",
+ sub:"Cross out everything outside the condition, then divide.",
+ gen:function(){
+   const T=someTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const useRow=Math.random()<.5;
+   const cell=T.cells[i][j];
+   const cond=useRow?T.rowT[i]:T.colT[j];
+   const other=useRow?T.colT[j]:T.rowT[i];
+   const evP=useRow?T.S.colP[j]:T.S.rowP[i];
+   const cdP=useRow?T.S.rowP[i]:T.S.colP[j];
+   const evPl=useRow?T.S.colPl[j]:T.S.rowPl[i];    /* plural, for "20 of them are female" */
+   const cdPl=useRow?T.S.rowPl[i]:T.S.colPl[j];
+   const condName=useRow?T.S.rows[i]:T.S.cols[j];
+   const otherName=useRow?T.S.cols[j]:T.S.rows[i];
+   return {q:"<b>Given that the "+T.S.who+" "+cdP+", what is the probability that the "+T.S.who+" "+evP+"?</b>",
+     scene:"The table shows "+T.S.q+".",
+     vis:tableHTML(T,{cond:[useRow?"row":"col", useRow?i:j], hit:[i,j], key:true}),
+     opts:shuffle(fracOpts(cell,cond,
+       condPool(cell,cond,other,T.G,{cond:condName.toLowerCase(), other:otherName.toLowerCase()}),
+       "Only the "+cond+" "+T.S.whoP+" who "+cdPl+" are still possible, and "+cell+" of them "+evPl
+       +": "+sumText(cell,cond)+".",
+       condSpares(cell,cond,other,T.G)))};
+ }
+},
+{
+ title:"Which way round",
+ sub:"Same cell on top, two different denominators.",
+ gen:function(){
+   const T=someTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const cell=T.cells[i][j];
+   const rowName=T.S.rows[i], colName=T.S.cols[j];
+   const forms=["value","which","compare"];
+   const f=pick(forms);
+   if(f==="compare"&&Math.random()<.5){
+     return {q:"<b>What is <i>different</i> between "+barHTML(colName.toLowerCase(),rowName.toLowerCase())
+       +" and "+barHTML(rowName.toLowerCase(),colName.toLowerCase())+"?</b>",
+       scene:"The table shows "+T.S.q+".",
+       vis:tableHTML(T,{hit:[i,j]}),
+       opts:shuffle(distinctOpts([
+         {label:"The denominators — "+T.rowT[i]+" in one, "+T.colT[j]+" in the other", correct:true,
+          note:"The condition supplies the denominator, and the two conditions are different groups: "
+            +fracText(cell,T.rowT[i])+" against "+fracText(cell,T.colT[j])+"."},
+         {label:"The numerators",
+          note:"The numerators are the same — both count the "+cell+" in that one cell."},
+         {label:"Both the numerators and the denominators",
+          note:"Only the denominators change. The numerator is the same cell either way."},
+         {label:"Nothing — they are the same number",
+          note:"They divide the same "+cell+" by "+T.rowT[i]+" and by "+T.colT[j]+", which are different numbers."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="compare"){
+     return {q:"<b>What is the same in "+barHTML(colName.toLowerCase(),rowName.toLowerCase())
+       +" and "+barHTML(rowName.toLowerCase(),colName.toLowerCase())+"?</b>",
+       scene:"The table shows "+T.S.q+".",
+       vis:tableHTML(T,{hit:[i,j]}),
+       opts:shuffle(distinctOpts([
+         {label:"The numerator — both are "+cell+" on top", correct:true,
+          note:"Both count the "+cell+" who are in that cell. They differ only in what they divide by: "
+            +T.rowT[i]+" against "+T.colT[j]+", giving "+fracText(cell,T.rowT[i])+" and "+fracText(cell,T.colT[j])+"."},
+         {label:"The denominator",
+          note:"The denominators are the ones that differ — "+T.rowT[i]+" and "+T.colT[j]+"."},
+         {label:"Everything — they are the same number",
+          note:"They are equal only when the two totals happen to match. Here they are "+T.rowT[i]+" and "+T.colT[j]+"."},
+         {label:"Nothing at all",
+          note:"The numerator is shared — it is the same cell of the table."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="which"){
+     const wantRow=Math.random()<.5;   /* which conditional is being asked for */
+     const target=wantRow?T.rowT[i]:T.colT[j];
+     const condName=wantRow?rowName:colName;
+     const evName=wantRow?colName:rowName;
+     return {q:"<b>Which fraction is "+barHTML(evName.toLowerCase(),condName.toLowerCase())+"?</b>",
+       scene:"The table shows "+T.S.q+".",
+       vis:tableHTML(T,{cond:[wantRow?"row":"col", wantRow?i:j], hit:[i,j]}),
+       opts:shuffle(ratioOpts(cell,target,[
+         {n:cell, d:(wantRow?T.colT[j]:T.rowT[i]),
+          w:"That divides by "+evName.toLowerCase()+", which is the event, not the condition. It gives "
+            +barHTML(condName.toLowerCase(),evName.toLowerCase())+" instead."},
+         {n:cell, d:T.G,
+          w:"That divides by everybody, which is the joint probability rather than a conditional."},
+         {n:target, d:T.G,
+          w:"That is the probability of the condition itself."},
+         {n:(wantRow?T.colT[j]:T.rowT[i]), d:T.G,
+          w:"That is the event's own probability, with nothing given."},
+         {n:target-cell, d:target,
+          w:"That counts the part of the condition where the event does <i>not</i> happen."},
+         {n:target, d:cell===0?1:cell,
+          w:"That is upside down — the condition's total belongs underneath."}
+       ],
+       "The condition is "+condName.toLowerCase()+", so its total of "+target+" is the denominator: "+fracText(cell,target)+".")), two:true};
+   }
+   const wantRow=Math.random()<.5;
+   const cond=wantRow?T.rowT[i]:T.colT[j];
+   const other=wantRow?T.colT[j]:T.rowT[i];
+   const condName=wantRow?rowName:colName, evName=wantRow?colName:rowName;
+   return {q:"<b>What is "+barHTML(evName.toLowerCase(),condName.toLowerCase())+"?</b>",
+     scene:"The table shows "+T.S.q+".",
+     vis:tableHTML(T,{cond:[wantRow?"row":"col", wantRow?i:j], hit:[i,j], key:true}),
+     opts:shuffle(fracOpts(cell,cond,
+       condPool(cell,cond,other,T.G,{cond:condName.toLowerCase(), other:evName.toLowerCase()}),
+       "Given "+condName.toLowerCase()+", only those "+cond+" remain, and "+cell+" of them are also "
+       +evName.toLowerCase()+": "+fracText(cell,cond)+". The other way round would be "+fracText(cell,other)+".",
+       condSpares(cell,cond,other,T.G)))};
+ }
+},
+{
+ title:"Conditional or joint",
+ sub:"“Given” divides by the group; “and” divides by everybody.",
+ gen:function(){
+   const T=someTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const cell=T.cells[i][j];
+   const rowName=T.S.rows[i], colName=T.S.cols[j];
+   const wantCond=Math.random()<.5;
+   const qText=wantCond
+     ? ("Given that the "+T.S.who+" "+T.S.rowP[i]+", what is the probability that the "+T.S.who+" "+T.S.colP[j]+"?")
+     : ("A "+T.S.who+" is picked at random from everybody surveyed. What is the probability that the "+T.S.who+" "
+        +T.S.rowP[i]+" <b>and</b> "+T.S.colP[j]+"?");
+   const ansN=cell, ansD=wantCond?T.rowT[i]:T.G;
+   return {q:"<b>"+qText+"</b>",
+     scene:"The table shows "+T.S.q+".",
+     vis:tableHTML(T,wantCond?{cond:["row",i], hit:[i,j]}:{hit:[i,j]}),
+     opts:shuffle(fracOpts(ansN,ansD,
+       [{n:cell, d:wantCond?T.G:T.rowT[i], w:wantCond
+           ?("That divides by everybody. Being told the "+T.S.who+" "+T.S.rowP[i]+" rules out all but "+T.rowT[i]+".")
+           :("That divides by the "+rowName.toLowerCase()+" only. Nothing has been given here — the pick is from all "+T.G+".")},
+        {n:cell, d:T.colT[j], w:"That divides by the "+colName.toLowerCase()+" column, which is neither the condition nor the whole survey."},
+        {n:T.rowT[i], d:T.G, w:"That is the probability of being "+rowName.toLowerCase()+" at all."},
+        {n:T.colT[j], d:T.G, w:"That is the probability of the column event on its own."},
+        {n:T.rowT[i]-cell, d:wantCond?T.rowT[i]:T.G, w:"That counts the part of the row where the column event does not hold."},
+        {n:T.G-T.rowT[i], d:T.G, w:"That is the probability of <i>not</i> being "+rowName.toLowerCase()+"."},
+        {n:T.colT[j]-cell, d:T.colT[j], w:"That works inside the "+colName.toLowerCase()+" column instead."},
+        {n:T.G-T.colT[j], d:T.G, w:"That is the probability of not being in the "+colName.toLowerCase()+" column."},
+        {n:cell, d:T.G-T.rowT[i]===0?1:T.G-T.rowT[i], w:"That divides by everybody <i>outside</i> the "+rowName.toLowerCase()+" row."}],
+       wantCond
+         ? ("“Given” makes the "+T.rowT[i]+" "+rowName.toLowerCase()+" the new sample space: "+sumText(cell,T.rowT[i])+".")
+         : ("“And” with a pick from everybody keeps the grand total underneath: "+sumText(cell,T.G)+".")))};
+ }
+},
+{
+ title:"By the formula",
+ sub:"P(A and B) ÷ P(B), and why it reduces.",
+ gen:function(){
+   const T=someTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const cell=T.cells[i][j], cond=T.rowT[i];
+   const rowName=T.S.rows[i], colName=T.S.cols[j];
+   const forms=["setup","value","why"];
+   const f=pick(forms);
+   if(f==="setup"){
+     return {q:"<b>Which division gives "+barHTML(colName.toLowerCase(),rowName.toLowerCase())+"?</b>",
+       scene:"The table shows "+T.S.q+".",
+       facts:factsHTML([["P("+rowName.toLowerCase()+" and "+colName.toLowerCase()+")",fracText(cell,T.G)],
+         ["P("+rowName.toLowerCase()+")",fracText(cond,T.G)],
+         ["P("+colName.toLowerCase()+")",fracText(T.colT[j],T.G)]]),
+       opts:shuffle(distinctOpts([
+         {label:"P(both) ÷ P("+rowName.toLowerCase()+")", correct:true,
+          note:"Dividing by the condition's probability: "+fracText(cell,T.G)+" ÷ "+fracText(cond,T.G)+" = "+fracText(cell,cond)+"."},
+         {label:"P(both) ÷ P("+colName.toLowerCase()+")",
+          note:"That divides by the event rather than the condition, giving the other conditional, "+fracText(cell,T.colT[j])+"."},
+         {label:"P("+rowName.toLowerCase()+") ÷ P(both)",
+          note:"That is upside down, and larger than 1."},
+         {label:"P("+rowName.toLowerCase()+") × P("+colName.toLowerCase()+")",
+          note:"Multiplying the two separate probabilities answers a different question, and only matches when the events are independent."}
+       ]).slice(0,4)), two:true};
+   }
+   if(f==="why"&&Math.random()<.5){
+     return {q:"<b>In P(A and B) ÷ P(B), what divides out?</b>",
+       opts:shuffle([
+         {label:"The grand total, which sits under both fractions", correct:true,
+          note:"("+cell+"/"+T.G+") ÷ ("+cond+"/"+T.G+") = "+cell+"/"+cond+". The "+T.G+" is in both, so it goes."},
+         {label:"P(B), leaving P(A) on its own",
+          note:"Then the condition would make no difference at all, and P("+colName.toLowerCase()
+            +") is "+fracText(T.colT[j],T.G)+", not "+fracText(cell,cond)+"."},
+         {label:"The numerator of the first fraction",
+          note:"The numerator is the "+cell+" that survives into the answer."},
+         {label:"Nothing — the division has to be carried out in full",
+          note:"It can be, and it gives the same "+fracText(cell,cond)+". Cancelling the "+T.G+" is just the short way."}
+       ]), one:true};
+   }
+   if(f==="why"){
+     return {q:"<b>Why does P(A and B) ÷ P(B) reduce to n(A and B) ÷ n(B)?</b>",
+       opts:shuffle([
+         {label:"Both fractions have the grand total underneath, so it cancels", correct:true,
+          note:"("+cell+"/"+T.G+") ÷ ("+cond+"/"+T.G+") = "+cell+"/"+cond+". The "+T.G+" appears twice and divides out."},
+         {label:"Because the grand total is always 1",
+          note:"The grand total is a count, here "+T.G+". It is the <i>probability</i> of the whole space that is 1."},
+         {label:"Because A and B are independent",
+          note:"The cancelling happens whether or not they are independent."},
+         {label:"It does not reduce — the two give different answers",
+          note:"They agree exactly: both give "+fracText(cell,cond)+"."}
+       ]), one:true};
+   }
+   return {q:"<b>Use the formula to find "+barHTML(colName.toLowerCase(),rowName.toLowerCase())+".</b>",
+     scene:"The table shows "+T.S.q+".",
+     facts:factsHTML([["P("+rowName.toLowerCase()+" and "+colName.toLowerCase()+")",fracText(cell,T.G)],
+       ["P("+rowName.toLowerCase()+")",fracText(cond,T.G)]]),
+     opts:shuffle(fracOpts(cell,cond,
+       condPool(cell,cond,T.colT[j],T.G,{cond:rowName.toLowerCase(), other:colName.toLowerCase()}),
+       fracText(cell,T.G)+" ÷ "+fracText(cond,T.G)+" = "+fracText(cell,cond)+".",
+       condSpares(cell,cond,T.colT[j],T.G)))};
+ }
+},
+{
+ title:"Both routes agree",
+ sub:"Count inside the condition, or divide two probabilities.",
+ gen:function(){
+   const T=someTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const cell=T.cells[i][j], cond=T.rowT[i];
+   const rowName=T.S.rows[i], colName=T.S.cols[j];
+   /* the form is picked once; picking inside each test would weight the branches */
+   const f7=pick(["agree","value"]);
+   if(f7==="agree"&&Math.random()<.5){
+     /* named P(both), not "P(row and col)", which reads as two ands in a row */
+     return {q:"<b>Why is "+barHTML(colName.toLowerCase(),rowName.toLowerCase())
+       +" bigger than P(both) — the chance that a "+T.S.who+" is in that cell?</b>",
+       scene:"The table shows "+T.S.q+".",
+       facts:factsHTML([["P(both)",fracText(cell,T.G)],
+         [barHTML(colName.toLowerCase(),rowName.toLowerCase()).replace(/<[^>]+>/g,""),fracText(cell,cond)]]),
+       opts:shuffle(distinctOpts([
+         {label:"The same "+cell+" is measured against "+cond+" instead of "+T.G, correct:true,
+          note:"Both count the same "+cell+" people. The conditional divides them by the "+cond+" "
+            +rowName.toLowerCase()+"; the joint divides them by all "+T.G+". A smaller denominator gives a bigger fraction."},
+         {label:"The conditional counts more people",
+          note:"It counts exactly the same "+cell+". Only the denominator changes."},
+         {label:"Because dividing always makes a number bigger",
+          note:"Dividing by something below 1 makes it bigger; dividing by something above 1 makes it smaller."},
+         {label:"It is not bigger — the joint probability is",
+          note:fracText(cell,cond)+" against "+fracText(cell,T.G)+". The conditional is the larger of the two."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f7==="agree"){
+     return {q:"<b>Counting inside the row gives "+fracText(cell,cond)+". What does the formula give?</b>",
+       scene:"The table shows "+T.S.q+". The event is "+barHTML(colName.toLowerCase(),rowName.toLowerCase())+".",
+       facts:factsHTML([["by counting",sumText(cell,cond)],
+         ["P(both)",fracText(cell,T.G)],["P("+rowName.toLowerCase()+")",fracText(cond,T.G)]]),
+       opts:shuffle(distinctOpts([
+         {label:"The same, "+fracText(cell,cond), correct:true,
+          note:"("+cell+"/"+T.G+") ÷ ("+cond+"/"+T.G+") = "+cell+"/"+cond+". The two routes are the same arithmetic written differently."},
+         {label:fracText(cell,T.G)+", the joint probability",
+          note:"That is the numerator of the formula before it is divided by P("+rowName.toLowerCase()+")."},
+         {label:fracText(cond,T.G)+", the condition's probability",
+          note:"That is the denominator of the formula."},
+         {label:"Something smaller, because dividing makes it smaller",
+          note:"Dividing by a fraction below 1 makes it <i>larger</i>: "+fracText(cell,T.G)+" grows to "+fracText(cell,cond)+"."}
+       ]).slice(0,4)), one:true};
+   }
+   const useRow=Math.random()<.5;
+   const c2=useRow?T.rowT[i]:T.colT[j];
+   const o2=useRow?T.colT[j]:T.rowT[i];
+   const cn=useRow?rowName:colName, en=useRow?colName:rowName;
+   return {q:"<b>What is "+barHTML(en.toLowerCase(),cn.toLowerCase())+"?</b>",
+     scene:"The table shows "+T.S.q+". Use whichever route you prefer.",
+     vis:tableHTML(T,{cond:[useRow?"row":"col", useRow?i:j], hit:[i,j]}),
+     facts:factsHTML([["P(both)",fracText(cell,T.G)],["P("+cn.toLowerCase()+")",fracText(c2,T.G)]]),
+     opts:shuffle(fracOpts(cell,c2,
+       condPool(cell,c2,o2,T.G,{cond:cn.toLowerCase(), other:en.toLowerCase()}),
+       "By counting: "+sumText(cell,c2)+". By formula: "+fracText(cell,T.G)+" ÷ "+fracText(c2,T.G)
+       +". Both give "+fracText(cell,c2)+".",
+       condSpares(cell,c2,o2,T.G)))};
+ }
+},
+{
+ title:"When it is 0 or 1",
+ sub:"The condition may rule the event out, or guarantee it.",
+ gen:function(){
+   const want=pick(["one","zero","one","zero","mid"]);
+   const asWhy=(Math.random()<.5&&want!=="mid");
+   /* the numeric branch needs n(A) and n(B) to differ or its options collapse;
+      the verbal "why" branch is fine either way, so it keeps the full range */
+   const c=cardCond({want:want, distinct:!asWhy});
+   const P=fracText(c.both,c.nB);
+   if(asWhy){
+     const isOne=(c.both===c.nB);
+     return {q:"<b>Why is "+barHTML(c.A.t,c.B.t)+" equal to "+(isOne?"1":"0")+"?</b>",
+       scene:"One card is drawn from a standard 52-card deck.",
+       opts:shuffle(distinctOpts([
+         {label:isOne?("Every "+c.B.t.replace(/^an? /,"")+" is also "+c.A.t):("No "+c.B.t.replace(/^an? /,"")+" is "+c.A.t), correct:true,
+          note:isOne
+            ?("All "+c.nB+" of them qualify, so the fraction is "+c.nB+"/"+c.nB+" = 1. The condition guarantees the event.")
+            :("None of the "+c.nB+" qualifies, so the fraction is 0/"+c.nB+" = 0. The condition rules the event out.")},
+         {label:isOne?("No "+c.B.t.replace(/^an? /,"")+" is "+c.A.t):("Every "+c.B.t.replace(/^an? /,"")+" is also "+c.A.t),
+          note:isOne?"That would give 0. Here every one of them qualifies.":"That would give 1. Here none of them does."},
+         {label:"Because the two events are independent",
+          note:"Independence would give P(A) itself, which is "+fracText(c.nA,52)+" — not "+(isOne?"1":"0")+"."},
+         {label:"Because there are no "+c.B.t.replace(/^an? /,"")+"s in the deck",
+          note:"There are "+c.nB+" of them; the question is how many of those are also "+c.A.t+"."}
+       ]).slice(0,4)), one:true};
+   }
+   return {q:"<b>What is "+barHTML(c.A.t,c.B.t)+"?</b>",
+     scene:"One card is drawn from a standard 52-card deck.",
+     facts:factsHTML([["n("+c.B.t+")",String(c.nB)],["n("+c.A.t+" and "+c.B.t+")",String(c.both)]]),
+     opts:shuffle(fracOpts(c.both,c.nB,
+       [{n:c.both, d:52, w:"That divides by the whole deck. Being told the card is "+c.B.t+" leaves only "+c.nB+" possibilities."},
+        {n:c.nA, d:52, w:"That is P("+c.A.t+") with nothing given."},
+        {n:c.nB, d:52, w:"That is P("+c.B.t+"), the condition's own probability."},
+        {n:c.both, d:c.nA===0?1:c.nA, w:"That divides by the event's total rather than the condition's."},
+        {n:c.nB-c.both, d:c.nB, w:"That counts the "+c.B.t.replace(/^an? /,"")+"s that are <i>not</i> "+c.A.t+"."}],
+       "Of the "+c.nB+" "+c.B.p+", "+c.both+" "+(c.both===1?"is":"are")+" also "+(c.both===1?c.A.t:c.A.p)
+       +": "+sumText(c.both,c.nB)+".",
+       /* spares: when the answer is 0 or 1 the five above collapse onto one another,
+          so three more are held in reserve to keep four distinct options on screen */
+       [{n:c.nA, d:c.nB, w:"That puts the whole of "+c.A.t.replace(/^an? /,"")+" on top. Only the "
+           +c.both+" that "+(c.both===1?"is":"are")+" also "+c.B.t+" can count."},
+        {n:52-c.nB, d:52, w:"That is the probability of <i>not</i> drawing "+c.B.t+" — the part of the deck the condition rules out."},
+        {n:c.nA-c.both, d:c.nA===0?1:c.nA, w:"That works inside "+c.A.t.replace(/^an? /,"")+" instead of inside the condition."}]))};
+ }
+},
+{
+ title:"The second draw, renamed",
+ sub:"3/51 was a conditional probability all along.",
+ gen:function(){
+   const KINDS=[{t:"king",p:"kings",n:4},{t:"queen",p:"queens",n:4},{t:"heart",p:"hearts",n:13},
+                {t:"spade",p:"spades",n:13},{t:"face card",p:"face cards",n:12}];
+   const K=pick(KINDS);
+   const forms=["second","name","product"];
+   const f=pick(forms);
+   if(f==="name"){
+     return {q:"<b>What is another name for the second fraction, "+(K.n-1)+"/51?</b>",
+       scene:"Two cards are drawn from a deck, and the first is a "+K.t+" which is not put back.",
+       opts:shuffle(distinctOpts([
+         {label:"P(a "+K.t+" | the first was a "+K.t+")", correct:true,
+          note:"Being told the first was a "+K.t+" leaves "+(K.n-1)+" of them among 51 cards. The without-replacement fractions were conditionals all along."},
+         {label:"P(the first was a "+K.t+" | a "+K.t+")",
+          note:"That has the two the wrong way round — the first draw is what is known, so it belongs after the bar."},
+         {label:"P(a "+K.t+" and the first was a "+K.t+")",
+          note:"The joint probability of both would be "+fracText(K.n,52)+" × "+fracText(K.n-1,51)+", which is smaller."},
+         {label:"P(a "+K.t+")",
+          note:"That is "+fracText(K.n,52)+", the chance with nothing known."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="product"){
+     const joint=frac(K.n*(K.n-1), 52*51);
+     return {q:"<b>Which product gives P(both are "+K.p+")?</b>",
+       scene:"Two cards are drawn from a deck, one after another, and neither is put back.",
+       opts:shuffle(distinctOpts([
+         {label:"P(a "+K.t+") × P(a "+K.t+" | the first was a "+K.t+")", correct:true,
+          note:fracText(K.n,52)+" × "+fracText(K.n-1,51)+" = "+joint.txt+". The second factor is a conditional, which is exactly why the deck shrank."},
+         {label:"P(a "+K.t+") × P(a "+K.t+")",
+          note:"That is the with-replacement answer, "+fracText(K.n*K.n,52*52)+", where the second draw faces the full deck."},
+         {label:"P(a "+K.t+") + P(a "+K.t+" | the first was a "+K.t+")",
+          note:"Adding is the <i>or</i> rule. Both happening calls for a product."},
+         {label:"P(a "+K.t+" | the first was a "+K.t+") on its own",
+          note:"That is only the second draw. The first has to happen too."}
+       ]).slice(0,4)), one:true};
+   }
+   return {q:"<b>What is P(a "+K.t+" | the first card was a "+K.t+")?</b>",
+     scene:"Two cards are drawn from a deck, one after another, and the first is not put back.",
+     vis:'<div class="chain">'
+       +'<div class="link"><div class="hd">already known</div><div class="bx">a '+K.t+" was drawn</div>"
+       +'<div class="pool">and kept out</div></div>'
+       +'<div class="times">→</div>'
+       +'<div class="link"><div class="hd">what is left</div><div class="bx c">'+fracHTML(K.n-1,51)+"</div>"
+       +'<div class="pool">'+(K.n-1)+" "+K.p+" among 51 cards</div></div></div>",
+     opts:shuffle(fracOpts(K.n-1,51,
+       [{n:K.n, d:52, w:"That is the chance with nothing known. Here one "+K.t+" has already gone."},
+        {n:K.n, d:51, w:"That reduces the deck but not the "+K.p+". Removing a "+K.t+" leaves one fewer of them."},
+        {n:K.n-1, d:52, w:"That reduces the "+K.p+" but not the deck."},
+        {n:K.n*(K.n-1), d:52*51, w:"That is the joint probability of both draws, not the conditional for the second."},
+        {n:K.n-2, d:50, w:"That is the third draw, after two "+K.p+" have gone."}],
+       "One "+K.t+" is gone and one card is gone, so "+(K.n-1)+" "+K.p+" remain among 51 cards: "+sumText(K.n-1,51)+"."))};
+ }
+},
+{
+ title:"Any condition",
+ sub:"Tables, cards and draws, all mixed.",
+ gen:function(){
+   const t=pick(["table","table","which","joint","card"]);
+   if(t==="card"){
+     const c=cardCond({want:"mid"});
+     return {q:"<b>What is "+barHTML(c.A.t,c.B.t)+"?</b>",
+       scene:"One card is drawn from a standard 52-card deck.",
+       facts:factsHTML([["n("+c.B.t+")",String(c.nB)],["n(both)",String(c.both)]]),
+       opts:shuffle(fracOpts(c.both,c.nB,
+         [{n:c.both, d:52, w:"That divides by the whole deck rather than by the condition."},
+          {n:c.nA, d:52, w:"That is P("+c.A.t+") with nothing given."},
+          {n:c.both, d:c.nA, w:"That divides by the event's total, giving the other conditional."},
+          {n:c.nB-c.both, d:c.nB, w:"That counts the ones that do not qualify."}],
+         c.both+" of the "+c.nB+" qualify: "+sumText(c.both,c.nB)+".",
+         [{n:c.nB, d:52, w:"That is P("+c.B.t+"), the condition's own probability."},
+          {n:52-c.nB, d:52, w:"That is the probability of <i>not</i> drawing "+c.B.t+"."},
+          {n:c.nA, d:c.nB, w:"That puts the whole of "+c.A.t.replace(/^an? /,"")+" over the condition's total; only the overlap belongs on top."},
+          {n:52-c.nA, d:52, w:"That is the probability of <i>not</i> drawing "+c.A.t+"."}]))};
+   }
+   const T=someTable();
+   const i=ri(0,T.R-1), j=ri(0,T.C-1);
+   const cell=T.cells[i][j];
+   const rowName=T.S.rows[i], colName=T.S.cols[j];
+   if(t==="which"){
+     const wantRow=Math.random()<.5;
+     const target=wantRow?T.rowT[i]:T.colT[j];
+     const cn=wantRow?rowName:colName, en=wantRow?colName:rowName;
+     return {q:"<b>Which fraction is "+barHTML(en.toLowerCase(),cn.toLowerCase())+"?</b>",
+       scene:"The table shows "+T.S.q+".",
+       vis:tableHTML(T,{cond:[wantRow?"row":"col", wantRow?i:j], hit:[i,j]}),
+       opts:shuffle(ratioOpts(cell,target,[
+         {n:cell, d:(wantRow?T.colT[j]:T.rowT[i]), w:"That divides by the event, giving the reversed conditional."},
+         {n:cell, d:T.G, w:"That is the joint probability."},
+         {n:target, d:T.G, w:"That is the condition's own probability."},
+         {n:(wantRow?T.colT[j]:T.rowT[i]), d:T.G, w:"That is the event's own probability, with nothing given."},
+         {n:target-cell, d:target, w:"That counts the part of the condition where the event fails."},
+         {n:target, d:cell===0?1:cell, w:"That is upside down."}
+       ],
+       "The condition's total is the denominator: "+fracText(cell,target)+".")), two:true};
+   }
+   if(t==="joint"){
+     return {q:"<b>A "+T.S.who+" is picked at random from everybody. What is the probability that the "
+       +T.S.who+" "+T.S.rowP[i]+" <b>and</b> "+T.S.colP[j]+"?</b>",
+       scene:"The table shows "+T.S.q+".",
+       vis:tableHTML(T,{hit:[i,j]}),
+       opts:shuffle(fracOpts(cell,T.G,
+         [{n:cell, d:T.rowT[i], w:"That divides by the "+rowName.toLowerCase()+" row, which would be a conditional. Nothing has been given here."},
+          {n:cell, d:T.colT[j], w:"That divides by the "+colName.toLowerCase()+" column."},
+          {n:T.rowT[i], d:T.G, w:"That is the row on its own."},
+          {n:T.colT[j], d:T.G, w:"That is the column on its own."},
+          {n:T.G-T.rowT[i], d:T.G, w:"That is the probability of not being "+rowName.toLowerCase()+"."},
+          {n:T.rowT[i]-cell, d:T.G, w:"That counts the rest of the row instead of the cell."}],
+         "The pick is from all "+T.G+", so the grand total stays underneath: "+fracText(cell,T.G)+"."))};
+   }
+   const useRow=Math.random()<.5;
+   const cond=useRow?T.rowT[i]:T.colT[j];
+   const other=useRow?T.colT[j]:T.rowT[i];
+   const cn=useRow?rowName:colName, en=useRow?colName:rowName;
+   const cdP=useRow?T.S.rowP[i]:T.S.colP[j];
+   const evP=useRow?T.S.colP[j]:T.S.rowP[i];
+   return {q:"<b>Given that the "+T.S.who+" "+cdP+", what is the probability that the "+T.S.who+" "+evP+"?</b>",
+     scene:"The table shows "+T.S.q+".",
+     vis:tableHTML(T,{cond:[useRow?"row":"col", useRow?i:j], hit:[i,j]}),
+     opts:shuffle(fracOpts(cell,cond,
+       condPool(cell,cond,other,T.G,{cond:cn.toLowerCase(), other:en.toLowerCase()}),
+       "The condition leaves "+cond+" "+T.S.whoP+", and "+cell+" of them "
+       +(useRow?T.S.colPl[j]:T.S.rowPl[i])+": "+sumText(cell,cond)+".",
+       condSpares(cell,cond,other,T.G)))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {kind:"row",    lbl:"action, given male"},
+  {kind:"col",    lbl:"male, given action"},
+  {kind:"both",   lbl:"the two compared"},
+  {kind:"joint",  lbl:"given, or and"},
+  {kind:"formula",lbl:"the formula"},
+  {kind:"draw",   lbl:"3/51, renamed"}
+];
+/* every note is built from the same figures its panel draws */
+const HNOTES={
+  row:function(){ return "Your worksheet's first conditional. Being told the person is male removes the whole female row, so 27 is all that is left to divide by. "
+    +"Ten of those 27 prefer action, giving "+fracText(10,27)+"."; },
+  col:function(){ return "The same cell, the other way round. Now the condition is “prefers action”, which removes the comedy column and leaves 19. "
+    +"The ten has not moved — only the denominator has, giving "+fracText(10,19)+"."; },
+  both:function(){ return "Side by side. Both fractions have 10 on top, because both count the same people. "
+    +"The difference is entirely which total survives the condition: 27 males against 19 action-preferrers."; },
+  joint:function(){ return "The contrast worth keeping straight. “Given male” divides by 27; “male and action”, picked from everybody, divides by 56. "
+    +"Same cell, three different denominators across these panels — 27, 19 and 56."; },
+  formula:function(){ return "The formula route, on the same figures. "+fracText(10,56)+" ÷ "+fracText(27,56)
+    +" = "+fracText(10,27)+", because the 56 appears in both fractions and cancels. That is why counting inside the row gives the same answer with less work."; },
+  draw:function(){ return "The loop closing. The 3/51 from the multiplication rule is P(a king | the first was a king) — one king gone from four, one card gone from 52. "
+    +"Every without-replacement problem in the last ladder was conditional probability without the notation."; }
+};
+let heroSel=0;
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="row"){
+    body=tableHTML(SHEET,{cond:["row",0], hit:[0,0], key:true})
+      +'<div class="eq" style="margin-top:14px">'
+      +'<span class="bar">P(action | male)</span> = '+fracHTML(10,27)
+      +'<span class="lbl">the female row is gone — 27 is the new sample space</span></div>';
+  }else if(h.kind==="col"){
+    body=tableHTML(SHEET,{cond:["col",0], hit:[0,0], key:true})
+      +'<div class="eq" style="margin-top:14px">'
+      +'<span class="bar">P(male | action)</span> = '+fracHTML(10,19)
+      +'<span class="lbl">the comedy column is gone — 19 is the new sample space</span></div>';
+  }else if(h.kind==="both"){
+    body='<div class="duo">'
+      +'<div class="pane"><div class="ttl">given male</div>'
+        +'<div class="fm">of the <b>27</b> males,<br>10 prefer action</div>'
+        +'<div class="vl">'+fracHTML(10,27)+"</div>"
+        +'<div class="wk">the female row drops out</div></div>'
+      +'<div class="pane b"><div class="ttl">given action</div>'
+        +'<div class="fm">of the <b>19</b> who prefer action,<br>10 are male</div>'
+        +'<div class="vl">'+fracHTML(10,19)+"</div>"
+        +'<div class="wk">the comedy column drops out</div></div></div>'
+      +'<div class="eq" style="margin-top:14px">same 10 on top, two different denominators'
+      +'<span class="lbl">the word after the bar decides which</span></div>';
+  }else if(h.kind==="joint"){
+    body='<table class="ct"><thead><tr><th>question</th><th>denominator</th><th>value</th></tr></thead><tbody>'
+      +'<tr><td class="lab">P(action | male)</td><td>27, the males</td><td class="p">'+fracText(10,27)+"</td></tr>"
+      +'<tr><td class="lab">P(male | action)</td><td>19, the action group</td><td class="b">'+fracText(10,19)+"</td></tr>"
+      +'<tr><td class="lab">P(male and action)</td><td>56, everybody</td><td class="p">'+fracText(10,56)+"</td></tr>"
+      +"</tbody></table>"
+      +'<div class="eq" style="margin-top:12px">the numerator is 10 in all three'
+      +'<span class="lbl">“given” shrinks the pool; “and”, picked from everybody, does not</span></div>';
+  }else if(h.kind==="formula"){
+    body='<div class="eq">'
+      +'<span class="bar">P(A | B)</span> = <span class="frac"><span>P(A and B)</span><span class="den">P(B)</span></span>'
+      +'<span class="lbl">the general formula</span>'
+      +"= <span class=\"frac\"><span>"+fracHTML(10,56)+"</span><span class=\"den\">"+fracHTML(27,56)+"</span></span> = <span class=\"res\">"+fracHTML(10,27)+"</span>"
+      +'<span class="lbl">the 56 is in both, so it cancels</span>'
+      +"= <span class=\"frac\"><span>n(A and B)</span><span class=\"den\">n(B)</span></span> = "+fracHTML(10,27)
+      +'<span class="lbl">which is just counting inside the row</span></div>';
+  }else{
+    body='<div class="chain">'
+      +'<div class="link"><div class="hd">already known</div><div class="bx">a king was drawn</div>'
+      +'<div class="pool">and kept out</div></div>'
+      +'<div class="times">→</div>'
+      +'<div class="link"><div class="hd">what is left</div><div class="bx c">'+fracHTML(3,51)+"</div>"
+      +'<div class="pool">3 kings among 51 cards</div></div></div>'
+      +'<div class="eq" style="margin-top:14px">'
+      +'<span class="bar">P(a king | the first was a king)</span> = <span class="res">'+fracHTML(3,51)+"</span>"
+      +'<span class="lbl">the second fraction of 4/52 × 3/51, with its proper name</span></div>';
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.vis?'<div class="vis">'+q.vis+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
