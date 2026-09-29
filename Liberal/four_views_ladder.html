@@ -1,0 +1,1299 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Four Views Ladder — one data set, four displays</title>
+<style>
+  :root{
+    --ink:#16202B;
+    --paper:#F3F6F7;
+    --card:#FFFFFF;
+    --rule:#D5DDE0;
+    --muted:#5C6A70;
+    --gv:#0F6E8C;          /* the accent: bars, stems, the histogram */
+    --gv-bg:#E2F0F5;
+    --gv-fill:#BFDCE6;
+    --poly:#A04A14;        /* the frequency polygon, carried over from the tally ladder */
+    --poly-bg:#FBEDE4;
+    --keep:#1B6B4B;        /* what a display keeps, and shaded cuts */
+    --keep-bg:#E4F2EA;
+    --keep-fill:#9ED0B5;
+    --dim:#BCC2C5;
+    --round-bg:#FCF1DA;
+    --right:#1B6B4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E4F2EA;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--gv)}
+  :focus-visible{outline:3px solid var(--gv); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(243,246,247,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--gv); font-family:var(--mono); letter-spacing:-.1em}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:19ch}
+  .lede{max-width:62ch; color:#2F3B40; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:700px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.0; text-align:center}
+  .eq .res{color:var(--gv); font-weight:700}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+
+  /* ---- the histogram and the frequency polygon ---- */
+  .chart{width:100%; max-width:620px; display:block; margin:0 auto; overflow:visible}
+  .grid{stroke:#E3E8EA; stroke-width:1}
+  .axis{stroke:#8A9296; stroke-width:1.5}
+  .ax{font-family:var(--sans); font-size:11px; fill:var(--muted)}
+  .ax.off{fill:var(--dim)}
+  .mid{font-family:var(--serif); font-size:10.5px; fill:var(--poly)}
+  .val{font-family:var(--serif); font-size:12px; font-weight:700; fill:var(--gv)}
+  .val.off{fill:var(--dim)}
+  .val.q{fill:var(--poly)}
+  .ttl{font-family:var(--sans); font-size:10.5px; fill:#79828A; letter-spacing:.06em; text-transform:uppercase}
+  .bar{fill:var(--gv-fill); stroke:var(--gv); stroke-width:1.5}
+  .bar.hit{fill:var(--gv)}
+  .bar.off{fill:#F1F3F3; stroke:#CBD1D3}
+  .bar.on{fill:var(--keep-fill); stroke:var(--keep)}
+  .poly{fill:none; stroke:var(--poly); stroke-width:2.5; stroke-linejoin:round}
+  .dot{fill:var(--poly); stroke:#fff; stroke-width:1.5}
+  .dot.hit{fill:#fff; stroke:var(--poly); stroke-width:3}
+
+  /* ---- stem-and-leaf, and the back-to-back version ---- */
+  table.sl{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:clamp(14px,3vw,16.5px); background:var(--card)}
+  table.sl th{font-family:var(--sans); font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--muted); padding:5px 14px; border-bottom:2px solid var(--gv)}
+  table.sl td{padding:4px 14px}
+  table.sl td.st{border-left:2px solid var(--gv); border-right:2px solid var(--gv); text-align:center;
+    color:var(--gv); font-weight:700; min-width:30px; background:var(--gv-bg)}
+  table.sl td.lv{letter-spacing:.32em; color:var(--ink); white-space:nowrap}
+  table.sl td.lv.r{text-align:right}
+  table.sl tr.hit td{background:#D7EBF2}
+  table.sl tr.hit td.st{background:var(--gv); color:#fff}
+  table.sl tr.off td{color:var(--dim)}
+  table.sl td.lv b{color:var(--poly)}
+  table.sl .ct{margin-left:12px; font-family:var(--sans); font-size:11px; color:#79828A; letter-spacing:0}
+  .slkey{text-align:center; font-size:12.5px; color:var(--muted); margin-top:9px; font-family:var(--sans)}
+
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:680px; margin:0 auto}
+  @media (max-width:640px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:15px 16px; text-align:center; background:var(--gv-bg)}
+  .pane.b{background:var(--poly-bg)}
+  .pane.c{background:var(--keep-bg)}
+  .pane .ttl2{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:9px; color:var(--gv)}
+  .pane.b .ttl2{color:var(--poly)} .pane.c .ttl2{color:var(--keep)}
+  .pane .fm{font-family:var(--serif); font-size:clamp(14.5px,2.9vw,17px); line-height:1.5}
+  .pane .vl{font-family:var(--serif); font-size:clamp(19px,4.2vw,26px); font-weight:700; margin-top:7px; color:var(--gv)}
+  .pane.b .vl{color:var(--poly)} .pane.c .vl{color:var(--keep)}
+  .pane .wk{font-size:12.5px; color:var(--muted); margin-top:7px; line-height:1.4}
+
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--gv); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--gv); background:var(--gv-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--gv)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3A464B}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:64ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#2F3B40}
+  .scene{max-width:58ch; margin:0 auto 14px; background:var(--gv-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:44ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(16px,3.6vw,25px); background:var(--gv-bg); border-radius:12px; padding:11px 25px; margin:0 auto 16px}
+  .vis{margin:0 auto 16px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:20px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #AFD7C2}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:42ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>▁▄█▆▃</span> The Four Views Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 21 · histograms, frequency polygons and stem-and-leaf plots</p>
+    <h1>One data set wearing four coats.</h1>
+    <p class="lede">The table, the <b>histogram</b>, the <b>frequency polygon</b> and the <b>stem-and-leaf plot</b> are four ways of drawing exactly the same forty numbers. Nothing is added when you move from one to the next, and only one of them throws anything away. Learn to read across them and a question you cannot answer in one display can often be answered in another — or, just as usefully, shown to be unanswerable there at all.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">▊</span>
+      <p><b>Histogram bars touch; bar-chart bars do not.</b> A bar chart puts separate categories side by side, so the gaps say "these do not run into one another". A histogram's classes butt up against each other along a number line — 79 is followed immediately by 80 — so the bars do too. The gap, or its absence, is information.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3A464B">Rungs 1–4 read a histogram: what it is, what one bar says, which is tallest, and how to add across several. Rungs 5–6 place the frequency polygon, which needs the class midpoint. Rungs 7–8 read a stem-and-leaf plot and connect its leaf counts back to the table. Rung 9 asks what each display keeps and what it loses. Rung 10 reads a back-to-back plot, where one side runs backwards.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Read the picture, not the memory</h3><p>Every figure you need is on screen. The bar heights, the leaves and the axis are the whole of the evidence.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Class midpoint is (lower limit + upper limit) ÷ 2, and the frequency polygon puts its point above that midpoint at the height of the frequency. Stems are the leading digits and leaves the final digit, written in increasing order — and on the <i>left</i> side of a back-to-back plot they increase <i>away</i> from the stem, so that row reads right to left.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Choosing a display is choosing what to lose</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The histogram shows shape</h3><p>Where the data piles up and how it tails off, at a glance. It cannot tell you a single person's score.</p></div>
+      <div class="step"><span class="n">02</span><h3>The stem-and-leaf keeps everything</h3><p>It is a histogram on its side built out of the actual digits, so every original value is still recoverable.</p></div>
+      <div class="step"><span class="n">03</span><h3>Back-to-back compares</h3><p>Two groups against one spine. The side with the longer row at a stem has more of its people there.</p></div>
+    </div>
+    <p class="closing">If two displays disagree, one of them was drawn wrong — the numbers underneath never changed.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Four Views Ladder · histogram (bars touch) · frequency polygon (a line through the class midpoints) · stem-and-leaf (every value kept) · back-to-back (one side reads outward)</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function sum(a){return a.reduce(function(x,y){return x+y;},0);}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+/* midpoints can be halves, so numbers are compared and printed through one place */
+function numText(v){ return (Math.round(v*2)/2===Math.round(v))?String(Math.round(v)):v.toFixed(1); }
+function numKey(v){ return (Math.round(v*100)/100).toFixed(2); }
+/* numeric options, deduplicated by VALUE; `spares` are held back in order and
+   used only when a coincidence knocks a main distractor out */
+function numOpts(ans,cands,note,spares){
+  const seen={}; seen[numKey(ans)]=1;
+  const opts=[{label:numText(ans), correct:true, note:note}];
+  shuffle(cands.slice()).concat(spares||[]).forEach(function(x){
+    if(x==null||x.v==null||!Number.isFinite(x.v)||x.v<0)return;
+    const k=numKey(x.v); if(seen[k])return; seen[k]=1;
+    opts.push({label:numText(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+function textOpts(ans,note,cands){
+  const opts=[{label:ans, correct:true, note:note}];
+  shuffle(cands.slice()).forEach(function(x){ if(x&&x.t!=null) opts.push({label:x.t, note:x.w}); });
+  return distinctOpts(opts).slice(0,4);
+}
+const ORD=["first","second","third","fourth","fifth","sixth","seventh"];
+/* "1 leaf", "4 leaves" -- a count and its noun, agreeing */
+function leafN(n){ return n+" "+(n===1?"leaf":"leaves"); }
+
+/* ================= the worksheet's own forty scores ================= */
+const SCORES=[82,47,75,64,57,82,63,93,76,68,84,54,88,77,79,80,
+              94,92,94,80,94,66,81,67,75,73,66,87,76,45,43,56,
+              57,74,50,78,71,84,59,76];
+/* Everything below is derived from that list, so the table, the histogram, the
+   polygon and the stem-and-leaf can never drift apart from each other. */
+function fromScores(list){
+  const stems=[];
+  list.forEach(function(x){ const s=Math.floor(x/10); if(stems.indexOf(s)<0) stems.push(s); });
+  stems.sort(function(a,b){return a-b;});
+  /* fill any stem with no values, so the class run stays unbroken */
+  const all=[];
+  for(let s=stems[0];s<=stems[stems.length-1];s++) all.push(s);
+  const leaves=all.map(function(s){
+    return list.filter(function(x){return Math.floor(x/10)===s;})
+               .map(function(x){return x%10;}).sort(function(a,b){return a-b;});
+  });
+  return {list:list.slice(), stems:all, leaves:leaves,
+          lo:all.map(function(s){return s*10;}), hi:all.map(function(s){return s*10+9;}),
+          f:leaves.map(function(L){return L.length;}), n:list.length, w:10};
+}
+const SHEET=(function(){
+  const D=fromScores(SCORES);
+  D.k=D.lo.length;
+  D.lead="A statistics class of 40 students sat an exam, and every score was recorded.";
+  D.whoP="students"; D.label="Test score"; D.what="Number of students";
+  D.unitOne=function(v){return "a score of "+v;};
+  return D;
+})();
+/* how many scores repeat, which is the fact a histogram cannot show */
+const REPEATS=(function(){
+  const c={}; SCORES.forEach(function(x){ c[x]=(c[x]||0)+1; });
+  const r=Object.keys(c).filter(function(k){return c[k]>1;}).map(Number).sort(function(a,b){return a-b;});
+  let best=SCORES[0];
+  Object.keys(c).forEach(function(k){ if(c[k]>c[best]) best=Number(k); });
+  return {vals:r, top:Number(best), topN:c[best]};
+})();
+
+/* the worksheet's back-to-back plot, left leaves stored in increasing order */
+const B2B={lname:"Male", rname:"Female", stems:[1,2,3,4,5,6,7],
+  left: [[0,2,5],[1,5],[1,3,5,5,5],[2,5],[1,1,6,8,9],[0,5,5,6],[0,0,1,1,2]],
+  right:[[5,8],[1,6,9,9],[],[1,2,6,8],[5],[0,1],[2]]};
+
+/* ================= generated data ================= */
+const SETS=[
+  {lead:"A statistics class sat an exam, and every score was recorded.",
+   whoP:"students", label:"Test score", what:"Number of students", stem0:[4,5],
+   unitOne:function(v){return "a score of "+v;}},
+  {lead:"A clinic recorded the age of every visitor one morning.",
+   whoP:"visitors", label:"Age", what:"Number of visitors", stem0:[1,2,3],
+   unitOne:function(v){return "an age of "+v;}},
+  {lead:"A charity 5K recorded the finishing time of every runner.",
+   whoP:"runners", label:"Minutes", what:"Number of runners", stem0:[2,3],
+   unitOne:function(v){return "a time of "+v+" minutes";}},
+  {lead:"A weather station recorded the rainfall on each of a run of days.",
+   whoP:"days", label:"Rainfall (mm)", what:"Number of days", stem0:[1,2],
+   unitOne:function(v){return "a rainfall of "+v+" mm";}},
+  {lead:"A small shop recorded the hours each member of staff worked last week.",
+   whoP:"workers", label:"Hours", what:"Number of workers", stem0:[1,2,3],
+   unitOne:function(v){return "a week of "+v+" hours";}}
+];
+
+/* A data set drawn as actual values, then grouped by leading digit. Because the
+   list comes first, the stem-and-leaf and the histogram are guaranteed to agree. */
+function makeData(){
+  for(let t=0;t<400;t++){
+    const S=pick(SETS);
+    const s0=pick(S.stem0), k=ri(4,6);
+    const f=[];
+    for(let i=0;i<k;i++) f.push(ri(2,12));
+    const n=sum(f);
+    const mx=Math.max.apply(null,f), mn=Math.min.apply(null,f);
+    if(f.filter(function(x){return x===mx;}).length!==1) continue;  /* one clear tallest */
+    if(f.filter(function(x){return x===mn;}).length!==1) continue;  /* one clear shortest */
+    if(n===k||f.indexOf(n)>=0) continue;
+    const list=[];
+    for(let i=0;i<k;i++) for(let j=0;j<f[i];j++) list.push((s0+i)*10+ri(0,9));
+    const D=fromScores(list);
+    if(D.stems.length!==k) continue;         /* a stem must not have come up empty */
+    D.k=k; D.S=S; D.lead=S.lead; D.whoP=S.whoP; D.label=S.label; D.what=S.what;
+    D.unitOne=S.unitOne;
+    return D;
+  }
+  return null;
+}
+/* Classes of any equal width, for the midpoint work, where a width of 10 would
+   make every midpoint end in .5 and hide the arithmetic. */
+function makeGrouped(){
+  for(let t=0;t<400;t++){
+    const S=pick(SETS);
+    const w=pick([4,5,10,20,25]);
+    const k=ri(4,6);
+    const L=pick([0,5,10,20,40,50])+0;
+    const lo=[], hi=[], f=[];
+    for(let i=0;i<k;i++){ lo.push(L+i*w); hi.push(L+i*w+w-1); f.push(ri(2,13)); }
+    const n=sum(f);
+    const mx=Math.max.apply(null,f), mn=Math.min.apply(null,f);
+    if(f.filter(function(x){return x===mx;}).length!==1) continue;
+    if(f.filter(function(x){return x===mn;}).length!==1) continue;
+    if(n===k||n===w||w===k||f.indexOf(n)>=0) continue;
+    return {lo:lo, hi:hi, f:f, n:n, k:k, w:w, S:S, lead:S.lead, whoP:S.whoP,
+            label:S.label, what:S.what, unitOne:S.unitOne, stems:null};
+  }
+  return null;
+}
+/* either kind, for the rungs that only read bar heights */
+function anyChart(){ return Math.random()<.35?SHEET:(Math.random()<.5?makeData():makeGrouped()); }
+function someData(){ return Math.random()<.35?SHEET:makeData(); }
+function clsLabel(T,i){ return T.lo[i]+"–"+T.hi[i]; }
+function midOf(T,i){ return (T.lo[i]+T.hi[i])/2; }
+/* wrong classes to offer, nearest first, so a four-class table still has three */
+function otherClasses(T,i,why){
+  const out=[];
+  for(let d=1;d<T.k;d++){ if(i-d>=0) out.push(i-d); if(i+d<T.k) out.push(i+d); }
+  return out.map(function(j){ return {t:clsLabel(T,j), w:why(j)}; });
+}
+
+/* ================= drawing ================= */
+function chartHTML(T,o){
+  o=o||{};
+  const k=T.lo.length, f=T.f;
+  const W=620, H=272, ML=38, MR=14, MT=16, MB=56;
+  const pw=W-ML-MR, ph=H-MT-MB;
+  const fmax=Math.max.apply(null,f);
+  /* the axis runs to a round number ABOVE the tallest bar, so the gridlines land
+     on whole frequencies and the tallest bar's label has room */
+  const step=fmax<=6?1:(fmax<=12?2:(fmax<=30?5:10));
+  let top=Math.ceil(fmax/step)*step;
+  if(top===fmax) top+=step;
+  /* an anchored polygon needs an empty half-class at each end to land in */
+  const slots=o.anchor?(k+1):k;
+  const bw=pw/slots;
+  const x0=ML+(o.anchor?bw/2:0);
+  const gap=o.gaps?bw*0.22:0;
+  const y=function(v){ return MT+ph-(v/top)*ph; };
+  let s='<svg class="chart" viewBox="0 0 '+W+" "+H+'" role="img" aria-label="'+(o.alt||"histogram")+'">';
+  for(let v=0;v<=top;v+=step){
+    s+='<line class="grid" x1="'+ML+'" x2="'+(W-MR)+'" y1="'+y(v)+'" y2="'+y(v)+'"/>'
+      +'<text class="ax" x="'+(ML-7)+'" y="'+(y(v)+4)+'" text-anchor="end">'+v+"</text>";
+  }
+  for(let i=0;i<k;i++){
+    const x=x0+i*bw+gap/2, w=bw-gap, cx=x0+i*bw+bw/2;
+    const dim=!!(o.off&&o.off.indexOf(i)>=0);
+    const cls="bar"+(o.hit===i?" hit":"")+(dim?" off":"")+(o.on&&o.on.indexOf(i)>=0?" on":"");
+    s+='<rect class="'+cls+'" x="'+x.toFixed(1)+'" y="'+y(f[i]).toFixed(1)+'" width="'+w.toFixed(1)
+      +'" height="'+(ph-(y(f[i])-MT)).toFixed(1)+'"/>';
+    if(!o.hideVals) s+='<text class="val'+(dim?" off":"")+(o.hide===i?" q":"")+'" x="'+cx.toFixed(1)
+      +'" y="'+(y(f[i])-6).toFixed(1)+'" text-anchor="middle">'+(o.hide===i?"?":f[i])+"</text>";
+    s+='<text class="ax'+(dim?" off":"")+'" x="'+cx.toFixed(1)+'" y="'+(MT+ph+17)+'" text-anchor="middle">'+clsLabel(T,i)+"</text>";
+    if(o.mids) s+='<text class="mid" x="'+cx.toFixed(1)+'" y="'+(MT+ph+33)+'" text-anchor="middle">'+numText(midOf(T,i))+"</text>";
+  }
+  if(o.poly){
+    const pts=[];
+    if(o.anchor) pts.push([x0-bw/2, y(0)]);
+    for(let i=0;i<k;i++) pts.push([x0+i*bw+bw/2, y(f[i])]);
+    if(o.anchor) pts.push([x0+k*bw+bw/2, y(0)]);
+    s+='<polyline class="poly" points="'+pts.map(function(p){return p[0].toFixed(1)+","+p[1].toFixed(1);}).join(" ")+'"/>';
+    pts.forEach(function(p,j){
+      const i=o.anchor?j-1:j;
+      const on=(o.dot!=null&&i===o.dot);
+      s+='<circle class="dot'+(on?" hit":"")+'" cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="'+(on?6:4)+'"/>';
+    });
+  }
+  s+='<line class="axis" x1="'+ML+'" x2="'+(W-MR)+'" y1="'+y(0)+'" y2="'+y(0)+'"/>'
+    +'<line class="axis" x1="'+ML+'" x2="'+ML+'" y1="'+MT+'" y2="'+y(0)+'"/>'
+    +'<text class="ttl" x="'+(ML+pw/2)+'" y="'+(H-6)+'" text-anchor="middle">'+(o.xlab||T.label||"class")+"</text>"
+    +'<text class="ttl" transform="translate(11,'+(MT+ph/2)+') rotate(-90)" text-anchor="middle">frequency</text>';
+  return s+"</svg>";
+}
+function stemHTML(D,o){
+  o=o||{};
+  let s='<table class="sl"><thead><tr><th>Stem</th><th>Leaves</th></tr></thead><tbody>';
+  for(let i=0;i<D.stems.length;i++){
+    const cls=(o.hit===i?"hit":"")+(o.off&&o.off.indexOf(i)>=0?" off":"");
+    s+='<tr class="'+cls+'"><td class="st">'+D.stems[i]+'</td><td class="lv">'
+      +(D.leaves[i].length
+        ? D.leaves[i].map(function(d,j){
+            return (o.leaf&&o.leaf[0]===i&&o.leaf[1]===j)?"<b>"+d+"</b>":String(d);
+          }).join(" ")
+        : "&nbsp;")
+      +(o.counts?'<span class="ct">('+D.leaves[i].length+")</span>":"")+"</td></tr>";
+  }
+  s+="</tbody></table>";
+  /* the key is drawn from the first row that actually has a leaf on it */
+  let ki=0; while(ki<D.stems.length&&!D.leaves[ki].length) ki++;
+  if(ki>=D.stems.length) ki=0;
+  const kl=D.leaves[ki].length?D.leaves[ki][0]:0;
+  const key=(o.key===false)?"":('<div class="slkey">Key: '+D.stems[ki]+" | "+kl
+    +" means "+(D.stems[ki]*10+kl)+"</div>");
+  return s+key;
+}
+function backHTML(B,o){
+  o=o||{};
+  let s='<table class="sl b2b"><thead><tr><th>'+B.lname+"</th><th>Stem</th><th>"+B.rname+"</th></tr></thead><tbody>";
+  for(let i=0;i<B.stems.length;i++){
+    s+='<tr class="'+(o.hit===i?"hit":"")+'"><td class="lv r">'
+      /* the left row is PRINTED largest-first so its leaves increase away from
+         the stem, which is what makes that side read right to left */
+      +(B.left[i].length?B.left[i].slice().reverse().join(" "):"&nbsp;")
+      +'</td><td class="st">'+B.stems[i]+'</td><td class="lv">'
+      +(B.right[i].length?B.right[i].join(" "):"&nbsp;")+"</td></tr>";
+  }
+  /* the key quotes a stem this plot actually has, not a fixed one */
+  const ks=B.stems[0];
+  return s+"</tbody></table>"
+    +'<div class="slkey">Key: on the left, '+ks+" | 3 means "+(ks*10+3)
+    +" — the leaf nearest the stem is the smallest</div>";
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+/* a generated back-to-back plot */
+function makeBack(){
+  for(let t=0;t<300;t++){
+    const s0=pick([1,2,3,4]), k=ri(4,6);
+    const stems=[], left=[], right=[];
+    for(let i=0;i<k;i++){
+      stems.push(s0+i);
+      const a=ri(0,5), b=ri(0,5);
+      const L=[],R=[];
+      for(let j=0;j<a;j++) L.push(ri(0,9));
+      for(let j=0;j<b;j++) R.push(ri(0,9));
+      L.sort(function(x,y){return x-y;}); R.sort(function(x,y){return x-y;});
+      left.push(L); right.push(R);
+    }
+    const nl=sum(left.map(function(x){return x.length;}));
+    const nr=sum(right.map(function(x){return x.length;}));
+    if(nl<6||nr<6||nl===nr) continue;          /* the two sides must differ in size */
+    /* at least one stem where one side clearly beats the other */
+    let ok=false;
+    for(let i=0;i<k;i++) if(left[i].length!==right[i].length) ok=true;
+    if(!ok) continue;
+    const G=pick([["Boys","Girls"],["Morning","Evening"],["Team A","Team B"],["Male","Female"],["Last year","This year"]]);
+    return {lname:G[0], rname:G[1], stems:stems, left:left, right:right, nl:nl, nr:nr, k:k};
+  }
+  return null;
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"Bars that touch",
+ sub:"A histogram is not a bar chart, and a polygon is a line.",
+ gen:function(){
+   const T=anyChart();
+   const forms=["hist","poly","why","which"];
+   const f=pick(forms);
+   if(f==="hist"){
+     return {q:"<b>A histogram is</b>",
+       opts:shuffle(distinctOpts([
+         {label:"a bar graph whose bars touch", correct:true,
+          note:"The classes run straight into one another along the number line, so the bars do too. No gaps."},
+         {label:"a bar graph with gaps between the bars",
+          note:"That is an ordinary bar chart, used for separate categories like blood types or brands."},
+         {label:"a line graph through the class midpoints",
+          note:"That is the frequency polygon."},
+         {label:"a circle divided into sectors",
+          note:"That is a pie chart, which shows shares of a whole rather than a distribution."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="poly"){
+     return {q:"<b>A frequency polygon is</b>",
+       opts:shuffle(distinctOpts([
+         {label:"a line graph through the class midpoints", correct:true,
+          note:"One point per class, placed above the midpoint at the height of that class's frequency, and joined up."},
+         {label:"a bar graph whose bars touch",
+          note:"That is the histogram. The polygon is the line you can draw over the top of it."},
+         {label:"a graph with one point per data value",
+          note:"It has one point per <i>class</i>, not per value — six classes give six points however many items there are."},
+         {label:"the outline of the bars, corners and all",
+          note:"It cuts across the top of each bar at the midpoint rather than tracing the corners."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="which"){
+     const gaps=Math.random()<.5;
+     return {q:"<b>Which graph is drawn here?</b>",
+       scene:T.lead,
+       vis:chartHTML(T,{gaps:gaps}),
+       opts:shuffle(distinctOpts([
+         (gaps
+          ? {label:"A bar chart — the bars have gaps", correct:true,
+             note:"Gaps between the bars say the columns are separate categories. A histogram's classes touch along the number line, so its bars would too."}
+          : {label:"A histogram — the bars touch", correct:true,
+             note:"The bars run into one another because the classes do: "+T.hi[0]+" is followed immediately by "+T.lo[1]+"."}),
+         (gaps
+          ? {label:"A histogram — the bars touch",
+             note:"These bars have clear gaps between them, so it is drawn as a bar chart."}
+          : {label:"A bar chart — the bars have gaps",
+             note:"There are no gaps here — each bar's right edge is the next bar's left edge."}),
+         {label:"A frequency polygon",
+          note:"A polygon is a line through points, not a set of bars."},
+         {label:"A stem-and-leaf plot",
+          note:"A stem-and-leaf plot is built from digits, not from bars."}
+       ]).slice(0,4)), one:true};
+   }
+   return {q:"<b>Why do the bars of a histogram touch?</b>",
+     opts:shuffle(distinctOpts([
+       {label:"Because the classes run continuously into one another", correct:true,
+        note:"There is no value between the end of one class and the start of the next, so there is nothing for a gap to represent."},
+       {label:"Because it saves space on the page",
+        note:"The touching is meaningful, not decorative. It says the scale underneath is continuous."},
+       {label:"Because every class has the same frequency",
+        note:"The frequencies are what the heights show, and they usually differ."},
+       {label:"Because the bars are always the same width",
+        note:"Equal width comes from equal class widths, but that is a separate matter from whether they touch."}
+     ]).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Read one bar",
+ sub:"Its height against the axis is the frequency.",
+ gen:function(){
+   const T=anyChart();
+   const i=ri(0,T.k-1);
+   const forms=["height","which"];
+   if(pick(forms)==="which"){
+     /* the reverse reading: given a frequency, name the class */
+     return {q:"<b>Which class has a frequency of "+T.f[i]+"?</b>",
+       scene:T.lead,
+       vis:chartHTML(T,{}),
+       opts:shuffle(textOpts(clsLabel(T,i),
+         "The bar above "+clsLabel(T,i)+" reaches "+T.f[i]+" on the frequency axis.",
+         otherClasses(T,i,function(j){ return "That bar reaches "+T.f[j]+", not "+T.f[i]+"."; }))), two:true};
+   }
+   return {q:"<b>How many "+T.whoP+" are in the class "+clsLabel(T,i)+"?</b>",
+     scene:T.lead+" The bar you want has had its label removed.",
+     vis:chartHTML(T,{hit:i, hide:i}),
+     opts:shuffle(numOpts(T.f[i],
+       [{v:T.f[i]+1, w:"One gridline too high. Read across from the top of the bar to the axis."},
+        {v:T.f[i]-1, w:"One gridline too low."},
+        {v:T.lo[i],  w:"That is the class's lower limit, which is on the horizontal axis. The frequency is the height."},
+        {v:T.hi[i],  w:"That is the class's upper limit, read off the wrong axis."},
+        {v:T.n,      w:"That is every "+T.whoP.replace(/s$/,"")+" in the survey, which is the total of all the bars."},
+        {v:i+1,      w:"That is the bar's position from the left, not its height."},
+        {v:Math.max.apply(null,T.f), w:"That is the height of the tallest bar, which is a different class."}],
+       "The bar above "+clsLabel(T,i)+" stops level with "+T.f[i]+" on the frequency axis, so "+T.f[i]+" "
+       +T.whoP+" are in that class."))};
+ }
+},
+{
+ title:"Tallest and shortest",
+ sub:"The busiest class is the highest bar.",
+ gen:function(){
+   const T=anyChart();
+   const hi=T.f.indexOf(Math.max.apply(null,T.f));
+   const lo=T.f.indexOf(Math.min.apply(null,T.f));
+   const most=Math.random()<.5;
+   const idx=most?hi:lo, word=most?"most":"least";
+   const wantName=Math.random()<.5;
+   if(wantName){
+     return {q:"<b>Which class is the "+word+" frequent?</b>",
+       scene:T.lead,
+       vis:chartHTML(T,{hit:idx}),
+       opts:shuffle(textOpts(clsLabel(T,idx),
+         "The "+(most?"tallest":"shortest")+" bar is above "+clsLabel(T,idx)+", at a height of "+T.f[idx]
+         +". The question asks which class, so the answer is the range along the bottom, not the height.",
+         otherClasses(T,idx,function(j){
+           return "That bar reaches "+T.f[j]+", which is "+(most?"lower":"higher")+" than the "+T.f[idx]+" above "+clsLabel(T,idx)+".";
+         }))), two:true};
+   }
+   return {q:"<b>How many "+T.whoP+" are in the "+word+" frequent class?</b>",
+     scene:T.lead,
+     vis:chartHTML(T,{hit:idx}),
+     opts:shuffle(numOpts(T.f[idx],
+       [{v:T.f[most?lo:hi], w:"That is the "+(most?"shortest":"tallest")+" bar. The question asks for the "+word+" frequent."},
+        {v:T.lo[idx], w:"That is a class limit from the horizontal axis, not a height."},
+        {v:T.n, w:"That is the total of every bar."},
+        {v:T.k, w:"That is how many bars there are."},
+        {v:idx+1, w:"That is the bar's position from the left."},
+        {v:T.f[idx]+1, w:"One gridline too high."}],
+       "The "+(most?"tallest":"shortest")+" bar is above "+clsLabel(T,idx)+" and reaches "+T.f[idx]+"."))};
+ }
+},
+{
+ title:"Add across bars",
+ sub:"Whole bars only, and check which side of the cut.",
+ gen:function(){
+   const T=anyChart();
+   const i=ri(1,T.k-2);                 /* the cut stays strictly inside the chart */
+   const above=Math.random()<.5;
+   const up=sum(T.f.slice(i)), below=sum(T.f.slice(0,i));
+   const want=above?up:below;
+   const shown=[], offRows=[];
+   for(let j=0;j<T.k;j++){ if(above?(j>=i):(j<i)) shown.push(j); else offRows.push(j); }
+   const terms=(above?T.f.slice(i):T.f.slice(0,i)).join(" + ");
+   return {q:"<b>How many "+T.whoP+" are in the shaded bars?</b>",
+     scene:T.lead+" The bars from "+(above?(clsLabel(T,i)+" upwards"):("the left up to "+clsLabel(T,i-1)))+" are shaded.",
+     vis:chartHTML(T,{on:shown, off:offRows}),
+     opts:shuffle(numOpts(want,
+       [{v:above?below:up, w:"That is the total of the bars that are <i>not</i> shaded."},
+        {v:above?sum(T.f.slice(i-1)):sum(T.f.slice(0,i+1)), w:"That takes in one more bar than is shaded."},
+        {v:above?sum(T.f.slice(i+1)):sum(T.f.slice(0,i-1)), w:"That leaves out one of the shaded bars."},
+        {v:T.f[i], w:"That is a single bar. Every shaded bar has to be added in."},
+        {v:T.n, w:"That is every bar in the chart, shaded or not."},
+        {v:Math.max.apply(null,T.f), w:"That is the tallest single bar."}],
+       "Add the shaded heights: "+terms+" = "+want+". The unshaded bars hold the other "
+       +(T.n-want)+", and "+want+" + "+(T.n-want)+" = "+T.n+".",
+       [{v:shown.length, w:"That is how many bars are shaded, not how tall they are."},
+        {v:Math.min.apply(null,T.f), w:"That is the shortest single bar."},
+        {v:want+T.f[i], w:"That adds the bar on the far side of the cut as well."},
+        {v:T.n-Math.max.apply(null,T.f), w:"That is everything except the tallest bar."}]))};
+ }
+},
+{
+ title:"The class midpoint",
+ sub:"Halfway between the two limits of one class.",
+ gen:function(){
+   const T=Math.random()<.5?makeGrouped():anyChart();
+   const i=ri(0,T.k-1);
+   const mid=midOf(T,i);
+   const forms=["value","which","gap"];
+   const f=pick(forms);
+   if(f==="gap"&&T.k>2){
+     /* consecutive midpoints are one class width apart, which is worth noticing */
+     const w=T.lo[1]-T.lo[0];
+     return {q:"<b>How far apart are the midpoints of two neighbouring classes?</b>",
+       scene:T.lead,
+       vis:chartHTML(T,{mids:true}),
+       opts:shuffle(numOpts(w,
+         [{v:w/2, w:"That is half a class. The midpoints sit at the same place inside each class, so they are a whole class apart."},
+          {v:w-1, w:"That is the upper limit minus the lower limit of one class, one short of the width."},
+          {v:1, w:"That is the step from one class's upper limit to the next class's lower limit."},
+          {v:T.k, w:"That is how many classes there are."},
+          {v:w*2, w:"That is two classes apart, not one."}],
+         "The midpoints run "+T.lo.map(function(l,j){return numText(midOf(T,j));}).join(", ")
+         +" — each one "+w+" further on, because every class is "+w+" wide."))};
+   }
+   if(f==="which"){
+     return {q:"<b>Which calculation gives the midpoint of "+clsLabel(T,i)+"?</b>",
+       scene:T.lead,
+       opts:shuffle(distinctOpts([
+         {label:"("+T.lo[i]+" + "+T.hi[i]+") ÷ 2", correct:true,
+          note:"Add the two limits and halve: ("+T.lo[i]+" + "+T.hi[i]+") ÷ 2 = "+numText(mid)+"."},
+         {label:T.hi[i]+" − "+T.lo[i],
+          note:"That is a width, not a position. It gives "+(T.hi[i]-T.lo[i])+", which is nowhere near the middle of the class."},
+         {label:"("+T.hi[i]+" − "+T.lo[i]+") ÷ 2",
+          note:"That is half the width, "+numText((T.hi[i]-T.lo[i])/2)+". You would still have to add it to "+T.lo[i]+" to reach the middle."},
+         {label:T.lo[i]+" ÷ 2",
+          note:"Halving one limit does not find the middle of the interval between two of them."}
+       ]).slice(0,4)), two:true};
+   }
+   const w=T.hi[i]-T.lo[i]+1;
+   return {q:"<b>What is the midpoint of the class "+clsLabel(T,i)+"?</b>",
+     scene:T.lead,
+     vis:chartHTML(T,{hit:i}),
+     opts:shuffle(numOpts(mid,
+       [{v:T.lo[i], w:"That is the lower limit, the left edge of the class."},
+        {v:T.hi[i], w:"That is the upper limit, the right edge."},
+        {v:T.lo[i]+w/2, w:"That is half a class width past the lower limit, which overshoots by a half. The midpoint is ("
+          +T.lo[i]+" + "+T.hi[i]+") ÷ 2 = "+numText(mid)+"."},
+        {v:(T.hi[i]-T.lo[i])/2, w:"That is half the difference between the limits, which is a distance rather than a position on the axis."},
+        {v:i<T.k-1?midOf(T,i+1):midOf(T,i-1), w:"That is the midpoint of a neighbouring class."},
+        {v:T.f[i], w:"That is the frequency of that class, read off the wrong axis."}],
+       "Add the limits and halve: ("+T.lo[i]+" + "+T.hi[i]+") ÷ 2 = "+(T.lo[i]+T.hi[i])+" ÷ 2 = "+numText(mid)+"."))};
+ }
+},
+{
+ title:"Where the point goes",
+ sub:"Above the midpoint, at the height of the frequency.",
+ gen:function(){
+   const T=Math.random()<.4?makeGrouped():anyChart();
+   const i=ri(0,T.k-1);
+   const forms=["x","y","count","rule"];
+   const f=pick(forms);
+   if(f==="rule"){
+     return {q:"<b>Where does the polygon's point for a class sit?</b>",
+       opts:shuffle(distinctOpts([
+         {label:"Above the class midpoint, at the height of its frequency", correct:true,
+          note:"Across to the middle of the class, then up to the frequency. That is the top-centre of the bar, which is why the line cuts each bar in half."},
+         {label:"Above the lower class limit, at the height of its frequency",
+          note:"That would shift every point to the left edge of its bar, and the line would lean the wrong way."},
+         {label:"Above the class midpoint, at the height of the class width",
+          note:"The height always comes from the frequency axis. The width is the same for every class, so that would draw a flat line."},
+         {label:"At the top right corner of each bar",
+          note:"That traces the bars rather than cutting across them, and again shifts every point sideways."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="count"){
+     return {q:"<b>How many points does the frequency polygon have, one per class?</b>",
+       scene:T.lead,
+       vis:chartHTML(T,{poly:true}),
+       opts:shuffle(numOpts(T.k,
+         [{v:T.n, w:"That is how many "+T.whoP+" there are. The polygon has one point per class, not per "+T.whoP.replace(/s$/,"")+"."},
+          {v:T.k-1, w:"One short — count the bars, and there is a point above each of them."},
+          {v:T.k+1, w:"One too many, unless you are counting a point where the line meets the axis at each end."},
+          {v:Math.max.apply(null,T.f), w:"That is the tallest frequency, not a count of classes."},
+          {v:T.k*2, w:"That would be two points per class."}],
+         "There are "+T.k+" classes, so there are "+T.k+" points: one above each class midpoint, at that class's frequency."))};
+   }
+   if(f==="y"){
+     return {q:"<b>How high is the polygon's point above "+clsLabel(T,i)+"?</b>",
+       scene:T.lead,
+       vis:chartHTML(T,{poly:true, dot:i, hit:i}),
+       opts:shuffle(numOpts(T.f[i],
+         [{v:midOf(T,i), w:"That is the midpoint, which fixes how far <i>across</i> the point sits, not how high."},
+          {v:T.lo[i], w:"That is a class limit from the horizontal axis."},
+          {v:T.n, w:"That is the whole survey."},
+          {v:T.f[i]+1, w:"One gridline too high."},
+          {v:T.f[i]-1, w:"One gridline too low."},
+          {v:Math.max.apply(null,T.f), w:"That is the tallest point on the polygon, which is above a different class."}],
+         "The height always comes from the frequency, and that class holds "+T.f[i]+". The point sits at the top of the bar, above the midpoint "+numText(midOf(T,i))+"."))};
+   }
+   return {q:"<b>How far across does the polygon's point for "+clsLabel(T,i)+" sit?</b>",
+     scene:T.lead,
+     vis:chartHTML(T,{poly:true, dot:i, mids:true}),
+     opts:shuffle(numOpts(midOf(T,i),
+       [{v:T.lo[i], w:"That is the left edge of the bar. The point sits at its centre."},
+        {v:T.hi[i], w:"That is the right edge of the bar."},
+        {v:T.f[i], w:"That is the frequency, which fixes the height rather than the position across."},
+        {v:T.lo[i]+(T.hi[i]-T.lo[i]+1)/2, w:"That is half a class width past the lower limit, a half too far. The midpoint is ("
+          +T.lo[i]+" + "+T.hi[i]+") ÷ 2 = "+numText(midOf(T,i))+"."},
+        {v:i<T.k-1?midOf(T,i+1):midOf(T,i-1), w:"That is the midpoint of a neighbouring class."}],
+       "The point goes above the class midpoint, ("+T.lo[i]+" + "+T.hi[i]+") ÷ 2 = "+numText(midOf(T,i))+"."))};
+ }
+},
+{
+ title:"Read the leaves",
+ sub:"Stem plus leaf, in that order, makes the value.",
+ gen:function(){
+   const D=someData();
+   /* pick a stem that actually has leaves */
+   const rows=[]; for(let j=0;j<D.stems.length;j++) if(D.leaves[j].length) rows.push(j);
+   const i=pick(rows);
+   const j=ri(0,D.leaves[i].length-1);
+   const v=D.stems[i]*10+D.leaves[i][j];
+   const forms=["value","where","extreme"];
+   const f=pick(forms);
+   if(f==="extreme"){
+     const big=Math.random()<.5;
+     const want=big?Math.max.apply(null,D.list):Math.min.apply(null,D.list);
+     const bi=big?rows[rows.length-1]:rows[0];
+     const other=big?Math.min.apply(null,D.list):Math.max.apply(null,D.list);
+     return {q:"<b>What is the "+(big?"largest":"smallest")+" value in the plot?</b>",
+       scene:D.lead,
+       vis:stemHTML(D,{hit:bi}),
+       opts:shuffle(numOpts(want,
+         [{v:other, w:"That is the "+(big?"smallest":"largest")+" value, at the other end of the plot."},
+          {v:D.stems[bi]*10+(big?D.leaves[bi][0]:D.leaves[bi][D.leaves[bi].length-1]),
+           w:"That is the leaf at the wrong end of the "+(big?"last":"first")+" row. Leaves run in increasing order, left to right."},
+          {v:D.stems[bi], w:"That is the stem on its own. A stem needs its leaf to make a value."},
+          {v:big?D.leaves[bi][D.leaves[bi].length-1]:D.leaves[bi][0], w:"That is the leaf on its own, without its stem in front."},
+          {v:D.n, w:"That is how many values there are, not how big the largest is."}],
+         "The "+(big?"last":"first")+" row is stem "+D.stems[bi]+", and its "+(big?"right-most":"left-most")+" leaf is "
+         +(big?D.leaves[bi][D.leaves[bi].length-1]:D.leaves[bi][0])+", so the "+(big?"largest":"smallest")+" value is "+want+".",
+         [{v:D.stems[bi]*10+(big?9:0), w:"That is the "+(big?"top":"bottom")+" of that ten, but no leaf on the row reads "+(big?9:0)+"."},
+          {v:want+(big?1:-1), w:"One out — read the "+(big?"last":"first")+" leaf on that row exactly as printed."},
+          {v:D.stems[bi]*10, w:"That is the stem with a nought after it."},
+          {v:D.stems[big?0:D.stems.length-1]*10, w:"That is at the other end of the plot altogether."}]))};
+   }
+   if(f==="where"){
+     return {q:"<b>Which stem holds "+v+"?</b>",
+       scene:D.lead,
+       vis:stemHTML(D,{}),
+       opts:shuffle(numOpts(D.stems[i],
+         [{v:v%10, w:"That is the leaf, the last digit. The stem is the digit or digits in front of it."},
+          {v:D.stems[i]+1, w:"That stem holds the values from "+((D.stems[i]+1)*10)+" upwards."},
+          {v:i>0?D.stems[i-1]:D.stems[i]+2, w:"That row covers a different ten."},
+          {v:v, w:"That is the whole value. The stem is only its leading digit."},
+          {v:D.leaves[i].length, w:"That is how many leaves are on the row, not the stem itself."}],
+         v+" splits into a stem of "+D.stems[i]+" and a leaf of "+(v%10)+", so it sits on the row marked "+D.stems[i]+"."))};
+   }
+   return {q:"<b>What value does the highlighted leaf stand for?</b>",
+     scene:D.lead,
+     vis:stemHTML(D,{leaf:[i,j], hit:i}),
+     opts:shuffle(numOpts(v,
+       [{v:D.leaves[i][j]*10+D.stems[i], w:"That reads the two digits the wrong way round. The stem comes first."},
+        {v:D.stems[i], w:"That is the stem alone, without its leaf."},
+        {v:D.leaves[i][j], w:"That is the leaf alone, without its stem."},
+        {v:D.stems[i]*10, w:"That is the stem with a nought after it — the leaf is "+D.leaves[i][j]+", not 0."},
+        {v:(D.stems[i]+1)*10+D.leaves[i][j], w:"That takes the leaf from the row below."},
+        {v:D.stems[i]*10+D.leaves[i][j]+1, w:"One too many. The leaf is the last digit exactly as printed."}],
+       "Stem "+D.stems[i]+" and leaf "+D.leaves[i][j]+" make "+v+". The stem supplies the leading digit and the leaf the last one."))};
+ }
+},
+{
+ title:"Count the leaves",
+ sub:"A row of leaves is a class of the table.",
+ gen:function(){
+   const D=someData();
+   const rows=[]; for(let j=0;j<D.stems.length;j++) if(D.leaves[j].length) rows.push(j);
+   const i=pick(rows);
+   const forms=["row","total","match"];
+   const f=pick(forms);
+   if(f==="total"){
+     return {q:"<b>How many "+D.whoP+" are in the plot altogether?</b>",
+       scene:D.lead,
+       vis:stemHTML(D,{counts:true}),
+       opts:shuffle(numOpts(D.n,
+         [{v:D.stems.length, w:"That is how many rows the plot has, not how many values."},
+          {v:Math.max.apply(null,D.f), w:"That is the longest single row."},
+          {v:D.n-Math.min.apply(null,D.f), w:"That leaves out the shortest row."},
+          {v:D.stems.length*10, w:"That is ten per row, which is not what the rows hold."},
+          {v:D.n-Math.max.apply(null,D.f), w:"That leaves out the longest row."}],
+         "Every leaf is one "+D.whoP.replace(/s$/,"")+", so count them all: "+D.f.join(" + ")+" = "+D.n+"."))};
+   }
+   if(f==="match"){
+     return {q:"<b>What is the frequency of the class "+clsLabel(D,i)+"?</b>",
+       scene:D.lead+" A stem-and-leaf plot is a grouped frequency distribution with the digits left in.",
+       vis:stemHTML(D,{hit:i}),
+       opts:shuffle(numOpts(D.f[i],
+         [{v:D.stems[i], w:"That is the stem, which names the class rather than counting it."},
+          {v:D.n, w:"That is every value in the plot."},
+          {v:D.stems.length, w:"That is how many rows there are."},
+          {v:D.f[i]+1, w:"One leaf too many — count them again, left to right."},
+          {v:D.f[i]-1, w:"One leaf short."},
+          {v:D.leaves[i][D.leaves[i].length-1], w:"That is the last leaf on the row, not how many there are."}],
+         "The class "+clsLabel(D,i)+" is exactly the row with stem "+D.stems[i]+", and that row has "+leafN(D.f[i])
+         +". Counting the leaves on a row gives the frequency of the class — the plot and the table are the same thing."))};
+   }
+   return {q:"<b>How many leaves are on the row with stem "+D.stems[i]+"?</b>",
+     scene:D.lead,
+     vis:stemHTML(D,{hit:i}),
+     opts:shuffle(numOpts(D.f[i],
+       [{v:D.stems[i], w:"That is the stem itself, printed to the left of the line."},
+        {v:D.f[i]+1, w:"One too many. Repeated leaves are written out separately, but count each one once."},
+        {v:D.f[i]-1, w:"One short."},
+        {v:D.n, w:"That is every leaf in the whole plot."},
+        {v:new Set(D.leaves[i]).size===D.f[i]?D.f[i]+2:new Set(D.leaves[i]).size,
+         w:"That counts only the <i>different</i> leaves. A leaf written twice stands for two values."},
+        {v:D.stems.length, w:"That is how many rows the plot has."}],
+       "The row reads "+D.leaves[i].join(" ")+", which is "+leafN(D.f[i])+", so "+D.f[i]+" "+D.whoP
+       +" fall between "+D.lo[i]+" and "+D.hi[i]+"."))};
+ }
+},
+{
+ title:"What each display keeps",
+ sub:"Only one of them still knows the original numbers.",
+ gen:function(){
+   const D=someData();
+   /* a value that really does repeat, so the question has a definite answer */
+   const c={}; D.list.forEach(function(x){ c[x]=(c[x]||0)+1; });
+   const reps=Object.keys(c).filter(function(k){return c[k]>1;}).map(Number);
+   const forms=["which","lost","exact","agree"];
+   let f=pick(forms);
+   if(f==="exact"&&!reps.length) f="which";
+   if(f==="exact"){
+     const v=pick(reps);
+     const i=D.stems.indexOf(Math.floor(v/10));
+     return {q:"<b>How many "+D.whoP+" scored exactly "+v+"?</b>",
+       scene:D.lead+" This is a question the histogram cannot answer, and the stem-and-leaf can.",
+       vis:stemHTML(D,{hit:i}),
+       opts:shuffle(numOpts(c[v],
+         [{v:D.f[i], w:"That is every value on that row, spread across the whole class. Only the leaves reading "+(v%10)+" are exactly "+v+"."},
+          {v:1, w:"Count the leaves equal to "+(v%10)+" on that row — that digit appears more than once."},
+          {v:c[v]+1, w:"One too many."},
+          {v:D.n, w:"That is the whole plot."},
+          {v:D.stems.length, w:"That is how many rows there are."}],
+         "On the row with stem "+Math.floor(v/10)+", the leaf "+(v%10)+" appears "+c[v]
+         +" times, so "+c[v]+" "+D.whoP+" scored exactly "+v+". A histogram would only tell you how many landed anywhere in "
+         +clsLabel(D,i)+"."))};
+   }
+   if(f==="lost"){
+     return {q:"<b>What does a histogram lose that the table it came from also loses?</b>",
+       opts:shuffle(distinctOpts([
+         {label:"The individual values inside each class", correct:true,
+          note:"Once a value is filed under a class, neither the table nor the histogram can say what it was. Both keep only the counts."},
+         {label:"The number of items in each class",
+          note:"That is precisely what both of them keep — it is the frequency."},
+         {label:"The class limits",
+          note:"Those are printed along the horizontal axis and down the first column of the table."},
+         {label:"The total number of items",
+          note:"Adding the bars, or the frequency column, gives it straight back."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="agree"){
+     return {q:"<b>What do a histogram and a stem-and-leaf plot of the same data agree on?</b>",
+       opts:shuffle(distinctOpts([
+         {label:"How many items fall in each class", correct:true,
+          note:"A bar's height and the number of leaves on the matching row are the same count, because they are counting the same items."},
+         {label:"Nothing — they show different things",
+          note:"They show the same data. One keeps the digits and one keeps only the counts."},
+         {label:"The exact value of every item",
+          note:"The stem-and-leaf keeps those; the histogram does not, so they cannot agree on something only one of them holds."},
+         {label:"Only the largest value",
+          note:"A histogram cannot give the largest value at all — only the class it falls in."}
+       ]).slice(0,4)), one:true};
+   }
+   return {q:"<b>Which display lets you read back every original value?</b>",
+     opts:shuffle(distinctOpts([
+       {label:"The stem-and-leaf plot", correct:true,
+        note:"Every value is still written down, split into a stem and a leaf. Put the digits back together and the raw list returns."},
+       {label:"The histogram",
+        note:"A bar says how many landed in a class, and nothing about which values they were."},
+       {label:"The frequency polygon",
+        note:"The polygon is drawn from the same class counts as the histogram, so it knows no more than the histogram does."},
+       {label:"The grouped frequency table",
+        note:"The table is where the values were lost in the first place — grouping replaced them with counts."}
+     ]).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Back to back",
+ sub:"Two groups on one spine, and the left side reads outward.",
+ gen:function(){
+   const B=Math.random()<.35?B2B:makeBack();
+   const nl=B.nl!=null?B.nl:sum(B.left.map(function(x){return x.length;}));
+   const nr=B.nr!=null?B.nr:sum(B.right.map(function(x){return x.length;}));
+   const k=B.stems.length;
+   const lefts=[]; for(let j=0;j<k;j++) if(B.left[j].length) lefts.push(j);
+   const forms=["direction","count","stem","extreme"];
+   const f=pick(forms);
+   if(f==="direction"){
+     /* only rows whose first and last leaves differ can teach which end is which */
+     const spread=lefts.filter(function(j){ return B.left[j][0]!==B.left[j][B.left[j].length-1]; });
+     if(!spread.length) return RUNGS[9].gen();
+     const i=pick(spread);
+     const row=B.left[i].slice().reverse().join(", ");
+     const small=B.stems[i]*10+B.left[i][0];
+     const large=B.stems[i]*10+B.left[i][B.left[i].length-1];
+     return {q:"<b>For "+B.lname+", the row beside stem "+B.stems[i]+" reads "+row
+       +". What is the <i>smallest</i> value in it?</b>",
+       scene:"Two groups are shown on one stem. On the left the leaves increase away from the stem, so that row reads right to left.",
+       vis:backHTML(B,{hit:i}),
+       opts:shuffle(numOpts(small,
+         [{v:large, w:"That takes the leaf furthest from the stem, which is the largest on that row. The smallest sits nearest the spine."},
+          {v:B.left[i][0], w:"That is the leaf on its own. It still needs the stem "+B.stems[i]+" in front of it."},
+          {v:B.stems[i]*10, w:"That is the stem with a nought, but the smallest leaf on the row is "+B.left[i][0]+"."},
+          {v:B.stems[i], w:"That is the stem by itself."},
+          {v:B.left[i].length, w:"That is how many values are on the row."}],
+         "The leaf nearest the stem is "+B.left[i][0]+", and on the left the leaf nearest the spine is the smallest, so the smallest value is "
+         +B.stems[i]+" and "+B.left[i][0]+" together: "+small+".",
+         [{v:B.stems[i]*10+9, w:"That is the top of that ten; the smallest leaf on the row is "+B.left[i][0]+"."},
+          {v:small+1, w:"One too many — no leaf on that row reads "+((B.left[i][0]+1)%10)+" and sits nearest the stem."},
+          {v:(B.stems[i]+1)*10+B.left[i][0], w:"That takes the leaf onto the row below."},
+          {v:B.left[i][0]*10+B.stems[i], w:"That reads the two digits the wrong way round."}]))};
+   }
+   if(f==="stem"){
+     /* a stem where the two sides genuinely differ */
+     const cands=[]; for(let j=0;j<k;j++) if(B.left[j].length!==B.right[j].length) cands.push(j);
+     const i=pick(cands);
+     const more=(B.left[i].length>B.right[i].length)?B.lname:B.rname;
+     const less=(more===B.lname)?B.rname:B.lname;
+     const a=B.left[i].length, b=B.right[i].length;
+     return {q:"<b>At stem "+B.stems[i]+", which group has more?</b>",
+       scene:"Two groups are shown on one stem.",
+       vis:backHTML(B,{hit:i}),
+       opts:shuffle(textOpts(more,
+         more+" has "+leafN(more===B.lname?a:b)+" on that row against "+(more===B.lname?b:a)
+         +", so more of that group falls between "+(B.stems[i]*10)+" and "+(B.stems[i]*10+9)+".",
+         [{t:less, w:"That side has "+leafN(less===B.lname?a:b)+" on that row, fewer than the "+(more===B.lname?a:b)+" opposite."},
+          {t:"They are equal at that stem", w:"They are not — "+a+" against "+b+"."},
+          {t:"The plot cannot say", w:"It can: count the leaves on each side of that row."}])), two:true};
+   }
+   if(f==="extreme"){
+     const leftSide=Math.random()<.5;
+     const rows=leftSide?lefts:(function(){const r=[];for(let j=0;j<k;j++) if(B.right[j].length) r.push(j); return r;})();
+     const name=leftSide?B.lname:B.rname;
+     const other=leftSide?B.rname:B.lname;
+     const last=rows[rows.length-1];
+     const arr=leftSide?B.left[last]:B.right[last];
+     const want=B.stems[last]*10+arr[arr.length-1];
+     const oRows=leftSide?(function(){const r=[];for(let j=0;j<k;j++) if(B.right[j].length) r.push(j); return r;})():lefts;
+     const oLast=oRows[oRows.length-1];
+     const oArr=leftSide?B.right[oLast]:B.left[oLast];
+     return {q:"<b>What is the largest value for "+name+"?</b>",
+       scene:"Two groups are shown on one stem.",
+       vis:backHTML(B,{hit:last}),
+       opts:shuffle(numOpts(want,
+         [{v:B.stems[oLast]*10+oArr[oArr.length-1], w:"That is the largest value for "+other+", on the other side of the stem."},
+          {v:B.stems[last]*10+arr[0], w:"That is the "+(leftSide?"leaf nearest the stem, which is the smallest on that row":"first leaf on that row, which is the smallest")+"."},
+          {v:B.stems[last], w:"That is the stem without a leaf."},
+          {v:arr[arr.length-1], w:"That is the leaf without its stem."},
+          {v:B.stems[last]*10+9, w:"That is the top of that ten, but no leaf on the row reads 9."}],
+         "The last row down the plot with any leaves for "+name+" is stem "+B.stems[last]
+         +", and the largest leaf there is "+arr[arr.length-1]+", giving "+want+".",
+         [{v:B.stems[0]*10+(B.stems[0]===B.stems[last]?0:9), w:"That is up at the top of the plot, in the smallest ten."},
+          {v:B.stems[last]*10, w:"That is the stem with a nought after it, but the largest leaf on the row is "+arr[arr.length-1]+"."},
+          {v:want+1, w:"One too many — no leaf on that row reads "+((arr[arr.length-1]+1)%10)+"."},
+          {v:B.stems[oLast]*10+oArr[0], w:"That is a value from the other side of the stem."}]))};
+   }
+   const which=Math.random()<.5;
+   const want=which?nl:nr;
+   const name=which?B.lname:B.rname;
+   return {q:"<b>How many values are there for "+name+"?</b>",
+     scene:"Two groups are shown on one stem. Every leaf stands for one value.",
+     vis:backHTML(B,{}),
+     opts:shuffle(numOpts(want,
+       [{v:which?nr:nl, w:"That is the count on the other side of the stem."},
+        {v:nl+nr, w:"That is both sides added together."},
+        {v:k, w:"That is how many stems the plot has."},
+        {v:Math.abs(nl-nr), w:"That is the difference between the two sides."},
+        {v:want-1, w:"One leaf short — a repeated leaf still counts once for each time it is written."}],
+       "Counting the leaves down that side gives "+want+". The other side has "
+       +(which?nr:nl)+", so the plot holds "+(nl+nr)+" values in all."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {lbl:"the table",       kind:"table"},
+  {lbl:"the histogram",   kind:"hist"},
+  {lbl:"the polygon",     kind:"poly"},
+  {lbl:"stem and leaf",   kind:"stem"},
+  {lbl:"what is kept",    kind:"keep"},
+  {lbl:"back to back",    kind:"back"}
+];
+let heroSel=0;
+
+const HNOTES={
+  table:function(){
+    const i=SHEET.f.indexOf(Math.max.apply(null,SHEET.f));
+    return "Where the last ladder left off. Six classes, frequencies "+SHEET.f.join(", ")+", adding to "+SHEET.n
+      +". The busiest class is "+clsLabel(SHEET,i)+" with "+SHEET.f[i]
+      +". Everything that follows is this table drawn differently — no new information enters at any point.";
+  },
+  hist:function(){
+    return "The same six numbers as bar heights. The bars touch because the classes do: "+SHEET.hi[0]+" is followed immediately by "
+      +SHEET.lo[1]+", with nothing in between for a gap to stand for. Now the shape is visible at once — a pile-up in the seventies and a thin tail at each end.";
+  },
+  poly:function(){
+    const i=3;
+    return "One point per class, placed above the midpoint at the height of the frequency. The midpoint of "+clsLabel(SHEET,i)
+      +" is ("+SHEET.lo[i]+" + "+SHEET.hi[i]+") ÷ 2 = "+numText(midOf(SHEET,i))+", and the point sits there at a height of "+SHEET.f[i]
+      +" — the top-centre of the bar, which is why the line cuts each bar in half. The midpoints are "+SHEET.w+" apart, one class width.";
+  },
+  stem:function(){
+    const i=3;
+    return "The same forty scores again, and now nothing has been thrown away: 7 | 4 is a score of 74. Count the leaves on each row and you get "
+      +SHEET.f.join(", ")+" — the frequencies, exactly. A stem-and-leaf plot is a histogram lying on its side, built out of the digits themselves.";
+  },
+  keep:function(){
+    return "Both displays agree that "+SHEET.f[3]+" students scored in the seventies. Only one of them can tell you that "+REPEATS.top
+      +" was scored "+REPEATS.topN+" times, or that "+REPEATS.vals.length
+      +" different scores came up more than once. The histogram shows the shape and forgets the numbers; the stem-and-leaf keeps both, and gets unreadable long before forty turns into four hundred.";
+  },
+  back:function(){
+    const nl=sum(B2B.left.map(function(x){return x.length;}));
+    const nr=sum(B2B.right.map(function(x){return x.length;}));
+    return "Your worksheet's back-to-back plot: "+nl+" on the left, "+nr+" on the right. The catch is the left-hand side, where the leaves increase <i>away</i> from the stem — the row reading 5, 2, 0 beside stem 1 is 10, 12 and 15, smallest nearest the spine. At stem 3 the right-hand side is empty altogether.";
+  }
+};
+
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="table"){
+    let rows="";
+    for(let i=0;i<SHEET.k;i++){
+      rows+='<tr'+(i===3?' class="hit"':"")+'><td class="st">'+clsLabel(SHEET,i)+"</td><td class=\"lv\">"+SHEET.f[i]+"</td></tr>";
+    }
+    body='<table class="sl"><thead><tr><th>'+SHEET.label+"</th><th>"+SHEET.what+"</th></tr></thead><tbody>"+rows
+      +'<tr><td class="st">Total</td><td class="lv">'+SHEET.n+"</td></tr></tbody></table>"
+      +'<div class="eq" style="margin-top:14px">'+SHEET.f.join(" + ")+" = <span class=\"res\">"+SHEET.n+"</span>"
+      +'<span class="lbl">the starting point: counts and nothing else</span></div>';
+  }else if(h.kind==="hist"){
+    body=chartHTML(SHEET,{alt:"histogram of forty exam scores"})
+      +'<div class="eq" style="margin-top:10px">the same six numbers, as heights'
+      +'<span class="lbl">no gaps, because '+SHEET.hi[0]+" runs straight into "+SHEET.lo[1]+"</span></div>";
+  }else if(h.kind==="poly"){
+    body=chartHTML(SHEET,{poly:true, anchor:true, mids:true, dot:3, alt:"histogram with a frequency polygon"})
+      +'<div class="duo" style="margin-top:16px">'
+        +'<div class="pane b"><div class="ttl2">how far across</div>'
+          +'<div class="fm">('+SHEET.lo[3]+" + "+SHEET.hi[3]+") ÷ 2</div>"
+          +'<div class="vl">'+numText(midOf(SHEET,3))+"</div>"
+          +'<div class="wk">the class midpoint</div></div>'
+        +'<div class="pane"><div class="ttl2">how high</div>'
+          +'<div class="fm">the frequency of '+clsLabel(SHEET,3)+"</div>"
+          +'<div class="vl">'+SHEET.f[3]+"</div>"
+          +'<div class="wk">the top of that bar</div></div></div>';
+  }else if(h.kind==="stem"){
+    body=stemHTML(SHEET,{counts:true, hit:3})
+      +'<div class="eq" style="margin-top:14px">leaf counts '+SHEET.f.join(", ")
+      +'<span class="lbl">the frequencies again, one row at a time</span></div>';
+  }else if(h.kind==="keep"){
+    body='<div class="duo">'
+      +'<div class="pane"><div class="ttl2">the histogram says</div>'
+        +'<div class="fm">'+SHEET.f[3]+" students scored<br>somewhere in "+clsLabel(SHEET,3)+"</div>"
+        +'<div class="vl">'+SHEET.f[3]+"</div>"
+        +'<div class="wk">and can say nothing more</div></div>'
+      +'<div class="pane c"><div class="ttl2">the stem-and-leaf says</div>'
+        +'<div class="fm">'+SHEET.leaves[3].join(" ")+"<br>on stem "+SHEET.stems[3]+"</div>"
+        +'<div class="vl">'+SHEET.f[3]+"</div>"
+        +'<div class="wk">the same count, and every score</div></div></div>'
+      +'<div class="eq" style="margin-top:16px">'+REPEATS.top+" was scored <span class=\"res\">"+REPEATS.topN
+      +"</span> times, and <span class=\"res\">"+REPEATS.vals.length+"</span> scores repeated at all"
+      +'<span class="lbl">neither fact survives in the histogram</span></div>';
+  }else{
+    body=backHTML(B2B,{})
+      +'<div class="eq" style="margin-top:14px">left: <span class="res">5, 2, 0 | 1</span> means 10, 12, 15'
+      +'<span class="lbl">on the left the leaves increase away from the stem</span></div>';
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.vis?'<div class="vis">'+q.vis+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
