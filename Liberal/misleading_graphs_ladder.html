@@ -1,0 +1,1300 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Second Look Ladder — what the picture adds to the number</title>
+<style>
+  :root{
+    --ink:#171720;
+    --paper:#F4F4F7;
+    --card:#FFFFFF;
+    --rule:#DBDAE2;
+    --muted:#5E5C6B;
+    --gv:#5C4B8A;          /* the accent: the graph itself */
+    --gv-bg:#EDEAF5;
+    --gv-fill:#CFC8E4;
+    --true:#1B6B4B;        /* what the data actually says */
+    --true-bg:#E4F2EA;
+    --seen:#B03A2E;        /* what the eye is led to read */
+    --seen-bg:#FBEAE7;
+    --dim:#BDBCC6;
+    --round-bg:#FCF1DA;
+    --right:#1B6B4B;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E4F2EA;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--gv)}
+  :focus-visible{outline:3px solid var(--gv); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,244,247,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--gv)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:18ch}
+  .lede{max-width:62ch; color:#33323E; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:700px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.0; text-align:center}
+  .eq .res{color:var(--seen); font-weight:700}
+  .eq .ok{color:var(--true); font-weight:700}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+
+  /* ---- the graphs ---- */
+  .mg{width:100%; max-width:560px; display:block; margin:0 auto; background:var(--card)}
+  .grid{stroke:#E8E7EC; stroke-width:1}
+  .axl{stroke:#8A8892; stroke-width:1.5}
+  .ax{font-family:var(--sans); font-size:11px; fill:var(--muted)}
+  .gt{font-family:var(--serif); font-size:13px; font-weight:700; fill:var(--ink)}
+  .gv{font-family:var(--serif); font-size:12px; font-weight:700; fill:var(--gv)}
+  .src{font-family:var(--sans); font-size:10px; fill:#8A8892}
+  .warnt{font-family:var(--sans); font-size:10.5px; font-style:italic; fill:var(--seen)}
+  .gb{fill:var(--gv-fill); stroke:var(--gv); stroke-width:1.5}
+  .gb.hit{fill:var(--gv)}
+  .ic{fill:var(--gv-fill); stroke:var(--gv); stroke-width:1.5}
+  .ic.hit{fill:var(--gv)}
+  .ico{fill:#fff; opacity:.55}
+  .gh{fill:none; stroke:var(--true); stroke-width:1.6; stroke-dasharray:5 4}
+  .tl{fill:none; stroke:var(--gv); stroke-width:2.5; stroke-linejoin:round}
+  .td{fill:var(--gv)}
+  .cut{stroke:var(--seen); stroke-width:1.5; stroke-dasharray:4 3}
+
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:680px; margin:0 auto}
+  @media (max-width:640px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:15px 16px; text-align:center; background:var(--true-bg)}
+  .pane.b{background:var(--seen-bg)}
+  .pane .ttl2{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:9px; color:var(--true)}
+  .pane.b .ttl2{color:var(--seen)}
+  .pane .fm{font-family:var(--serif); font-size:clamp(14.5px,2.9vw,17px); line-height:1.5}
+  .pane .vl{font-family:var(--serif); font-size:clamp(20px,4.4vw,28px); font-weight:700; margin-top:7px; color:var(--true)}
+  .pane.b .vl{color:var(--seen)}
+  .pane .wk{font-size:12.5px; color:var(--muted); margin-top:7px; line-height:1.4}
+
+  /* ---- the six checks ---- */
+  table.chk{border-collapse:collapse; margin:0 auto; font-size:14px; max-width:620px; width:100%}
+  table.chk th,table.chk td{border-bottom:1px solid var(--rule); padding:7px 12px; text-align:left; vertical-align:top}
+  table.chk th{font-family:var(--sans); font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); font-weight:600}
+  table.chk td.nm{font-weight:600; white-space:nowrap; color:var(--gv)}
+  table.chk tr.fail td{background:var(--seen-bg)}
+  table.chk tr.fail td.nm{color:var(--seen)}
+  table.chk tr.ok td.nm{color:var(--true)}
+  table.chk td.vd{width:74px; white-space:nowrap; font-size:12.5px}
+
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--gv); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--seen); background:var(--seen-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk{font-family:var(--serif); font-size:26px; line-height:1; color:var(--seen)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3D3C48}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:64ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#33323E}
+  .scene{max-width:58ch; margin:0 auto 14px; background:var(--gv-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:46ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(16px,3.6vw,25px); background:var(--gv-bg); border-radius:12px; padding:11px 25px; margin:0 auto 16px}
+  .vis{margin:0 auto 16px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:20px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #AFD7C2}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:42ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>◢</span> The Second Look Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 21 · misleading visual representations</p>
+    <h1>The eye reads area.</h1>
+    <p class="lede">A number is a length. Draw it as a picture that grows in two directions at once and the reader sees a <b>square</b> of that length, because area is what the eye actually judges. Lift the bottom of an axis off zero and a small rise becomes a cliff. Space out unequal years evenly and a slowing trend looks steady. None of these change the figures printed on the graph — every one of them changes what the graph says.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk">◢</span>
+      <p><b>43¢ drawn twice over looks like 18¢.</b> In your worksheet's dollar graphic each bill is scaled to its value in <i>height and in width</i>. Shrink both to 43% and the area left is 0.43 × 0.43 = <b>0.1849</b> — about eighteen per cent of the original. The label is honest and the picture is not, and the picture is what gets remembered.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3D3C48">Rung 1 names the six checks. Rungs 2–4 work on the vertical axis: where it starts, how much that exaggerates, and what the true change was. Rungs 5–6 handle icons scaled in two directions, where the arithmetic is squaring. Rung 7 is the horizontal axis. Rungs 8–9 run the remaining checks on a graph in front of you. Rung 10 mixes all six.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Green is honest, red is the effect</h3><p>A dashed green outline shows the size a figure should have been. Red marks what the drawing leads you to see.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Percentages are given to the nearest tenth. A figure scaled in both directions covers an area equal to the <i>square</i> of its ratio — twice as tall and twice as wide is four times the area, not two. "How much taller does it look" is measured from the axis the graph actually draws; "the true change" is measured from zero, where it belongs.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Six questions, asked every time</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing here is illegal</h3><p>Every figure on these graphs is correct. The distortion lives entirely in how they were drawn.</p></div>
+      <div class="step"><span class="n">02</span><h3>Whoever drew it wanted something</h3><p>Ask what case the graph is making, and whether the drawing is doing work the numbers cannot.</p></div>
+      <div class="step"><span class="n">03</span><h3>The arithmetic is your defence</h3><p>Work the real ratio yourself. If it does not match the impression, the impression was manufactured.</p></div>
+    </div>
+    <p class="closing">Read the numbers first, then look at the picture and ask what it added.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Second Look Ladder · title · vertical axis · artistic design · horizontal axis · bar proportional · source</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+/* one place decides how every number is printed and how two are compared */
+function numText(v){
+  const r=Math.round(v*10)/10;
+  return (Math.abs(r-Math.round(r))<1e-9)?grp(Math.round(r)):grp(Math.trunc(r))+"."+Math.abs(Math.round(r*10)%10);
+}
+function numKey(v){ return (Math.round(v*100)/100).toFixed(2); }
+function pctText(v){ return numText(v)+"%"; }
+/* enough decimal places that the multiplication shown on the page is true */
+function ratText(v){
+  let s=v.toFixed(4).replace(/0+$/,"").replace(/\.$/,"");
+  return s;
+}
+function timesText(v){ return ratText(v)+(Math.abs(v-1)<1e-9?" time":" times"); }
+/* numeric options deduplicated by VALUE; spares wait in order for a coincidence */
+function numOpts(ans,cands,note,spares,fmt){
+  fmt=fmt||numText;
+  const seen={}; seen[numKey(ans)]=1;
+  const opts=[{label:fmt(ans), correct:true, note:note}];
+  shuffle(cands.slice()).concat(spares||[]).forEach(function(x){
+    if(x==null||x.v==null||!Number.isFinite(x.v)||x.v<0)return;
+    const k=numKey(x.v); if(seen[k])return; seen[k]=1;
+    opts.push({label:fmt(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+function textOpts(ans,note,cands){
+  const opts=[{label:ans, correct:true, note:note}];
+  shuffle(cands.slice()).forEach(function(x){ if(x&&x.t!=null) opts.push({label:x.t, note:x.w}); });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= the six checks ================= */
+const CHECKS=[
+  {n:"TITLE", q:"Is there a title, and does it say what is being displayed?",
+   fail:"There is no title at all, so nothing states what the graph is about."},
+  {n:"VERTICAL AXIS", q:"Are there numbers and tick marks showing the scale, and has the scale been stretched?",
+   fail:"The vertical axis does not start at zero, which stretches every difference on the graph."},
+  {n:"ARTISTIC DESIGN", q:"Do the pictures and effects pull attention away from the data?",
+   fail:"The data has been replaced by drawings, and the drawings do the talking."},
+  {n:"HORIZONTAL AXIS", q:"Are the intervals along the bottom equally spaced in reality, not just on the page?",
+   fail:"The intervals along the bottom are unequal in reality but drawn the same width apart."},
+  {n:"BAR PROPORTIONAL", q:"Are the shapes sized in proportion to the numbers they stand for?",
+   fail:"The shapes are scaled in height and width at once, so their areas grow as the square of the figures."},
+  {n:"SOURCE", q:"Is there a source saying where the data came from?",
+   fail:"No source is given, so there is no way to check the figures or who is making the case."}
+];
+function checkByName(n){ for(const c of CHECKS) if(c.n===n) return c; return null; }
+
+/* ================= the worksheet's two displays ================= */
+const DOLLAR={vals:[100,63,54,48,43], labs:["1980","1990","1995","2000","2005"],
+  years:[1980,1990,1995,2000,2005], shape:"note", post:"¢",
+  title:"Purchasing Power of the Diminishing Dollar", source:"U.S. Bureau of Labor Statistics"};
+const HOUSE={vals:[1740,2080,2392], labs:["1980","1990","2010"],
+  years:[1980,1990,2010], shape:"house", post:"",
+  title:"Number of Square Feet in an Average U.S. Single-Family Home", source:"U.S. Census Bureau"};
+/* every apparent figure is computed from the ratio, never typed */
+function apparent(v,base){ const r=v/base; return base*r*r; }
+
+/* ================= drawing ================= */
+function niceStep(r){ const c=[1,2,4,5,10,20,25,50,100,200,250,500,1000,2000]; for(const x of c) if(r/x<=6) return x; return 5000; }
+/* bars, honest or lifted off zero */
+function barsHTML(o){
+  const v=o.vals, lab=o.labs, k=v.length;
+  /* a lifted axis needs a line of its own beneath the labels, or its note lands
+     on top of them */
+  const W=560,H=252,ML=o.noAxis?14:48,MR=14,MT=o.title?34:14,
+        MB=(o.source?50:42)+((o.base||0)>0?12:0);
+  const pw=W-ML-MR, ph=H-MT-MB;
+  const base=o.base||0;
+  const vmax=Math.max.apply(null,v);
+  const step=niceStep(vmax-base);
+  let top=Math.ceil((vmax-base)/step)*step+base;
+  if(top===vmax) top+=step;
+  const y=function(t){ return MT+ph-((t-base)/(top-base))*ph; };
+  const bw=pw/k, gw=Math.min(bw*0.56,86);
+  let s='<svg class="mg" viewBox="0 0 '+W+" "+H+'" role="img" aria-label="bar graph">';
+  if(o.title) s+='<text class="gt" x="'+(W/2)+'" y="22" text-anchor="middle">'+o.title+"</text>";
+  if(!o.noAxis){
+    for(let t=base;t<=top+1e-9;t+=step){
+      s+='<line class="grid" x1="'+ML+'" x2="'+(W-MR)+'" y1="'+y(t).toFixed(1)+'" y2="'+y(t).toFixed(1)+'"/>'
+        +'<text class="ax" x="'+(ML-6)+'" y="'+(y(t)+4).toFixed(1)+'" text-anchor="end">'+grp(Math.round(t*100)/100)+"</text>";
+    }
+  }
+  for(let i=0;i<k;i++){
+    const cx=ML+i*bw+bw/2;
+    s+='<rect class="gb'+(o.hit===i?" hit":"")+'" x="'+(cx-gw/2).toFixed(1)+'" y="'+y(v[i]).toFixed(1)
+      +'" width="'+gw.toFixed(1)+'" height="'+(MT+ph-y(v[i])).toFixed(1)+'"/>'
+      +'<text class="gv" x="'+cx.toFixed(1)+'" y="'+(y(v[i])-6).toFixed(1)+'" text-anchor="middle">'+grp(v[i])+"</text>"
+      +'<text class="ax" x="'+cx.toFixed(1)+'" y="'+(MT+ph+17)+'" text-anchor="middle">'+lab[i]+"</text>";
+  }
+  s+='<line class="axl" x1="'+ML+'" x2="'+(W-MR)+'" y1="'+y(base).toFixed(1)+'" y2="'+y(base).toFixed(1)+'"/>';
+  if(!o.noAxis) s+='<line class="axl" x1="'+ML+'" x2="'+ML+'" y1="'+MT+'" y2="'+y(base).toFixed(1)+'"/>';
+  if(base>0) s+='<text class="warnt" x="'+(ML+4)+'" y="'+(MT+ph+32)+'">the axis starts at '+grp(base)+"</text>";
+  if(o.noAxis) s+='<text class="warnt" x="'+(ML+4)+'" y="'+(MT+13)+'">no vertical scale is shown</text>';
+  if(o.source) s+='<text class="src" x="'+ML+'" y="'+(H-6)+'">Source: '+o.source+"</text>";
+  return s+"</svg>";
+}
+/* icons. Both dimensions scale by the same ratio, measured against the FIRST
+   value, so a growing figure bulges past the honest dashed outline. */
+function iconsHTML(o){
+  const v=o.vals, lab=o.labs, k=v.length, two=!!o.two;
+  const W=560,H=272,MT=o.title?32:12,MB=o.ghost?60:48;
+  const ph=H-MT-MB, cw=W/k, base=MT+ph;
+  const r=v.map(function(x){return x/v[0];});
+  const rmax=Math.max.apply(null,r);
+  const baseH=(ph*0.90)/rmax;
+  const baseW=Math.min((cw*0.70)/(two?rmax:1), baseH*0.78);
+  let s='<svg class="mg" viewBox="0 0 '+W+" "+H+'" role="img" aria-label="pictograph">';
+  if(o.title) s+='<text class="gt" x="'+(W/2)+'" y="21" text-anchor="middle">'+o.title+"</text>";
+  for(let i=0;i<k;i++){
+    const cx=i*cw+cw/2, hh=baseH*r[i], ww=two?baseW*r[i]:baseW;
+    s+=shapeHTML(o.shape,cx,base,ww,hh,o.hit===i);
+    /* the honest outline is drawn LAST, so it stays visible over a widened icon */
+    if(two&&o.ghost&&Math.abs(r[i]-1)>1e-9){
+      s+='<rect class="gh" x="'+(cx-baseW/2).toFixed(1)+'" y="'+(base-hh).toFixed(1)
+        +'" width="'+baseW.toFixed(1)+'" height="'+hh.toFixed(1)+'" rx="3"/>';
+    }
+    s+='<text class="gv" x="'+cx.toFixed(1)+'" y="'+(base-hh-8).toFixed(1)+'" text-anchor="middle">'
+      +(o.pre||"")+grp(v[i])+(o.post||"")+"</text>"
+      +'<text class="ax" x="'+cx.toFixed(1)+'" y="'+(base+17)+'" text-anchor="middle">'+lab[i]+"</text>";
+  }
+  s+='<line class="axl" x1="8" x2="'+(W-8)+'" y1="'+base+'" y2="'+base+'"/>';
+  if(two&&o.ghost) s+='<text class="warnt" x="'+(W/2)+'" y="'+(base+36)+'" text-anchor="middle">'
+    +"dashed outline = the honest height, with the width left alone</text>";
+  if(o.source) s+='<text class="src" x="10" y="'+(H-6)+'">Source: '+o.source+"</text>";
+  return s+"</svg>";
+}
+function shapeHTML(kind,cx,base,w,h,hit){
+  const c="ic"+(hit?" hit":"");
+  if(kind==="house"){
+    const rh=h*0.34, bh=h-rh;
+    return '<polygon class="'+c+'" points="'
+      +(cx-w/2).toFixed(1)+","+(base-bh).toFixed(1)+" "+cx.toFixed(1)+","+(base-h).toFixed(1)+" "
+      +(cx+w/2).toFixed(1)+","+(base-bh).toFixed(1)+'"/>'
+      +'<rect class="'+c+'" x="'+(cx-w*0.40).toFixed(1)+'" y="'+(base-bh).toFixed(1)
+      +'" width="'+(w*0.80).toFixed(1)+'" height="'+bh.toFixed(1)+'"/>';
+  }
+  if(kind==="note"){
+    return '<rect class="'+c+'" x="'+(cx-w/2).toFixed(1)+'" y="'+(base-h).toFixed(1)
+      +'" width="'+w.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="4"/>'
+      +'<circle class="ico" cx="'+cx.toFixed(1)+'" cy="'+(base-h/2).toFixed(1)+'" r="'+(Math.min(w,h)*0.22).toFixed(1)+'"/>';
+  }
+  return '<rect class="'+c+'" x="'+(cx-w/2).toFixed(1)+'" y="'+(base-h).toFixed(1)
+    +'" width="'+w.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="3"/>';
+}
+/* a time axis, drawn equally spaced or to scale */
+function timeHTML(o){
+  const yr=o.years, v=o.vals, k=yr.length;
+  const W=560,H=214,ML=48,MR=18,MT=o.title?32:14,MB=42;
+  const pw=W-ML-MR, ph=H-MT-MB;
+  const vmax=Math.max.apply(null,v);
+  const y=function(t){ return MT+ph-(t/vmax)*ph; };
+  const span=yr[k-1]-yr[0];
+  const x=o.toScale
+    ? function(i){ return ML+pw*(yr[i]-yr[0])/span; }
+    : function(i){ return ML+pw*i/(k-1); };
+  let s='<svg class="mg" viewBox="0 0 '+W+" "+H+'" role="img" aria-label="line graph over time">';
+  if(o.title) s+='<text class="gt" x="'+(W/2)+'" y="21" text-anchor="middle">'+o.title+"</text>";
+  const pts=[];
+  for(let i=0;i<k;i++) pts.push(x(i).toFixed(1)+","+y(v[i]).toFixed(1));
+  s+='<polyline class="tl" points="'+pts.join(" ")+'"/>';
+  for(let i=0;i<k;i++){
+    s+='<circle class="td" cx="'+x(i).toFixed(1)+'" cy="'+y(v[i]).toFixed(1)+'" r="4"/>'
+      +'<text class="ax" x="'+x(i).toFixed(1)+'" y="'+(MT+ph+16)+'" text-anchor="middle">'+yr[i]+"</text>";
+  }
+  s+='<line class="axl" x1="'+ML+'" x2="'+(W-MR)+'" y1="'+(MT+ph)+'" y2="'+(MT+ph)+'"/>'
+    +'<line class="axl" x1="'+ML+'" x2="'+ML+'" y1="'+MT+'" y2="'+(MT+ph)+'"/>'
+    +'<text class="'+(o.toScale?"src":"warnt")+'" x="'+(ML+4)+'" y="'+(MT+13)+'">'
+    +(o.toScale?"spaced by the actual year":"drawn equally spaced")+"</text>";
+  return s+"</svg>";
+}
+function checksHTML(rows){
+  let s='<table class="chk"><thead><tr><th>Check</th><th>What it asks</th><th class="vd">Verdict</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    const c=checkByName(r[0]);
+    s+='<tr class="'+(r[1]?"fail":"ok")+'"><td class="nm">'+c.n+"</td><td>"+(r[1]?c.fail:c.q)
+      +'</td><td class="vd">'+(r[1]?"fails":"passes")+"</td></tr>";
+  });
+  return s+"</tbody></table>";
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+
+/* ================= generated cases ================= */
+const TOPICS=[
+  {t:"Weekly sales", u:"sales", who:"a shop", src:"the company's own report"},
+  {t:"Club membership", u:"members", who:"a club", src:"the club secretary"},
+  {t:"Daily visitors", u:"visitors", who:"a museum", src:"the ticket office"},
+  {t:"Test scores", u:"points", who:"a school", src:"the district office"},
+  {t:"Monthly downloads", u:"downloads", who:"an app maker", src:"the app store"},
+  {t:"Units produced", u:"units", who:"a factory", src:"the production log"}
+];
+/* A truncated-axis case with clean arithmetic: the two bars above the lifted
+   axis are in a whole-number ratio, and the true rise is a whole percentage. */
+const TRUNC=(function(){
+  const out=[];
+  [20,30,40,50,60,80,90,100,120,150,200].forEach(function(v1){
+    [10,20,25,50].forEach(function(pct){
+      if(v1*(100+pct)%100) return;
+      const v2=v1*(100+pct)/100;
+      [2,3,4,5].forEach(function(m){
+        const num=m*v1-v2;
+        if(num%(m-1)) return;
+        const a=num/(m-1);
+        if(a<=0||a>=v1) return;
+        out.push({v1:v1, v2:v2, pct:pct, a:a, m:m});
+      });
+    });
+  });
+  return out;
+})();
+function truncCase(){
+  const c=TRUNC[Math.floor(Math.random()*TRUNC.length)];
+  const T=pick(TOPICS);
+  return {v1:c.v1, v2:c.v2, pct:c.pct, a:c.a, m:c.m, T:T,
+          labs:pick([["2024","2025"],["last year","this year"],["before","after"],["March","April"]])};
+}
+/* A two-dimensional icon case whose squared ratio stays a tidy number */
+function iconCase(){
+  for(let t=0;t<200;t++){
+    const base=pick([20,40,60,80,100,200,400]);
+    const r=pick([2,3,1.5,2.5,4,0.5]);
+    const v=base*r;
+    const app=base*r*r;
+    if(!Number.isInteger(v)||!Number.isInteger(app)) continue;
+    if(v===app) continue;
+    const T=pick(TOPICS);
+    return {base:base, r:r, v:v, app:app, T:T, shape:pick(["box","house","note"]),
+            labs:pick([["2020","2025"],["last year","this year"],["then","now"]])};
+  }
+  return null;
+}
+/* Unequal intervals along the bottom, drawn equally spaced */
+function timeCase(){
+  for(let t=0;t<200;t++){
+    const y0=pick([1980,1990,2000,2005,2010]);
+    const gaps=shuffle([pick([1,2,5]),pick([10,15,20]),pick([5,10])]).slice(0,ri(2,3));
+    const yr=[y0];
+    gaps.forEach(function(g){ yr.push(yr[yr.length-1]+g); });
+    const g=[]; for(let i=0;i+1<yr.length;i++) g.push(yr[i+1]-yr[i]);
+    if(new Set(g).size<2) continue;                 /* the gaps must actually differ */
+    const vals=yr.map(function(){ return ri(20,95); });
+    const T=pick(TOPICS);
+    return {years:yr, vals:vals, gaps:g, T:T};
+  }
+  return null;
+}
+/* A display carrying a known set of faults, for the checking rungs */
+function displayCase(faults){
+  const T=pick(TOPICS);
+  const kind=pick(["bars","icons","time"]);
+  const c=truncCase();
+  const ic=iconCase();
+  const tc=timeCase();
+  return {T:T, kind:kind, bars:c, icon:ic, time:tc};
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"The six checks",
+ sub:"What to ask of any graph, every time.",
+ gen:function(){
+   const forms=["what","which","name"];
+   const f=pick(forms);
+   const c=pick(CHECKS);
+   if(f==="what"){
+     const others=CHECKS.filter(function(x){return x!==c;});
+     return {q:"<b>Which check asks: "+c.q+"</b>",
+       opts:shuffle(textOpts(c.n,
+         "That is the "+c.n+" check. "+c.q,
+         shuffle(others).slice(0,3).map(function(x){
+           return {t:x.n, w:"The "+x.n+" check asks something else: "+x.q.charAt(0).toLowerCase()+x.q.slice(1)};
+         }))), two:true};
+   }
+   if(f==="name"){
+     const others=CHECKS.filter(function(x){return x!==c;});
+     return {q:"<b>What does the "+c.n+" check ask?</b>",
+       opts:shuffle(textOpts(c.q,
+         "It is the question behind every "+c.n+" fault: "+c.fail,
+         shuffle(others).slice(0,3).map(function(x){
+           return {t:x.q, w:"That is the "+x.n+" check."};
+         }))), one:true};
+   }
+   return {q:"<b>How many checks are there to run on a visual display?</b>",
+     opts:shuffle(distinctOpts([
+       {label:"6", correct:true,
+        note:"Title, vertical axis, artistic design, horizontal axis, bar proportional, source. Six questions, asked of every graph."},
+       {label:"4", note:"Four leaves two of the six out, and the two most often left out are the axes."},
+       {label:"3", note:"Three is not enough to catch a stretched axis, a two-dimensional icon and a missing source."},
+       {label:"8", note:"There are six. Adding more does not help if the six are not asked."}
+     ]).slice(0,4))};
+ }
+},
+{
+ title:"Where the axis starts",
+ sub:"A bar graph is only honest from zero.",
+ gen:function(){
+   const c=truncCase();
+   const lifted=Math.random()<.5;
+   const base=lifted?c.a:0;
+   const forms=["read","judge"];
+   if(pick(forms)==="judge"){
+     return {q:"<b>Does this graph pass the VERTICAL AXIS check?</b>",
+       scene:c.T.t+" for "+c.T.who+", "+c.labs[0]+" against "+c.labs[1]+".",
+       vis:barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:base, title:c.T.t, source:c.T.src}),
+       opts:shuffle(distinctOpts([
+         (lifted
+          ? {label:"No — the axis does not start at zero", correct:true,
+             note:"It starts at "+c.a+", so the bars show only the part above "+c.a+". The second bar looks "+c.m
+               +" times the first, when the figures are "+c.v1+" and "+c.v2+"."}
+          : {label:"Yes — the axis starts at zero", correct:true,
+             note:"From zero, each bar's height is the whole figure, so the picture and the numbers agree: "+c.v1+" and "+c.v2+"."}),
+         (lifted
+          ? {label:"Yes — the axis starts at zero",
+             note:"Look at the bottom-left number. This axis begins at "+c.a+", not at 0."}
+          : {label:"No — the axis does not start at zero",
+             note:"It does start at zero here. The bottom-left of the scale reads 0."}),
+         {label:"It cannot be told from the graph",
+          note:"It can — the number printed at the bottom of the vertical scale says where the axis begins."},
+         {label:"Only if the bars are different heights",
+          note:"Where the axis starts is fixed by the scale, not by how the bars happen to compare."}
+       ]).slice(0,4)), one:true};
+   }
+   return {q:"<b>What number does the vertical axis start at?</b>",
+     scene:c.T.t+" for "+c.T.who+".",
+     vis:barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:base, title:c.T.t}),
+     opts:shuffle(numOpts(base,
+       [{v:0, w:"Zero is where an honest bar graph starts, but read the number actually printed at the foot of the scale."},
+        {v:c.v1, w:"That is the height of the first bar, not where the scale begins."},
+        {v:c.v2, w:"That is the second bar's figure."},
+        {v:c.v1-c.a, w:"That is how far the first bar rises above the axis, not the axis itself."},
+        {v:c.v2-c.v1, w:"That is the difference between the two bars."},
+        {v:c.a+10, w:"Read the lowest number printed on the vertical scale."}],
+       (lifted
+        ? "The lowest number on the scale is "+c.a+". Everything below "+c.a+" has been cut away, which is what makes the difference between the bars look so large."
+        : "The scale begins at 0, so each bar's full height stands for its whole figure.")))};
+ }
+},
+{
+ title:"How much taller it looks",
+ sub:"Measure the bars from the axis the graph drew.",
+ gen:function(){
+   const c=truncCase();
+   const h1=c.v1-c.a, h2=c.v2-c.a;
+   const forms=["times","heights"];
+   if(pick(forms)==="heights"){
+     return {q:"<b>How tall is the second bar, measured from the axis?</b>",
+       scene:c.T.t+" for "+c.T.who+". The axis starts at "+c.a+".",
+       vis:barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:c.a, title:c.T.t, hit:1}),
+       opts:shuffle(numOpts(h2,
+         [{v:c.v2, w:"That is the figure itself. Its bar only rises from "+c.a+", so its height is "+c.v2+" − "+c.a+" = "+h2+"."},
+          {v:h1, w:"That is the first bar's height above the axis."},
+          {v:c.a, w:"That is where the axis starts."},
+          {v:c.v2-c.v1, w:"That is the gap between the two figures."},
+          {v:h2+c.a, w:"That adds the cut-off part back on, which gives the figure rather than the drawn height."}],
+         "The bar runs from "+c.a+" up to "+c.v2+", so its drawn height is "+c.v2+" − "+c.a+" = "+h2
+         +". The first bar's is "+c.v1+" − "+c.a+" = "+h1+".",
+         [{v:c.v1, w:"That is the first bar's figure, not the height it is drawn at."},
+          {v:h2+h1, w:"That adds the two drawn heights together."},
+          {v:c.m, w:"That is how many times taller the second bar looks."},
+          {v:h2*2, w:"Subtract once: "+c.v2+" − "+c.a+" = "+h2+"."}]))};
+   }
+   return {q:"<b>How many times taller does the second bar look than the first?</b>",
+     scene:c.T.t+" for "+c.T.who+". The axis starts at "+c.a+".",
+     vis:barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:c.a, title:c.T.t}),
+     facts:factsHTML([["first bar, above the axis",c.v1+" − "+c.a+" = "+h1],
+                      ["second bar, above the axis",c.v2+" − "+c.a+" = "+h2]]),
+     opts:shuffle(numOpts(c.m,
+       [{v:c.v2/c.v1, w:"That is the true ratio of the figures, "+c.v2+" ÷ "+c.v1+". The drawn bars are in a different ratio because the axis was lifted."},
+        {v:h2-h1, w:"That is the difference in height, not how many times taller."},
+        {v:c.m+1, w:"Divide the two drawn heights: "+h2+" ÷ "+h1+" = "+c.m+"."},
+        {v:c.v2-c.v1, w:"That is the difference between the figures."},
+        {v:h1/h2, w:"That is the two heights the wrong way round."}],
+       "Above the axis the bars are "+h1+" and "+h2+", and "+h2+" ÷ "+h1+" = "+c.m
+       +". The figures themselves are only in the ratio "+c.v2+" ÷ "+c.v1+" = "+ratText(c.v2/c.v1)+".",
+       [{v:c.m*2, w:"Divide the drawn heights, do not double them."},
+        {v:c.pct, w:"That is the true percentage rise, not a multiple."}],
+       timesText))};
+ }
+},
+{
+ title:"What really changed",
+ sub:"The true rise, measured from zero where it belongs.",
+ gen:function(){
+   const c=truncCase();
+   const h1=c.v1-c.a, h2=c.v2-c.a;
+   const appPct=(c.m-1)*100;
+   const forms=["true","apparent","gap"];
+   const f=pick(forms);
+   if(f==="apparent"){
+     return {q:"<b>Looking only at the bars, what rise does the picture suggest?</b>",
+       scene:c.T.t+" rose from "+c.v1+" to "+c.v2+". The axis starts at "+c.a+".",
+       vis:barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:c.a, title:c.T.t}),
+       opts:shuffle(numOpts(appPct,
+         [{v:c.pct, w:"That is the true rise, from "+c.v1+" to "+c.v2+". The bars suggest something much larger."},
+          {v:c.m, w:"That is how many times taller the bar looks, not a percentage."},
+          {v:appPct+100, w:"A bar "+c.m+" times as tall suggests a rise of "
+            +((c.m-1)===1?"its own size over again":((c.m-1)+" times its own size"))+", which is "+pctText(appPct)+" — not "+pctText(appPct+100)+"."},
+          {v:c.v2-c.v1, w:"That is the difference in the figures themselves."},
+          {v:appPct/2, w:"Going from a height of "+h1+" to "+h2+" is a rise of "+(h2-h1)+" on "+h1+", which is "+appPct+"%."}],
+         "The bars run "+h1+" and "+h2+", a rise of "+(h2-h1)+" on "+h1+" — that is "+pctText(appPct)
+         +". The real rise was only "+pctText(c.pct)+".",
+         null, pctText))};
+   }
+   if(f==="gap"){
+     const factor=appPct/c.pct;
+     return {q:"<b>How many times is the rise exaggerated?</b>",
+       scene:c.T.t+" rose from "+c.v1+" to "+c.v2+", a rise of "+pctText(c.pct)+". Drawn from an axis at "+c.a
+         +", the bars suggest a rise of "+pctText(appPct)+".",
+       vis:barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:c.a, title:c.T.t}),
+       opts:shuffle(numOpts(factor,
+         [{v:appPct-c.pct, w:"That is the difference between the two percentages. The question asks how many times one is bigger than the other."},
+          {v:c.m, w:"That is how many times taller the bar looks. The exaggeration of the <i>rise</i> is "+pctText(appPct)+" ÷ "+pctText(c.pct)+" = "+ratText(factor)+"."},
+          {v:c.pct/appPct*100, w:"That divides the wrong way round."},
+          {v:factor/2, w:pctText(appPct)+" ÷ "+pctText(c.pct)+" = "+ratText(factor)+"."},
+          {v:c.pct, w:"That is the true rise itself."}],
+         pctText(appPct)+" ÷ "+pctText(c.pct)+" = "+ratText(factor)
+         +". A lifted axis does not add a fixed amount to the impression — it multiplies it.",
+         [{v:appPct, w:"That is the apparent rise on its own."},
+          {v:factor*2, w:pctText(appPct)+" ÷ "+pctText(c.pct)+" = "+ratText(factor)+"."},
+          {v:c.a, w:"That is where the axis was cut off."},
+          {v:c.v2-c.v1, w:"That is the change in the figures."}],
+         timesText))};
+   }
+   return {q:"<b>What was the true percentage rise?</b>",
+     scene:c.T.t+" for "+c.T.who+", drawn from an axis that starts at "+c.a+".",
+     vis:barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:c.a, title:c.T.t}),
+     facts:factsHTML([["before",String(c.v1)],["after",String(c.v2)]]),
+     opts:shuffle(numOpts(c.pct,
+       [{v:appPct, w:"That is what the bars suggest, because they are measured from "+c.a+" instead of from zero."},
+        {v:c.v2-c.v1, w:"That is the rise in "+c.T.u+", not as a percentage of where it started."},
+        {v:(c.v2-c.v1)/c.v2*100, w:"That divides the rise by the <i>new</i> figure. A percentage change is measured against the starting figure, "+c.v1+"."},
+        {v:c.v2/c.v1*100, w:"That is the new figure as a percentage of the old one, which is "+ratText(c.v2/c.v1*100)+"% — the rise is what is left after taking off 100%."},
+        {v:c.m*100, w:"That is a multiple of the drawn bar height, not the true rise."}],
+       "("+c.v2+" − "+c.v1+") ÷ "+c.v1+" = "+ratText((c.v2-c.v1)/c.v1)+", which is "+pctText(c.pct)
+       +". Measured from zero, where a percentage change belongs.",
+       null, pctText))};
+ }
+},
+{
+ title:"One direction or two",
+ sub:"Did the width follow the height?",
+ gen:function(){
+   const c=iconCase();
+   const f5=pick(["judge","judge","effect"]);
+   /* the effect form always needs a two-dimensional picture; the verdict form
+      draws its own coin, so the two verdicts stay 50/50 */
+   const two=(f5==="effect")?true:(Math.random()<.5);
+   if(f5==="effect"){
+     return {q:"<b>What does scaling the picture in both directions do to it?</b>",
+       scene:c.T.t+" went from "+c.base+" to "+c.v+" "+c.T.u+", and the picture was scaled to match in height <i>and</i> width.",
+       vis:iconsHTML({vals:[c.base,c.v], labs:c.labs, two:true, ghost:true, shape:c.shape, title:c.T.t}),
+       opts:shuffle(distinctOpts([
+         {label:"Its area grows by the square of the ratio", correct:true,
+          note:"Both sides are multiplied by "+ratText(c.r)+", so the area is multiplied by "+ratText(c.r)+" × "+ratText(c.r)
+            +" = "+ratText(c.r*c.r)+". Area is what the eye judges, so the change looks that much bigger."},
+         {label:"Its area grows by the same ratio as the figures",
+          note:"That would be true if only the height changed. Once the width follows too, the area grows by the ratio <i>squared</i>."},
+         {label:"Its area grows by twice the ratio",
+          note:"Doubling is not squaring. A ratio of "+ratText(c.r)+" gives an area of "+ratText(c.r*c.r)+" times, not "+ratText(2*c.r)+"."},
+         {label:"Nothing — the area is unchanged",
+          note:"The dashed outline shows the honest size. The solid shape covers "+ratText(c.r*c.r)+" times the area of the first one."}
+       ]).slice(0,4)), one:true};
+   }
+   return {q:"<b>Does this picture pass the BAR PROPORTIONAL check?</b>",
+     scene:c.T.t+" for "+c.T.who+", drawn as pictures rather than plain bars.",
+     vis:iconsHTML({vals:[c.base,c.v], labs:c.labs, two:two, ghost:two, shape:c.shape, title:c.T.t}),
+     opts:shuffle(distinctOpts([
+       (two
+        ? {label:"No — the width was scaled as well as the height", correct:true,
+           note:"Both sides grew by "+ratText(c.r)+", so the area grew by "+ratText(c.r*c.r)
+             +" times. The dashed outline shows the honest size, and the shape spills past it."}
+        : {label:"Yes — only the height was scaled", correct:true,
+           note:"Every shape is the same width, so the height alone carries the figure. A ratio of "+ratText(c.r)
+             +" in the numbers is a ratio of "+ratText(c.r)+" on the page."}),
+       (two
+        ? {label:"Yes — only the height was scaled",
+           note:"Compare the widths. The second shape is wider as well as taller, which is what the dashed outline is there to show."}
+        : {label:"No — the width was scaled as well as the height",
+           note:"The widths here are identical. Only the heights differ, which is what makes the picture proportional."}),
+       {label:"It cannot be judged without the source",
+        note:"The source matters for a different check. Proportion is settled by comparing the shapes on the page."},
+       {label:"Only if the shapes are rectangles",
+        note:"Any shape scaled in two directions at once grows by the square of the ratio — houses, coins and bills alike."}
+     ]).slice(0,4)), one:true};
+ }
+},
+{
+ title:"The area it shows",
+ sub:"Two directions at once means squaring.",
+ gen:function(){
+   const c=iconCase();
+   const forms=["value","times","pct"];
+   const f=pick(forms);
+   if(f==="times"){
+     return {q:"<b>How many times bigger does the second picture look?</b>",
+       scene:c.T.t+" went from "+c.base+" to "+c.v+" "+c.T.u+", and the picture was made "+ratText(c.r)
+         +" times as tall <b>and</b> "+ratText(c.r)+" times as wide.",
+       vis:iconsHTML({vals:[c.base,c.v], labs:c.labs, two:true, ghost:true, shape:c.shape, title:c.T.t}),
+       opts:shuffle(numOpts(c.r*c.r,
+         [{v:c.r, w:"That is the ratio of the figures, and it would be the answer if only the height had changed. With the width scaled too, the area is "+ratText(c.r)+" × "+ratText(c.r)+" = "+ratText(c.r*c.r)+"."},
+          {v:2*c.r, w:"Two directions means multiplying the ratio by itself, not by 2."},
+          {v:c.r*c.r*c.r, w:"That is the ratio cubed, which would be right for a solid grown in three directions."},
+          {v:c.r+1, w:"Adding one is not what scaling does."},
+          {v:c.v-c.base, w:"That is the change in the figures themselves."}],
+         "Height × width, both multiplied by "+ratText(c.r)+": the area is "+ratText(c.r)+" × "+ratText(c.r)
+         +" = "+ratText(c.r*c.r)+" times. The figures only went up "+ratText(c.r)+" times.",
+         null, timesText))};
+   }
+   if(f==="pct"){
+     const truePct=(c.r-1)*100, appPct=(c.r*c.r-1)*100;
+     if(truePct<=0) return RUNGS[5].gen();
+     return {q:"<b>The figures rose "+pctText(truePct)+". What rise does the area suggest?</b>",
+       scene:c.T.t+" went from "+c.base+" to "+c.v+" "+c.T.u+", drawn "+ratText(c.r)+" times as tall and "+ratText(c.r)+" times as wide.",
+       vis:iconsHTML({vals:[c.base,c.v], labs:c.labs, two:true, ghost:true, shape:c.shape, title:c.T.t}),
+       opts:shuffle(numOpts(appPct,
+         [{v:truePct, w:"That is the true rise. The area grew by "+ratText(c.r*c.r)+" times, which is a rise of "+pctText(appPct)+"."},
+          {v:truePct*2, w:"The area is the ratio <i>squared</i>, not the percentage doubled."},
+          {v:c.r*c.r*100, w:"That is the area as a percentage of the original. The <i>rise</i> is what is left after taking off 100%."},
+          {v:appPct/2, w:"The area is "+ratText(c.r*c.r)+" times, so the rise is "+ratText(c.r*c.r)+" − 1 = "+ratText(c.r*c.r-1)+" times, or "+pctText(appPct)+"."},
+          {v:c.r*100, w:"That is the linear ratio as a percentage."}],
+         "The area is "+ratText(c.r)+"² = "+ratText(c.r*c.r)+" times the original, so it suggests a rise of "
+         +ratText(c.r*c.r)+" − 1 = "+ratText(c.r*c.r-1)+" times, or "+pctText(appPct)+" — against a true rise of "+pctText(truePct)+".",
+         null, pctText))};
+   }
+   return {q:"<b>What figure does the second picture appear to show?</b>",
+     scene:c.T.t+" went from "+c.base+" to "+c.v+" "+c.T.u+". The picture was scaled to match in height and in width, so its area is what the eye compares.",
+     vis:iconsHTML({vals:[c.base,c.v], labs:c.labs, two:true, ghost:true, shape:c.shape, title:c.T.t}),
+     facts:factsHTML([["the true ratio",c.v+" ÷ "+c.base+" = "+ratText(c.r)],
+                      ["the area ratio",ratText(c.r)+" × "+ratText(c.r)+" = "+ratText(c.r*c.r)]]),
+     opts:shuffle(numOpts(c.app,
+       [{v:c.v, w:"That is the honest figure, and it is what the label says. The area drawn is bigger than that."},
+        {v:c.base, w:"That is the figure it started from."},
+        {v:c.base*2*c.r, w:"That doubles the ratio instead of squaring it."},
+        {v:c.base*c.r*c.r*c.r, w:"That cubes the ratio, which belongs to solids rather than flat pictures."},
+        {v:c.v-c.base, w:"That is the change, not the figure the area suggests."}],
+       "The area is "+ratText(c.r*c.r)+" times the first shape, and "+c.base+" × "+ratText(c.r*c.r)+" = "+grp(c.app)
+       +". So a reader comparing the pictures sees about "+grp(c.app)+" where the label says "+grp(c.v)+"."))};
+ }
+},
+{
+ title:"Equally spaced years",
+ sub:"Unequal gaps drawn the same width apart.",
+ gen:function(){
+   const c=timeCase();
+   const g=c.gaps;
+   const forms=["judge","gap","effect"];
+   const f=pick(forms);
+   if(f==="gap"){
+     const i=ri(0,g.length-1);
+     return {q:"<b>How many years lie between "+c.years[i]+" and "+c.years[i+1]+"?</b>",
+       scene:c.T.t+" for "+c.T.who+", plotted at the years shown.",
+       vis:timeHTML({years:c.years, vals:c.vals, toScale:false, title:c.T.t}),
+       opts:shuffle(numOpts(g[i],
+         [{v:g[(i+1)%g.length], w:"That is the gap somewhere else along the axis. They are not all the same, which is the whole trouble."},
+          {v:c.years[c.years.length-1]-c.years[0], w:"That is the span of the whole graph."},
+          {v:g[i]+5, w:"Subtract the two years printed: "+c.years[i+1]+" − "+c.years[i]+" = "+g[i]+"."},
+          {v:c.years.length, w:"That is how many points are plotted."},
+          {v:1, w:"The points are one step apart on the page, but that step is not one year."}],
+         c.years[i+1]+" − "+c.years[i]+" = "+g[i]+" years. On the page that step is drawn the same width as every other, even though the gaps run "
+         +g.join(", ")+" years."))};
+   }
+   if(f==="effect"){
+     return {q:"<b>What does drawing unequal gaps at equal widths do to the line?</b>",
+       scene:"The gaps between these years run "+g.join(", ")+" years, but every step is drawn the same width.",
+       vis:timeHTML({years:c.years, vals:c.vals, toScale:false, title:c.T.t}),
+       opts:shuffle(distinctOpts([
+         {label:"It changes how steep the line looks between points", correct:true,
+          note:"A change spread over "+Math.max.apply(null,g)+" years is squeezed into the same width as one over "
+            +Math.min.apply(null,g)+", so the slower change is drawn as steeply as the faster one."},
+         {label:"Nothing — only the heights matter",
+          note:"The heights give the figures, but the slope is what a reader takes as the rate of change, and the slope depends on the spacing."},
+         {label:"It changes the figures at each point",
+          note:"The figures stay as they are. It is the impression of how fast they moved that is altered."},
+         {label:"It only matters if the line goes down",
+          note:"It distorts a rise exactly as much as a fall."}
+       ]).slice(0,4)), one:true};
+   }
+   const even=Math.random()<.5;
+   const yr=even?[c.years[0],c.years[0]+5,c.years[0]+10,c.years[0]+15].slice(0,c.years.length):c.years;
+   const gg=[]; for(let i=0;i+1<yr.length;i++) gg.push(yr[i+1]-yr[i]);
+   return {q:"<b>Does this graph pass the HORIZONTAL AXIS check?</b>",
+     scene:c.T.t+" for "+c.T.who+".",
+     vis:timeHTML({years:yr, vals:c.vals.slice(0,yr.length), toScale:false, title:c.T.t}),
+     opts:shuffle(distinctOpts([
+       (even
+        ? {label:"Yes — the intervals are equal", correct:true,
+           note:"Every gap is "+gg[0]+" years, and every step is drawn the same width, so the spacing on the page matches the spacing in time."}
+        : {label:"No — the intervals are unequal but drawn the same width", correct:true,
+           note:"The gaps run "+gg.join(", ")+" years, yet each step takes the same space. The slope between two points no longer means what it appears to."}),
+       (even
+        ? {label:"No — the intervals are unequal but drawn the same width",
+           note:"Subtract the years: every gap here is "+gg[0]+"."}
+        : {label:"Yes — the intervals are equal",
+           note:"Subtract the years and the gaps come out "+gg.join(", ")+" — not equal."}),
+       {label:"It depends on the vertical scale",
+        note:"The vertical scale is a different check. This one is only about the spacing along the bottom."},
+       {label:"It cannot be judged without more years",
+        note:"The years printed are enough: subtract each from the next."}
+     ]).slice(0,4)), one:true};
+ }
+},
+{
+ title:"Title and source",
+ sub:"The two easiest checks, and the two most often skipped.",
+ gen:function(){
+   const c=truncCase();
+   const hasT=Math.random()<.5, hasS=Math.random()<.5;
+   const which=pick(["TITLE","SOURCE"]);
+   const has=(which==="TITLE")?hasT:hasS;
+   const chk=checkByName(which);
+   /* the form is picked once; picking inside each test would weight the branches */
+   const f8=pick(["judge","why"]);
+   if(f8==="why"&&Math.random()<.5){
+     return {q:"<b>Why does a graph need a title?</b>",
+       opts:shuffle(distinctOpts([
+         {label:"So the reader knows what is being displayed before reading anything else", correct:true,
+          note:"Without one, the bars and labels have to be guessed at. A title is the only part of a graph that says what the whole thing is about."},
+         {label:"So the graph can be found again in a list",
+          note:"That is a filing convenience. The title is there so the display can be read at all."},
+         {label:"Because a graph without one cannot be drawn to scale",
+          note:"Scale is the vertical axis check. A graph can be perfectly scaled and still say nothing about its subject."},
+         {label:"To balance the source line at the bottom",
+          note:"Both carry information. Neither is there for the look of the thing."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f8==="why"){
+     return {q:"<b>Why does a graph need a source?</b>",
+       opts:shuffle(distinctOpts([
+         {label:"So the figures can be checked, and you can see who is making the case", correct:true,
+          note:"A source says where the data came from, whether it covers a whole population or a sample, and whose interest the display might serve."},
+         {label:"So the graph looks more professional",
+          note:"Appearance is not the point. The source is what makes the figures checkable."},
+         {label:"Because every graph must name its author",
+          note:"The author and the source of the data are not the same thing, and it is the data that needs tracing."},
+         {label:"To fill space beneath the axis",
+          note:"It carries real information: where the numbers came from, and from whom."}
+       ]).slice(0,4)), one:true};
+   }
+   return {q:"<b>Does this graph pass the "+which+" check?</b>",
+     scene:c.T.t+" for "+c.T.who+".",
+     vis:barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:0,
+                   title:hasT?c.T.t:null, source:hasS?c.T.src:null}),
+     opts:shuffle(distinctOpts([
+       (has
+        ? {label:"Yes", correct:true,
+           note:(which==="TITLE")
+             ? "A title is given, and it says what the graph is displaying."
+             : "A source is given, so the figures can be traced back and checked."}
+        : {label:"No", correct:true, note:chk.fail}),
+       (has
+        ? {label:"No", note:"It is there — look "+(which==="TITLE"?"above the graph":"below the axis")+"."}
+        : {label:"Yes", note:"Nothing appears "+(which==="TITLE"?"above the graph":"below the axis")+". "+chk.fail}),
+       {label:"Only if the axis starts at zero",
+        note:"Where the axis starts is the VERTICAL AXIS check. This one is separate."},
+       {label:"It depends on how many bars there are",
+        note:"The number of bars has nothing to do with whether a "+which.toLowerCase()+" was supplied."}
+     ]).slice(0,4)), two:true};
+ }
+},
+{
+ title:"Name the fault",
+ sub:"One graph, one thing wrong with it.",
+ gen:function(){
+   const kind=pick(["axis","icons","time","nosource","notitle"]);
+   const c=truncCase(), ic=iconCase(), tc=timeCase();
+   let vis, want, scene;
+   if(kind==="axis"){
+     want="VERTICAL AXIS";
+     scene=c.T.t+" for "+c.T.who+", rising from "+c.v1+" to "+c.v2+".";
+     /* a lifted axis or no axis at all -- both are the same check */
+     vis=(Math.random()<.5)
+       ? barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:c.a, title:c.T.t, source:c.T.src})
+       : barsHTML({vals:[c.v1,c.v2], labs:c.labs, noAxis:true, title:c.T.t, source:c.T.src});
+   }else if(kind==="icons"){
+     want="BAR PROPORTIONAL";
+     scene=ic.T.t+" went from "+ic.base+" to "+ic.v+" "+ic.T.u+".";
+     vis=iconsHTML({vals:[ic.base,ic.v], labs:ic.labs, two:true, ghost:true, shape:ic.shape,
+                    title:ic.T.t, source:ic.T.src});
+   }else if(kind==="time"){
+     want="HORIZONTAL AXIS";
+     scene=tc.T.t+" for "+tc.T.who+", at the years shown.";
+     vis=timeHTML({years:tc.years, vals:tc.vals, toScale:false, title:tc.T.t});
+   }else if(kind==="nosource"){
+     want="SOURCE";
+     scene=c.T.t+" for "+c.T.who+".";
+     vis=barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:0, title:c.T.t});
+   }else{
+     want="TITLE";
+     scene=c.T.t+" for "+c.T.who+".";
+     vis=barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:0, source:c.T.src});
+   }
+   const chk=checkByName(want);
+   const others=CHECKS.filter(function(x){return x.n!==want;});
+   return {q:"<b>Which check does this display fail?</b>",
+     scene:scene,
+     vis:vis,
+     opts:shuffle(textOpts(want, chk.fail,
+       shuffle(others).slice(0,3).map(function(x){
+         return {t:x.n, w:"That check asks: "+x.q.charAt(0).toLowerCase()+x.q.slice(1)+" Here it is not the problem."};
+       }))), two:true};
+ }
+},
+{
+ title:"Run all six",
+ sub:"Every kind of distortion, mixed.",
+ gen:function(){
+   const t=pick(["area","trunc","truepct","times","which","verdict"]);
+   if(t==="area"){
+     const c=iconCase();
+     return {q:"<b>What figure does the larger picture appear to show?</b>",
+       scene:c.T.t+" went from "+c.base+" to "+c.v+" "+c.T.u+", drawn to scale in height and width.",
+       vis:iconsHTML({vals:[c.base,c.v], labs:c.labs, two:true, ghost:true, shape:c.shape, title:c.T.t}),
+       opts:shuffle(numOpts(c.app,
+         [{v:c.v, w:"That is the honest figure on the label."},
+          {v:c.base, w:"That is the starting figure."},
+          {v:c.base*2*c.r, w:"That doubles the ratio rather than squaring it."},
+          {v:c.base*c.r*c.r*c.r, w:"That cubes the ratio."},
+          {v:c.v-c.base, w:"That is the change in the figures."}],
+         c.base+" × "+ratText(c.r)+"² = "+c.base+" × "+ratText(c.r*c.r)+" = "+grp(c.app)+"."))};
+   }
+   if(t==="trunc"){
+     const c=truncCase(), h1=c.v1-c.a, h2=c.v2-c.a;
+     return {q:"<b>How many times taller does the second bar look?</b>",
+       scene:c.T.t+" for "+c.T.who+". The axis starts at "+c.a+".",
+       vis:barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:c.a, title:c.T.t}),
+       opts:shuffle(numOpts(c.m,
+         [{v:c.v2/c.v1, w:"That is the true ratio of the figures."},
+          {v:h2-h1, w:"That is the difference in drawn height."},
+          {v:c.m+1, w:h2+" ÷ "+h1+" = "+c.m+"."},
+          {v:c.pct, w:"That is the true percentage rise."},
+          {v:c.m*2, w:"Divide the heights rather than doubling."}],
+         h2+" ÷ "+h1+" = "+c.m+", against a true ratio of "+ratText(c.v2/c.v1)+".",
+         null, timesText))};
+   }
+   if(t==="truepct"){
+     const c=truncCase();
+     return {q:"<b>What was the true percentage rise?</b>",
+       scene:c.T.t+" went from "+c.v1+" to "+c.v2+".",
+       vis:barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:c.a, title:c.T.t}),
+       opts:shuffle(numOpts(c.pct,
+         [{v:(c.m-1)*100, w:"That is the rise the bars suggest, measured from "+c.a+" instead of zero."},
+          {v:c.v2-c.v1, w:"That is the rise in "+c.T.u+", not a percentage."},
+          {v:(c.v2-c.v1)/c.v2*100, w:"That measures the rise against the new figure rather than the old one."},
+          {v:c.v2/c.v1*100, w:"That is the new figure as a percentage of the old."},
+          {v:c.pct*2, w:"("+c.v2+" − "+c.v1+") ÷ "+c.v1+" = "+ratText((c.v2-c.v1)/c.v1)+", which is "+pctText(c.pct)+"."}],
+         "("+c.v2+" − "+c.v1+") ÷ "+c.v1+" = "+ratText((c.v2-c.v1)/c.v1)+", which is "+pctText(c.pct)+".",
+         null, pctText))};
+   }
+   if(t==="times"){
+     const c=iconCase();
+     return {q:"<b>How many times bigger does the picture look?</b>",
+       scene:"The picture was made "+ratText(c.r)+" times as tall and "+ratText(c.r)+" times as wide.",
+       vis:iconsHTML({vals:[c.base,c.v], labs:c.labs, two:true, ghost:true, shape:c.shape, title:c.T.t}),
+       opts:shuffle(numOpts(c.r*c.r,
+         [{v:c.r, w:"That is the ratio in one direction only."},
+          {v:2*c.r, w:"Two directions means squaring, not doubling."},
+          {v:c.r*c.r*c.r, w:"That is the ratio cubed."},
+          {v:c.r+1, w:ratText(c.r)+" × "+ratText(c.r)+" = "+ratText(c.r*c.r)+"."},
+          {v:c.base, w:"That is a figure from the data, not a ratio."}],
+         ratText(c.r)+" × "+ratText(c.r)+" = "+ratText(c.r*c.r)+" times the area.",
+         null, timesText))};
+   }
+   if(t==="verdict"){
+     const c=truncCase();
+     const zero=Math.random()<.5;
+     return {q:"<b>Does this graph pass the VERTICAL AXIS check?</b>",
+       scene:c.T.t+" for "+c.T.who+".",
+       vis:barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:zero?0:c.a, title:c.T.t, source:c.T.src}),
+       opts:shuffle(distinctOpts([
+         (zero
+          ? {label:"Yes — it starts at zero", correct:true, note:"Each bar's height is its whole figure, so the picture matches the numbers."}
+          : {label:"No — it starts at "+c.a, correct:true, note:"Everything below "+c.a+" is cut away, so the second bar looks "+c.m+" times the first when the figures are "+c.v1+" and "+c.v2+"."}),
+         (zero
+          ? {label:"No — it starts at "+c.a, note:"The lowest number on this scale is 0."}
+          : {label:"Yes — it starts at zero", note:"The lowest number on this scale is "+c.a+"."}),
+         {label:"Yes, because a source is given",
+          note:"A source satisfies a different check. It says nothing about the scale."},
+         {label:"No, because the bars are different heights",
+          note:"Bars are meant to differ — that is the data. The question is where the scale begins."}
+       ]).slice(0,4)), two:true};
+   }
+   const kinds=["VERTICAL AXIS","BAR PROPORTIONAL","HORIZONTAL AXIS","SOURCE","TITLE"];
+   const want=pick(kinds);
+   const chk=checkByName(want);
+   const c=truncCase(), ic=iconCase(), tc=timeCase();
+   let vis, scene;
+   if(want==="VERTICAL AXIS"){
+     scene=c.T.t+" for "+c.T.who+"."; vis=barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:c.a, title:c.T.t, source:c.T.src});
+   }else if(want==="BAR PROPORTIONAL"){
+     scene=ic.T.t+" for "+ic.T.who+"."; vis=iconsHTML({vals:[ic.base,ic.v], labs:ic.labs, two:true, ghost:true, shape:ic.shape, title:ic.T.t, source:ic.T.src});
+   }else if(want==="HORIZONTAL AXIS"){
+     scene=tc.T.t+" for "+tc.T.who+"."; vis=timeHTML({years:tc.years, vals:tc.vals, toScale:false, title:tc.T.t});
+   }else if(want==="SOURCE"){
+     scene=c.T.t+" for "+c.T.who+"."; vis=barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:0, title:c.T.t});
+   }else{
+     scene=c.T.t+" for "+c.T.who+"."; vis=barsHTML({vals:[c.v1,c.v2], labs:c.labs, base:0, source:c.T.src});
+   }
+   const others=CHECKS.filter(function(x){return x.n!==want;});
+   return {q:"<b>Which check does this display fail?</b>",
+     scene:scene, vis:vis,
+     opts:shuffle(textOpts(want, chk.fail,
+       shuffle(others).slice(0,3).map(function(x){
+         return {t:x.n, w:"That check asks: "+x.q.charAt(0).toLowerCase()+x.q.slice(1)+" Here it is not the problem."};
+       }))), two:true};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {lbl:"the dollar, honestly", kind:"honest"},
+  {lbl:"scaled both ways",     kind:"two"},
+  {lbl:"what it looks like",   kind:"area"},
+  {lbl:"the houses",           kind:"house"},
+  {lbl:"a lifted axis",        kind:"axis"},
+  {lbl:"the six checks",       kind:"checks"}
+];
+let heroSel=0;
+
+const HNOTES={
+  honest:function(){
+    return "Your worksheet's first graphic, drawn the honest way: every bill the same width, so only the height carries the figure. "
+      +"Read like this it says what it should — the dollar of 1980 buys "+DOLLAR.vals[DOLLAR.vals.length-1]
+      +"¢ worth by 2005, a little under half.";
+  },
+  two:function(){
+    const r=DOLLAR.vals[4]/DOLLAR.vals[0];
+    return "The same figures, now scaled in width as well as height, which is how the original is drawn. The dashed outlines show what each bill "
+      +"should have been. Every one of them has lost width it was never entitled to lose, and the further right you go the bigger the gap.";
+  },
+  area:function(){
+    const rows=DOLLAR.vals.map(function(v){ return [v, Math.round(apparent(v,100)*10)/10]; });
+    return "The arithmetic behind that gap. Shrink a shape to "+DOLLAR.vals[4]+"% of its height <i>and</i> "+DOLLAR.vals[4]
+      +"% of its width and the area left is 0."+DOLLAR.vals[4]+" × 0."+DOLLAR.vals[4]+" = "
+      +(Math.round(apparent(43,100)*100)/10000).toFixed(4)+", which reads as about "+Math.round(apparent(43,100))
+      +"¢. The label says "+DOLLAR.vals[4]+"¢ and the picture says "+Math.round(apparent(43,100))+"¢.";
+  },
+  house:function(){
+    const r=HOUSE.vals[2]/HOUSE.vals[0];
+    const truePct=(r-1)*100, appPct=(r*r-1)*100;
+    return "The second graphic is worse, because it has no vertical scale at all. Floor space rose from "+grp(HOUSE.vals[0])+" to "
+      +grp(HOUSE.vals[2])+" square feet — a real increase of "+pctText(truePct)+". Drawn in two directions the last house covers "
+      +ratText(r*r)+" times the area of the first, an apparent increase of "+pctText(appPct)+", more than double the truth. "
+      +"The years are unequal too: ten, then twenty, drawn the same width apart.";
+  },
+  axis:function(){
+    return "A different trick on the same principle. Both graphs show a rise from 40 to 50, a real increase of 25%. Cut the axis off at 30 and "
+      +"the bars become 10 and 20, so the second looks twice the first — an apparent rise of 100%, four times what happened. "
+      +"No figure on the graph has been altered.";
+  },
+  checks:function(){
+    return "Six questions, asked of every display. Your worksheet's dollar graphic fails three of them: the bills are scaled in two directions, "
+      +"the years run 10, 5, 5, 5 but are drawn evenly, and the artwork does the arguing. It passes on title and source — which is exactly why "
+      +"running all six matters, because two ticks are not a clean bill of health.";
+  }
+};
+
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="honest"){
+    body=iconsHTML({vals:DOLLAR.vals, labs:DOLLAR.labs, two:false, shape:"note", post:"¢",
+      title:DOLLAR.title, source:DOLLAR.source})
+      +'<div class="eq" style="margin-top:10px">same width throughout, height alone carries the figure'
+      +'<span class="lbl">a picture the numbers can stand behind</span></div>';
+  }else if(h.kind==="two"){
+    body=iconsHTML({vals:DOLLAR.vals, labs:DOLLAR.labs, two:true, ghost:true, shape:"note", post:"¢",
+      title:DOLLAR.title, source:DOLLAR.source})
+      +'<div class="eq" style="margin-top:10px">the width shrinks too, and area is what the eye measures'
+      +'<span class="lbl">the dashed outline is the size it should have been</span></div>';
+  }else if(h.kind==="area"){
+    let rows='<table class="chk"><thead><tr><th>Year</th><th>The label says</th><th class="vd">The area shows</th></tr></thead><tbody>';
+    for(let i=0;i<DOLLAR.vals.length;i++){
+      const v=DOLLAR.vals[i], a=apparent(v,100);
+      const d=(v/100).toFixed(2);
+      rows+='<tr class="'+(i===DOLLAR.vals.length-1?"fail":"")+'"><td class="nm">'+DOLLAR.labs[i]
+        +"</td><td>"+v+"¢ &nbsp;→&nbsp; "+d+" × "+d+"</td><td class=\"vd\">"+(Math.round(a*10)/10)+"¢</td></tr>";
+    }
+    rows+="</tbody></table>";
+    body=rows
+      +'<div class="duo" style="margin-top:18px">'
+        +'<div class="pane"><div class="ttl2">the label</div><div class="fm">the 2005 dollar buys</div>'
+          +'<div class="vl">'+DOLLAR.vals[4]+"¢</div><div class=\"wk\">and that figure is correct</div></div>"
+        +'<div class="pane b"><div class="ttl2">the picture</div><div class="fm">0.'+DOLLAR.vals[4]+" × 0."+DOLLAR.vals[4]+"</div>"
+          +'<div class="vl">'+(Math.round(apparent(43,100)*10)/10)+"¢</div><div class=\"wk\">which is what the eye is given</div></div></div>";
+  }else if(h.kind==="house"){
+    const r=HOUSE.vals[2]/HOUSE.vals[0];
+    body=iconsHTML({vals:HOUSE.vals, labs:HOUSE.labs, two:true, ghost:true, shape:"house",
+      title:HOUSE.title, source:HOUSE.source})
+      +'<div class="duo" style="margin-top:16px">'
+        +'<div class="pane"><div class="ttl2">the real increase</div>'
+          +'<div class="fm">'+grp(HOUSE.vals[0])+" → "+grp(HOUSE.vals[2])+"</div>"
+          +'<div class="vl">'+pctText((r-1)*100)+'</div><div class="wk">from the figures themselves</div></div>'
+        +'<div class="pane b"><div class="ttl2">the apparent increase</div>'
+          +'<div class="fm">'+ratText(r)+" × "+ratText(r)+" = "+ratText(r*r)+"</div>"
+          +'<div class="vl">'+pctText((r*r-1)*100)+'</div><div class="wk">the area of the last house</div></div></div>';
+  }else if(h.kind==="axis"){
+    body='<div class="duo">'
+      +'<div class="pane" style="padding:8px"><div class="ttl2">from zero</div>'
+        +barsHTML({vals:[40,50], labs:["2024","2025"], base:0, title:null})+"</div>"
+      +'<div class="pane b" style="padding:8px"><div class="ttl2">from 30</div>'
+        +barsHTML({vals:[40,50], labs:["2024","2025"], base:30, title:null})+"</div></div>"
+      +'<div class="eq" style="margin-top:14px">a rise of <span class="ok">'+pctText(25)
+      +'</span> drawn to look like <span class="res">'+pctText(100)+"</span>"
+      +'<span class="lbl">bars of 10 and 20 above the cut, instead of 40 and 50</span></div>';
+  }else{
+    body=checksHTML([["TITLE",false],["VERTICAL AXIS",false],["ARTISTIC DESIGN",true],
+                     ["HORIZONTAL AXIS",true],["BAR PROPORTIONAL",true],["SOURCE",false]])
+      +'<div class="eq" style="margin-top:14px">your worksheet’s dollar graphic: <span class="ok">3 pass</span>, <span class="res">3 fail</span>'
+      +'<span class="lbl">a title and a source are not a clean bill of health</span></div>';
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.vis?'<div class="vis">'+q.vis+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
