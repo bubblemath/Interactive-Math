@@ -1,0 +1,852 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Which Tool Is This?</title>
+<style>
+:root{
+  --paper:#F3F1E7; --sheet:#FBFAF4; --rule:#D8D3C2; --rule-2:#EAE6D9;
+  --ink:#14213D; --ink-soft:#5C6478;
+  --blue:#1F4E9C; --blue-soft:#E4EBF7;
+  --red:#B3221F; --red-soft:#F7E4E3;
+  --turf:#2E6B45; --turf-soft:#E2EFE7;
+  --gold:#B58B15; --gold-soft:#F6EFD8;
+  --plum:#6B3A7A; --plum-soft:#EFE6F3;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
+.wrap{max-width:960px;margin:0 auto;padding:0 18px 70px}
+
+.masthead{border-bottom:3px double var(--ink);padding:24px 0 12px;margin-bottom:18px;display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.masthead h1{font-family:var(--serif);font-size:clamp(27px,5.4vw,42px);line-height:1;margin:0;letter-spacing:-.015em}
+.masthead p{margin:6px 0 0;color:var(--ink-soft);font-size:15px;max-width:50ch}
+
+.panel{display:none}
+.panel.on{display:block}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:3px;padding:20px 22px 22px;margin-bottom:18px}
+h2{font-family:var(--serif);font-size:24px;margin:0 0 4px;line-height:1.15}
+h3{font-family:var(--serif);font-size:17px;margin:20px 0 6px}
+.lede{color:var(--ink-soft);margin:0 0 16px;max-width:68ch}
+p{max-width:72ch}
+.note{border-left:3px solid var(--blue);background:var(--blue-soft);padding:10px 14px;margin:14px 0;font-size:14.5px;border-radius:0 3px 3px 0}
+.note.good{border-left-color:var(--turf);background:var(--turf-soft)}
+.note.warn{border-left-color:var(--red);background:var(--red-soft)}
+.note.gold{border-left-color:var(--gold);background:var(--gold-soft)}
+.note p{margin:0;max-width:none}
+
+button{font-family:inherit;font-size:15px;cursor:pointer}
+.btn{background:var(--blue);color:#fff;border:1px solid var(--blue);padding:10px 20px;border-radius:3px;font-weight:600}
+.btn:hover:not(:disabled){background:#183E7D}
+.btn:disabled{background:#B9BDC7;border-color:#B9BDC7;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--blue)}
+.btn.ghost:hover:not(:disabled){background:var(--blue-soft)}
+.btn.quiet{background:transparent;color:var(--ink-soft);border-color:var(--rule);font-weight:500}
+.btn.quiet:hover:not(:disabled){background:var(--paper);color:var(--ink)}
+.btn.big{font-size:18px;padding:13px 30px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.hidden{display:none !important}
+
+/* ---- setup ---- */
+.modepick{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+@media(max-width:620px){.modepick{grid-template-columns:1fr}}
+.mcard{background:#fff;border:2px solid var(--rule);border-radius:4px;padding:14px 16px;text-align:left;font-family:inherit;cursor:pointer}
+.mcard:hover{border-color:var(--ink)}
+.mcard.sel{border-color:var(--blue);border-width:3px;padding:13px 15px}
+.mcard .t{font-family:var(--serif);font-size:17px;display:block;margin-bottom:3px}
+.mcard .s{font-size:13px;color:var(--ink-soft);display:block}
+.famtoggles{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.famtoggles button{border:1.5px solid var(--rule);background:#fff;border-radius:3px;padding:7px 13px;font-size:14px;color:var(--ink-soft)}
+.famtoggles button.on{color:#fff;font-weight:600}
+.ctl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+.stepper{display:inline-flex;align-items:center}
+.stepper button{width:32px;height:32px;border:1px solid var(--rule);background:#fff;color:var(--ink);font-size:18px;line-height:1;padding:0}
+.stepper button:first-child{border-radius:3px 0 0 3px}
+.stepper button:last-child{border-radius:0 3px 3px 0}
+.stepper span{min-width:46px;height:32px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;background:#fff}
+
+/* ---- play ---- */
+.statusbar{display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--ink-soft);margin-bottom:14px}
+.statusbar b{font-family:var(--mono);color:var(--ink);font-size:16px}
+.scenario{background:#fff;border:1px solid var(--rule);border-left:4px solid var(--ink);border-radius:0 3px 3px 0;
+  padding:22px 24px;font-family:var(--serif);font-size:21px;line-height:1.5;min-height:112px;display:flex;align-items:center}
+body.klass .scenario{font-size:clamp(26px,3.6vw,38px);padding:40px 34px;min-height:230px}
+body.klass .statusbar{font-size:16px}
+.prompt{font-size:14.5px;color:var(--ink-soft);margin:18px 0 8px}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:700px){.choices{grid-template-columns:1fr 1fr}}
+@media(max-width:430px){.choices{grid-template-columns:1fr}}
+.choices.subs{grid-template-columns:repeat(5,1fr)}
+@media(max-width:820px){.choices.subs{grid-template-columns:1fr 1fr}}
+.choice{background:#fff;border:2px solid var(--rule);border-radius:4px;padding:15px 12px;font-family:inherit;
+  font-size:15px;font-weight:600;cursor:pointer;text-align:center;line-height:1.3;color:var(--ink)}
+.choice:hover:not(:disabled){border-color:var(--ink);background:#FFFDF6}
+.choice:disabled{cursor:default}
+.choice.right{border-color:var(--turf);background:var(--turf-soft);color:var(--turf)}
+.choice.wrong{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+.choice.dim{opacity:.4}
+body.klass .choice{font-size:18px;padding:19px 12px}
+
+.verdict{font-family:var(--serif);font-size:22px;margin:18px 0 6px}
+.verdict.ok{color:var(--turf)}
+.verdict.no{color:var(--red)}
+.verdict.part{color:var(--gold)}
+.clue{background:var(--gold-soft);border-left:3px solid var(--gold);border-radius:0 3px 3px 0;padding:12px 16px;font-size:15.5px}
+body.klass .clue{font-size:20px;padding:18px 22px}
+.answerline{font-size:16px;margin-top:10px}
+.answerline b{font-family:var(--serif);font-size:19px}
+
+/* ---- progress ---- */
+.mast{margin-top:6px}
+.mastrow{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13.5px}
+.mastrow .nm{width:158px;flex:0 0 auto}
+.mastrow .track{flex:1;min-width:90px;background:var(--rule-2);border-radius:2px;height:15px;overflow:hidden}
+.mastrow .track i{display:block;height:100%;background:var(--turf)}
+.mastrow .track i.low{background:var(--red)}
+.mastrow .track i.mid{background:var(--gold)}
+.mastrow .n{width:104px;flex:0 0 auto;text-align:right;font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+.metrics{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.metric{border:1px solid var(--rule);border-radius:3px;background:#fff;padding:10px 16px;min-width:132px}
+.metric b{display:block;font-family:var(--mono);font-size:25px;line-height:1.15}
+.metric small{color:var(--ink-soft);font-size:12px}
+.misslist{margin-top:10px;font-size:14px}
+.misslist div{background:#fff;border:1px solid var(--rule-2);border-left:3px solid var(--red);border-radius:0 3px 3px 0;padding:8px 12px;margin:6px 0}
+.misslist div span{display:block;font-size:12.5px;color:var(--ink-soft);margin-top:3px}
+.footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-soft);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+
+@media print{
+  body{background:#fff}
+  .btnrow,.footer,.no-print,.choices{display:none !important}
+  .panel{display:block !important}
+  .sheet{border-color:#999}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div>
+    <h1>Which Tool Is This?</h1>
+    <p>No arithmetic. Just read the situation and say what you would reach for — which is where most marks are actually lost.</p>
+  </div>
+</header>
+
+<!-- ============ SETUP ============ -->
+<section class="panel" id="p-setup">
+  <div class="sheet">
+    <h2>Set up a round</h2>
+    <div class="modepick" id="modepick"></div>
+
+    <h3>What to include</h3>
+    <p class="lede" style="margin-bottom:6px">Switch off anything you have not covered yet.</p>
+    <div class="famtoggles" id="famtoggles"></div>
+
+    <div class="ctl" style="margin-top:18px">
+      <label>Questions in a round</label>
+      <span class="stepper" id="roundStep"></span>
+    </div>
+
+    <div class="note gold" id="setupnote"></div>
+
+    <div class="btnrow">
+      <button class="btn big" id="startBtn">Start</button>
+      <button class="btn quiet" id="resetProgress">Reset my progress</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="progressSheet">
+    <h2>Where you stand</h2>
+    <div class="metrics" id="overall"></div>
+    <h3>By tool</h3>
+    <div class="mast" id="mastery"></div>
+    <div id="missSection"></div>
+  </div>
+</section>
+
+<!-- ============ PLAY ============ -->
+<section class="panel" id="p-play">
+  <div class="sheet">
+    <div class="statusbar" id="status"></div>
+    <div class="scenario" id="scenario"></div>
+    <div class="prompt" id="prompt"></div>
+    <div class="choices" id="choices"></div>
+    <div id="feedback"></div>
+    <div class="btnrow" id="playbtns"></div>
+  </div>
+</section>
+
+<!-- ============ SUMMARY ============ -->
+<section class="panel" id="p-summary">
+  <div class="sheet">
+    <h2>Round finished</h2>
+    <div class="metrics" id="roundMetrics"></div>
+    <div id="roundNote"></div>
+    <h3>What tripped you up</h3>
+    <div id="roundMisses"></div>
+    <div class="btnrow">
+      <button class="btn big" id="againBtn">Another round</button>
+      <button class="btn quiet" id="backBtn">Back to the setup</button>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  <span>Your progress saves in this browser automatically.</span>
+  <span><button class="btn quiet" id="wipe" style="font-size:12px;padding:4px 10px">Erase my saved work</button></span>
+</div>
+</div>
+
+<script>
+/* ==================================================================
+   ============ CORE LOGIC — START (stress-tested in Node) ==========
+   ================================================================== */
+
+/* The six families a student chooses between. "prob" is the only one with a
+   second stage, because one button marked "probability rule" would let a
+   student dodge the or / and / not / given decision entirely — and that
+   decision is most of the unit. */
+var FAMS = [
+  {id:'counting',    label:'Counting principle', color:'#2F6E86'},
+  {id:'permutation', label:'Permutation',        color:'#1F4E9C'},
+  {id:'combination', label:'Combination',        color:'#2E6B45'},
+  {id:'prob',        label:'Probability rule',   color:'#6B3A7A'},
+  {id:'binomial',    label:'Binomial',           color:'#B3221F'},
+  {id:'expected',    label:'Expected value',     color:'#B58B15'}
+];
+var SUBS = [
+  {id:'or',        label:'Or'},
+  {id:'oroverlap', label:'Or with overlap'},
+  {id:'and',       label:'And'},
+  {id:'not',       label:'Not / complement'},
+  {id:'given',     label:'Given / if'}
+];
+function famById(id){ for(var i=0;i<FAMS.length;i++) if(FAMS[i].id===id) return FAMS[i]; return null; }
+function subById(id){ for(var i=0;i<SUBS.length;i++) if(SUBS[i].id===id) return SUBS[i]; return null; }
+
+var BANK = [
+/* ---- counting principle: separate choices, one from each pool ---- */
+{id:'c1', fam:'counting', text:'A deli offers 4 breads, 6 meats and 3 cheeses. How many different sandwiches can be built by taking one of each?', clue:'One choice from each separate group, so multiply the group sizes: 4 · 6 · 3.'},
+{id:'c2', fam:'counting', text:'A PIN is 4 digits long and digits may repeat. How many PINs are possible?', clue:'Four blanks, and because repeats are allowed all 10 digits are still available for every blank: 10 · 10 · 10 · 10.'},
+{id:'c3', fam:'counting', text:'A licence plate has 3 letters followed by 3 digits, and repeats are allowed. How many plates are possible?', clue:'Six blanks drawn from two different pools with repeats allowed: 26³ · 10³.'},
+{id:'c4', fam:'counting', text:'A coin is tossed 6 times. How many different sequences of heads and tails are possible?', clue:'Six blanks with 2 choices each time: 2⁶ = 64.'},
+{id:'c5', fam:'counting', text:'A quiz has 9 true-or-false questions. In how many ways can the whole quiz be answered?', clue:'Nine blanks, 2 choices at every blank: 2⁹.'},
+{id:'c6', fam:'counting', text:'Three dice are rolled and you record what each one shows. How many outcomes are there?', clue:'Three blanks with 6 faces each: 6³ = 216.'},
+{id:'c7', fam:'counting', text:'A restaurant offers 3 starters, 7 main courses and 5 puddings. How many three-course meals are possible?', clue:'One choice per course, so multiply: 3 · 7 · 5.'},
+{id:'c8', fam:'counting', text:'A car is sold in 8 colours, with 3 engine sizes and 2 trim levels. How many versions exist?', clue:'Three independent lists, one choice from each: multiply.'},
+{id:'c9', fam:'counting', text:'A phone passcode is 6 digits long and digits may repeat. How many passcodes are possible?', clue:'Six blanks, 10 digits available every time because repeats are allowed: 10⁶.'},
+{id:'c10', fam:'counting', text:'You pick one shirt from 5, one pair of trousers from 4 and one pair of shoes from 3. How many outfits?', clue:'Separate groups, one item from each: multiply the three sizes.'},
+
+/* ---- permutation: no repeats, and the positions are distinguishable ---- */
+{id:'p1', fam:'permutation', text:'A club of 10 members elects a president, a vice-president and a secretary. How many outcomes are possible?', clue:'Nobody can hold two posts, and the three posts are different jobs — so order matters. 10P3.'},
+{id:'p2', fam:'permutation', text:'Eight runners finish a race. In how many ways can gold, silver and bronze be awarded?', clue:'The medals are different, so who came first matters, and no runner wins twice. 8P3.'},
+{id:'p3', fam:'permutation', text:'A flag has three horizontal stripes, each a different colour chosen from 10 colours. How many flags are possible?', clue:'Top, middle and bottom are distinguishable positions and no colour repeats. 10P3.'},
+{id:'p4', fam:'permutation', text:'In how many ways can 5 of 12 books be arranged in a row on a shelf?', clue:'Arranged in a row means the left-to-right order counts, and a book cannot appear twice. 12P5.'},
+{id:'p5', fam:'permutation', text:'A coach writes a batting order of 9 players chosen from a squad of 15. How many orders are possible?', clue:'Batting first is a different job from batting ninth, so order matters. 15P9.'},
+{id:'p6', fam:'permutation', text:'How many 4-letter codes can be made from the 26 letters if no letter may be used twice?', clue:'A code is read in order, and repeats are banned. 26P4.'},
+{id:'p7', fam:'permutation', text:'Six people sit in six chairs in a row. How many seating arrangements are there?', clue:'Every rearrangement of the same six people is a different arrangement. 6!'},
+{id:'p8', fam:'permutation', text:'Twenty science-fair projects compete for first, second and third prize. In how many ways can the prizes be given out?', clue:'The three prizes are different, so order matters, and no project wins twice. 20P3.'},
+{id:'p9', fam:'permutation', text:'A 3-digit code is made from the digits 0 to 9 with no digit repeated. How many codes are possible?', clue:'A code is ordered and no digit repeats. 10P3, which is the 10 · 9 · 8 you already chant.'},
+{id:'p10', fam:'permutation', text:'You rank your 4 favourite films out of the 10 you have seen. How many rankings are possible?', clue:'A ranking is an ordered list, and no film appears twice. 10P4.'},
+
+/* ---- combination: no repeats, and swapping two picks changes nothing ---- */
+{id:'k1', fam:'combination', text:'A club of 10 members chooses 3 people to serve on a committee. How many committees are possible?', clue:'All three have the same job, so swapping two names gives the same committee. 10C3.'},
+{id:'k2', fam:'combination', text:'A salad bar has 10 ingredients and you choose 3 for your salad. How many salads are possible?', clue:'The salad is identical whichever order you add the ingredients in. 10C3.'},
+{id:'k3', fam:'combination', text:'Five cards are dealt from a deck of 52. How many different hands are possible?', clue:'A hand is the same set of cards however it was dealt to you. 52C5.'},
+{id:'k4', fam:'combination', text:'A lottery draws 6 numbers from 49. How many possible draws are there?', clue:'The numbers on the ticket count as a set — drawing 7 then 12 is the same ticket as 12 then 7. 49C6.'},
+{id:'k5', fam:'combination', text:'A pizza is made with 3 toppings chosen from 12. How many pizzas are possible?', clue:'The toppings all end up on the same pizza, so the order they were named in is irrelevant. 12C3.'},
+{id:'k6', fam:'combination', text:'Four students are chosen from a class of 25 to attend a conference. How many groups are possible?', clue:'All four attend on the same footing — there is no ranking among them. 25C4.'},
+{id:'k7', fam:'combination', text:'Ten people each shake hands once with everyone else. How many handshakes take place?', clue:'A handshake is a pair, and the pair is the same read either way round. 10C2.'},
+{id:'k8', fam:'combination', text:'A jury of 12 is selected from a pool of 40 people. How many juries are possible?', clue:'Jurors are interchangeable — there are no distinct positions to fill. 40C12.'},
+{id:'k9', fam:'combination', text:'Two of 8 paint colours are chosen for a room, with no distinction between the two. How many pairs are possible?', clue:'An unordered pair with no repeats. 8C2.'},
+{id:'k10', fam:'combination', text:'A teacher picks 3 of her 10 students to present, in no particular order. How many groups are possible?', clue:'"In no particular order" says it outright — this is a selection, not an arrangement. 10C3.'},
+
+/* ---- binomial: fixed n, success or failure, constant p, independent ---- */
+{id:'b1', fam:'binomial', text:'About 20% of people are left-handed. In a random sample of 15 people, what is the probability that exactly 4 are left-handed?', clue:'Fifteen fixed trials, each person is left-handed or not, one person does not affect another, and p stays at 0.20 throughout.'},
+{id:'b2', fam:'binomial', text:'A player makes 80% of her free throws. She shoots 10. What is the probability she makes at least 8?', clue:'Ten fixed shots, each a make or a miss, with the same 80% every time.'},
+{id:'b3', fam:'binomial', text:'A die is rolled 12 times. What is the probability of getting exactly 3 sixes?', clue:'Twelve fixed rolls, each one a six or not a six, p = 1/6 on every roll.'},
+{id:'b4', fam:'binomial', text:'A treatment works for 70% of patients. Of 20 patients treated, what is the probability that at most 12 are helped?', clue:'Twenty fixed trials, helped or not helped, the same 70% for each patient.'},
+{id:'b5', fam:'binomial', text:'5% of the items a machine makes are faulty. In a sample of 40, what is the probability that none are faulty?', clue:'Forty fixed trials, faulty or not, constant 5%. "None" is just x = 0.'},
+{id:'b6', fam:'binomial', text:'A student guesses at all 10 multiple-choice questions, each with 4 options. What is the probability of exactly 6 correct?', clue:'Ten fixed questions, right or wrong, p = 0.25 on every guess.'},
+{id:'b7', fam:'binomial', text:'A coin is tossed 30 times. What is the probability of more than 20 heads?', clue:'Thirty fixed tosses, heads or tails, p = 0.5 all the way through.'},
+{id:'b8', fam:'binomial', text:'60% of voters in a large city favour a measure. In a poll of 25 voters, what is the probability that at least 15 favour it?', clue:'Twenty-five fixed trials, favour or not, and the city is large enough that p stays at 0.60.'},
+{id:'b9', fam:'binomial', text:'A team wins 65% of its games. What is the probability it wins exactly 7 of its next 10?', clue:'Ten fixed games, a win or a loss, the same 65% each time.'},
+
+/* ---- expected value: every outcome carries a value and a probability ---- */
+{id:'e1', fam:'expected', text:'A raffle sells 200 tickets at $5 each and gives one prize of $500. What is the average gain or loss per ticket bought?', clue:'Every outcome has a money value and a probability — multiply each pair and add.'},
+{id:'e2', fam:'expected', text:'A game costs $2 to play and pays $10 if you roll a six. Over many plays, what happens to your money?', clue:'"Over many plays" is the giveaway — the long-run average per play is expected value.'},
+{id:'e3', fam:'expected', text:'An insurance policy charges a $300 premium and pays out $10,000 with probability 0.02. What is the company’s average profit per policy?', clue:'Two outcomes, each with a value and a probability: multiply and add.'},
+{id:'e4', fam:'expected', text:'A carnival game charges $1 to play and pays $5 with probability 0.15. What is the average result per play?', clue:'Average per play across many plays is exactly what expected value measures.'},
+{id:'e5', fam:'expected', text:'You win $3 when a coin lands heads and lose $2 when it lands tails. What is your average result per toss?', clue:'Two outcomes with values and probabilities: (3)(0.5) + (−2)(0.5).'},
+{id:'e6', fam:'expected', text:'A table lists the number of cars per household alongside the probability of each. What is the mean number of cars?', clue:'The mean of a probability distribution is Σ x · P(x).'},
+{id:'e7', fam:'expected', text:'A machine pays $20 with probability 0.01, pays $1 with probability 0.20, and pays nothing otherwise. What is the average payout?', clue:'Multiply each payout by its probability and add the results.'},
+{id:'e8', fam:'expected', text:'A game costs $4 to play and returns an average of $3.60 per play. Is it a fair game?', clue:'Comparing the long-run average against the cost is an expected value question — fair means 0.'},
+
+/* ---- probability rule: OR, no overlap ---- */
+{id:'r1', fam:'prob', sub:'or', text:'One card is drawn from a deck. What is the probability that it is a king or a queen?', clue:'"Or", and no card is both a king and a queen — nothing overlaps, so simply add.'},
+{id:'r2', fam:'prob', sub:'or', text:'A die is rolled once. What is the probability of a 2 or a 5?', clue:'"Or", and the two results cannot both happen on one roll — add them.'},
+{id:'r3', fam:'prob', sub:'or', text:'A student is chosen at random. What is the probability they are a freshman or a senior?', clue:'"Or", and nobody is in both year groups — add.'},
+{id:'r4', fam:'prob', sub:'or', text:'A bag holds red, blue and green marbles. One is drawn. What is the probability it is red or blue?', clue:'"Or", and a marble is only one colour — add the two.'},
+{id:'r5', fam:'prob', sub:'or', text:'One card is drawn. What is the probability it is a heart or a spade?', clue:'"Or", and no card belongs to two suits — add.'},
+
+/* ---- probability rule: OR, with an overlap ---- */
+{id:'r6', fam:'prob', sub:'oroverlap', text:'One card is drawn. What is the probability that it is a king or a heart?', clue:'"Or", but the king of hearts is in both groups — add, then subtract the overlap once.'},
+{id:'r7', fam:'prob', sub:'oroverlap', text:'A die is rolled. What is the probability that it shows an even number or a number greater than 3?', clue:'"Or", but 4 and 6 are in both groups — subtract the overlap so they are not counted twice.'},
+{id:'r8', fam:'prob', sub:'oroverlap', text:'In a school some students take Spanish, some take French, and some take both. What is the probability a student takes Spanish or French?', clue:'"Or" with students sitting in both lists — subtract the ones counted twice.'},
+{id:'r9', fam:'prob', sub:'oroverlap', text:'Some households own a dog, some own a cat, and some own both. What is the probability a household owns a dog or a cat?', clue:'"Or" with an overlap that would otherwise be counted twice — subtract the both.'},
+{id:'r10', fam:'prob', sub:'oroverlap', text:'One card is drawn. What is the probability that it is a face card or a club?', clue:'"Or", and the jack, queen and king of clubs sit in both groups — subtract them once.'},
+
+/* ---- probability rule: AND ---- */
+{id:'r11', fam:'prob', sub:'and', text:'Two cards are drawn without replacement. What is the probability that both are aces?', clue:'"Both" means and — two things must happen together, so multiply, using the smaller deck for the second card.'},
+{id:'r12', fam:'prob', sub:'and', text:'A coin is tossed and a die is rolled. What is the probability of heads and a six?', clue:'"And" — both must happen, so multiply the two probabilities.'},
+{id:'r13', fam:'prob', sub:'and', text:'A marble is drawn, replaced, and a second is drawn. What is the probability the first is red and the second is blue?', clue:'"And" — one thing then another, so multiply along the path.'},
+{id:'r14', fam:'prob', sub:'and', text:'Two marbles are drawn from a bag. What is the probability that both are green?', clue:'"Both" is and — multiply the two branches together.'},
+{id:'r15', fam:'prob', sub:'and', text:'A spinner is spun twice. What is the probability it lands on red both times?', clue:'"Both times" means and — multiply the two spins.'},
+
+/* ---- probability rule: NOT / complement ---- */
+{id:'r16', fam:'prob', sub:'not', text:'Three cards are drawn from a deck without replacement. What is the probability that at least one is a heart?', clue:'"At least one" is the opposite of "none" \u2014 take 1 minus the probability that none of the three is a heart.'},
+{id:'r17', fam:'prob', sub:'not', text:'One card is drawn. What is the probability that it is not a face card?', clue:'"Not" — find the probability it is a face card and subtract from 1.'},
+{id:'r18', fam:'prob', sub:'not', text:'A spinner has 8 equal sections numbered 1 to 8. What is the probability that it does not land on a multiple of 3?', clue:'"Does not" \u2014 work out the probability it lands on 3 or 6, then subtract that from 1.'},
+{id:'r19', fam:'prob', sub:'not', text:'Two dice are rolled. What is the probability that the sum is not 7?', clue:'"Not" — work out the probability the sum is 7 and subtract it from 1.'},
+{id:'r20', fam:'prob', sub:'not', text:'What is the probability that a randomly chosen person was not born in July?', clue:'"Not" — 1 minus the probability they were born in July.'},
+
+/* ---- probability rule: GIVEN / conditional ---- */
+{id:'r21', fam:'prob', sub:'given', text:'A card is drawn and not replaced, and it was an ace. What is the probability the second card is also an ace?', clue:'You were told what already happened, so the deck you divide by has shrunk — that is a conditional.'},
+{id:'r22', fam:'prob', sub:'given', text:'A student is chosen from those who attended the review session. What is the probability that they passed?', clue:'The group you divide by is not the whole class, only the ones who attended.'},
+{id:'r23', fam:'prob', sub:'given', text:'Of everyone who tested positive, what fraction actually has the disease?', clue:'"Of everyone who tested positive" fixes the denominator — divide by the positives, not by everybody.'},
+{id:'r24', fam:'prob', sub:'given', text:'A die is rolled and you are told it shows an even number. What is the probability it is a 6?', clue:'Being told it is even shrinks the sample space to just 2, 4 and 6.'},
+{id:'r25', fam:'prob', sub:'given', text:'Among households that own a car, what is the probability that they own two or more?', clue:'"Among" is a given — the denominator is only the car-owning households.'}
+];
+
+function itemById(id){ for(var i=0;i<BANK.length;i++) if(BANK[i].id===id) return BANK[i]; return null; }
+function itemsInFam(fam){ return BANK.filter(function(x){ return x.fam === fam; }); }
+
+/* ---------------- fresh progress ---------------- */
+function newProgress(){
+  var seen = {}, i;
+  for(i = 0; i < BANK.length; i++) seen[BANK[i].id] = {right:0, wrong:0, last:0};
+  return seen;
+}
+function famStats(seen, fam){
+  var r = 0, w = 0, items = itemsInFam(fam), i, s;
+  for(i = 0; i < items.length; i++){
+    s = seen[items[i].id];
+    if(s){ r += s.right; w += s.wrong; }
+  }
+  return {right:r, wrong:w, n:r + w, acc:(r + w) ? r/(r + w) : null};
+}
+
+/* ---------------- choosing the next scenario ----------------
+   Families are sampled at the family level, not by picking uniformly from the
+   bank. The bank is lopsided on purpose — the probability rules need 25
+   scenarios to cover five sub-rules — and sampling by item would make
+   "probability rule" the right answer a third of the time, which a student
+   would learn to exploit without learning anything. */
+function enabledFams(enabled){
+  return FAMS.filter(function(f){ return enabled[f.id]; }).map(function(f){ return f.id; });
+}
+/* A family a student keeps getting wrong comes up more often, but never so
+   much that a strong family disappears. */
+function famWeight(seen, fam){
+  var st = famStats(seen, fam);
+  var acc = (st.acc === null) ? 0.5 : st.acc;
+  return 0.6 + 1.4 * (1 - acc);
+}
+function pickFamily(seen, fams, rng){
+  var w = fams.map(function(f){ return famWeight(seen, f); });
+  var tot = 0, i;
+  for(i = 0; i < w.length; i++) tot += w[i];
+  var x = rng() * tot, acc = 0;
+  for(i = 0; i < w.length; i++){
+    acc += w[i];
+    if(x < acc) return fams[i];
+  }
+  return fams[fams.length - 1];
+}
+/* Within a family, take whatever has been seen least recently, so the whole
+   family gets covered before anything repeats. */
+function pickInFamily(seen, fam, avoidId, rng){
+  var items = itemsInFam(fam);
+  var cand = items.filter(function(x){ return x.id !== avoidId; });
+  if(!cand.length) cand = items;
+  var best = null, i, s, lastSeen;
+  for(i = 0; i < cand.length; i++){
+    s = seen[cand[i].id];
+    lastSeen = s ? s.last : 0;
+    if(best === null || lastSeen < best) best = lastSeen;
+  }
+  var pool = cand.filter(function(x){
+    var t = seen[x.id] ? seen[x.id].last : 0;
+    return t === best;
+  });
+  return pool[Math.floor(rng() * pool.length)].id;
+}
+var MISS_CHANCE = 0.3;   /* the most of a round the review pile may claim */
+var MISS_SPACING = 4;    /* questions that must pass before a pile item returns */
+var MISS_FULL_AT = 4;    /* a pile smaller than this claims proportionally less */
+/* A student who genuinely cannot do something would otherwise meet the same
+   three scenarios over and over and start recognising the wording instead of
+   the structure. Two guards: a pile item has to wait several questions before
+   it comes back, and a small pile only claims a share proportional to its size. */
+function pickNext(seen, enabled, missed, avoidId, rng, tick){
+  var fams = enabledFams(enabled);
+  if(!fams.length) return null;
+  tick = tick || 0;
+  var pool = (missed || []).filter(function(id){
+    var it = itemById(id);
+    if(!it || it.id === avoidId || fams.indexOf(it.fam) < 0) return false;
+    var s = seen[id];
+    return !s || !s.last || (tick - s.last) >= MISS_SPACING;
+  });
+  var chance = MISS_CHANCE * Math.min(1, pool.length / MISS_FULL_AT);
+  if(pool.length && rng() < chance) return pool[Math.floor(rng() * pool.length)];
+  return pickInFamily(seen, pickFamily(seen, fams, rng), avoidId, rng);
+}
+
+/* ---------------- marking ----------------
+   Three results, not two: getting the family right but the sub-rule wrong is
+   worth telling a student apart from not knowing the family at all. */
+function judge(item, pickedFam, pickedSub){
+  if(pickedFam !== item.fam) return 'wrong';
+  if(item.fam !== 'prob') return 'right';
+  return (pickedSub === item.sub) ? 'right' : 'famOnly';
+}
+function applyResult(seen, missed, id, result, tick){
+  var s = seen[id] || (seen[id] = {right:0, wrong:0, last:0});
+  s.last = tick;
+  if(result === 'right'){
+    s.right++;
+    var at = missed.indexOf(id);
+    if(at >= 0) missed.splice(at, 1);
+  } else {
+    s.wrong++;
+    if(missed.indexOf(id) < 0) missed.push(id);
+  }
+  return {seen:seen, missed:missed};
+}
+
+/* ==================================================================
+   ============ CORE LOGIC — END ====================================
+   ================================================================== */
+</script>
+
+<script>
+(function(){
+if(typeof document === 'undefined') return;
+
+var KEY = 'whichToolSorterV1';
+var PANELS = ['p-setup','p-play','p-summary'];
+
+var S = {
+  panel:0, mode:'practice', roundSize:15,
+  enabled:{counting:true, permutation:true, combination:true, prob:true, binomial:true, expected:true},
+  seen:null, missed:[], tick:0,
+  current:null, stage:'fam', pickedFam:null, pickedSub:null, result:null,
+  roundN:0, roundRight:0, roundLog:[], streak:0, best:0
+};
+
+function $(id){ return document.getElementById(id); }
+function el(t,c,x){ var n=document.createElement(t); if(c)n.className=c; if(x!==undefined)n.textContent=x; return n; }
+function rng(){ return Math.random(); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(!raw) return;
+    var o = JSON.parse(raw);
+    for(var k in o) if(o.hasOwnProperty(k)) S[k] = o[k];
+  }catch(e){}
+}
+/* A save can be old or hand-edited, and the bank changes between versions —
+   rebuild anything that no longer lines up rather than trusting it. */
+function sanitize(){
+  if(!S.seen || typeof S.seen !== 'object') S.seen = newProgress();
+  var fresh = newProgress(), id;
+  for(id in fresh){
+    if(!fresh.hasOwnProperty(id)) continue;
+    var s = S.seen[id];
+    if(!s || typeof s !== 'object'){ S.seen[id] = fresh[id]; continue; }
+    s.right = Math.max(0, int(s.right, 0));
+    s.wrong = Math.max(0, int(s.wrong, 0));
+    s.last  = Math.max(0, int(s.last, 0));
+  }
+  for(id in S.seen) if(S.seen.hasOwnProperty(id) && !itemById(id)) delete S.seen[id];
+
+  if(!Array.isArray(S.missed)) S.missed = [];
+  S.missed = S.missed.filter(function(x){ return !!itemById(x); });
+
+  if(!S.enabled || typeof S.enabled !== 'object') S.enabled = {};
+  FAMS.forEach(function(f){ S.enabled[f.id] = (S.enabled[f.id] !== false); });
+  if(!enabledFams(S.enabled).length) FAMS.forEach(function(f){ S.enabled[f.id] = true; });
+
+  S.mode = (S.mode === 'class') ? 'class' : 'practice';
+  S.roundSize = clamp(int(S.roundSize, 15), 5, 40);
+  S.tick = Math.max(0, int(S.tick, 0));
+  S.roundN = Math.max(0, int(S.roundN, 0));
+  S.roundRight = Math.max(0, int(S.roundRight, 0));
+  S.streak = Math.max(0, int(S.streak, 0));
+  S.best = Math.max(0, int(S.best, 0));
+  if(!Array.isArray(S.roundLog)) S.roundLog = [];
+  if(S.current && !itemById(S.current)) S.current = null;
+  if(['fam','sub','done'].indexOf(S.stage) < 0) S.stage = 'fam';
+  S.panel = clamp(int(S.panel, 0), 0, PANELS.length - 1);
+  /* nothing in play means we cannot show the play panel */
+  if(S.panel === 1 && !S.current) S.panel = 0;
+}
+function int(v,d){ var n = parseInt(v,10); return isNaN(n) ? d : n; }
+function clamp(v,lo,hi){ return Math.min(hi, Math.max(lo, v)); }
+
+function showPanel(i){
+  S.panel = i;
+  PANELS.forEach(function(p,k){ $(p).classList.toggle('on', k===i); });
+  document.body.classList.toggle('klass', S.mode === 'class' && i === 1);
+  window.scrollTo({top:0, behavior:'smooth'});
+  save();
+}
+
+/* ---------------- setup ---------------- */
+var MODES = [
+  {id:'practice', t:'Practice', s:'You pick an answer and get told straight away why it is right or wrong. Keeps score.'},
+  {id:'class',    t:'Class',    s:'Big text for the projector. The class calls out, you reveal. No scoring.'}
+];
+function drawSetup(){
+  var h = $('modepick'); h.innerHTML = '';
+  MODES.forEach(function(m){
+    var b = el('button','mcard' + (S.mode===m.id ? ' sel' : ''));
+    b.type = 'button';
+    b.appendChild(el('span','t',m.t));
+    b.appendChild(el('span','s',m.s));
+    b.onclick = function(){ S.mode = m.id; drawSetup(); save(); };
+    h.appendChild(b);
+  });
+  var f = $('famtoggles'); f.innerHTML = '';
+  FAMS.forEach(function(fam){
+    var b = el('button', S.enabled[fam.id] ? 'on' : '', fam.label);
+    b.type = 'button';
+    b.setAttribute('aria-pressed', S.enabled[fam.id] ? 'true' : 'false');
+    if(S.enabled[fam.id]){ b.style.background = fam.color; b.style.borderColor = fam.color; }
+    b.onclick = function(){
+      S.enabled[fam.id] = !S.enabled[fam.id];
+      if(!enabledFams(S.enabled).length) S.enabled[fam.id] = true;
+      drawSetup(); save();
+    };
+    f.appendChild(b);
+  });
+  stepper('roundStep', function(){ return S.roundSize; },
+    function(v){ S.roundSize = v; drawSetup(); save(); }, 5, 40, 'question');
+  var n = enabledFams(S.enabled).reduce(function(a,fam){ return a + itemsInFam(fam).length; }, 0);
+  $('setupnote').innerHTML = '<p>' + n + ' scenarios are in play. Every family comes up about equally often however many ' +
+    'scenarios it holds, so guessing the biggest category will not help you.</p>';
+  $('startBtn').textContent = S.mode === 'class' ? 'Start the class round' : 'Start practising';
+  drawProgress();
+}
+function stepper(hostId, get, set, lo, hi, what){
+  var h = $(hostId); h.innerHTML = '';
+  var minus = el('button', null, '−'); minus.type='button';
+  minus.setAttribute('aria-label','one fewer ' + what);
+  minus.onclick = function(){ set(clamp(get()-1, lo, hi)); };
+  var val = el('span', null, String(get()));
+  var plus = el('button', null, '+'); plus.type='button';
+  plus.setAttribute('aria-label','one more ' + what);
+  plus.onclick = function(){ set(clamp(get()+1, lo, hi)); };
+  h.appendChild(minus); h.appendChild(val); h.appendChild(plus);
+}
+function drawProgress(){
+  var tot = {r:0, w:0};
+  FAMS.forEach(function(f){ var st = famStats(S.seen, f.id); tot.r += st.right; tot.w += st.wrong; });
+  var o = $('overall'); o.innerHTML = '';
+  o.appendChild(metric(String(tot.r + tot.w), 'Scenarios answered'));
+  o.appendChild(metric((tot.r + tot.w) ? Math.round(tot.r/(tot.r+tot.w)*100) + '%' : '—', 'Correct overall'));
+  o.appendChild(metric(String(S.best), 'Best streak'));
+  o.appendChild(metric(String(S.missed.length), 'In the review pile'));
+
+  var m = $('mastery'); m.innerHTML = '';
+  FAMS.forEach(function(f){
+    var st = famStats(S.seen, f.id);
+    var row = el('div','mastrow');
+    row.appendChild(el('span','nm', f.label));
+    var tr = el('span','track');
+    var i = el('i');
+    var a = st.acc === null ? 0 : st.acc;
+    i.style.width = (a*100) + '%';
+    i.className = st.acc === null ? '' : (a < 0.6 ? 'low' : (a < 0.85 ? 'mid' : ''));
+    tr.appendChild(i); row.appendChild(tr);
+    row.appendChild(el('span','n', st.n ? (st.right + '/' + st.n + '  ' + Math.round(a*100) + '%') : 'not tried'));
+    m.appendChild(row);
+  });
+
+  var ms = $('missSection'); ms.innerHTML = '';
+  if(S.missed.length){
+    ms.appendChild(el('h3', null, 'Your review pile'));
+    var p = el('p','lede','These come back more often until you get them right.');
+    ms.appendChild(p);
+    var list = el('div','misslist');
+    S.missed.slice(0, 8).forEach(function(id){
+      var it = itemById(id);
+      if(!it) return;
+      var d = el('div', null, it.text);
+      d.appendChild(el('span', null, answerName(it)));
+      list.appendChild(d);
+    });
+    ms.appendChild(list);
+  }
+}
+function metric(b,s){
+  var d = el('div','metric'); d.appendChild(el('b',null,b)); d.appendChild(el('small',null,s)); return d;
+}
+function answerName(it){
+  var f = famById(it.fam);
+  if(it.fam !== 'prob') return f.label;
+  var sb = subById(it.sub);
+  return f.label + ' — ' + (sb ? sb.label : it.sub);
+}
+
+/* ---------------- play ---------------- */
+function nextQuestion(){
+  var id = pickNext(S.seen, S.enabled, S.missed, S.current, rng, S.tick);
+  if(!id) return;
+  S.current = id; S.stage = 'fam'; S.pickedFam = null; S.pickedSub = null; S.result = null;
+  drawPlay(); save();
+}
+function drawPlay(){
+  var it = itemById(S.current);
+  if(!it){ showPanel(0); return; }
+
+  var sb = $('status'); sb.innerHTML = '';
+  if(S.mode === 'practice'){
+    sb.appendChild(tag('Question', (S.roundN + 1) + ' of ' + S.roundSize));
+    sb.appendChild(tag('This round', S.roundRight + ' right'));
+    sb.appendChild(tag('Streak', String(S.streak)));
+    if(S.missed.indexOf(S.current) >= 0) sb.appendChild(tag('', 'from your review pile'));
+  } else {
+    sb.appendChild(tag('Question', String(S.roundN + 1)));
+  }
+
+  $('scenario').textContent = it.text;
+
+  var ch = $('choices'), pr = $('prompt'), fb = $('feedback'), pb = $('playbtns');
+  ch.innerHTML = ''; fb.innerHTML = ''; pb.innerHTML = '';
+
+  if(S.mode === 'class'){
+    pr.textContent = '';
+    ch.className = 'choices';
+    if(S.stage === 'done'){
+      showAnswer(fb, it, null);
+      var nx = el('button','btn big','Next scenario');
+      nx.onclick = function(){ S.roundN++; nextQuestion(); };
+      pb.appendChild(nx);
+    } else {
+      var rv = el('button','btn big','Reveal the answer');
+      rv.onclick = function(){ S.stage = 'done'; drawPlay(); save(); };
+      pb.appendChild(rv);
+    }
+    var bk = el('button','btn quiet','End the round');
+    bk.onclick = function(){ showPanel(0); drawSetup(); };
+    pb.appendChild(bk);
+    return;
+  }
+
+  /* practice mode */
+  if(S.stage === 'fam' || S.stage === 'sub'){
+    /* a way out of the round exists at every stage, not only after answering */
+    var sb2 = el('button','btn quiet','Stop the round');
+    sb2.onclick = function(){ drawSummary(); showPanel(2); };
+    pb.appendChild(sb2);
+  }
+  if(S.stage === 'fam'){
+    pr.textContent = 'Which tool would you reach for?';
+    ch.className = 'choices';
+    FAMS.forEach(function(f){
+      var b = el('button','choice', f.label);
+      b.type = 'button';
+      b.onclick = function(){ answerFam(f.id); };
+      ch.appendChild(b);
+    });
+  } else if(S.stage === 'sub'){
+    pr.textContent = 'Right family. Now which rule is it?';
+    ch.className = 'choices subs';
+    SUBS.forEach(function(s){
+      var b = el('button','choice', s.label);
+      b.type = 'button';
+      b.onclick = function(){ answerSub(s.id); };
+      ch.appendChild(b);
+    });
+  } else {
+    /* answered — show the buttons frozen in their marked state */
+    if(S.pickedSub !== null || (S.pickedFam === it.fam && it.fam === 'prob')){
+      ch.className = 'choices subs';
+      SUBS.forEach(function(s){
+        var b = el('button','choice', s.label);
+        b.type = 'button'; b.disabled = true;
+        if(s.id === it.sub) b.className = 'choice right';
+        else if(s.id === S.pickedSub) b.className = 'choice wrong';
+        else b.className = 'choice dim';
+        ch.appendChild(b);
+      });
+    } else {
+      ch.className = 'choices';
+      FAMS.forEach(function(f){
+        var b = el('button','choice', f.label);
+        b.type = 'button'; b.disabled = true;
+        if(f.id === it.fam) b.className = 'choice right';
+        else if(f.id === S.pickedFam) b.className = 'choice wrong';
+        else b.className = 'choice dim';
+        ch.appendChild(b);
+      });
+    }
+    pr.textContent = '';
+    showAnswer(fb, it, S.result);
+    var nb = el('button','btn big', (S.roundN + 1 >= S.roundSize) ? 'See the round summary' : 'Next scenario');
+    nb.onclick = function(){
+      S.roundN++;
+      if(S.roundN >= S.roundSize){ drawSummary(); showPanel(2); }
+      else nextQuestion();
+      save();
+    };
+    pb.appendChild(nb);
+    var qb = el('button','btn quiet','Stop the round');
+    qb.onclick = function(){ drawSummary(); showPanel(2); };
+    pb.appendChild(qb);
+  }
+}
+function tag(k, v){
+  var s = el('span');
+  if(k) s.appendChild(document.createTextNode(k + ' '));
+  s.appendChild(el('b', null, v));
+  return s;
+}
+function showAnswer(fb, it, result){
+  if(result){
+    var v = el('div','verdict ' + (result === 'right' ? 'ok' : (result === 'famOnly' ? 'part' : 'no')));
+    v.textContent = result === 'right' ? 'Correct.'
+      : (result === 'famOnly' ? 'Right family, wrong rule.' : 'Not this time.');
+    fb.appendChild(v);
+  }
+  var a = el('div','answerline');
+  a.innerHTML = 'Answer: <b>' + answerName(it) + '</b>';
+  fb.appendChild(a);
+  var c = el('div','clue');
+  c.textContent = it.clue;
+  fb.appendChild(c);
+}
+function answerFam(famId){
+  var it = itemById(S.current);
+  S.pickedFam = famId;
+  if(famId === it.fam && it.fam === 'prob'){ S.stage = 'sub'; drawPlay(); save(); return; }
+  finish(judge(it, famId, null));
+}
+function answerSub(subId){
+  var it = itemById(S.current);
+  S.pickedSub = subId;
+  finish(judge(it, S.pickedFam, subId));
+}
+function finish(result){
+  var it = itemById(S.current);
+  S.result = result; S.stage = 'done';
+  S.tick++;
+  applyResult(S.seen, S.missed, it.id, result, S.tick);
+  if(result === 'right'){
+    S.roundRight++; S.streak++;
+    if(S.streak > S.best) S.best = S.streak;
+  } else S.streak = 0;
+  S.roundLog.push({id:it.id, result:result, pickedFam:S.pickedFam, pickedSub:S.pickedSub});
+  drawPlay(); save();
+}
+
+/* ---------------- summary ---------------- */
+function drawSummary(){
+  var asked = S.roundLog.length;
+  var m = $('roundMetrics'); m.innerHTML = '';
+  m.appendChild(metric(S.roundRight + ' / ' + asked, 'Correct this round'));
+  m.appendChild(metric(asked ? Math.round(S.roundRight/asked*100) + '%' : '—', 'Accuracy'));
+  m.appendChild(metric(String(S.best), 'Best streak'));
+  m.appendChild(metric(String(S.missed.length), 'In the review pile'));
+
+  var weakest = null, worstAcc = 2;
+  FAMS.forEach(function(f){
+    var st = famStats(S.seen, f.id);
+    if(st.n >= 3 && st.acc !== null && st.acc < worstAcc){ worstAcc = st.acc; weakest = f; }
+  });
+  var n = $('roundNote'); n.innerHTML = '';
+  var d = el('div','note' + (asked && S.roundRight/asked >= 0.85 ? ' good' : ''));
+  if(weakest && worstAcc < 0.8){
+    d.innerHTML = '<p>Your weakest family so far is <b>' + weakest.label + '</b>, at ' +
+      Math.round(worstAcc*100) + '%. Those will come round more often until it evens out.</p>';
+  } else if(asked && S.roundRight/asked >= 0.85){
+    d.innerHTML = '<p>Strong round. If you want it harder, switch off the families you have nailed and drill the rest.</p>';
+  } else {
+    d.innerHTML = '<p>Keep going — anything you missed has been added to the review pile and will come back.</p>';
+  }
+  n.appendChild(d);
+
+  var mi = $('roundMisses'); mi.innerHTML = '';
+  var misses = S.roundLog.filter(function(x){ return x.result !== 'right'; });
+  if(!misses.length){ mi.appendChild(el('p','lede','Nothing missed this round.')); }
+  else {
+    var list = el('div','misslist');
+    misses.forEach(function(x){
+      var it = itemById(x.id);
+      if(!it) return;
+      var dd = el('div', null, it.text);
+      var said = x.result === 'famOnly'
+        ? 'You said ' + (subById(x.pickedSub) ? subById(x.pickedSub).label : x.pickedSub) +
+          ' — it is ' + answerName(it)
+        : 'You said ' + (famById(x.pickedFam) ? famById(x.pickedFam).label : x.pickedFam) +
+          ' — it is ' + answerName(it);
+      dd.appendChild(el('span', null, said));
+      var cl = el('span', null, it.clue);
+      dd.appendChild(cl);
+      list.appendChild(dd);
+    });
+    mi.appendChild(list);
+  }
+  drawProgress();
+}
+
+/* ---------------- wiring ---------------- */
+function startRound(){
+  S.roundN = 0; S.roundRight = 0; S.roundLog = []; S.streak = 0;
+  S.current = null;
+  nextQuestion();
+  showPanel(1);
+}
+function boot(){
+  load(); sanitize();
+  drawSetup();
+  if(S.panel === 1 && S.current) drawPlay();
+  showPanel(S.panel);
+
+  $('startBtn').onclick = startRound;
+  $('againBtn').onclick = startRound;
+  $('backBtn').onclick = function(){ drawSetup(); showPanel(0); };
+  $('resetProgress').onclick = function(){
+    if(!confirm('Clear every score and empty the review pile?')) return;
+    S.seen = newProgress(); S.missed = []; S.tick = 0; S.best = 0; S.streak = 0;
+    drawSetup(); save();
+  };
+  $('wipe').onclick = function(){
+    if(confirm('Erase everything saved in this browser?')){
+      try{ localStorage.removeItem(KEY); }catch(e){}
+      location.reload();
+    }
+  };
+  document.addEventListener('keydown', function(e){
+    if(S.panel !== 1) return;
+    if(e.key === 'Enter' || e.key === ' '){
+      var b = $('playbtns').querySelector('button.big');
+      if(b){ e.preventDefault(); b.click(); }
+    }
+  });
+}
+boot();
+})();
+</script>
+</body>
+</html>
