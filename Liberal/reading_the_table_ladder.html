@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Table Ladder — four measures from a frequency table</title>
+<style>
+  :root{
+    --ink:#172024;
+    --paper:#F2F5F6;
+    --card:#FFFFFF;
+    --rule:#D5DDE0;
+    --muted:#5C6A70;
+    --gv:#2F4858;          /* the page's own colour */
+    --gv-bg:#E8EEF0;
+    --mean:#B5451F;        /* the four measures keep the colours of ladder one */
+    --mean-bg:#FBEBE4;
+    --med:#1F6B9E;
+    --med-bg:#E3F0F7;
+    --mode:#2E7A4A;
+    --mode-bg:#E5F3EA;
+    --mid:#7A3A8C;
+    --mid-bg:#F3E9F6;
+    --dim:#BDC4C7;
+    --round-bg:#FCF1DA;
+    --right:#2E7A4A;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E5F3EA;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--gv)}
+  :focus-visible{outline:3px solid var(--gv); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(242,245,246,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand span{color:var(--med); font-family:var(--mono); letter-spacing:-.08em}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:19ch}
+  .lede{max-width:62ch; color:#333C40; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:700px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.0; text-align:center}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+  .eq b.mean{color:var(--mean)} .eq b.med{color:var(--med)}
+  .eq b.mode{color:var(--mode)} .eq b.mid{color:var(--mid)}
+
+  /* ---- the frequency table ---- */
+  table.ft{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:clamp(13.5px,2.9vw,15.5px); background:var(--card)}
+  table.ft th,table.ft td{border:1px solid var(--rule); padding:4px 14px; text-align:right; white-space:nowrap}
+  table.ft th{background:var(--gv-bg); color:var(--muted); font-family:var(--sans); font-size:11.5px; font-weight:600;
+    text-transform:uppercase; letter-spacing:.04em; text-align:center}
+  table.ft td.lab{text-align:left}
+  table.ft td.xf{color:var(--mean); font-weight:700}
+  table.ft td.ps{color:var(--med); font-size:.88em}
+  table.ft td.bl{color:var(--mean); font-weight:700; letter-spacing:.2em}
+  table.ft tr.hit td{background:var(--med-bg)}
+  table.ft tr.hit td.lab{color:var(--med); font-weight:700}
+  table.ft tr.off td{color:var(--dim)}
+  table.ft tr.tot td{background:#E7EDEF; font-weight:700; border-top:2px solid var(--muted)}
+
+  /* ---- the position ruler: every item laid end to end, cut by row ---- */
+  .pb{width:100%; max-width:560px; display:block; margin:0 auto}
+  .pbk{fill:#D6E2E8; stroke:#fff; stroke-width:1}
+  .pbk.hit{fill:var(--med)}
+  .pbx{font-family:var(--sans); font-size:10px; fill:var(--gv)}
+  .pbx.hit{fill:#fff; font-weight:700}
+  .pbo{fill:none; stroke:var(--gv); stroke-width:1.5}
+  .pe{font-family:var(--sans); font-size:11px; fill:var(--muted)}
+  .pml{stroke:var(--mean); stroke-width:1.5; stroke-dasharray:3 2}
+  .pmk{fill:var(--mean)}
+  .pmt{font-family:var(--sans); font-size:11px; font-weight:600; fill:var(--mean)}
+
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:680px; margin:0 auto}
+  @media (max-width:640px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:15px 16px; text-align:center; background:var(--gv-bg)}
+  .pane.a{background:var(--mean-bg)} .pane.b{background:var(--med-bg)}
+  .pane.c{background:var(--mode-bg)} .pane.d{background:var(--mid-bg)}
+  .pane .ttl2{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:9px; color:var(--gv)}
+  .pane.a .ttl2{color:var(--mean)} .pane.b .ttl2{color:var(--med)}
+  .pane.c .ttl2{color:var(--mode)} .pane.d .ttl2{color:var(--mid)}
+  .pane .fm{font-family:var(--serif); font-size:clamp(14.5px,2.9vw,17px); line-height:1.5}
+  .pane .vl{font-family:var(--serif); font-size:clamp(20px,4.4vw,28px); font-weight:700; margin-top:7px; color:var(--gv)}
+  .pane.a .vl{color:var(--mean)} .pane.b .vl{color:var(--med)}
+  .pane.c .vl{color:var(--mode)} .pane.d .vl{color:var(--mid)}
+  .pane .wk{font-size:12.5px; color:var(--muted); margin-top:7px; line-height:1.4}
+
+  table.sum{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:clamp(14px,3vw,16.5px)}
+  table.sum th,table.sum td{border:1px solid var(--rule); padding:6px 15px; text-align:right; white-space:nowrap}
+  table.sum th{background:var(--paper); color:var(--muted); font-weight:700; font-size:.86em; text-align:center; font-family:var(--sans)}
+  table.sum td.nm{text-align:left; font-weight:700}
+  table.sum tr.mean td.nm,table.sum tr.mean td.vv{color:var(--mean)}
+  table.sum tr.med td.nm,table.sum tr.med td.vv{color:var(--med)}
+  table.sum tr.mode td.nm,table.sum tr.mode td.vv{color:var(--mode)}
+  table.sum tr.mid td.nm,table.sum tr.mid td.vv{color:var(--mid)}
+  table.sum td.vv{font-weight:700}
+  table.sum td.wk{color:var(--muted); font-size:.86em; text-align:left; font-family:var(--sans)}
+
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--gv); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--mode); background:var(--mode-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk2{font-family:var(--serif); font-size:26px; line-height:1; color:var(--mode)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#3C4549}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:64ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#333C40}
+  .scene{max-width:58ch; margin:0 auto 14px; background:var(--gv-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:46ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(16px,3.6vw,25px); background:var(--gv-bg); border-radius:12px; padding:11px 25px; margin:0 auto 16px}
+  .vis{margin:0 auto 16px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:20px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B2D9C0}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:42ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><span>▥</span> The Table Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 22 · central tendency from a frequency table</p>
+    <h1>A hundred and fifty-one numbers in eleven rows.</h1>
+    <p class="lede">A frequency table is a long list folded up. The same four measures still apply, but each one unfolds the table differently: the <b>mean</b> needs every value multiplied by how often it occurred, the <b>median</b> needs you to count along positions until you reach the middle one, the <b>mode</b> is read straight off the frequency column, and the <b>midrange</b> ignores the frequencies entirely. Read the wrong column and you get a number that looks like an answer.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk2">▣</span>
+      <p><b>The mode is 7, not 31.</b> In your worksheet's stress table the tallest frequency is 31, and it belongs to the rating 7. The mode is the <i>rating</i> that came up most often, not the count of how often it did. The same trap catches the midrange: it is halfway between the lowest and highest <i>ratings</i>, (0 + 10) ÷ 2 = <b>5</b> — not halfway between the lowest and highest frequencies, which would give 16.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#3C4549">Rung 1 counts how many items the table describes. Rungs 2–4 build the mean: the products column, its total, and the division. Rungs 5–7 are the median, which is the hard one: the position formula, counting along the rows, and reading off the value you land on. Rungs 8–9 are the mode and the midrange, where the usual mistake is reading the wrong column. Rung 10 mixes all four.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Watch the ruler</h3><p>The bar under the table lays every item end to end. Its blocks are the rows, and their widths are the frequencies.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Answers are rounded to two decimal places where they do not come out exactly. The median position is <b>(n + 1) ÷ 2</b>, counted along the items themselves rather than along the rows. Every table here is already in order from smallest data value to largest, as a frequency table should be.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Two columns, four different readings</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The mean weighs</h3><p>A rating given by thirty-one people counts thirty-one times. That is what the products column is for.</p></div>
+      <div class="step"><span class="n">02</span><h3>The median counts</h3><p>It walks along the items, not the rows. Eleven rows, but a hundred and fifty-one places to count through.</p></div>
+      <div class="step"><span class="n">03</span><h3>The mode and midrange look sideways</h3><p>One reads the frequency column to find a row; the other ignores the frequencies completely.</p></div>
+    </div>
+    <p class="closing">The table has two columns, and almost every mistake is reading a value out of the wrong one.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Table Ladder · n = the total of the frequencies · mean = Σ(x × f) ÷ n · median = the value at position (n + 1) ÷ 2 · mode = the data item with the highest frequency · midrange = (lowest + highest data value) ÷ 2</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function sum(a){return a.reduce(function(x,y){return x+y;},0);}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+function r2(v){ return Math.round((v+Number.EPSILON)*100)/100; }
+function num2(v){
+  const r=r2(v);
+  if(Math.abs(r-Math.round(r))<1e-9) return grp(Math.round(r));
+  const s=r.toFixed(2);
+  return (s.charAt(s.length-1)==="0")?s.slice(0,-1):s;
+}
+function numKey(v){ return r2(v).toFixed(2); }
+function isExact(v){ return Math.abs(v-r2(v))<1e-12; }
+/* a division written out honestly: exact when it is, rounded when it is not */
+function divWork(t,n){
+  const m=t/n;
+  return isExact(m) ? (grp(t)+" ÷ "+grp(n)+" = "+num2(m))
+                    : (grp(t)+" ÷ "+grp(n)+" = "+m.toFixed(4)+"… ≈ "+num2(m));
+}
+/* 1st, 2nd, 3rd, 4th … a bare "th" gives "the 3th" */
+/* a count and the noun it counts, agreeing: "1 student", "31 students" */
+function cnt(k,T){ return grp(k)+" "+(k===1?T.who:T.whoP); }
+function ord(n){
+  const a=Math.abs(n)%100, b=Math.abs(n)%10;
+  const suf=(a>=11&&a<=13)?"th":(b===1?"st":(b===2?"nd":(b===3?"rd":"th")));
+  return grp(n)+suf;
+}
+/* numeric options, deduplicated by rounded VALUE. `pinned` goes in right after
+   the answer, for a distractor that is the whole point of its rung; `spares`
+   wait at the back in case a coincidence knocks a main one out. */
+function numOpts(ans,cands,note,spares,pinned){
+  const seen={}; seen[numKey(ans)]=1;
+  const opts=[{label:num2(ans), correct:true, note:note}];
+  (pinned||[]).concat(shuffle(cands.slice())).concat(spares||[]).forEach(function(x){
+    if(x==null||x.v==null||!Number.isFinite(x.v)||x.v<0)return;
+    const k=numKey(x.v); if(seen[k])return; seen[k]=1;
+    opts.push({label:num2(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+function textOpts(ans,note,cands){
+  const opts=[{label:ans, correct:true, note:note}];
+  shuffle(cands.slice()).forEach(function(x){ if(x&&x.t!=null) opts.push({label:x.t, note:x.w}); });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= a frequency table, and what it says ================= */
+/* Everything is derived from x and f, so no figure anywhere can drift from the
+   table it is supposed to describe. */
+function build(T){
+  const n=sum(T.f);
+  const xf=T.x.map(function(v,i){ return v*T.f[i]; });
+  const sxf=sum(xf);
+  const lo=[], hi=[];
+  let cum=0;
+  for(let i=0;i<T.x.length;i++){ lo.push(cum+1); cum+=T.f[i]; hi.push(cum); }
+  const topF=Math.max.apply(null,T.f);
+  const modeIdx=T.f.indexOf(topF);
+  const pos=(n+1)/2;
+  /* the row holding a given position */
+  function rowAt(p){
+    for(let i=0;i<T.x.length;i++) if(T.f[i]>0&&p>=lo[i]&&p<=hi[i]) return i;
+    return -1;
+  }
+  const medIdx=rowAt(Math.ceil(pos));
+  const medIdxLow=rowAt(Math.floor(pos));
+  const median=(T.x[medIdx]+T.x[medIdxLow])/2;
+  const used=T.x.filter(function(v,i){ return T.f[i]>0; });
+  const minX=Math.min.apply(null,used), maxX=Math.max.apply(null,used);
+  const minF=Math.min.apply(null,T.f.filter(function(v){return v>0;})), maxF=topF;
+  const used2=T.x.filter(function(v,i){ return T.f[i]>0; });
+  const rowAvg=sum(T.x)/T.x.length;
+  return Object.assign({}, T, {
+    n:n, xf:xf, sxf:sxf, lo:lo, hi:hi, rowAt:rowAt, rowAvg:rowAvg,
+    mean:sxf/n, pos:pos, medIdx:medIdx, medIdxLow:medIdxLow, median:median,
+    mode:T.x[modeIdx], modeIdx:modeIdx, topF:topF,
+    minX:minX, maxX:maxX, minF:minF, maxF:maxF,
+    midrange:(minX+maxX)/2, range:maxX-minX,
+    rows:T.x.length
+  });
+}
+
+/* ================= the worksheet's own table ================= */
+const SHEET=build({
+  label:"Stress rating", item:"rating", who:"student", whoP:"students",
+  lead:"Statistics students were asked how stressed they had been in the past two weeks, on a scale of 0 to 10.",
+  x:[0,1,2,3,4,5,6,7,8,9,10],
+  f:[2,1,3,12,16,18,13,31,26,15,14]
+});
+
+/* ================= generated tables ================= */
+const TOPICS=[
+  {label:"Children in the family", item:"number", who:"household", whoP:"households",
+   lead:"A neighbourhood survey asked each household how many children live there.", lo:0, hi:6},
+  {label:"Cars owned", item:"number", who:"household", whoP:"households",
+   lead:"A survey asked each household how many cars it owns.", lo:0, hi:5},
+  {label:"Nights out last month", item:"number", who:"person", whoP:"people",
+   lead:"People were asked how many nights they went out last month.", lo:0, hi:9},
+  {label:"Rating out of 10", item:"rating", who:"customer", whoP:"customers",
+   lead:"Customers rated a new menu on a scale of 0 to 10.", lo:0, hi:10},
+  {label:"Books read this term", item:"number", who:"pupil", whoP:"pupils",
+   lead:"Pupils were asked how many books they had read this term.", lo:0, hi:8},
+  {label:"Goals scored", item:"number", who:"match", whoP:"matches",
+   lead:"The number of goals scored in each match of a season was recorded.", lo:0, hi:7},
+  {label:"Hours of sleep", item:"number", who:"night", whoP:"nights",
+   lead:"Someone recorded how many hours they slept on each of a run of nights.", lo:4, hi:11}
+];
+/* A table whose four measures are four different numbers, and whose common
+   wrong readings are different again, so every distractor stays usable. */
+function makeTable(o){
+  o=o||{};
+  for(let t=0;t<800;t++){
+    const S=o.S||pick(TOPICS);
+    const span=ri(5,Math.min(8,S.hi-S.lo+1));
+    const start=ri(S.lo, S.hi-span+1);
+    const x=[]; for(let i=0;i<span;i++) x.push(start+i);
+    const f=x.map(function(){ return ri(1,24); });
+    const T=build({label:S.label, item:S.item, who:S.who, whoP:S.whoP, lead:S.lead, x:x, f:f});
+    if(T.f.filter(function(v){return v===T.topF;}).length!==1) continue;  /* one clear mode */
+    if(T.n<24||T.n>160) continue;
+    if(o.odd&&T.n%2===0) continue;
+    /* with an even count the two middle positions must land in the same row, so
+       the median is a single data value rather than a straddle */
+    if(T.n%2===0&&T.medIdx!==T.medIdxLow) continue;
+    if(T.range<3) continue;
+    /* each rung's own trap must be a different number from its own answer */
+    if(numKey(T.mode)===numKey(T.topF)) continue;                 /* rung 8 */
+    if(numKey(T.midrange)===numKey((T.minF+T.maxF)/2)) continue;  /* rung 9 */
+    if(numKey(T.median)===numKey(T.pos)) continue;                /* rung 7 */
+    if(numKey(T.mean)===numKey(T.rowAvg)) continue;               /* rung 4 */
+    if(o.allDistinct){
+      const keys=[numKey(T.mean),numKey(T.median),numKey(T.mode),numKey(T.midrange)];
+      if(new Set(keys).size!==4) continue;
+    }
+    return T;
+  }
+  return null;
+}
+function someTable(o){ return (!o&&Math.random()<.3)?SHEET:makeTable(o||{}); }
+
+/* ================= drawing ================= */
+function ftHTML(T,o){
+  o=o||{};
+  let head='<tr><th>'+T.label+"</th><th>Frequency</th>"
+    +(o.xf?"<th>"+T.label.toLowerCase()+" × frequency</th>":"")
+    +(o.pos?"<th>Positions</th>":"")+"</tr>";
+  let body="";
+  for(let i=0;i<T.x.length;i++){
+    const cls=(o.hit===i?"hit":"")+(o.off&&o.off.indexOf(i)>=0?" off":"");
+    body+='<tr class="'+cls+'"><td class="lab">'+T.x[i]+"</td><td>"
+      +(o.blankF===i?'<span class="bl">?</span>':grp(T.f[i]))+"</td>"
+      +(o.xf?('<td class="'+(o.blankXF===i?"bl":"xf")+'">'+(o.blankXF===i?"?":grp(T.xf[i]))+"</td>"):"")
+      +(o.pos?('<td class="ps">'+(T.f[i]?(T.lo[i]===T.hi[i]?grp(T.lo[i]):grp(T.lo[i])+"–"+grp(T.hi[i])):"—")+"</td>"):"")
+      +"</tr>";
+  }
+  if(o.totals!==false){
+    body+='<tr class="tot"><td class="lab">Totals</td><td>'+(o.blankN?'<span class="bl">?</span>':grp(T.n))+"</td>"
+      +(o.xf?('<td class="xf">'+(o.blankSum?'<span class="bl">?</span>':grp(T.sxf))+"</td>"):"")
+      +(o.pos?"<td class=\"ps\"></td>":"")+"</tr>";
+  }
+  return '<table class="ft"><thead>'+head+"</thead><tbody>"+body+"</tbody></table>";
+}
+/* Every item laid end to end, cut into one block per row. The block widths are
+   the frequencies, which is what makes a position land where it does. */
+function posHTML(T,o){
+  o=o||{};
+  const n=T.n;
+  const W=560, H=o.lab?96:76, ML=14, MR=14, MT=o.pos!=null?30:16, BH=26;
+  const pw=W-ML-MR;
+  const x=function(p){ return ML+(p/n)*pw; };
+  let out='<svg class="pb" viewBox="0 0 '+W+" "+H+'" role="img" aria-label="every item laid end to end">';
+  for(let i=0;i<T.x.length;i++){
+    if(T.f[i]===0) continue;
+    const x0=x(T.lo[i]-1), x1=x(T.hi[i]), w=x1-x0;
+    const hit=(o.hit===i);
+    out+='<rect class="pbk'+(hit?" hit":"")+'" x="'+x0.toFixed(1)+'" y="'+MT+'" width="'+Math.max(w,0.6).toFixed(1)
+      +'" height="'+BH+'"/>';
+    if(w>15) out+='<text class="pbx'+(hit?" hit":"")+'" x="'+((x0+x1)/2).toFixed(1)+'" y="'+(MT+17)
+      +'" text-anchor="middle">'+T.x[i]+"</text>";
+  }
+  out+='<rect class="pbo" x="'+ML+'" y="'+MT+'" width="'+pw+'" height="'+BH+'"/>'
+     +'<text class="pe" x="'+ML+'" y="'+(MT+BH+15)+'" text-anchor="start">1</text>'
+     +'<text class="pe" x="'+(W-MR)+'" y="'+(MT+BH+15)+'" text-anchor="end">'+grp(n)+"</text>";
+  if(o.pos!=null){
+    const px=x(o.pos-0.5);
+    out+='<line class="pml" x1="'+px.toFixed(1)+'" x2="'+px.toFixed(1)+'" y1="'+(MT-8)+'" y2="'+(MT+BH+4)+'"/>'
+       +'<polygon class="pmk" points="'+px.toFixed(1)+","+(MT-2)+" "+(px-5).toFixed(1)+","+(MT-11)+" "
+       +(px+5).toFixed(1)+","+(MT-11)+'"/>'
+       +'<text class="pmt" x="'+px.toFixed(1)+'" y="'+(MT-16)+'" text-anchor="middle">position '+grp(o.pos)+"</text>";
+  }
+  if(o.lab) out+='<text class="pe" x="'+(W/2)+'" y="'+(H-5)+'" text-anchor="middle">'+o.lab+"</text>";
+  return out+"</svg>";
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+function sumHTML(T){
+  const rows=[
+    ["mean","mean",num2(T.mean), grp(T.sxf)+" ÷ "+grp(T.n)],
+    ["med","median",num2(T.median), "the item at position "+num2(T.pos)],
+    ["mode","mode",num2(T.mode), "frequency "+grp(T.topF)+", the highest"],
+    ["mid","midrange",num2(T.midrange), "("+T.minX+" + "+T.maxX+") ÷ 2"]
+  ];
+  let out='<table class="sum"><thead><tr><th>Measure</th><th>Value</th><th>How it was found</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    out+='<tr class="'+r[0]+'"><td class="nm">'+r[1]+'</td><td class="vv">'+r[2]+'</td><td class="wk">'+r[3]+"</td></tr>";
+  });
+  return out+"</tbody></table>";
+}
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"How many altogether",
+ sub:"Add the frequencies, not the rows.",
+ gen:function(){
+   const T=someTable();
+   const forms=["total","blank","which"];
+   const f=pick(forms);
+   if(f==="which"){
+     return {q:"<b>Where does the number of "+T.whoP+" come from?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{}),
+       opts:shuffle(distinctOpts([
+         {label:"The total of the frequency column", correct:true,
+          note:"Each frequency says how many "+T.whoP+" gave that answer, so adding them gives everyone: "+grp(T.n)+"."},
+         {label:"The number of rows in the table",
+          note:"There are "+T.rows+" rows, but a single row can stand for many "+T.whoP+" — one of them stands for "+grp(T.topF)+"."},
+         {label:"The largest frequency",
+          note:"That is "+grp(T.topF)+", the busiest row on its own. Every other row has to be added in too."},
+         {label:"The total of the "+T.label.toLowerCase()+" column",
+          note:"That adds the answers themselves rather than counting the "+T.whoP+" who gave them."}
+       ]).slice(0,4)), two:true};
+   }
+   if(f==="blank"){
+     const i=ri(0,T.rows-1);
+     const rest=T.n-T.f[i];
+     return {q:"<b>One frequency has been smudged out. What was it?</b>",
+       scene:T.lead+" The table describes "+grp(T.n)+" "+T.whoP+" in all.",
+       vis:ftHTML(T,{blankF:i, hit:i}),
+       opts:shuffle(numOpts(T.f[i],
+         [{v:rest, w:"That is every other row added together. Take it away from "+grp(T.n)+" to get the missing one."},
+          {v:T.n, w:"That is the total for the whole table."},
+          {v:T.rows, w:"That is how many rows there are."},
+          {v:T.x[i], w:"That is the "+T.item+" on that row, not how many gave it."},
+          {v:T.f[i]+1, w:"One too many — the column would then add to "+grp(T.n+1)+"."},
+          {v:T.topF, w:"That is the largest frequency in the table, which is on a different row."}],
+         "The other rows add to "+grp(rest)+", and "+grp(T.n)+" − "+grp(rest)+" = "+grp(T.f[i])+"."))};
+   }
+   return {q:"<b>How many "+T.whoP+" does this table describe?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{totals:false}),
+     opts:shuffle(numOpts(T.n,
+       [{v:T.rows, w:"That is how many rows the table has. One row can speak for many "+T.whoP+"."},
+        {v:T.topF, w:"That is the largest single frequency."},
+        {v:sum(T.x), w:"That adds the "+T.label.toLowerCase()+" column, which counts the answers rather than the "+T.whoP+"."},
+        {v:T.sxf, w:"That is every "+T.item+" multiplied by its frequency and added — the total needed for the mean, not the count."},
+        {v:T.n-T.minF, w:"That leaves out the smallest row."},
+        {v:T.maxX, w:"That is the largest "+T.item+" in the table."}],
+       "Add the frequency column: "+T.f.join(" + ")+" = "+grp(T.n)+"."))};
+ }
+},
+{
+ title:"The products column",
+ sub:"Each value multiplied by how often it occurred.",
+ gen:function(){
+   const T=someTable();
+   const i=ri(0,T.rows-1);
+   const forms=["cell","why"];
+   if(pick(forms)==="why"){
+     return {q:"<b>Why does the mean need a "+T.label.toLowerCase()+" × frequency column?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{xf:true}),
+       opts:shuffle(distinctOpts([
+         {label:"Because a value given by many "+T.whoP+" has to count many times", correct:true,
+          note:"The "+T.item+" "+T.x[T.modeIdx]+" was given by "+cnt(T.topF,T)
+            +", so it contributes "+T.x[T.modeIdx]+" × "+grp(T.topF)+" = "+grp(T.xf[T.modeIdx])+" to the total, not just "+T.x[T.modeIdx]+"."},
+         {label:"Because the rows have to be put in order first",
+          note:"A frequency table is already in order. The products column is about weighting, not sorting."},
+         {label:"Because the frequencies must add to 1",
+          note:"These are counts of "+T.whoP+", and they add to "+grp(T.n)+"."},
+         {label:"Because the mean is always bigger than the median",
+          note:"Neither is always bigger. Here the mean is "+num2(T.mean)+" and the median "+num2(T.median)+"."}
+       ]).slice(0,4)), one:true};
+   }
+   return {q:"<b>What belongs in the missing cell?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{xf:true, blankXF:i, hit:i}),
+     opts:shuffle(numOpts(T.xf[i],
+       [{v:T.x[i]+T.f[i], w:"Those two have been added. The column multiplies them: "+T.x[i]+" × "+grp(T.f[i])+" = "+grp(T.xf[i])+"."},
+        {v:T.f[i], w:"That is the frequency on its own."},
+        {v:T.x[i], w:"That is the "+T.item+" on its own."},
+        {v:T.sxf, w:"That is the total of the whole products column."},
+        {v:i<T.rows-1?T.xf[i+1]:T.xf[i-1], w:"That is the product from a neighbouring row."},
+        {v:T.n, w:"That is how many "+T.whoP+" the table describes."}],
+       T.x[i]+" × "+grp(T.f[i])+" = "+grp(T.xf[i])+". That row's "+cnt(T.f[i],T)
+       +(T.f[i]===1?" contributed a ":" each contributed a ")+T.item+" of "+T.x[i]+"."))};
+ }
+},
+{
+ title:"The total of the products",
+ sub:"Everything the mean is about to be divided from.",
+ gen:function(){
+   const T=someTable();
+   const forms=["sum","blankrow"];
+   if(pick(forms)==="blankrow"){
+     const i=ri(0,T.rows-1);
+     const rest=T.sxf-T.xf[i];
+     return {q:"<b>The products column totals "+grp(T.sxf)+". What is the missing product?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{xf:true, blankXF:i, hit:i}),
+       opts:shuffle(numOpts(T.xf[i],
+         [{v:rest, w:"That is every other product added together. Take it from "+grp(T.sxf)+" to get the missing one."},
+          {v:T.sxf, w:"That is the total of the whole column."},
+          {v:T.x[i]+T.f[i], w:"Those two have been added rather than multiplied."},
+          {v:T.f[i], w:"That is the frequency on that row."},
+          {v:T.x[i], w:"That is the "+T.item+" on that row."}],
+         "The other products add to "+grp(rest)+", and "+grp(T.sxf)+" − "+grp(rest)+" = "+grp(T.xf[i])
+         +" — which is also "+T.x[i]+" × "+grp(T.f[i])+".",
+         [{v:T.n, w:"That is how many "+T.whoP+" the table describes."},
+          {v:T.topF, w:"That is the largest frequency in the table."},
+          {v:T.xf[T.modeIdx], w:"That is the product from the busiest row."},
+          {v:T.xf[i]+T.f[i], w:"That is one frequency too many."},
+          {v:T.xf[i]+T.x[i], w:"That is one data value too many."},
+          {v:Math.max.apply(null,T.xf), w:"That is the largest product in the table."},
+          {v:T.rows, w:"That is how many rows there are."}]))};
+   }
+   return {q:"<b>What is the total of the products column?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{xf:true, blankSum:true}),
+     opts:shuffle(numOpts(T.sxf,
+       [{v:T.n, w:"That is the total of the <i>frequency</i> column — how many "+T.whoP+" there are."},
+        {v:sum(T.x), w:"That is the total of the "+T.label.toLowerCase()+" column, with no frequencies applied."},
+        {v:T.sxf-T.xf[T.modeIdx], w:"That leaves out the busiest row, which contributes "+grp(T.xf[T.modeIdx])+" on its own."},
+        {v:T.rows, w:"That is how many rows there are."},
+        {v:r2(T.mean), w:"That is the mean, which is this total <i>after</i> dividing by "+grp(T.n)+"."}],
+       "Add the products: "+T.xf.join(" + ")+" = "+grp(T.sxf)+"."))};
+ }
+},
+{
+ title:"The mean from a table",
+ sub:"The products total, shared between everybody.",
+ gen:function(){
+   const T=someTable();
+   const forms=["value","which"];
+   if(pick(forms)==="which"){
+     return {q:"<b>Which calculation gives the mean?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{xf:true}),
+       opts:shuffle(distinctOpts([
+         {label:grp(T.sxf)+" ÷ "+grp(T.n), correct:true,
+          note:"The products total divided by how many "+T.whoP+" there are: "+divWork(T.sxf,T.n)+"."},
+         {label:grp(T.sxf)+" ÷ "+T.rows,
+          note:"That divides by the number of rows. There are "+T.rows+" rows but "+grp(T.n)+" "+T.whoP+"."},
+         {label:grp(sum(T.x))+" ÷ "+T.rows,
+          note:"That averages the "+T.label.toLowerCase()+" column and ignores how many "+T.whoP
+            +" gave each answer. It gives "+num2(T.rowAvg)+", which on a table of consecutive values is just the midrange."},
+         {label:grp(T.n)+" ÷ "+grp(T.sxf),
+          note:"That is upside down. The products total goes on top."},
+         {label:grp(T.sxf)+" ÷ "+grp(T.topF),
+          note:"That divides by the largest frequency, "+grp(T.topF)+", rather than by all "+grp(T.n)+" "+T.whoP+"."},
+         {label:grp(T.sxf)+" ÷ "+grp(T.n-1),
+          note:"That divides by one fewer than there are."}
+       ]).slice(0,4)), two:true};
+   }
+   return {q:"<b>What is the mean?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{xf:true}),
+     opts:shuffle(numOpts(T.mean,
+       [{v:T.sxf/T.rows, w:"That divides by the "+T.rows+" rows instead of the "+grp(T.n)+" "+T.whoP+"."},
+        {v:T.median, w:"That is the median — the "+T.item+" at the middle position."},
+        {v:T.midrange, w:(numKey(T.midrange)===numKey(T.rowAvg))
+           ? ("That is the midrange — and also what you get by averaging the "+T.label.toLowerCase()
+              +" column with no frequencies applied, which treats a row given by "+cnt(T.topF,T)
+              +" the same as one given by "+grp(T.minF)+".")
+           : ("That is the midrange, halfway between "+T.minX+" and "+T.maxX+".")},
+        {v:T.rowAvg, w:"That averages the "+T.label.toLowerCase()+" column with no frequencies applied, which treats a row given by "
+           +cnt(T.topF,T)+" the same as one given by "+grp(T.minF)+"."},
+        {v:T.mode, w:"That is the mode, the "+T.item+" with the highest frequency."},
+        {v:T.sxf/(T.n-1), w:"That divides by one fewer than there are."}],
+       "The products add to "+grp(T.sxf)+" and there are "+grp(T.n)+" "+T.whoP+", so the mean is "
+       +divWork(T.sxf,T.n)+".",
+       [{v:T.sxf, w:"That is the products total, before dividing."},
+        {v:T.n, w:"That is how many "+T.whoP+" there are."},
+        {v:T.rowAvg, w:"That averages the "+T.label.toLowerCase()+" column with no frequencies applied."},
+        {v:T.maxX, w:"That is the largest "+T.item+" in the table."},
+        {v:T.minX, w:"That is the smallest "+T.item+" in the table."}]))};
+ }
+},
+{
+ title:"The median position",
+ sub:"(n + 1) ÷ 2, counted along the items.",
+ gen:function(){
+   const T=someTable();
+   /* two numeric forms to one verbal, so the explanation is not half the rung */
+   const f5=pick(["pos","pos","what"]);
+   if(f5==="what"){
+     return {q:"<b>With "+grp(T.n)+" "+T.whoP+", what does (n + 1) ÷ 2 tell you?</b>",
+       scene:T.lead,
+       opts:shuffle(distinctOpts([
+         {label:"Which item to count along to, out of all "+grp(T.n), correct:true,
+          note:"It gives "+num2(T.pos)+". You then count down the frequency column until you reach that item, and the "
+            +T.item+" on the row you land in is the median."},
+         {label:"Which row of the table to look at",
+          note:"It counts items, not rows. There are "+T.rows+" rows but "+grp(T.n)+" items to count through."},
+         {label:"The median itself",
+          note:"It gives a position. The median is the "+T.item+" you find once you have counted that far."},
+         {label:"How many "+T.whoP+" are above the median",
+          note:"That would be about half of them. The formula gives a place in the list, not a count of what is past it."}
+       ]).slice(0,4)), one:true};
+   }
+   return {q:"<b>Which position does the median sit at?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{}),
+     opts:shuffle(numOpts(T.pos,
+       [{v:T.n/2, w:"That halves n without adding one first. The formula is (n + 1) ÷ 2 = "+num2(T.pos)+"."},
+        {v:(T.rows+1)/2, w:"That uses the number of rows, "+T.rows+". The counting runs along the "+grp(T.n)+" "+T.whoP+", not the rows."},
+        {v:T.n, w:"That is the last position, not the middle one."},
+        {v:T.median, w:"That is the median "+T.item+" itself. The formula gives the position to count to."},
+        {v:(T.n-1)/2, w:"That subtracts one instead of adding it."},
+        {v:T.rows, w:"That is how many rows there are."}],
+       "("+grp(T.n)+" + 1) ÷ 2 = "+num2(T.pos)
+       +". Counting along the frequency column to item "+num2(T.pos)+" lands in the "+T.x[T.medIdx]+" row."))};
+ }
+},
+{
+ title:"Counting along the rows",
+ sub:"Each row takes up as many places as its frequency.",
+ gen:function(){
+   const T=someTable();
+   const i=ri(0,T.rows-1);
+   const forms=["range","first","upto"];
+   const f=pick(forms);
+   if(f==="first"){
+     /* the first row always begins at 1, so the question starts from the second */
+     const j=Math.max(1,i);
+     return {q:"<b>At which position does the "+T.x[j]+" row begin?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{pos:true, hit:j})+posHTML(T,{hit:j}),
+       opts:shuffle(numOpts(T.lo[j],
+         [{v:T.hi[j], w:"That is where the row <i>ends</i>. It begins one place after the row above finishes."},
+          {v:T.hi[j-1], w:"That is where the row above finishes. This one starts at the next place along."},
+          {v:T.f[j], w:"That is the row's frequency — how many places it takes up, not where it starts."},
+          {v:T.x[j], w:"That is the "+T.item+" itself."},
+          {v:j+1, w:"That is the row's number in the table, not a position among the "+grp(T.n)+" "+T.whoP+"."}],
+         "The rows before it take up "+grp(T.lo[j]-1)+" places, so this row starts at position "+grp(T.lo[j])
+         +" and runs to "+grp(T.hi[j])+".",
+         [{v:T.n, w:"That is the last position in the table."},
+          {v:T.lo[j]+1, w:"One place too far along."},
+          {v:T.pos, w:"That is the median position."},
+          {v:T.hi[T.rows-1]-T.f[j], w:"That counts back from the end of the table instead of forward from the start."}]))};
+   }
+   if(f==="upto"){
+     return {q:"<b>How many "+T.whoP+" gave a "+T.item+" of "+T.x[i]+" or less?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{pos:true, hit:i, off:(function(){const a=[];for(let j=i+1;j<T.rows;j++)a.push(j);return a;})()}),
+       opts:shuffle(numOpts(T.hi[i],
+         [{v:T.lo[i]-1, w:"That stops before the "+T.x[i]+" row. “Or less” takes in that row as well."},
+          {v:T.f[i], w:"That is the "+T.x[i]+" row on its own. Every row above it counts too."},
+          {v:T.n-T.hi[i], w:"That is how many gave <i>more</i> than "+T.x[i]+"."},
+          {v:T.n, w:"That is every "+T.who+" in the table."},
+          {v:T.x[i], w:"That is the "+T.item+" itself, not a count."}],
+         "Add the frequencies down to and including the "+T.x[i]+" row: "+T.f.slice(0,i+1).join(" + ")+" = "+grp(T.hi[i])
+         +". That row ends at position "+grp(T.hi[i])+"."))};
+   }
+   return {q:"<b>Which positions does the "+T.x[i]+" row cover?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{hit:i})+posHTML(T,{hit:i}),
+     opts:shuffle(textOpts(grp(T.lo[i])+" to "+grp(T.hi[i]),
+       "The rows above take up "+grp(T.lo[i]-1)+" places, and this row's frequency of "+grp(T.f[i])
+       +" takes the next "+grp(T.f[i])+": positions "+grp(T.lo[i])+" to "+grp(T.hi[i])+".",
+       [{t:grp(T.lo[i]-1)+" to "+grp(T.hi[i]-1), w:"That starts one place too early — the row above ends at "+grp(T.lo[i]-1)+"."},
+        {t:"1 to "+grp(T.f[i]), w:"That is where the row would start if it were the first one in the table."},
+        {t:grp(T.lo[i])+" to "+grp(T.lo[i]+T.f[i]), w:"That is one place too long. A frequency of "+grp(T.f[i])
+          +" covers "+grp(T.f[i])+" places, ending at "+grp(T.hi[i])+"."},
+        {t:grp(T.hi[i])+" to "+grp(T.n), w:"That runs from the end of this row to the end of the table."}])),
+     two:true};
+ }
+},
+{
+ title:"The median value",
+ sub:"Count to the position, then read the row you land in.",
+ gen:function(){
+   const T=someTable();
+   const forms=["value","row","why"];
+   const f=pick(forms);
+   if(f==="row"){
+     return {q:"<b>Position "+num2(T.pos)+" falls in which row?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{pos:true})+posHTML(T,{pos:Math.ceil(T.pos)}),
+       opts:shuffle(textOpts("the "+T.x[T.medIdx]+" row",
+         "The "+T.x[T.medIdx]+" row covers positions "+grp(T.lo[T.medIdx])+" to "+grp(T.hi[T.medIdx])
+         +", and "+num2(T.pos)+" is inside that. So the median "+T.item+" is "+num2(T.median)+".",
+         [T.medIdx>0?{t:"the "+T.x[T.medIdx-1]+" row", w:"That row ends at position "+grp(T.hi[T.medIdx-1])
+            +", before "+num2(T.pos)+"."}:null,
+          T.medIdx<T.rows-1?{t:"the "+T.x[T.medIdx+1]+" row", w:"That row does not start until position "+grp(T.lo[T.medIdx+1])+"."}:null,
+          {t:"the "+T.x[T.modeIdx]+" row", w:T.modeIdx===T.medIdx
+            ? "That is the right row, but it is being picked for the wrong reason — it is the busiest row, which makes it the mode."
+            : ("That is the busiest row, which gives the mode. It covers positions "+grp(T.lo[T.modeIdx])+" to "+grp(T.hi[T.modeIdx])+".")},
+          {t:"the "+T.x[T.rows-1]+" row", w:"That is the last row, covering positions "+grp(T.lo[T.rows-1])+" to "+grp(T.n)+"."},
+          {t:"the "+T.x[0]+" row", w:"That is the first row, covering positions 1 to "+grp(T.hi[0])+"."},
+          T.medIdx>1?{t:"the "+T.x[T.medIdx-2]+" row", w:"That row ends at position "+grp(T.hi[T.medIdx-2])+", well before "+num2(T.pos)+"."}:null,
+          T.medIdx<T.rows-2?{t:"the "+T.x[T.medIdx+2]+" row", w:"That row does not start until position "+grp(T.lo[T.medIdx+2])+"."}:null,
+          {t:"the middle row of the table", w:"Counting rows is not the same as counting items — rows stand for different numbers of "+T.whoP+"."}
+         ].filter(Boolean))), two:true};
+   }
+   if(f==="why"){
+     return {q:"<b>Why is the median not simply the middle row of the table?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{pos:true}),
+       opts:shuffle(distinctOpts([
+         {label:"Because rows stand for different numbers of "+T.whoP, correct:true,
+          note:"One row here speaks for "+cnt(T.topF,T)+" and another for only "+grp(T.minF)
+            +". Counting rows would treat those as equal; counting items does not."},
+         {label:"Because the rows are not in order",
+          note:"They are in order — a frequency table is built that way, which is what makes counting along it possible."},
+         {label:"Because the table has an odd number of rows",
+          note:"It has "+T.rows+". Either way, the median counts items rather than rows."},
+         {label:"Because the median is always in the busiest row",
+          note:"It often is, but not because of that. The median is wherever position "+num2(T.pos)+" happens to land."}
+       ]).slice(0,4)), one:true};
+   }
+   return {q:"<b>What is the median?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{pos:true})+posHTML(T,{pos:Math.ceil(T.pos), hit:T.medIdx}),
+     facts:factsHTML([["how many "+T.whoP,grp(T.n)],["median position","("+grp(T.n)+" + 1) ÷ 2 = "+num2(T.pos)]]),
+     opts:shuffle(numOpts(T.median,
+       [{v:T.pos, w:"That is the <i>position</i> to count to, not the "+T.item+" you find there."},
+        {v:T.mean, w:"That is the mean, "+grp(T.sxf)+" ÷ "+grp(T.n)+"."},
+        {v:T.mode, w:"That is the mode — the "+T.item+" with the highest frequency, which is a different row."},
+        {v:T.midrange, w:"That is the midrange, halfway between "+T.minX+" and "+T.maxX+"."},
+        {v:T.x[Math.floor((T.rows-1)/2)], w:"That is the "+T.item+" on the middle <i>row</i>. Rows stand for different numbers of "+T.whoP+", so the middle row is not the middle item."},
+        {v:T.topF, w:"That is the highest frequency, which belongs in the other column."}],
+       "Position "+num2(T.pos)+" of "+grp(T.n)+" lands in the "+T.x[T.medIdx]+" row, which covers positions "
+       +grp(T.lo[T.medIdx])+" to "+grp(T.hi[T.medIdx])+". So the median is "+num2(T.median)+".",
+       [{v:T.minX, w:"That is the smallest "+T.item+" in the table."},
+        {v:T.maxX, w:"That is the largest "+T.item+" in the table."},
+        {v:T.rows, w:"That is how many rows there are."},
+        {v:T.n, w:"That is how many "+T.whoP+" there are."}]))};
+ }
+},
+{
+ title:"The mode from a table",
+ sub:"The data item with the highest frequency — not the frequency.",
+ gen:function(){
+   const T=someTable();
+   const forms=["value","which","how"];
+   const f=pick(forms);
+   if(f==="how"){
+     return {q:"<b>How is the mode read off a frequency table?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{}),
+       opts:shuffle(distinctOpts([
+         {label:"Find the largest frequency, then read the "+T.item+" beside it", correct:true,
+          note:"The largest frequency is "+grp(T.topF)+", on the "+T.x[T.modeIdx]+" row — so the mode is "+num2(T.mode)+"."},
+         {label:"Take the largest frequency itself",
+          note:"That is "+grp(T.topF)+", which is how many "+T.whoP+" gave the most popular answer rather than what that answer was."},
+         {label:"Take the largest "+T.item+" in the table",
+          note:"That is "+T.maxX+", which is the top of the scale. It has a frequency of only "+grp(T.f[T.rows-1])+"."},
+         {label:"Take the "+T.item+" on the middle row",
+          note:"That has to do with position, and even then the median counts items rather than rows."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="which"){
+     return {q:"<b>Which row holds the mode?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{hit:T.modeIdx}),
+       opts:shuffle(textOpts("the "+T.x[T.modeIdx]+" row",
+         "Its frequency of "+grp(T.topF)+" is the largest in the table, so "+num2(T.mode)+" was given more often than any other "+T.item+".",
+         [{t:"the "+T.x[T.rows-1]+" row", w:"That is the last row, with a frequency of "+grp(T.f[T.rows-1])+"."},
+          {t:"the "+T.x[0]+" row", w:"That is the first row, with a frequency of "+grp(T.f[0])+"."},
+          {t:"the row with the smallest frequency", w:"That is the rarest answer, not the most common one."},
+          {t:"the middle row of the table", w:"That is a question about position, and the median answers it by counting items rather than rows."}])),
+       two:true};
+   }
+   return {q:"<b>What is the mode?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{hit:T.modeIdx}),
+     opts:shuffle(numOpts(T.mode,
+       [{v:T.maxX, w:"That is the largest "+T.item+" in the table, with a frequency of only "+grp(T.f[T.rows-1])+"."},
+        {v:T.median, w:"That is the median, the "+T.item+" at position "+num2(T.pos)+"."},
+        {v:T.mean, w:"That is the mean."},
+        {v:T.midrange, w:"That is the midrange."},
+        {v:T.rows, w:"That is how many rows there are."}],
+       "The highest frequency is "+grp(T.topF)+", on the row for a "+T.item+" of "+num2(T.mode)
+       +". The mode is that "+T.item+", because it is the one most "+T.whoP+" gave.",
+       [{v:T.minX, w:"That is the smallest "+T.item+" in the table."},
+        {v:T.rows, w:"That is how many rows there are."},
+        {v:T.pos, w:"That is the median position."}],
+       [{v:T.topF, w:"That is the <i>frequency</i> — how many "+T.whoP+" gave the most common answer. The mode is the answer itself, "
+          +num2(T.mode)+", read off beside it."}]))};
+ }
+},
+{
+ title:"The midrange from a table",
+ sub:"The two ends of the data column, and nothing else.",
+ gen:function(){
+   const T=someTable();
+   const forms=["value","which","ignore"];
+   const f=pick(forms);
+   if(f==="ignore"){
+     return {q:"<b>What does the midrange of a frequency table take no notice of?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{}),
+       opts:shuffle(distinctOpts([
+         {label:"The frequencies", correct:true,
+          note:"It uses only the smallest and largest "+T.item+"s, "+T.minX+" and "+T.maxX
+            +". How many "+T.whoP+" gave each answer makes no difference at all."},
+         {label:"The largest "+T.item,
+          note:"That is one of the two it does use: ("+T.minX+" + "+T.maxX+") ÷ 2 = "+num2(T.midrange)+"."},
+         {label:"The smallest "+T.item,
+          note:"That is the other one it uses."},
+         {label:"Nothing — it uses the whole table",
+          note:"The mean uses the whole table. The midrange looks at exactly two numbers."}
+       ]).slice(0,4)), two:true};
+   }
+   if(f==="which"){
+     return {q:"<b>Which two numbers does the midrange use?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{}),
+       opts:shuffle(textOpts("the "+T.item+"s "+T.minX+" and "+T.maxX,
+         "The smallest and largest entries in the "+T.label.toLowerCase()+" column: ("+T.minX+" + "+T.maxX
+         +") ÷ 2 = "+num2(T.midrange)+".",
+         [{t:"the frequencies "+grp(T.minF)+" and "+grp(T.maxF),
+           w:"Those are from the frequency column. Averaging them gives "+num2((T.minF+T.maxF)/2)
+             +", which is not a "+T.item+" at all."},
+          {t:"the "+T.item+"s on the first and last rows with their frequencies",
+           w:"The frequencies play no part. Only the two end values do."},
+          {t:"the mode and the median", w:"Those are two other measures, not the ingredients of this one."},
+          {t:"every "+T.item+" in the table", w:"That is the mean's business. The midrange uses two numbers."}])),
+       two:true};
+   }
+   return {q:"<b>What is the midrange?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{}),
+     opts:shuffle(numOpts(T.midrange,
+       [{v:T.range, w:"That is the range, "+T.maxX+" − "+T.minX+" = "+T.range+". The midrange adds the two and halves."},
+        {v:T.mean, w:"That is the mean, which uses every row."},
+        {v:T.median, w:"That is the median."},
+        {v:T.mode, w:"That is the mode."},
+        {v:T.minX+T.maxX, w:"The two have been added but not halved."}],
+       "The smallest "+T.item+" is "+T.minX+" and the largest is "+T.maxX+", so the midrange is ("
+       +T.minX+" + "+T.maxX+") ÷ 2 = "+num2(T.midrange)+".",
+       [{v:T.rows, w:"That is how many rows the table has."},
+        {v:T.maxX, w:"That is the largest "+T.item+" on its own."},
+        {v:T.minX, w:"That is the smallest "+T.item+" on its own."}],
+       [{v:(T.minF+T.maxF)/2, w:"That averages the smallest and largest <i>frequencies</i>, "+grp(T.minF)+" and "+grp(T.maxF)
+          +". The midrange works on the "+T.label.toLowerCase()+" column, not the frequency column."}]))};
+ }
+},
+{
+ title:"Any measure, any table",
+ sub:"All four, mixed.",
+ gen:function(){
+   const T=someTable();
+   const t=pick(["mean","median","mode","midrange","which","n"]);
+   if(t==="n"){
+     return {q:"<b>How many "+T.whoP+" does this table describe?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{totals:false}),
+       opts:shuffle(numOpts(T.n,
+         [{v:T.rows, w:"That is the number of rows."},
+          {v:T.topF, w:"That is the largest single frequency."},
+          {v:sum(T.x), w:"That totals the "+T.label.toLowerCase()+" column."},
+          {v:T.sxf, w:"That is the products total."},
+          {v:T.maxX, w:"That is the largest "+T.item+"."}],
+         T.f.join(" + ")+" = "+grp(T.n)+"."))};
+   }
+   if(t==="which"){
+     const opts=[{k:"mean",v:T.mean},{k:"median",v:T.median},{k:"mode",v:T.mode},{k:"midrange",v:T.midrange}];
+     /* only a measure whose value no other measure shares has one right answer */
+     const solo=opts.filter(function(a){
+       return opts.filter(function(b){ return numKey(a.v)===numKey(b.v); }).length===1;
+     });
+     if(!solo.length) return RUNGS[9].gen();
+     const w=pick(solo);
+     const how={mean:"the products total divided by how many "+T.whoP+" there are",
+                median:"the "+T.item+" at position "+num2(T.pos),
+                mode:"the "+T.item+" with the highest frequency",
+                midrange:"halfway between the smallest and largest "+T.item};
+     return {q:"<b>For this table, "+num2(w.v)+" is which measure?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{xf:true, pos:true}),
+       opts:shuffle(textOpts("the "+w.k, num2(w.v)+" is "+how[w.k]+".",
+         opts.filter(function(x){return x.k!==w.k;}).map(function(x){
+           return {t:"the "+x.k, w:"The "+x.k+" here is "+num2(x.v)+", which is "+how[x.k]+"."};
+         }))), two:true};
+   }
+   if(t==="mean"){
+     return {q:"<b>What is the mean?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{xf:true}),
+       opts:shuffle(numOpts(T.mean,
+         [{v:T.sxf/T.rows, w:"That divides by the "+T.rows+" rows rather than the "+grp(T.n)+" "+T.whoP+"."},
+          {v:T.rowAvg, w:"That averages the "+T.label.toLowerCase()+" column with no frequencies applied."},
+          {v:T.median, w:"That is the median."},
+          {v:T.midrange, w:"That is the midrange."},
+          {v:T.mode, w:"That is the mode."}],
+         divWork(T.sxf,T.n)+".",
+         [{v:T.sxf, w:"That is the products total, before dividing."},
+          {v:T.n, w:"That is how many "+T.whoP+" there are."},
+          {v:T.maxX, w:"That is the largest "+T.item+"."}]))};
+   }
+   if(t==="median"){
+     return {q:"<b>What is the median?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{pos:true})+posHTML(T,{pos:Math.ceil(T.pos), hit:T.medIdx}),
+       opts:shuffle(numOpts(T.median,
+         [{v:T.pos, w:"That is the position, not the "+T.item+" found there."},
+          {v:T.mean, w:"That is the mean."},
+          {v:T.mode, w:"That is the mode."},
+          {v:T.midrange, w:"That is the midrange."},
+          {v:T.x[Math.floor((T.rows-1)/2)], w:"That is the "+T.item+" on the middle row, which is not the middle item."}],
+         "("+grp(T.n)+" + 1) ÷ 2 = "+num2(T.pos)+", which lands in the "+T.x[T.medIdx]+" row (positions "
+         +grp(T.lo[T.medIdx])+"–"+grp(T.hi[T.medIdx])+").",
+         [{v:T.minX, w:"That is the smallest "+T.item+"."},
+          {v:T.maxX, w:"That is the largest "+T.item+"."},
+          {v:T.topF, w:"That is the highest frequency."},
+          {v:T.rows, w:"That is how many rows there are."}]))};
+   }
+   if(t==="mode"){
+     return {q:"<b>What is the mode?</b>",
+       scene:T.lead,
+       vis:ftHTML(T,{hit:T.modeIdx}),
+       opts:shuffle(numOpts(T.mode,
+         [{v:T.median, w:"That is the median."},
+          {v:T.mean, w:"That is the mean."},
+          {v:T.midrange, w:"That is the midrange."},
+          {v:T.maxX, w:"That is the largest "+T.item+", not the most common one."}],
+         "The highest frequency is "+grp(T.topF)+", beside a "+T.item+" of "+num2(T.mode)+".",
+         [{v:T.minX, w:"That is the smallest "+T.item+"."},
+          {v:T.rows, w:"That is how many rows there are."},
+          {v:T.pos, w:"That is the median position."},
+          {v:T.n, w:"That is how many "+T.whoP+" there are."}],
+         [{v:T.topF, w:"That is the frequency itself. The mode is the "+T.item+" beside it."}]))};
+   }
+   return {q:"<b>What is the midrange?</b>",
+     scene:T.lead,
+     vis:ftHTML(T,{}),
+     opts:shuffle(numOpts(T.midrange,
+       [{v:T.range, w:"That is the range."},
+        {v:T.mean, w:"That is the mean."},
+        {v:T.median, w:"That is the median."},
+        {v:T.minX+T.maxX, w:"Added but not halved."}],
+       "("+T.minX+" + "+T.maxX+") ÷ 2 = "+num2(T.midrange)+".",
+       [{v:T.minX, w:"That is the smallest "+T.item+" on its own."},
+        {v:T.maxX, w:"That is the largest "+T.item+" on its own."},
+        {v:T.rows, w:"That is how many rows there are."}],
+       [{v:(T.minF+T.maxF)/2, w:"That averages the two end <i>frequencies</i> instead."}]))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {lbl:"the table",       kind:"table"},
+  {lbl:"the products",    kind:"xf"},
+  {lbl:"the mean",        kind:"mean"},
+  {lbl:"position 76",     kind:"pos"},
+  {lbl:"the wrong column", kind:"trap"},
+  {lbl:"all four",        kind:"four"}
+];
+let heroSel=0;
+
+const S=SHEET;
+const HNOTES={
+  table:function(){
+    return "Your worksheet's table. Eleven rows, but they describe "+grp(S.n)+" "+S.whoP
+      +" — the frequency column adds to "+grp(S.n)+", and that is the number every measure here has to work with. "
+      +"The busiest row is "+S.x[S.modeIdx]+", given by "+grp(S.topF)+" of them.";
+  },
+  xf:function(){
+    const i=S.modeIdx;
+    return "The mean cannot just average the numbers 0 to 10, because a rating given by "+grp(S.topF)
+      +" students has to count "+grp(S.topF)+" times. Multiplying each rating by its frequency and adding gives "
+      +grp(S.sxf)+" — the total of all "+grp(S.n)+" ratings handed in. The "+S.x[i]+" row alone contributes "
+      +S.x[i]+" × "+grp(S.topF)+" = "+grp(S.xf[i])+".";
+  },
+  mean:function(){
+    return "Now the division. "+divWork(S.sxf,S.n)+". Averaging the eleven ratings 0 to 10 instead would give "
+      +num2(sum(S.x)/S.rows)+", which treats the row given by "+grp(S.minF)+" student as equal to the row given by "
+      +grp(S.topF)+" — and is the commonest wrong answer on this table.";
+  },
+  pos:function(){
+    return "The median counts items, not rows. ("+grp(S.n)+" + 1) ÷ 2 = "+num2(S.pos)
+      +", so the median is the "+ord(S.pos)+" rating of the "+grp(S.n)+". Counting down the frequency column, the "
+      +S.x[S.medIdx]+" row covers positions "+grp(S.lo[S.medIdx])+" to "+grp(S.hi[S.medIdx])+", and "+num2(S.pos)
+      +" falls inside it. The median is "+num2(S.median)+" — the same number as the mode here, but found a different way.";
+  },
+  trap:function(){
+    return "Both of these read a value out of the wrong column. The mode is the rating "+num2(S.mode)
+      +", not the count "+grp(S.topF)+" beside it. The midrange is halfway between the lowest and highest <i>ratings</i>, ("
+      +S.minX+" + "+S.maxX+") ÷ 2 = "+num2(S.midrange)+", not halfway between the lowest and highest frequencies, which would give "
+      +num2((S.minF+S.maxF)/2)+".";
+  },
+  four:function(){
+    return "All four, from one table. Mean "+num2(S.mean)+", median "+num2(S.median)+", mode "+num2(S.mode)
+      +", midrange "+num2(S.midrange)+". The median and the mode agree here at "+num2(S.mode)
+      +", which happens often on a table with one tall row — but they were found by different routes, and on the next table they will part company.";
+  }
+};
+
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="table"){
+    body=ftHTML(S,{hit:S.modeIdx})
+      +'<div class="eq" style="margin-top:12px">'+S.f.join(" + ")+" = <b class=\"med\">"+grp(S.n)+"</b>"
+      +'<span class="lbl">eleven rows, '+grp(S.n)+" students</span></div>";
+  }else if(h.kind==="xf"){
+    body=ftHTML(S,{xf:true, hit:S.modeIdx})
+      +'<div class="eq" style="margin-top:12px">'+S.x[S.modeIdx]+" × "+grp(S.topF)+" = <b class=\"mean\">"+grp(S.xf[S.modeIdx])+"</b>"
+      +'<span class="lbl">the busiest row, weighted</span></div>';
+  }else if(h.kind==="mean"){
+    body='<div class="duo">'
+      +'<div class="pane a"><div class="ttl2">the mean</div>'
+        +'<div class="fm">'+grp(S.sxf)+" ÷ "+grp(S.n)+"</div>"
+        +'<div class="vl">'+num2(S.mean)+"</div>"
+        +'<div class="wk">every rating, weighted by how many gave it</div></div>'
+      +'<div class="pane"><div class="ttl2">the common mistake</div>'
+        +'<div class="fm">'+grp(sum(S.x))+" ÷ "+S.rows+"</div>"
+        +'<div class="vl">'+num2(sum(S.x)/S.rows)+"</div>"
+        +'<div class="wk">averaging the rows and ignoring the frequencies</div></div></div>'
+      +'<div style="margin-top:18px">'+ftHTML(S,{xf:true})+"</div>";
+  }else if(h.kind==="pos"){
+    body=ftHTML(S,{pos:true, hit:S.medIdx})
+      +'<div style="margin-top:14px">'+posHTML(S,{pos:Math.ceil(S.pos), hit:S.medIdx,
+        lab:"each block is one rating; its width is how many students gave it"})+"</div>"
+      +'<div class="eq" style="margin-top:8px">('+grp(S.n)+" + 1) ÷ 2 = <b class=\"med\">"+num2(S.pos)+"</b>"
+      +'<span class="lbl">the '+ord(S.pos)+" of "+grp(S.n)+" ratings, which lands in the "+S.x[S.medIdx]+" row</span></div>";
+  }else if(h.kind==="trap"){
+    body='<div class="duo">'
+      +'<div class="pane c"><div class="ttl2">the mode</div>'
+        +'<div class="fm">the rating beside the highest frequency</div>'
+        +'<div class="vl">'+num2(S.mode)+"</div>"
+        +'<div class="wk">not '+grp(S.topF)+", which is how many gave it</div></div>"
+      +'<div class="pane d"><div class="ttl2">the midrange</div>'
+        +'<div class="fm">('+S.minX+" + "+S.maxX+") ÷ 2</div>"
+        +'<div class="vl">'+num2(S.midrange)+"</div>"
+        +'<div class="wk">not ('+grp(S.minF)+" + "+grp(S.maxF)+") ÷ 2 = "+num2((S.minF+S.maxF)/2)
+        +", which reads the frequency column</div></div></div>"
+      +'<div style="margin-top:18px">'+ftHTML(S,{hit:S.modeIdx})+"</div>";
+  }else{
+    body=sumHTML(S)
+      +'<div style="margin-top:16px">'+ftHTML(S,{xf:true, pos:true})+"</div>";
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.vis?'<div class="vis">'+q.vis+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
