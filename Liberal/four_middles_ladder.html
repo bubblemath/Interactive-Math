@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Four Middles Ladder — mean, median, mode and midrange</title>
+<style>
+  :root{
+    --ink:#1D1A15;
+    --paper:#F5F3F0;
+    --card:#FFFFFF;
+    --rule:#DCD6CC;
+    --muted:#5E584E;
+    --gv:#6B4A2E;          /* the page's own colour; the four measures have their own */
+    --gv-bg:#F2ECE4;
+    --mean:#B5451F;
+    --mean-bg:#FBEBE4;
+    --med:#1F6B9E;
+    --med-bg:#E5F0F7;
+    --mode:#2E7A4A;
+    --mode-bg:#E5F3EA;
+    --mid:#7A3A8C;
+    --mid-bg:#F3E9F6;
+    --dim:#BDB7AC;
+    --round-bg:#FCF1DA;
+    --right:#2E7A4A;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E5F3EA;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--gv)}
+  :focus-visible{outline:3px solid var(--gv); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(245,243,240,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand i{font-style:normal; letter-spacing:-.05em}
+  .brand i.a{color:var(--mean)} .brand i.b{color:var(--med)}
+  .brand i.c{color:var(--mode)} .brand i.d{color:var(--mid)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:18ch}
+  .lede{max-width:62ch; color:#3A352C; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:700px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.0; text-align:center}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+  .eq b.mean{color:var(--mean)} .eq b.med{color:var(--med)}
+  .eq b.mode{color:var(--mode)} .eq b.mid{color:var(--mid)}
+
+  /* ---- the dot line: one dot per value, stacked where values repeat ---- */
+  .dl{width:100%; max-width:560px; display:block; margin:0 auto}
+  .axl{stroke:#8A8478; stroke-width:1.5}
+  .tk{stroke:#8A8478; stroke-width:1}
+  .ax{font-family:var(--sans); font-size:11px; fill:var(--muted)}
+  .dt{fill:#E0D8CB; stroke:var(--gv); stroke-width:1.4}
+  .dt.hit{fill:var(--gv)}
+  .mk.mean,.ml.mean{fill:var(--mean)} .mk.med,.ml.med{fill:var(--med)}
+  .mk.mode,.ml.mode{fill:var(--mode)} .mk.mid,.ml.mid{fill:var(--mid)}
+  .ln{stroke-width:1; stroke-dasharray:2 3; opacity:.55}
+  .ln.mean{stroke:var(--mean)} .ln.med{stroke:var(--med)}
+  .ln.mode{stroke:var(--mode)} .ln.mid{stroke:var(--mid)}
+  .ml{font-family:var(--sans); font-size:11px; font-weight:600}
+
+  /* ---- the raw list, as collected and then ordered ---- */
+  .lst{display:flex; flex-wrap:wrap; gap:7px; justify-content:center; font-family:var(--serif);
+       font-size:clamp(16px,3.6vw,20px); max-width:600px; margin:0 auto}
+  .lst span{min-width:38px; text-align:center; padding:5px 9px; border:1.5px solid var(--rule); border-radius:7px; background:var(--card)}
+  .lst.srt span{border-color:#B9D3E5; background:var(--med-bg)}
+  .lst span.hit{border-color:var(--med); background:var(--med); color:#fff; font-weight:700}
+  .lst span.lo{border-color:var(--mid); background:var(--mid); color:#fff; font-weight:700}
+  .lst span.mo{border-color:var(--mode); background:var(--mode); color:#fff; font-weight:700}
+  .cap{text-align:center; font-size:12.5px; color:var(--muted); margin-top:9px}
+  .arrowdown{text-align:center; color:var(--muted); font-size:19px; line-height:1; margin:10px 0 4px}
+
+  table.sum{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:clamp(14px,3vw,16.5px)}
+  table.sum th,table.sum td{border:1px solid var(--rule); padding:6px 15px; text-align:right; white-space:nowrap}
+  table.sum th{background:var(--paper); color:var(--muted); font-weight:700; font-size:.86em; text-align:center; font-family:var(--sans)}
+  table.sum td.nm{text-align:left; font-weight:700}
+  table.sum tr.mean td.nm{color:var(--mean)} table.sum tr.med td.nm{color:var(--med)}
+  table.sum tr.mode td.nm{color:var(--mode)} table.sum tr.mid td.nm{color:var(--mid)}
+  table.sum tr.mean td.vv{color:var(--mean); font-weight:700} table.sum tr.med td.vv{color:var(--med); font-weight:700}
+  table.sum tr.mode td.vv{color:var(--mode); font-weight:700} table.sum tr.mid td.vv{color:var(--mid); font-weight:700}
+  table.sum td.wk{color:var(--muted); font-size:.86em; text-align:left; font-family:var(--sans)}
+
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:680px; margin:0 auto}
+  @media (max-width:640px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:15px 16px; text-align:center; background:var(--gv-bg)}
+  .pane.a{background:var(--mean-bg)} .pane.b{background:var(--med-bg)}
+  .pane.c{background:var(--mode-bg)} .pane.d{background:var(--mid-bg)}
+  .pane .ttl2{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:9px; color:var(--gv)}
+  .pane.a .ttl2{color:var(--mean)} .pane.b .ttl2{color:var(--med)}
+  .pane.c .ttl2{color:var(--mode)} .pane.d .ttl2{color:var(--mid)}
+  .pane .fm{font-family:var(--serif); font-size:clamp(14.5px,2.9vw,17px); line-height:1.5}
+  .pane .vl{font-family:var(--serif); font-size:clamp(20px,4.4vw,28px); font-weight:700; margin-top:7px; color:var(--gv)}
+  .pane.a .vl{color:var(--mean)} .pane.b .vl{color:var(--med)}
+  .pane.c .vl{color:var(--mode)} .pane.d .vl{color:var(--mid)}
+  .pane .wk{font-size:12.5px; color:var(--muted); margin-top:7px; line-height:1.4}
+
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--gv); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--med); background:var(--med-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk2{font-family:var(--serif); font-size:26px; line-height:1; color:var(--med)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#453F35}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:64ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#3A352C}
+  .scene{max-width:58ch; margin:0 auto 14px; background:var(--gv-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:46ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(16px,3.6vw,25px); background:var(--gv-bg); border-radius:12px; padding:11px 25px; margin:0 auto 16px}
+  .vis{margin:0 auto 16px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:20px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B2D9C0}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:42ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><i class="a">▲</i><i class="b">▲</i><i class="c">▲</i><i class="d">▲</i> The Four Middles Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 22 · measures of central tendency</p>
+    <h1>Four answers to one question.</h1>
+    <p class="lede">"What is a typical value?" has four standard answers, and on most data sets they are four different numbers. The <b>mean</b> shares the total out evenly. The <b>median</b> stands in the middle once the list is in order. The <b>mode</b> is whatever turns up most. The <b>midrange</b> sits halfway between the smallest and the largest and ignores everything in between. Each is right; each is right about something different.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk2">⇅</span>
+      <p><b>Order the list before you look for the middle.</b> Your worksheet's scores are 8, 10, 9, 9, 6, 8, 7, 9. The middle two <i>as written</i> are 9 and 6, which would give 7.5. Put them in order — 6, 7, 8, <b>8, 9</b>, 9, 9, 10 — and the middle two are 8 and 9, so the median is <b>8.5</b>. Sorting is step one, not a tidying-up afterwards.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#453F35">Rung 1 is the mean. Rungs 2–5 are the median: ordering first, an even list, an odd list, and the position formula. Rung 6 is the mode, including the cases where there are two or none. Rung 7 is the midrange. Rungs 8–9 ask which measure is which, and what a single extreme value does to each. Rung 10 mixes all four.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Each measure has a colour</h3><p>Mean is <b style="color:var(--mean)">red</b>, median <b style="color:var(--med)">blue</b>, mode <b style="color:var(--mode)">green</b>, midrange <b style="color:var(--mid)">purple</b> — on every dot line in this ladder.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Answers are rounded to two decimal places where a value does not come out exactly. A data set has <b>no mode</b> when every value appears once, and has <b>two modes</b> when two values tie for the highest count — both are named. The midrange uses the <i>smallest</i> and <i>largest</i> values, not the first and last ones written down.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>Which middle you quote is a choice</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The mean feels every value</h3><p>Change any one number and the mean moves. That is its strength and, next to an outlier, its weakness.</p></div>
+      <div class="step"><span class="n">02</span><h3>The median barely notices</h3><p>It cares about position, not size. One enormous value moves it by at most one place along the list.</p></div>
+      <div class="step"><span class="n">03</span><h3>The midrange sees two numbers</h3><p>Only the smallest and the largest. Everything in between could be rearranged and it would not change.</p></div>
+    </div>
+    <p class="closing">When someone quotes an average, the first question is which of the four they used.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Four Middles Ladder · mean = sum ÷ n · median = the middle of the ordered list · mode = the most frequent value · midrange = (lowest + highest) ÷ 2</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function sum(a){return a.reduce(function(x,y){return x+y;},0);}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+/* One place decides how a number is printed and how two are compared. Every
+   answer is rounded to two decimal places; a value that lands on a whole number
+   or a single place is written that way rather than padded with zeros. */
+function r2(v){ return Math.round((v+Number.EPSILON)*100)/100; }
+function num2(v){
+  const r=r2(v);
+  if(Math.abs(r-Math.round(r))<1e-9) return grp(Math.round(r));
+  const s=r.toFixed(2);
+  return (s.charAt(s.length-1)==="0")?s.slice(0,-1):s;
+}
+function numKey(v){ return r2(v).toFixed(2); }
+/* 1st, 2nd, 3rd, 4th ... a bare "th" gives "the 3th" */
+function ord(n){
+  const a=Math.abs(n)%100, b=Math.abs(n)%10;
+  const suf=(a>=11&&a<=13)?"th":(b===1?"st":(b===2?"nd":(b===3?"rd":"th")));
+  return n+suf;
+}
+/* whether a value needed rounding at all, so the working can say so honestly */
+function isExact(v){ return Math.abs(v-r2(v))<1e-12; }
+function meanWork(t,n){
+  const m=t/n;
+  return isExact(m) ? (t+" ÷ "+n+" = "+num2(m))
+                    : (t+" ÷ "+n+" = "+m.toFixed(4)+"… ≈ "+num2(m));
+}
+/* numeric options, deduplicated by rounded VALUE; spares wait in order for a
+   coincidence to knock a main distractor out */
+function numOpts(ans,cands,note,spares,pinned){
+  const seen={}; seen[numKey(ans)]=1;
+  const opts=[{label:num2(ans), correct:true, note:note}];
+  (pinned||[]).concat(shuffle(cands.slice())).concat(spares||[]).forEach(function(x){
+    if(x==null||x.v==null||!Number.isFinite(x.v)||x.v<0)return;
+    const k=numKey(x.v); if(seen[k])return; seen[k]=1;
+    opts.push({label:num2(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+function textOpts(ans,note,cands){
+  const opts=[{label:ans, correct:true, note:note}];
+  shuffle(cands.slice()).forEach(function(x){ if(x&&x.t!=null) opts.push({label:x.t, note:x.w}); });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= the four measures ================= */
+function sorted(v){ return v.slice().sort(function(a,b){return a-b;}); }
+function meanOf(v){ return sum(v)/v.length; }
+function medianOf(v){
+  const s=sorted(v), n=s.length;
+  return (n%2) ? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2;
+}
+function countsOf(v){
+  const c={}; v.forEach(function(x){ c[x]=(c[x]||0)+1; }); return c;
+}
+/* the modes, as a list: empty when every value appears once */
+function modesOf(v){
+  const c=countsOf(v);
+  const top=Math.max.apply(null,Object.keys(c).map(function(k){return c[k];}));
+  if(top===1) return [];
+  return Object.keys(c).filter(function(k){return c[k]===top;}).map(Number)
+    .sort(function(a,b){return a-b;});
+}
+function modeText(v){
+  const m=modesOf(v);
+  if(!m.length) return "no mode";
+  return m.map(num2).join(" and ");
+}
+function midrangeOf(v){ const s=sorted(v); return (s[0]+s[s.length-1])/2; }
+function rangeOf(v){ const s=sorted(v); return s[s.length-1]-s[0]; }
+
+/* ================= the worksheet's own data ================= */
+const QUIZ=[8,10,9,9,6,8,7,9];
+const QUIZ9=[8,10,9,9,6,8,7,9,8];
+const FIVE=[28,42,40,25,35];
+const INHERIT=[8,16,16,20,22,23,23,23,25,25];
+/* the hero's outlier illustration: seven values, so adding an eighth moves the
+   median off a single value and onto a pair */
+const OUTBASE=[12,13,15,15,16,18,20];
+const OUTFAR=52;
+
+/* ================= drawing ================= */
+/* A dot line. One dot per value, stacked where values repeat, so the tallest
+   stack is the mode. The measure labels are laid out first, on as many rows as
+   it takes, so two of them can never print on top of each other. */
+function dotHTML(vals,o){
+  o=o||{};
+  const s=sorted(vals);
+  const lo=s[0], hi=s[s.length-1];
+  const W=560, ML=52, MR=52, MT=14;
+  const counts=countsOf(s);
+  const keys=Object.keys(counts).map(Number).sort(function(a,b){return a-b;});
+  const tall=Math.max.apply(null,keys.map(function(k){return counts[k];}));
+  const dr=Math.min(9, Math.max(4.5, 150/Math.max(6,(hi-lo)+1)));
+  const pad=(hi-lo)===0?1:0;
+  const x=function(v){ return ML+((v-lo+pad)/((hi-lo)+2*pad))*(W-ML-MR); };
+
+  let placed=[], rowRight=[];
+  if(o.marks){
+    o.marks.slice().sort(function(a,b){return a.v-b.v;}).forEach(function(m){
+      const txt=m.t+" "+num2(m.v);
+      const w=txt.length*6.5+10;
+      const px=x(m.v), L=px-w/2, R=px+w/2;
+      let r=0;
+      while(r<8 && rowRight[r]!=null && L<rowRight[r]+7) r++;
+      rowRight[r]=R;
+      placed.push({m:m, px:px, row:r, txt:txt});
+    });
+  }
+  const nrows=rowRight.length;
+  /* the tick numbers get a clear line of their own before the markers begin */
+  const MB=o.marks ? (52+(nrows-1)*17) : 26;
+  const H=MT+MB+tall*(dr*2+3)+10;
+  const base=H-MB;
+
+  let out='<svg class="dl" viewBox="0 0 '+W+" "+H+'" role="img" aria-label="dot plot of the data">';
+  out+='<line class="axl" x1="'+(ML-18)+'" x2="'+(W-MR+18)+'" y1="'+base+'" y2="'+base+'"/>';
+  const span=hi-lo, step=span<=12?1:(span<=30?5:(span<=70?10:20));
+  for(let v=Math.ceil(lo/step)*step; v<=hi+1e-9; v+=step){
+    out+='<line class="tk" x1="'+x(v).toFixed(1)+'" x2="'+x(v).toFixed(1)+'" y1="'+base+'" y2="'+(base+5)+'"/>'
+      +'<text class="ax" x="'+x(v).toFixed(1)+'" y="'+(base+17)+'" text-anchor="middle">'+v+"</text>";
+  }
+  keys.forEach(function(v){
+    for(let i=0;i<counts[v];i++){
+      const cy=base-dr-2-i*(dr*2+3);
+      out+='<circle class="dt'+((o.hit!=null&&o.hit===v)?" hit":"")+'" cx="'+x(v).toFixed(1)
+        +'" cy="'+cy.toFixed(1)+'" r="'+dr.toFixed(1)+'"/>';
+    }
+  });
+  placed.forEach(function(p){
+    const ty=base+44+p.row*17;
+    out+='<line class="ln '+p.m.k+'" x1="'+p.px.toFixed(1)+'" x2="'+p.px.toFixed(1)+'" y1="'+(base-2)+'" y2="'+(ty-9)+'"/>'
+      +'<polygon class="mk '+p.m.k+'" points="'+p.px.toFixed(1)+","+(base+21)+" "+(p.px-5).toFixed(1)+","+(base+30)
+      +" "+(p.px+5).toFixed(1)+","+(base+30)+'"/>'
+      +'<text class="ml '+p.m.k+'" x="'+p.px.toFixed(1)+'" y="'+ty+'" text-anchor="middle">'+p.txt+"</text>";
+  });
+  return out+"</svg>";
+}
+/* all four measures of a set, ready to hand to dotHTML */
+function allMarks(v){
+  const m=modesOf(v);
+  const out=[{v:meanOf(v), k:"mean", t:"mean"},
+             {v:medianOf(v), k:"med", t:"median"},
+             {v:midrangeOf(v), k:"mid", t:"midrange"}];
+  m.forEach(function(x){ out.push({v:x, k:"mode", t:"mode"}); });
+  return out;
+}
+function listHTML(vals,o){
+  o=o||{};
+  return '<div class="lst'+(o.sorted?" srt":"")+'">'+vals.map(function(v,i){
+      let cls="";
+      if(o.hit&&o.hit.indexOf(i)>=0) cls="hit";
+      if(o.lo&&o.lo.indexOf(i)>=0) cls="lo";
+      if(o.mo&&o.mo.indexOf(i)>=0) cls="mo";
+      return '<span class="'+cls+'">'+v+"</span>";
+    }).join("")+"</div>"
+    +(o.cap?'<div class="cap">'+o.cap+"</div>":"");
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+/* the summary table of all four */
+function sumHTML(v,o){
+  o=o||{};
+  const s=sorted(v), n=v.length, t=sum(v);
+  const rows=[
+    ["mean","mean",num2(meanOf(v)), t+" ÷ "+n],
+    ["med","median",num2(medianOf(v)), n%2?("the "+ord((n+1)/2)+" of "+n):("halfway between the "+ord(n/2)+" and "+ord(n/2+1))],
+    ["mode","mode",modeText(v), modesOf(v).length?("appears "+countsOf(v)[modesOf(v)[0]]+" times"):"every value appears once"],
+    ["mid","midrange",num2(midrangeOf(v)), "("+s[0]+" + "+s[n-1]+") ÷ 2"]
+  ];
+  let out='<table class="sum"><thead><tr><th>Measure</th><th>Value</th><th>How it was found</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    if(o.only&&o.only.indexOf(r[0])<0) return;
+    out+='<tr class="'+r[0]+'"><td class="nm">'+r[1]+'</td><td class="vv">'+r[2]+'</td><td class="wk">'+r[3]+"</td></tr>";
+  });
+  return out+"</tbody></table>";
+}
+
+/* ================= generated data ================= */
+const TOPICS=[
+  {q:"points scored by a player in each game", who:"game", whoP:"games", unit:"points", lo:4, hi:30},
+  {q:"the number of emails arriving each hour", who:"hour", whoP:"hours", unit:"emails", lo:2, hi:24},
+  {q:"minutes spent waiting at a bus stop", who:"morning", whoP:"mornings", unit:"minutes", lo:3, hi:26},
+  {q:"the ages of the people in a book group", who:"member", whoP:"members", unit:"years", lo:20, hi:60},
+  {q:"scores out of 50 on a short quiz", who:"student", whoP:"students", unit:"marks", lo:18, hi:48},
+  {q:"the number of push-ups managed in one minute", who:"attempt", whoP:"attempts", unit:"push-ups", lo:8, hi:40},
+  {q:"daily high temperatures in degrees", who:"day", whoP:"days", unit:"degrees", lo:48, hi:88}
+];
+/* A data set whose four measures are four DIFFERENT numbers, so a question
+   asking which measure a value is has exactly one answer. */
+function makeSet(o){
+  o=o||{};
+  for(let t=0;t<600;t++){
+    const T=o.T||pick(TOPICS);
+    const n=o.n||ri(5,9);
+    if(o.even&&n%2) continue;
+    if(o.odd&&n%2===0) continue;
+    const v=[];
+    for(let i=0;i<n;i++) v.push(ri(T.lo,T.hi));
+    const md=modesOf(v);
+    if(o.oneMode&&md.length!==1) continue;
+    if(o.noMode&&md.length!==0) continue;
+    if(o.twoModes&&md.length!==2) continue;
+    if(o.anyMode==null&&md.length>1) continue;         /* at most one mode by default */
+    const me=meanOf(v), mdn=medianOf(v), mr=midrangeOf(v);
+    /* the four must be distinct once rounded, or "which measure is this" breaks */
+    const keys=[numKey(me),numKey(mdn),numKey(mr)].concat(md.map(numKey));
+    if(new Set(keys).size!==keys.length) continue;
+    if(rangeOf(v)<4) continue;
+    /* when the largest is exactly three times the smallest, the range and the
+       midrange are the same number, and the rung's key distractor disappears */
+    if(numKey(rangeOf(v))===numKey(midrangeOf(v))) continue;
+    if(o.distinctVals&&new Set(v).size!==v.length) continue;
+    return {v:v, s:sorted(v), n:n, T:T, sum:sum(v),
+            mean:me, median:mdn, modes:md, midrange:mr, range:rangeOf(v)};
+  }
+  return null;
+}
+/* A list whose middle AS WRITTEN differs from its middle once ordered, which is
+   the mistake this ladder exists to catch. */
+function makeUnsorted(){
+  for(let t=0;t<600;t++){
+    const D=makeSet({even:true});
+    if(!D) continue;
+    const v=D.v, n=D.n;
+    const raw=(v[n/2-1]+v[n/2])/2;
+    if(numKey(raw)===numKey(D.median)) continue;      /* it has to give a different answer */
+    if(raw<0) continue;
+    return Object.assign({}, D, {rawMid:raw});
+  }
+  return null;
+}
+/* A tight cluster with one value far away, so the mean and midrange move and
+   the median and mode barely do. */
+function makeOutlier(){
+  for(let t=0;t<600;t++){
+    const T=pick(TOPICS);
+    const n=ri(6,8);
+    const c=ri(T.lo+2, T.lo+8);
+    const base=[];
+    for(let i=0;i<n-1;i++) base.push(c+ri(0,4));
+    const far=c+ri(28,60);
+    const v=base.concat([far]);
+    const md=modesOf(base), md2=modesOf(v);
+    if(md.length!==1||md2.length!==1||md[0]!==md2[0]) continue;   /* the mode must not move */
+    if(numKey(medianOf(base))===numKey(medianOf(v))) continue;     /* but the median may shift a little */
+    const keys=[numKey(meanOf(v)),numKey(medianOf(v)),numKey(midrangeOf(v)),numKey(md2[0])];
+    if(new Set(keys).size!==keys.length) continue;
+    const keys2=[numKey(meanOf(base)),numKey(medianOf(base)),numKey(midrangeOf(base)),numKey(md[0])];
+    if(new Set(keys2).size!==keys2.length) continue;
+    if(Math.abs(meanOf(v)-meanOf(base))<3) continue;               /* the mean must visibly move */
+    return {T:T, base:base, v:v, far:far, n:v.length};
+  }
+  return null;
+}
+const MEAS=[
+  {k:"mean", t:"the mean", d:"the total shared out evenly between all the items",
+   how:"add every value and divide by how many there are"},
+  {k:"median", t:"the median", d:"the value standing in the middle once the list is in order",
+   how:"order the list, then take the middle value — or the mean of the middle two"},
+  {k:"mode", t:"the mode", d:"the value that turns up more often than any other",
+   how:"count how many times each value appears and take the most frequent"},
+  {k:"midrange", t:"the midrange", d:"the value halfway between the smallest and the largest",
+   how:"add the lowest and highest values and halve the result"}
+];
+function measByKey(k){ for(const m of MEAS) if(m.k===k) return m; return null; }
+
+/* ================= rungs ================= */
+const RUNGS=[
+{
+ title:"The mean",
+ sub:"Add everything, divide by how many.",
+ gen:function(){
+   const D=makeSet({});
+   const forms=["value","which","missing"];
+   const f=pick(forms);
+   if(f==="which"){
+     return {q:"<b>Which calculation gives the mean?</b>",
+       scene:"A survey recorded "+D.T.q+": "+D.v.join(", ")+".",
+       opts:shuffle(distinctOpts([
+         {label:D.sum+" ÷ "+D.n, correct:true,
+          note:"The total shared between all "+D.n+" items: "+meanWork(D.sum,D.n)+"."},
+         {label:D.sum+" ÷ "+(D.n-1),
+          note:"Dividing by one fewer belongs to the standard deviation, not the mean. There are "+D.n+" items here."},
+         {label:D.n+" ÷ "+D.sum,
+          note:"That is upside down. The total goes on top."},
+         {label:"("+D.s[0]+" + "+D.s[D.n-1]+") ÷ 2",
+          note:"That is the midrange, which uses only the smallest and largest values and ignores the rest."}
+       ]).slice(0,4)), two:true};
+   }
+   if(f==="missing"){
+     /* the total is given and one value is hidden */
+     const i=ri(0,D.n-1);
+     const shown=D.v.slice(); const want=shown[i];
+     const rest=D.sum-want;
+     return {q:"<b>One value has been smudged out. What was it?</b>",
+       scene:"A survey recorded "+D.T.q+". The "+D.n+" values add to "+D.sum+".",
+       vis:listHTML(shown.map(function(x,j){return j===i?"?":x;}),{hit:[i]}),
+       opts:shuffle(numOpts(want,
+         [{v:rest, w:"That is everything except the missing value. Take it away from "+D.sum+" to get the one that is gone."},
+          {v:D.sum, w:"That is the total of all "+D.n+" values."},
+          {v:r2(D.mean), w:"That is the mean, which is what the values average to rather than what the missing one was."},
+          {v:want+1, w:"One too many — the values would then add to "+(D.sum+1)+"."},
+          {v:want-1, w:"One short — the values would then add to "+(D.sum-1)+"."},
+          {v:D.n, w:"That is how many values there are."}],
+         "The visible values add to "+rest+", and "+D.sum+" − "+rest+" = "+want+"."))};
+   }
+   return {q:"<b>What is the mean?</b>",
+     scene:"A survey recorded "+D.T.q+".",
+     vis:listHTML(D.v,{cap:D.n+" values"}),
+     opts:shuffle(numOpts(D.mean,
+       [{v:D.sum, w:"That is the total. It still has to be divided by the "+D.n+" items."},
+        {v:D.n, w:"That is how many values there are, not their average."},
+        {v:D.sum/(D.n-1), w:"That divides by one fewer than there are. The mean divides by all "+D.n+"."},
+        {v:D.median, w:"That is the median — the middle of the ordered list, not the total shared out."},
+        {v:D.midrange, w:"That is the midrange, halfway between "+D.s[0]+" and "+D.s[D.n-1]+"."},
+        {v:D.sum/(D.n+1), w:"That divides by one more than there are."}],
+       "Add them: "+D.v.join(" + ")+" = "+D.sum+". Then "+meanWork(D.sum,D.n)+".",
+       [{v:D.range, w:"That is the range, the distance from smallest to largest."},
+        {v:D.s[Math.floor(D.n/2)], w:"That is one of the values, not their average."}]))};
+ }
+},
+{
+ title:"Order it first",
+ sub:"The middle of the list you were given is not the median.",
+ gen:function(){
+   const D=makeUnsorted();
+   const forms=["value","step","which"];
+   const f=pick(forms);
+   if(f==="step"){
+     return {q:"<b>What is the first step in finding the median?</b>",
+       opts:shuffle(distinctOpts([
+         {label:"Put the values in order, smallest to largest", correct:true,
+          note:"The median is a position in the <i>ordered</i> list. Until the list is sorted, the middle of it means nothing."},
+         {label:"Add all the values up",
+          note:"That is the first step for the mean. The median never adds the whole list."},
+         {label:"Count how often each value appears",
+          note:"That is how the mode is found."},
+         {label:"Find the smallest and largest values",
+          note:"Those two give the midrange and the range, but the median needs the whole list in order."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="which"){
+     const mid=[D.n/2-1, D.n/2];
+     return {q:"<b>Once the list is in order, which two values are in the middle?</b>",
+       scene:"A survey recorded "+D.T.q+".",
+       vis:listHTML(D.v,{cap:"as collected"})
+         +'<div class="arrowdown">↓</div>'
+         +listHTML(D.s,{sorted:true}),
+       opts:shuffle(textOpts(D.s[mid[0]]+" and "+D.s[mid[1]],
+         "With "+D.n+" values the middle two are the "+ord(D.n/2)+" and "+ord(D.n/2+1)+" of the ordered list: "
+         +D.s[mid[0]]+" and "+D.s[mid[1]]+", giving a median of "+num2(D.median)+".",
+         [{t:D.v[mid[0]]+" and "+D.v[mid[1]],
+           w:"Those are the middle two of the list <i>as collected</i>. Ordering moves values about, so the middle two change."},
+          {t:D.s[0]+" and "+D.s[D.n-1],
+           w:"Those are the smallest and largest, which give the midrange rather than the median."},
+          {t:D.v[0]+" and "+D.v[D.n-1],
+           w:"Those are the first and last as written down, which have nothing to do with the middle."},
+          {t:D.s[D.n/2]+" and "+D.s[Math.min(D.n-1,D.n/2+1)],
+           w:"That pair sits one place too high in a list of "+D.n+"."},
+          {t:D.s[Math.max(0,D.n/2-2)]+" and "+D.s[D.n/2-1],
+           w:"That pair sits one place too low."},
+          {t:D.s[1]+" and "+D.s[D.n-2],
+           w:"Those are the second smallest and second largest, which are nowhere near the middle of a list of "+D.n+"."}])),
+       two:true};
+   }
+   return {q:"<b>What is the median?</b>",
+     scene:"A survey recorded "+D.T.q+", in the order it was collected.",
+     vis:listHTML(D.v,{hit:[D.n/2-1,D.n/2], cap:"careful — these are the middle two of the list as written"}),
+     opts:shuffle(numOpts(D.median,
+       [{v:D.mean, w:"That is the mean. The median is a position, not a total shared out."},
+        {v:D.midrange, w:"That is the midrange, halfway between "+D.s[0]+" and "+D.s[D.n-1]+"."},
+        {v:D.s[D.n/2], w:"That is only the upper of the two middle values. With an even count, average the pair."},
+        {v:D.s[D.n/2-1], w:"That is only the lower of the two middle values."},
+        {v:D.v[D.n/2-1], w:"That is a value from the middle of the unordered list."},
+        {v:D.s[0], w:"That is the smallest value."},
+        {v:D.s[D.n-1], w:"That is the largest value."}],
+       "In order the values are "+D.s.join(", ")+". The middle two are "+D.s[D.n/2-1]+" and "+D.s[D.n/2]
+       +", so the median is ("+D.s[D.n/2-1]+" + "+D.s[D.n/2]+") ÷ 2 = "+num2(D.median)+".",
+       null,
+       [{v:D.rawMid, w:"That takes the middle two of the list <i>as written</i>: ("+D.v[D.n/2-1]+" + "+D.v[D.n/2]
+         +") ÷ 2 = "+num2(D.rawMid)+". Order the values first and the middle two change."}]))};
+ }
+},
+{
+ title:"Median, even count",
+ sub:"Average the two in the middle.",
+ gen:function(){
+   const D=makeSet({even:true});
+   const a=D.s[D.n/2-1], b=D.s[D.n/2];
+   const forms=["value","pair"];
+   if(pick(forms)==="pair"){
+     return {q:"<b>With "+D.n+" values, which two are averaged to give the median?</b>",
+       scene:"A survey recorded "+D.T.q+".",
+       vis:listHTML(D.s,{sorted:true}),
+       opts:shuffle(textOpts("the "+ord(D.n/2)+" and "+ord(D.n/2+1),
+         "An even count has no single middle value, so the median is the mean of the two that straddle the middle — here "
+         +a+" and "+b+", giving "+num2(D.median)+".",
+         [{t:"the "+ord(D.n/2)+" only", w:"That is the lower of the pair. With an even count, both are needed."},
+          {t:"the "+ord(D.n/2+1)+" only", w:"That is the upper of the pair."},
+          {t:"the first and the last", w:"Those give the midrange, not the median."},
+          {t:"the "+ord(D.n/2-1)+" and "+ord(D.n/2), w:"That pair sits one place too low in a list of "+D.n+"."}])),
+       two:true};
+   }
+   return {q:"<b>What is the median?</b>",
+     scene:"A survey recorded "+D.T.q+".",
+     vis:listHTML(D.s,{sorted:true, hit:[D.n/2-1,D.n/2], cap:"already in order"}),
+     opts:shuffle(numOpts(D.median,
+       [{v:a, w:"That is the lower of the middle two. With an even count the median is the mean of the pair."},
+        {v:b, w:"That is the upper of the middle two."},
+        {v:D.mean, w:"That is the mean of the whole list, not of the middle two."},
+        {v:D.midrange, w:"That is the midrange, from the smallest and largest."},
+        {v:D.s[D.n/2+1], w:"That sits one place past the middle."}],
+       "With "+D.n+" values the middle two are the "+ord(D.n/2)+" and "+ord(D.n/2+1)+": "+a+" and "+b+". Their mean is ("
+       +a+" + "+b+") ÷ 2 = "+num2(D.median)+".",
+       [{v:D.s[0], w:"That is the smallest value."},
+        {v:D.s[D.n-1], w:"That is the largest value."},
+        {v:D.range, w:"That is the range, the distance from smallest to largest."},
+        {v:D.s[D.n/2-2], w:"That sits two places below the middle."}],
+       [{v:(a+b), w:"The pair has been added but not halved: ("+a+" + "+b+") ÷ 2 = "+num2(D.median)+"."}]))};
+ }
+},
+{
+ title:"Median, odd count",
+ sub:"One value stands alone in the middle.",
+ gen:function(){
+   const D=makeSet({odd:true});
+   const k=(D.n-1)/2;
+   const forms=["value","value","why"];
+   if(pick(forms)==="why"){
+     return {q:"<b>Why is there no averaging to do when the count is odd?</b>",
+       scene:"A survey recorded "+D.T.q+": "+D.s.join(", ")+".",
+       opts:shuffle(distinctOpts([
+         {label:"One value sits exactly in the middle, with as many below as above", correct:true,
+          note:"With "+D.n+" values there are "+k+" below the middle and "+k+" above it, so the "+((D.n+1)/2)
+            +" value is the median on its own: "+num2(D.median)+"."},
+         {label:"Because an odd list is always already in order",
+          note:"Being odd says nothing about the order. The list still has to be sorted first."},
+         {label:"Because the mean and the median agree when the count is odd",
+          note:"They need not agree at all — here the mean is "+num2(D.mean)+" and the median is "+num2(D.median)+"."},
+         {label:"Because an odd list has no smallest or largest value",
+          note:"It has both, and they give the midrange. The median is about position."}
+       ]).slice(0,4)), one:true};
+   }
+   return {q:"<b>What is the median?</b>",
+     scene:"A survey recorded "+D.T.q+".",
+     vis:listHTML(D.s,{sorted:true, hit:[k], cap:"already in order"}),
+     opts:shuffle(numOpts(D.median,
+       [{v:D.s[k-1], w:"That is one place below the middle. With "+D.n+" values the middle is the "+ord((D.n+1)/2)+"."},
+        {v:D.s[k+1], w:"That is one place above the middle."},
+        {v:D.mean, w:"That is the mean of the whole list."},
+        {v:D.midrange, w:"That is the midrange, halfway between "+D.s[0]+" and "+D.s[D.n-1]+"."},
+        {v:(D.s[k-1]+D.s[k+1])/2, w:"That averages the neighbours either side. With an odd count the middle value stands on its own."},
+        {v:D.s[0], w:"That is the smallest value."}],
+       "There are "+D.n+" values, so the middle is the "+ord((D.n+1)/2)+" of the ordered list: "+num2(D.median)
+       +", with "+k+" values below it and "+k+" above."))};
+ }
+},
+{
+ title:"The position formula",
+ sub:"(n + 1) ÷ 2 says where to look, not what you find.",
+ gen:function(){
+   const D=makeSet({});
+   const pos=(D.n+1)/2;
+   const forms=["pos","mean","half"];
+   const f=pick(forms);
+   if(f==="mean"){
+     return {q:"<b>What does (n + 1) ÷ 2 give you?</b>",
+       opts:shuffle(distinctOpts([
+         {label:"The position of the median in the ordered list", correct:true,
+          note:"It counts places, not values. With "+D.n+" items it gives "+num2(pos)+", meaning the median is found at that place in the ordered list."},
+         {label:"The median itself",
+          note:"It gives a position. You then have to go to that place in the ordered list and read what is there."},
+         {label:"The mean of the data",
+          note:"The mean is the total divided by n. This formula never touches the values at all."},
+         {label:"The number of values in the data set",
+          note:"That is n. This formula turns n into a position."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="half"&&D.n%2===0){
+     return {q:"<b>With "+D.n+" values the formula gives "+num2(pos)+". What does a half-position mean?</b>",
+       scene:"A survey recorded "+D.T.q+".",
+       vis:listHTML(D.s,{sorted:true, hit:[D.n/2-1,D.n/2]}),
+       opts:shuffle(textOpts("Take the mean of the values either side of it",
+         num2(pos)+" sits between the "+ord(D.n/2)+" and the "+ord(D.n/2+1)+", which are "+D.s[D.n/2-1]+" and "
+         +D.s[D.n/2]+". Their mean is "+num2(D.median)+".",
+         [{t:"Round it up and use that position", w:"Rounding would take only the "+ord(D.n/2+1)+" value, "+D.s[D.n/2]
+            +", and throw away the other half of the pair."},
+          {t:"Round it down and use that position", w:"Rounding down would take only the "+ord(D.n/2)+" value, "+D.s[D.n/2-1]+"."},
+          {t:"The formula does not apply to even lists", w:"It applies to every list. A half-position is how it signals that two values share the middle."}])),
+       one:true};
+   }
+   return {q:"<b>With "+D.n+" values, which position does the median sit at?</b>",
+     scene:"A survey recorded "+D.T.q+".",
+     opts:shuffle(numOpts(pos,
+       [{v:D.n/2, w:"That halves n without adding one first. The formula is (n + 1) ÷ 2, which gives "+num2(pos)+"."},
+        {v:D.n, w:"That is how many values there are, which is the last position rather than the middle one."},
+        {v:(D.n-1)/2, w:"That subtracts one instead of adding it."},
+        {v:D.median, w:"That is the median value itself. The formula gives the position it sits at."},
+        {v:D.n+1, w:"That is n + 1 before the halving."},
+        {v:Math.round(pos), w:"("+D.n+" + 1) ÷ 2 = "+num2(pos)+" exactly, and the half is meaningful — it points between two values."}],
+       "("+D.n+" + 1) ÷ 2 = "+num2(pos)+". "
+       +(D.n%2 ? ("So the median is the "+ord(pos)+" value of the ordered list, which is "+num2(D.median)+".")
+               : ("A half-position means the median lies between the "+ord(D.n/2)+" and "+ord(D.n/2+1)+" values, so take their mean: "+num2(D.median)+"."))))};
+ }
+},
+{
+ title:"The mode",
+ sub:"One, two, or none at all.",
+ gen:function(){
+   const kind=pick(["one","one","two","none"]);
+   const D=makeSet(kind==="one"?{oneMode:true}:(kind==="two"?{twoModes:true, anyMode:1}:{noMode:true}));
+   const c=countsOf(D.v);
+   const forms=["value","how","count"];
+   const f=pick(forms);
+   if(f==="how"){
+     return {q:"<b>How is the mode found?</b>",
+       opts:shuffle(distinctOpts([
+         {label:"Count how many times each value appears and take the most frequent", correct:true,
+          note:"It is the only one of the four that counts repeats rather than working with the sizes of the values."},
+         {label:"Take the value in the middle of the ordered list",
+          note:"That is the median."},
+         {label:"Add the values and divide by how many",
+          note:"That is the mean."},
+         {label:"Average the smallest and the largest",
+          note:"That is the midrange."}
+       ]).slice(0,4)), one:true};
+   }
+   if(f==="count"&&D.modes.length){
+     const top=c[D.modes[0]];
+     return {q:"<b>How many times does the most frequent value appear?</b>",
+       scene:"A survey recorded "+D.T.q+".",
+       vis:dotHTML(D.v,{hit:D.modes[0]}),
+       opts:shuffle(numOpts(top,
+         [{v:D.modes[0], w:"That is the value itself. The question asks how often it turns up."},
+          {v:D.n, w:"That is how many values there are altogether."},
+          {v:top+1, w:"Count the dots in the tallest stack again."},
+          {v:top-1, w:"One short."},
+          {v:new Set(D.v).size, w:"That is how many different values appear."}],
+         "The tallest stack is above "+D.modes[0]+", with "+top+" dots, so "+D.modes[0]+" appears "+top
+         +" times — more than any other value."))};
+   }
+   const cands=[];
+   if(kind==="none"){
+     cands.push({t:num2(D.s[0]), w:"Every value here appears exactly once, so no value is more frequent than any other."});
+     cands.push({t:num2(D.median), w:"That is the median. A mode has to be a value that repeats, and none of these do."});
+     cands.push({t:num2(D.mean), w:"That is the mean. With no repeats at all there is no mode to find."});
+   }else if(kind==="two"){
+     cands.push({t:num2(D.modes[0]), w:"That is only one of them. "+num2(D.modes[1])+" appears just as often, so both are modes."});
+     cands.push({t:num2(D.modes[1]), w:"That is only one of them. "+num2(D.modes[0])+" appears just as often, so both are modes."});
+     cands.push({t:"no mode", w:"There are repeats here — two values tie for the highest count, and both count as modes."});
+   }else{
+     cands.push({t:"no mode", w:"There is a repeat: "+num2(D.modes[0])+" appears "+c[D.modes[0]]+" times."});
+     cands.push({t:num2(D.median), w:"That is the median, the middle of the ordered list."});
+     cands.push({t:num2(D.mean), w:"That is the mean."});
+     cands.push({t:String(c[D.modes[0]]), w:"That is how many times the mode appears, not the mode itself."});
+   }
+   return {q:"<b>What is the mode?</b>",
+     scene:"A survey recorded "+D.T.q+".",
+     vis:dotHTML(D.v,{hit:D.modes.length===1?D.modes[0]:null}),
+     opts:shuffle(textOpts(modeText(D.v),
+       (kind==="none")
+         ? "Every value appears exactly once — no stack is taller than any other — so this data set has no mode."
+         : (kind==="two")
+           ? ("Two values tie for the tallest stack: "+num2(D.modes[0])+" and "+num2(D.modes[1])+" each appear "
+              +c[D.modes[0]]+" times, so both are modes.")
+           : ("The tallest stack is above "+num2(D.modes[0])+", which appears "+c[D.modes[0]]
+              +" times — more than any other value."),
+       cands)), two:true};
+ }
+},
+{
+ title:"The midrange",
+ sub:"Halfway between the smallest and the largest.",
+ gen:function(){
+   const D=makeSet({});
+   const forms=["value","which","first"];
+   const f=pick(forms);
+   if(f==="which"){
+     return {q:"<b>Which calculation gives the midrange?</b>",
+       scene:"A survey recorded "+D.T.q+": "+D.v.join(", ")+".",
+       opts:shuffle(distinctOpts([
+         {label:"("+D.s[0]+" + "+D.s[D.n-1]+") ÷ 2", correct:true,
+          note:"The smallest and the largest, halved: ("+D.s[0]+" + "+D.s[D.n-1]+") ÷ 2 = "+num2(D.midrange)+"."},
+         {label:D.s[D.n-1]+" − "+D.s[0],
+          note:"That is the range, "+D.range+" — how far apart they are, not what lies halfway between them."},
+         {label:"("+D.v[0]+" + "+D.v[D.n-1]+") ÷ 2",
+          note:"Those are the first and last values <i>as written</i>. The midrange needs the smallest and the largest."},
+         {label:D.sum+" ÷ "+D.n,
+          note:"That is the mean, which uses every value rather than only two."},
+         {label:"("+D.s[0]+" + "+D.s[D.n-1]+") ÷ "+D.n,
+          note:"Only two values are being averaged, so they are halved — divided by 2, not by "+D.n+"."},
+         {label:D.s[0]+" + "+D.s[D.n-1],
+          note:"The two have been added but not halved, which gives "+(D.s[0]+D.s[D.n-1])+" rather than "+num2(D.midrange)+"."}
+       ]).slice(0,4)), two:true};
+   }
+   if(f==="first"){
+     return {q:"<b>Which two values does the midrange use?</b>",
+       scene:"A survey recorded "+D.T.q+".",
+       vis:listHTML(D.v,{lo:[D.v.indexOf(D.s[0]), D.v.lastIndexOf(D.s[D.n-1])]}),
+       opts:shuffle(textOpts(D.s[0]+" and "+D.s[D.n-1],
+         "The smallest and the largest, wherever they happen to sit in the list. ("+D.s[0]+" + "+D.s[D.n-1]
+         +") ÷ 2 = "+num2(D.midrange)+".",
+         [{t:D.v[0]+" and "+D.v[D.n-1], w:"Those are the first and last as written down. The order they were collected in does not matter."},
+          {t:D.s[(D.n/2|0)-1]+" and "+D.s[D.n/2|0], w:"Those sit near the middle, which is the median's business."},
+          {t:"every value in the list", w:"That is the mean. The midrange looks at exactly two values."},
+          {t:D.s[1]+" and "+D.s[D.n-2], w:"Those are the second smallest and second largest. The midrange wants the extremes themselves."},
+          {t:D.s[0]+" and "+D.s[1], w:"Those are the two smallest. The midrange needs one from each end."}])),
+       two:true};
+   }
+   return {q:"<b>What is the midrange?</b>",
+     scene:"A survey recorded "+D.T.q+".",
+     vis:listHTML(D.v,{lo:[D.v.indexOf(D.s[0]), D.v.lastIndexOf(D.s[D.n-1])], cap:"smallest and largest marked"}),
+     opts:shuffle(numOpts(D.midrange,
+       [{v:D.mean, w:"That is the mean, which uses every value."},
+        {v:D.median, w:"That is the median, the middle of the ordered list."},
+        {v:(D.v[0]+D.v[D.n-1])/2, w:"That averages the first and last as written, rather than the smallest and largest."},
+        {v:D.s[0]+D.s[D.n-1], w:"The two have been added but not halved."},
+        {v:D.range/2, w:"That halves the distance between them rather than averaging the two values."}],
+       "The smallest is "+D.s[0]+" and the largest is "+D.s[D.n-1]+", so the midrange is ("+D.s[0]+" + "+D.s[D.n-1]
+       +") ÷ 2 = "+num2(D.midrange)+".",
+       null,
+       [{v:D.range, w:"That is the range, "+D.s[D.n-1]+" − "+D.s[0]+" = "+D.range
+         +". The midrange <i>adds</i> the two and halves instead of subtracting."}]))};
+ }
+},
+{
+ title:"Which measure is that?",
+ sub:"Given the number, name what it is.",
+ gen:function(){
+   const D=makeSet({oneMode:true});
+   const forms=["name","describe","how"];
+   const f=pick(forms);
+   if(f==="describe"){
+     const m=pick(MEAS);
+     return {q:"<b>Which measure is "+m.d+"?</b>",
+       opts:shuffle(textOpts(m.t, "To find it you "+m.how+".",
+         MEAS.filter(function(x){return x.k!==m.k;}).map(function(x){
+           return {t:x.t, w:"That one is "+x.d+"."};
+         }))), two:true};
+   }
+   if(f==="how"){
+     const m=pick(MEAS);
+     return {q:"<b>Which measure do you find by this method: "+m.how+"?</b>",
+       opts:shuffle(textOpts(m.t, "Yes — that is "+m.d+".",
+         MEAS.filter(function(x){return x.k!==m.k;}).map(function(x){
+           return {t:x.t, w:"For that one you "+x.how+"."};
+         }))), two:true};
+   }
+   const opts=[{k:"mean",v:D.mean},{k:"median",v:D.median},{k:"midrange",v:D.midrange},{k:"mode",v:D.modes[0]}];
+   const w=pick(opts);
+   const m=measByKey(w.k);
+   return {q:"<b>For this data set, "+num2(w.v)+" is which measure?</b>",
+     scene:"A survey recorded "+D.T.q+".",
+     vis:dotHTML(D.v,{}),
+     facts:factsHTML([["the values in order",D.s.join(", ")],["how many",String(D.n)],["total",String(D.sum)]]),
+     opts:shuffle(textOpts(m.t,
+       num2(w.v)+" is "+m.d+". Here the mean is "+num2(D.mean)+", the median "+num2(D.median)
+       +", the mode "+num2(D.modes[0])+" and the midrange "+num2(D.midrange)+".",
+       opts.filter(function(x){return x.k!==w.k;}).map(function(x){
+         return {t:measByKey(x.k).t, w:"The "+x.k+" here is "+num2(x.v)+", not "+num2(w.v)+"."};
+       }))), two:true};
+ }
+},
+{
+ title:"When one value is extreme",
+ sub:"Which of the four notices, and which shrugs.",
+ gen:function(){
+   const O=makeOutlier();
+   const before={mean:meanOf(O.base), median:medianOf(O.base), mid:midrangeOf(O.base), mode:modesOf(O.base)[0]};
+   const after={mean:meanOf(O.v), median:medianOf(O.v), mid:midrangeOf(O.v), mode:modesOf(O.v)[0]};
+   const dMean=Math.abs(after.mean-before.mean);
+   const dMid=Math.abs(after.mid-before.mid);
+   const dMed=Math.abs(after.median-before.median);
+   /* the four moves, largest first, so the rung can ask about any of them */
+   const MOVE={mean:dMean, midrange:dMid, median:dMed, mode:0};
+   const forms=["most","second","little","value","least"];
+   const f=pick(forms);
+   const scene="A survey recorded "+O.T.q+": "+O.base.join(", ")+". Then one more arrived — "+O.far
+     +", far above the rest.";
+   function moveNote(){
+     return "The midrange moves "+num2(dMid)+", the mean "+num2(dMean)+", the median "+num2(dMed)
+       +", and the mode not at all.";
+   }
+   function others(want){
+     return ["mean","midrange","median","mode"].filter(function(x){return x!==want;}).map(function(x){
+       return {t:"the "+x, w:"The "+x+" moves "+num2(MOVE[x])+(x==="mode"?" — it is still "+num2(after.mode)+".":".")};
+     });
+   }
+   if(f==="most"||f==="second"){
+     const rank=["midrange","mean","median","mode"].sort(function(a,b){return MOVE[b]-MOVE[a];});
+     const want=(f==="most")?rank[0]:rank[1];
+     return {q:"<b>Which measure moves the "+(f==="most"?"most":"second most")+" when "+O.far+" is added?</b>",
+       scene:scene,
+       vis:dotHTML(O.v,{marks:allMarks(O.v)}),
+       opts:shuffle(textOpts("the "+want,
+         "The "+want+" shifts from "+num2(want==="mean"?before.mean:(want==="midrange"?before.mid:before.median))
+         +" to "+num2(want==="mean"?after.mean:(want==="midrange"?after.mid:after.median))+", a move of "+num2(MOVE[want])
+         +". "+moveNote(),
+         others(want))), two:true};
+   }
+   if(f==="little"){
+     return {q:"<b>Which measure moves only a little — sliding one place along the list rather than following the new value?</b>",
+       scene:scene,
+       vis:dotHTML(O.v,{marks:allMarks(O.v)}),
+       opts:shuffle(textOpts("the median",
+         "The median is a position, not a size. Adding one value at the top nudges the middle of the list along by one place, from "
+         +num2(before.median)+" to "+num2(after.median)+" — a move of just "+num2(dMed)+". "+moveNote(),
+         others("median"))), two:true};
+   }
+   if(f==="least"){
+     return {q:"<b>Which measure is completely unchanged by adding "+O.far+"?</b>",
+       scene:scene,
+       vis:dotHTML(O.v,{marks:allMarks(O.v), hit:after.mode}),
+       opts:shuffle(textOpts("the mode",
+         "The mode counts repeats, and "+O.far+" appears once, so the tallest stack is still above "+num2(after.mode)
+         +". The mean moved to "+num2(after.mean)+", the midrange to "+num2(after.mid)+" and the median to "+num2(after.median)+".",
+         [{t:"the mean", w:"It moved from "+num2(before.mean)+" to "+num2(after.mean)+" — every value pulls on the mean."},
+          {t:"the midrange", w:"It moved from "+num2(before.mid)+" to "+num2(after.mid)+", because "+O.far+" is the new largest value."},
+          {t:"the median", w:"It moved from "+num2(before.median)+" to "+num2(after.median)+", one place along the list."}])),
+       two:true};
+   }
+   const which=pick(["mean","mid"]);
+   const lbl=(which==="mean")?"mean":"midrange";
+   return {q:"<b>What is the new "+lbl+" once "+O.far+" is added?</b>",
+     scene:scene,
+     vis:dotHTML(O.v,{}),
+     facts:factsHTML([["before",num2(which==="mean"?before.mean:before.mid)],
+                      ["values now",String(O.n)],["total now",String(sum(O.v))]]),
+     opts:shuffle(numOpts(which==="mean"?after.mean:after.mid,
+       [{v:which==="mean"?before.mean:before.mid, w:"That is the value before "+O.far+" arrived."},
+        {v:which==="mean"?after.mid:after.mean, w:"That is the new "+(which==="mean"?"midrange":"mean")+", not the "+lbl+"."},
+        {v:after.median, w:"That is the new median."},
+        {v:which==="mean"?(sum(O.v)/(O.n-1)):(sorted(O.v)[0]+O.far), w:which==="mean"
+           ? ("That divides by "+(O.n-1)+". There are now "+O.n+" values.")
+           : ("The two have been added but not halved.")},
+        {v:O.far, w:"That is the new value on its own."}],
+       (which==="mean")
+        ? ("The "+O.n+" values now total "+sum(O.v)+", so the mean is "+meanWork(sum(O.v),O.n)
+           +" — up from "+num2(before.mean)+".")
+        : ("The smallest is still "+sorted(O.v)[0]+" but the largest is now "+O.far+", so the midrange is ("
+           +sorted(O.v)[0]+" + "+O.far+") ÷ 2 = "+num2(after.mid)+" — up from "+num2(before.mid)+".")))};
+ }
+},
+{
+ title:"All four at once",
+ sub:"Any of the measures, any kind of list.",
+ gen:function(){
+   const t=pick(["mean","median","mode","midrange","which","compare"]);
+   if(t==="compare"){
+     const D=makeSet({oneMode:true});
+     const pairs=[["mean",D.mean],["median",D.median],["mode",D.modes[0]],["midrange",D.midrange]];
+     const big=pairs.slice().sort(function(a,b){return b[1]-a[1];})[0];
+     const small=pairs.slice().sort(function(a,b){return a[1]-b[1];})[0];
+     const wantBig=Math.random()<.5;
+     const w=wantBig?big:small;
+     return {q:"<b>For this data set, which of the four measures is the "+(wantBig?"largest":"smallest")+"?</b>",
+       scene:"A survey recorded "+D.T.q+".",
+       vis:dotHTML(D.v,{marks:allMarks(D.v)}),
+       opts:shuffle(textOpts("the "+w[0],
+         "The four come out at mean "+num2(D.mean)+", median "+num2(D.median)+", mode "+num2(D.modes[0])
+         +" and midrange "+num2(D.midrange)+". The "+(wantBig?"largest":"smallest")+" of these is the "+w[0]+", at "+num2(w[1])+".",
+         pairs.filter(function(p){return p[0]!==w[0];}).map(function(p){
+           return {t:"the "+p[0], w:"The "+p[0]+" is "+num2(p[1])+", which is "+(wantBig?"smaller":"larger")+" than the "
+             +num2(w[1])+" of the "+w[0]+"."};
+         }))), two:true};
+   }
+   if(t==="which"){
+     const D=makeSet({oneMode:true});
+     const opts=[{k:"mean",v:D.mean},{k:"median",v:D.median},{k:"midrange",v:D.midrange},{k:"mode",v:D.modes[0]}];
+     const w=pick(opts);
+     return {q:"<b>For this data set, "+num2(w.v)+" is which measure?</b>",
+       scene:"A survey recorded "+D.T.q+".",
+       vis:dotHTML(D.v,{}),
+       facts:factsHTML([["the values in order",D.s.join(", ")],["how many",String(D.n)],["total",String(D.sum)]]),
+       opts:shuffle(textOpts(measByKey(w.k).t, num2(w.v)+" is "+measByKey(w.k).d+".",
+         opts.filter(function(x){return x.k!==w.k;}).map(function(x){
+           return {t:measByKey(x.k).t, w:"The "+x.k+" here is "+num2(x.v)+"."};
+         }))), two:true};
+   }
+   const D=makeSet(t==="mode"?{oneMode:true}:{});
+   if(t==="mean"){
+     return {q:"<b>What is the mean?</b>",
+       scene:"A survey recorded "+D.T.q+".",
+       vis:listHTML(D.v,{}),
+       opts:shuffle(numOpts(D.mean,
+         [{v:D.sum, w:"That is the total, before dividing by "+D.n+"."},
+          {v:D.median, w:"That is the median."},
+          {v:D.midrange, w:"That is the midrange."},
+          {v:D.sum/(D.n-1), w:"That divides by one fewer than there are."},
+          {v:D.range, w:"That is the range."}],
+         D.v.join(" + ")+" = "+D.sum+", and "+meanWork(D.sum,D.n)+"."))};
+   }
+   if(t==="median"){
+     const k=D.n%2 ? (D.n-1)/2 : null;
+     return {q:"<b>What is the median?</b>",
+       scene:"A survey recorded "+D.T.q+".",
+       vis:listHTML(D.v,{cap:"as collected — order them first"}),
+       opts:shuffle(numOpts(D.median,
+         [{v:D.mean, w:"That is the mean."},
+          {v:D.midrange, w:"That is the midrange."},
+          {v:D.n%2?D.s[k-1]:D.s[D.n/2-1], w:"That sits one place below the middle."},
+          {v:D.n%2?D.s[k+1]:D.s[D.n/2], w:"That sits one place above the middle."},
+          {v:(D.v[Math.floor((D.n-1)/2)]+D.v[Math.ceil((D.n-1)/2)])/2, w:"That takes the middle of the list as written, before ordering."},
+          {v:D.s[0], w:"That is the smallest value."},
+          {v:D.s[D.n-1], w:"That is the largest value."},
+          {v:D.range, w:"That is the range."}],
+         "In order: "+D.s.join(", ")+". "
+         +(D.n%2 ? ("The middle of "+D.n+" is the "+ord((D.n+1)/2)+", which is "+num2(D.median)+".")
+                 : ("The middle two are "+D.s[D.n/2-1]+" and "+D.s[D.n/2]+", so the median is "+num2(D.median)+"."))))};
+   }
+   if(t==="mode"){
+     const c=countsOf(D.v);
+     return {q:"<b>What is the mode?</b>",
+       scene:"A survey recorded "+D.T.q+".",
+       vis:dotHTML(D.v,{}),
+       opts:shuffle(numOpts(D.modes[0],
+         [{v:D.median, w:"That is the median."},
+          {v:D.mean, w:"That is the mean."},
+          {v:D.midrange, w:"That is the midrange."},
+          {v:D.s[D.n-1], w:"That is the largest value, which appears only once."}],
+         num2(D.modes[0])+" appears "+c[D.modes[0]]+" times, more than any other value.",
+         null,
+         [{v:c[D.modes[0]], w:"That is how many <i>times</i> the mode appears, not the mode itself."}]))};
+   }
+   return {q:"<b>What is the midrange?</b>",
+     scene:"A survey recorded "+D.T.q+".",
+     vis:listHTML(D.v,{lo:[D.v.indexOf(D.s[0]), D.v.lastIndexOf(D.s[D.n-1])]}),
+     opts:shuffle(numOpts(D.midrange,
+       [{v:D.range, w:"That is the range, "+D.s[D.n-1]+" − "+D.s[0]+"."},
+        {v:D.mean, w:"That is the mean."},
+        {v:D.median, w:"That is the median."},
+        {v:D.s[0]+D.s[D.n-1], w:"The two have been added but not halved."},
+        {v:(D.v[0]+D.v[D.n-1])/2, w:"That averages the first and last as written."}],
+       "("+D.s[0]+" + "+D.s[D.n-1]+") ÷ 2 = "+num2(D.midrange)+"."))};
+ }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {lbl:"all four at once",  kind:"four"},
+  {lbl:"order it first",    kind:"order"},
+  {lbl:"the ninth student", kind:"nine"},
+  {lbl:"one, two or none",  kind:"modes"},
+  {lbl:"ten countries",     kind:"world"},
+  {lbl:"an outlier",        kind:"out"}
+];
+let heroSel=0;
+
+/* every figure below is computed from the lists above, never typed */
+const HNOTES={
+  four:function(){
+    return "Your worksheet's pop quiz, run through all four. The mean is "+sum(QUIZ)+" ÷ "+QUIZ.length+" = "+num2(meanOf(QUIZ))
+      +", the median "+num2(medianOf(QUIZ))+", the mode "+modeText(QUIZ)+" and the midrange ("+sorted(QUIZ)[0]+" + "
+      +sorted(QUIZ)[QUIZ.length-1]+") ÷ 2 = "+num2(midrangeOf(QUIZ))
+      +". Four different numbers from one list of eight, and not one of them is wrong.";
+  },
+  order:function(){
+    const s=sorted(QUIZ), n=QUIZ.length;
+    const raw=(QUIZ[n/2-1]+QUIZ[n/2])/2;
+    return "The trap is in your own example. As collected, the middle two are "+QUIZ[n/2-1]+" and "+QUIZ[n/2]
+      +", which would give "+num2(raw)+". Ordered, the middle two are "+s[n/2-1]+" and "+s[n/2]+", giving "
+      +num2(medianOf(QUIZ))+". A student who skips the sorting gets a believable wrong answer rather than an obvious one.";
+  },
+  nine:function(){
+    const s=sorted(QUIZ9), n=QUIZ9.length;
+    return "The absent student sits the quiz and scores 8. Now there are "+n+" values, an odd number, so one value stands alone in the middle: the "
+      +ord((n+1)/2)+" of the ordered list, which is "+num2(medianOf(QUIZ9))+". Worth noticing that the mode has changed too — "
+      +modeText(QUIZ9)+" now tie at three each, so this set has two modes.";
+  },
+  modes:function(){
+    return "Three lists, one letter apart. Change the last score and the mode goes from a single value, to a tie between two, "
+      +"to nothing at all. The mode is the only one of the four that can fail to exist, and the only one that can come in pairs.";
+  },
+  world:function(){
+    const s=sorted(INHERIT), n=INHERIT.length;
+    return "The inheritance column from your worksheet's graphic. The mean is "+sum(INHERIT)+" ÷ "+n+" = "+num2(meanOf(INHERIT))
+      +", the median ("+s[n/2-1]+" + "+s[n/2]+") ÷ 2 = "+num2(medianOf(INHERIT))+", the mode "+modeText(INHERIT)
+      +" and the midrange "+num2(midrangeOf(INHERIT))+". China at "+s[0]
+      +"% drags the midrange well below everything else, because the midrange only ever looks at two numbers.";
+  },
+  out:function(){
+    const base=OUTBASE, v=base.concat([OUTFAR]);
+    const dMed=medianOf(v)-medianOf(base);
+    return "One value, far out. The mean climbs from "+num2(meanOf(base))+" to "+num2(meanOf(v))+", a jump of "
+      +num2(meanOf(v)-meanOf(base))+", and the midrange from "+num2(midrangeOf(base))+" to "+num2(midrangeOf(v))
+      +", a jump of "+num2(midrangeOf(v)-midrangeOf(base))+". The median "
+      +(Math.abs(dMed)<1e-9 ? "does not move at all" : ("slides just "+num2(Math.abs(dMed))+", from "+num2(medianOf(base))+" to "+num2(medianOf(v))))
+      +", and the mode stays at "+modeText(v)
+      +". Mean and midrange feel how big the new value is; median and mode only feel that it is there.";
+  }
+};
+
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="four"){
+    body=dotHTML(QUIZ,{marks:allMarks(QUIZ)})
+      +'<div style="margin-top:16px">'+sumHTML(QUIZ)+"</div>";
+  }else if(h.kind==="order"){
+    const s=sorted(QUIZ), n=QUIZ.length;
+    body=listHTML(QUIZ,{hit:[n/2-1,n/2], cap:"as collected — the middle two are "+QUIZ[n/2-1]+" and "+QUIZ[n/2]})
+      +'<div class="arrowdown">↓</div>'
+      +listHTML(s,{sorted:true, hit:[n/2-1,n/2], cap:"in order — the middle two are "+s[n/2-1]+" and "+s[n/2]})
+      +'<div class="duo" style="margin-top:18px">'
+        +'<div class="pane"><div class="ttl2">if you skip the sorting</div>'
+          +'<div class="fm">('+QUIZ[n/2-1]+" + "+QUIZ[n/2]+") ÷ 2</div>"
+          +'<div class="vl">'+num2((QUIZ[n/2-1]+QUIZ[n/2])/2)+"</div>"
+          +'<div class="wk">believable, and wrong</div></div>'
+        +'<div class="pane b"><div class="ttl2">the median</div>'
+          +'<div class="fm">('+s[n/2-1]+" + "+s[n/2]+") ÷ 2</div>"
+          +'<div class="vl">'+num2(medianOf(QUIZ))+"</div>"
+          +'<div class="wk">after ordering</div></div></div>';
+  }else if(h.kind==="nine"){
+    const s=sorted(QUIZ9), n=QUIZ9.length, k=(n-1)/2;
+    body=listHTML(s,{sorted:true, hit:[k], cap:n+" values in order — the middle one stands alone"})
+      +'<div class="duo" style="margin-top:18px">'
+        +'<div class="pane b"><div class="ttl2">eight values</div>'
+          +'<div class="fm">the middle <b>two</b>, averaged</div>'
+          +'<div class="vl">'+num2(medianOf(QUIZ))+"</div>"
+          +'<div class="wk">(n + 1) ÷ 2 = '+num2((QUIZ.length+1)/2)+", a half-position</div></div>"
+        +'<div class="pane b"><div class="ttl2">nine values</div>'
+          +'<div class="fm">the middle <b>one</b>, alone</div>'
+          +'<div class="vl">'+num2(medianOf(QUIZ9))+"</div>"
+          +'<div class="wk">(n + 1) ÷ 2 = '+num2((n+1)/2)+", the "+ord((n+1)/2)+" value</div></div></div>";
+  }else if(h.kind==="modes"){
+    const a=[8,10,9,9,6,8,7,9], b=[8,10,9,9,6,8,7,5], c=[8,10,9,4,6,3,7,5];
+    body='<table class="sum"><thead><tr><th>The list</th><th>Mode</th><th>Why</th></tr></thead><tbody>'
+      +'<tr class="mode"><td class="nm" style="font-weight:400">'+a.join(", ")+'</td><td class="vv">'+modeText(a)
+        +'</td><td class="wk">9 appears '+countsOf(a)[9]+" times, more than any other</td></tr>"
+      +'<tr class="mode"><td class="nm" style="font-weight:400">'+b.join(", ")+'</td><td class="vv">'+modeText(b)
+        +'</td><td class="wk">8 and 9 each appear '+countsOf(b)[9]+" times — a tie</td></tr>"
+      +'<tr class="mode"><td class="nm" style="font-weight:400">'+c.join(", ")+'</td><td class="vv">'+modeText(c)
+        +'</td><td class="wk">every value appears exactly once</td></tr>'
+      +"</tbody></table>"
+      +'<div class="eq" style="margin-top:14px">one mode, two modes, or none'
+      +'<span class="lbl">the only measure of the four that can fail to exist</span></div>';
+  }else if(h.kind==="world"){
+    body=dotHTML(INHERIT,{marks:allMarks(INHERIT)})
+      +'<div style="margin-top:16px">'+sumHTML(INHERIT)+"</div>";
+  }else{
+    const base=OUTBASE, v=base.concat([OUTFAR]);
+    body=dotHTML(v,{marks:allMarks(v)})
+      +'<div style="margin-top:16px"><table class="sum"><thead><tr><th>Measure</th><th>Before</th><th>After</th></tr></thead><tbody>'
+      +'<tr class="mean"><td class="nm">mean</td><td class="vv">'+num2(meanOf(base))+'</td><td class="vv">'+num2(meanOf(v))+"</td></tr>"
+      +'<tr class="med"><td class="nm">median</td><td class="vv">'+num2(medianOf(base))+'</td><td class="vv">'+num2(medianOf(v))+"</td></tr>"
+      +'<tr class="mode"><td class="nm">mode</td><td class="vv">'+modeText(base)+'</td><td class="vv">'+modeText(v)+"</td></tr>"
+      +'<tr class="mid"><td class="nm">midrange</td><td class="vv">'+num2(midrangeOf(base))+'</td><td class="vv">'+num2(midrangeOf(v))+"</td></tr>"
+      +"</tbody></table></div>";
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.vis?'<div class="vis">'+q.vis+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
