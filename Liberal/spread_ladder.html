@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Spread Ladder — range and standard deviation</title>
+<style>
+  :root{
+    --ink:#1A1D17;
+    --paper:#F4F5F1;
+    --card:#FFFFFF;
+    --rule:#D8DCD2;
+    --muted:#585E52;
+    --gv:#3E5C3A;          /* the page's own colour */
+    --gv-bg:#EBF0E8;
+    --mean:#B5451F;        /* the mean, the same red as rungs 1 and 2 of this lesson */
+    --mean-bg:#FBEBE4;
+    --dev:#2F6E8C;         /* the deviations */
+    --dev-bg:#E6F0F4;
+    --sq:#7A4A8C;          /* the squares */
+    --sq-bg:#F2E9F5;
+    --dim:#BAC0B4;
+    --round-bg:#FCF1DA;
+    --right:#2E7A4A;
+    --wrong:#AF3244;
+    --wrong-bg:#FBEBEE;
+    --right-bg:#E5F3EA;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important}}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans); font-size:17px; line-height:1.6; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px; margin:0 auto; padding:0 22px}
+  a{color:var(--gv)}
+  :focus-visible{outline:3px solid var(--gv); outline-offset:2px; border-radius:3px}
+
+  nav{position:sticky; top:0; z-index:20; background:rgba(244,245,241,.94); backdrop-filter:blur(6px); border-bottom:1px solid var(--rule)}
+  nav .wrap{display:flex; align-items:center; gap:18px; height:56px; flex-wrap:wrap}
+  .brand{font-family:var(--serif); font-weight:700; font-size:18px; margin-right:auto}
+  .brand i{font-style:normal; letter-spacing:-.04em}
+  .brand i.a{color:var(--mean)} .brand i.b{color:var(--dev)} .brand i.c{color:var(--sq)}
+  nav a{font-size:14px; text-decoration:none; color:var(--muted)}
+  nav a:hover{color:var(--ink)}
+
+  header{padding:54px 0 10px; border-bottom:1px solid var(--rule); background:var(--card)}
+  .meta{font-size:13px; color:var(--muted); margin-bottom:18px}
+  h1{font-family:var(--serif); font-weight:700; font-size:clamp(30px,5.2vw,50px); line-height:1.12; letter-spacing:-.01em; margin:0 0 18px; max-width:18ch}
+  .lede{max-width:62ch; color:#383D33; font-size:18px}
+
+  .demo{margin:30px 0 46px; border:1px solid var(--rule); border-radius:10px; background:var(--paper); overflow:hidden}
+  .demo-top{padding:22px 16px 18px; background:var(--card); overflow-x:auto}
+  .eq{max-width:700px; margin:0 auto; font-family:var(--serif); font-size:clamp(15px,3.1vw,20px); line-height:2.0; text-align:center}
+  .eq .lbl{font-family:var(--sans); font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); display:block; line-height:1.4; margin-top:6px}
+  .eq b.mean{color:var(--mean)} .eq b.dev{color:var(--dev)} .eq b.sq{color:var(--sq)} .eq b.gv{color:var(--gv)}
+
+  /* ---- the deviation picture: one row per value, a bar back to the mean line ---- */
+  .dv{width:100%; max-width:560px; display:block; margin:0 auto}
+  .dl{width:100%; max-width:560px; display:block; margin:0 auto}
+  .axl{stroke:#8A8E84; stroke-width:1.5}
+  .tk{stroke:#8A8E84; stroke-width:1}
+  .ax{font-family:var(--sans); font-size:11px; fill:var(--muted)}
+  .dt{fill:#E3E8DF; stroke:var(--gv); stroke-width:1.4}
+  .dt.hit{fill:var(--gv)}
+  .dvb{stroke:var(--dev); stroke-width:7; opacity:.30}
+  .dvb.hit{opacity:.8}
+  .dvl{font-family:var(--sans); font-size:11.5px; font-weight:700; fill:var(--dev)}
+  .mnl{stroke:var(--mean); stroke-width:1.6; stroke-dasharray:4 3}
+  .mnt{font-family:var(--sans); font-size:11.5px; font-weight:700; fill:var(--mean)}
+  .vlb{font-family:var(--serif); font-size:12.5px; fill:var(--ink)}
+  .sdl{font-family:var(--sans); font-size:11.5px; font-weight:700; fill:var(--gv)}
+  .ln{stroke:var(--mean); stroke-width:1; stroke-dasharray:2 3; opacity:.75}
+  .ml{font-family:var(--sans); font-size:11px; font-weight:600; fill:var(--mean)}
+  .mk{fill:var(--mean)}
+  .bnd{fill:var(--gv); fill-opacity:.11; stroke:var(--gv); stroke-width:1; stroke-dasharray:3 3}
+  .bndt{font-family:var(--sans); font-size:11px; font-weight:600; fill:var(--gv)}
+
+  /* ---- the squares: side = the deviation, so the area is its square ---- */
+  .sqr{fill:var(--sq); fill-opacity:.17; stroke:var(--sq); stroke-width:1.5}
+  .sqr.hit{fill-opacity:.45}
+  .sqt{font-family:var(--serif); font-size:12.5px; fill:var(--sq); font-weight:700}
+  .sqs{font-family:var(--sans); font-size:11px; fill:var(--muted)}
+
+  .lst{display:flex; flex-wrap:wrap; gap:7px; justify-content:center; font-family:var(--serif);
+       font-size:clamp(16px,3.6vw,20px); max-width:600px; margin:0 auto}
+  .lst span{min-width:38px; text-align:center; padding:5px 9px; border:1.5px solid var(--rule); border-radius:7px; background:var(--card)}
+  .lst span.hit{border-color:var(--gv); background:var(--gv); color:#fff; font-weight:700}
+  .cap{text-align:center; font-size:12.5px; color:var(--muted); margin-top:9px}
+  .arrowdown{text-align:center; color:var(--muted); font-size:19px; line-height:1; margin:10px 0 4px}
+
+  /* ---- the worksheet's own three columns ---- */
+  table.wkt{border-collapse:collapse; margin:0 auto; font-family:var(--serif); font-size:clamp(14px,3vw,16.5px)}
+  table.wkt th,table.wkt td{border:1px solid var(--rule); padding:5px 16px; text-align:right; white-space:nowrap}
+  table.wkt th{background:var(--paper); color:var(--muted); font-weight:700; font-size:.84em; text-align:center; font-family:var(--sans); line-height:1.3}
+  table.wkt th.c2{color:var(--dev)} table.wkt th.c3{color:var(--sq)}
+  table.wkt td.c2{color:var(--dev)} table.wkt td.c3{color:var(--sq)}
+  table.wkt tr.tot td{border-top:2px solid var(--ink); font-weight:700; background:var(--paper)}
+  table.wkt tr.tot td.lb{text-align:left; font-family:var(--sans); font-size:.84em; color:var(--muted); font-weight:400}
+  table.wkt tr.hit td{background:var(--gv-bg)}
+  table.wkt td.q{color:var(--muted); font-weight:700}
+
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:680px; margin:0 auto}
+  @media (max-width:640px){.duo{grid-template-columns:1fr}}
+  .pane{border-radius:10px; padding:15px 16px; text-align:center; background:var(--gv-bg)}
+  .pane.a{background:var(--mean-bg)} .pane.b{background:var(--dev-bg)}
+  .pane.c{background:var(--sq-bg)} .pane.x{background:var(--wrong-bg)}
+  .pane .ttl2{font-size:12px; letter-spacing:.04em; text-transform:uppercase; font-weight:600; margin-bottom:9px; color:var(--gv)}
+  .pane.a .ttl2{color:var(--mean)} .pane.b .ttl2{color:var(--dev)}
+  .pane.c .ttl2{color:var(--sq)} .pane.x .ttl2{color:var(--wrong)}
+  .pane .fm{font-family:var(--serif); font-size:clamp(14.5px,2.9vw,17px); line-height:1.5}
+  .pane .vl{font-family:var(--serif); font-size:clamp(20px,4.4vw,28px); font-weight:700; margin-top:7px; color:var(--gv)}
+  .pane.a .vl{color:var(--mean)} .pane.b .vl{color:var(--dev)}
+  .pane.c .vl{color:var(--sq)} .pane.x .vl{color:var(--wrong)}
+  .pane .wk{font-size:12.5px; color:var(--muted); margin-top:7px; line-height:1.4}
+
+  /* ---- the two-slot step strip for rung 8 ---- */
+  .strip{display:flex; gap:10px; align-items:stretch; justify-content:center; flex-wrap:wrap}
+  .slot{border:1.5px solid var(--rule); border-radius:9px; background:var(--card); padding:10px 16px; max-width:17em;
+        font-family:var(--sans); font-size:14.5px; line-height:1.35; display:flex; flex-direction:column; justify-content:center}
+  .slot .tg{font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:3px}
+  .slot.done{border-color:var(--gv); background:var(--gv-bg)}
+  .slot.ask{border-style:dashed; border-color:var(--dev); color:var(--dev); font-weight:700; font-size:22px; align-items:center}
+  .slot.ask .tg{font-size:11px; font-weight:400; color:var(--dev)}
+  .strip .arw{align-self:center; color:var(--muted); font-size:20px}
+
+  .placebar{display:flex; flex-wrap:wrap; gap:6px; justify-content:center; padding:14px; border-top:1px solid var(--rule); background:var(--card)}
+  .placebar button{font:inherit; font-size:13.5px; padding:6px 12px; border-radius:20px; cursor:pointer; border:1px solid var(--rule); background:var(--paper); color:var(--muted)}
+  .placebar button:hover{border-color:var(--gv); color:var(--ink)}
+  .placebar button[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:#fff}
+  .result{padding:14px 18px; text-align:center; border-top:1px solid var(--rule); background:var(--card); font-size:15px; min-height:74px}
+
+  .warn{display:flex; gap:18px; align-items:flex-start; margin:0 0 54px; border-left:4px solid var(--dev); background:var(--dev-bg); padding:20px 22px; border-radius:0 8px 8px 0}
+  .warn p{margin:0; max-width:62ch; font-size:16px}
+  .warn .mk2{font-family:var(--serif); font-size:26px; line-height:1; color:var(--dev)}
+
+  section{padding:52px 0; border-top:1px solid var(--rule)}
+  .kicker{font-size:13px; color:var(--muted); margin:0 0 8px}
+  h2{font-family:var(--serif); font-size:clamp(23px,3.4vw,31px); margin:0 0 12px; letter-spacing:-.01em}
+  h3{font-size:17px; margin:0 0 6px}
+  .grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:22px; margin-top:26px}
+  .grid3 p{margin:0; font-size:15px; color:#43483E}
+  .step{border-top:2px solid var(--ink); padding-top:12px}
+  .step .n{font-family:var(--mono); font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+  .note2{margin-top:22px; font-size:14.5px; color:var(--muted); background:var(--paper); border:1px solid var(--rule); border-radius:8px; padding:12px 16px; max-width:64ch}
+
+  #ladder{background:var(--card)}
+  .ladderhead{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:20px}
+  .badgecount{margin-left:auto; font-size:14px; color:var(--muted)}
+  .badgecount b{color:var(--ink); font-size:17px}
+  .ghost{font:inherit; font-size:13px; background:none; border:1px solid var(--rule); border-radius:6px; padding:5px 10px; cursor:pointer; color:var(--muted)}
+  .ghost:hover{border-color:var(--wrong); color:var(--wrong)}
+
+  .rungs{display:grid; grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); gap:8px; margin-bottom:26px}
+  .rung{text-align:left; font:inherit; font-size:14px; cursor:pointer; padding:10px 12px; border:1px solid var(--rule); border-radius:8px; background:var(--paper); color:var(--ink); display:flex; gap:9px; align-items:flex-start; line-height:1.35}
+  .rung:hover{border-color:var(--ink)}
+  .rung[aria-current="true"]{background:var(--ink); color:#fff; border-color:var(--ink)}
+  .rung .no{font-family:var(--mono); font-size:12px; opacity:.65; padding-top:1px}
+  .rung.done .no::after{content:" ●"; color:var(--right)}
+  .rung[aria-current="true"].done .no::after{color:#7BD6A4}
+
+  .panel{border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+  .panel-top{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--rule); background:var(--paper)}
+  .panel-top h3{margin:0; font-size:16px}
+  .panel-top .sub{font-size:13px; color:var(--muted); flex:1 1 100%; margin-top:-2px}
+  .streak{display:flex; gap:6px; margin-left:auto; align-items:center}
+  .streak .pip{width:12px; height:12px; border-radius:50%; border:1.5px solid var(--rule)}
+  .streak .pip.on{background:var(--right); border-color:var(--right)}
+  .streak .lbl{font-size:12px; color:var(--muted); margin-right:4px}
+
+  .stem{padding:24px 20px 6px; text-align:center}
+  .stem .q{font-size:17px; max-width:60ch; margin:0 auto 14px; color:#383D33}
+  .scene{max-width:58ch; margin:0 auto 14px; background:var(--gv-bg); border-radius:10px; padding:13px 20px; font-family:var(--serif); font-size:clamp(15.5px,3vw,18px); line-height:1.5; text-align:left}
+  .facts{max-width:46ch; margin:0 auto 14px; text-align:left; border:1px solid var(--rule); border-radius:9px; background:var(--paper); overflow:hidden; font-family:var(--serif); font-size:16px}
+  .facts div{padding:6px 18px; display:flex; justify-content:space-between; gap:12px}
+  .facts div+div{border-top:1px solid var(--rule)}
+  .facts .lb{color:var(--muted)}
+  .big{display:inline-block; font-family:var(--serif); font-size:clamp(16px,3.6vw,25px); background:var(--gv-bg); border-radius:12px; padding:11px 25px; margin:0 auto 16px}
+  .vis{margin:0 auto 16px}
+
+  .options{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:8px 20px 20px}
+  .options.one{grid-template-columns:1fr}
+  .options.two{grid-template-columns:1fr 1fr}
+  @media (max-width:700px){.options{grid-template-columns:repeat(2,1fr)} .options.two{grid-template-columns:1fr}}
+  .opt{font:inherit; text-align:left; cursor:pointer; padding:13px 15px; border-radius:9px; border:1.5px solid var(--rule); background:var(--card); color:var(--ink); display:flex; gap:11px; align-items:center; transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--ink)}
+  .opt:disabled{cursor:default}
+  .opt .k{font-family:var(--mono); font-size:12px; color:var(--muted); border:1px solid var(--rule); border-radius:4px; padding:1px 6px; flex:none; align-self:flex-start}
+  .opt .v{font-size:16px; line-height:1.45}
+  .options:not(.one):not(.two) .opt{flex-direction:column; align-items:center; gap:7px; text-align:center}
+  .options:not(.one):not(.two) .opt .k{align-self:auto}
+  .options:not(.one):not(.two) .opt .v{font-family:var(--serif); font-size:20px; font-weight:700; white-space:nowrap}
+  .opt.correct{border-color:var(--right); background:var(--right-bg)}
+  .opt.chosen-wrong{border-color:var(--wrong); background:var(--wrong-bg)}
+
+  .feedback{padding:0 20px 20px; min-height:10px}
+  .fbox{border-radius:9px; padding:14px 16px; font-size:15px; text-align:left}
+  .fbox.good{background:var(--right-bg); border:1px solid #B2D9C0}
+  .fbox.bad{background:var(--wrong-bg); border:1px solid #EFC3CB}
+  .fbox b{display:block; margin-bottom:3px}
+  .panel-bottom{display:flex; align-items:center; gap:12px; padding:12px 18px; border-top:1px solid var(--rule); background:var(--paper); flex-wrap:wrap}
+  .hint{font-size:13px; color:var(--muted)}
+  .next{margin-left:auto; font:inherit; font-size:15px; padding:9px 18px; border-radius:8px; border:none; background:var(--ink); color:#fff; cursor:pointer}
+  .next[disabled]{opacity:.35; cursor:default}
+  .earned{margin-top:14px; padding:12px 16px; border-radius:9px; background:var(--round-bg); border:1px solid #E8D3A6; font-size:15px; text-align:left}
+
+  footer{padding:34px 0 60px; border-top:1px solid var(--rule); font-size:14px; color:var(--muted)}
+  .closing{font-family:var(--serif); font-size:clamp(19px,2.8vw,25px); line-height:1.4; max-width:42ch; margin:30px 0 0}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand"><i class="a">|</i><i class="b">—</i><i class="c">▪</i> The Spread Ladder</div>
+    <a href="#how">How it works</a>
+    <a href="#ladder">The ladder</a>
+    <a href="#why">Why it matters</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <p class="meta">Lesson 22 · measures of dispersion</p>
+    <h1>Same mean, different worlds.</h1>
+    <p class="lede">Two data sets can share an average and have nothing else in common. The <b>range</b> notices by looking at two numbers, the largest and the smallest. The <b>standard deviation</b> notices by asking every value the same question — <i>how far are you from the mean?</i> — and then averaging the answers. The six steps that follow are the whole of it, and the one students lose marks on is the fifth.</p>
+
+    <div class="demo">
+      <div class="demo-top"><div id="heroBody"></div></div>
+      <div class="placebar" id="heroBtns"></div>
+      <div class="result" id="heroNote"></div>
+    </div>
+
+    <div class="warn">
+      <span class="mk2">∑</span>
+      <p><b>The deviations always add to zero.</b> For your worksheet's 2, 4, 7, 11 the mean is 6, and the distances from it are −4, −2, +1 and +5. Add them: <b>0</b>. That is not a coincidence about this list — it is true of every list, because the mean is the balance point. So the plain average distance is useless as a measure of spread, and <i>that</i> is why the next step squares them.</p>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <p class="kicker">How it works</p>
+    <h2>Climb it, or jump to the rung that trips you up</h2>
+    <p style="max-width:62ch; margin:0; color:#43483E">Rung 1 is the range. Rungs 2–7 take the standard deviation one step at a time: one deviation, why they sum to zero, squaring, totalling, dividing by <i>n</i> − 1, and the square root. Rung 8 asks where you are in the recipe. Rung 9 compares two sets that share a mean. Rung 10 mixes everything.</p>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>Nothing is locked</h3><p>Start at rung 1 or go straight to the skill you need. Rungs stay open whether or not you earned the ones before.</p></div>
+      <div class="step"><span class="n">02</span><h3>Four in a row earns the badge</h3><p>Answer with the mouse or press <b>1</b>–<b>4</b>, then <b>Enter</b> for the next question. One miss resets the streak to zero.</p></div>
+      <div class="step"><span class="n">03</span><h3>Each stage has a colour</h3><p>The mean is <b style="color:var(--mean)">red</b>, a deviation is <b style="color:var(--dev)">blue</b>, a squared deviation is <b style="color:var(--sq)">purple</b> — on every picture in this ladder.</p></div>
+    </div>
+    <p class="note2"><b>Conventions.</b> Every standard deviation here is the <b>sample</b> standard deviation: the squared deviations are divided by <i>n</i> − 1, not by <i>n</i>. Answers are rounded to two decimal places where a value does not come out exactly, and the rounding is done once, at the end — not at every step.</p>
+  </div>
+</section>
+
+<section id="ladder">
+  <div class="wrap">
+    <p class="kicker">The ladder</p>
+    <div class="ladderhead">
+      <h2 style="margin:0">Pick a rung and practice</h2>
+      <span class="badgecount"><b id="badgeCount">0</b> of 10 badges &nbsp;<button class="ghost" id="resetBtn">Reset progress</button></span>
+    </div>
+    <div class="rungs" id="rungList"></div>
+    <div class="panel">
+      <div class="panel-top">
+        <h3 id="rungTitle"></h3>
+        <div class="streak"><span class="lbl">streak</span><span class="pip" id="p0"></span><span class="pip" id="p1"></span><span class="pip" id="p2"></span><span class="pip" id="p3"></span></div>
+        <p class="sub" id="rungSub"></p>
+      </div>
+      <div class="stem" id="stem"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback" aria-live="polite"></div>
+      <div class="panel-bottom">
+        <span class="hint">Keys 1–4 to answer · Enter for the next question</span>
+        <button class="next" id="nextBtn" disabled>Next question</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="wrap">
+    <p class="kicker">Why it matters</p>
+    <h2>An average on its own tells you half the story</h2>
+    <div class="grid3">
+      <div class="step"><span class="n">01</span><h3>The range is cheap and fragile</h3><p>Two numbers decide it. One freak value at either end and the range doubles while nothing else about the data has changed.</p></div>
+      <div class="step"><span class="n">02</span><h3>The standard deviation asks everybody</h3><p>Every value contributes a distance. Move any one of them and the answer moves — which is why it is worth the six steps.</p></div>
+      <div class="step"><span class="n">03</span><h3>It comes back in the same units</h3><p>Squaring inflates; the square root at the end undoes it. A spread of 3.92 points is in points, not points squared.</p></div>
+    </div>
+    <p class="closing">The mean tells you where the data sits. The standard deviation tells you how much you can trust that.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">The Spread Ladder · range = largest − smallest · s = √( Σ(x − x̄)² ÷ (n − 1) )</div>
+</footer>
+
+<script>
+"use strict";
+
+/* ================= helpers ================= */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function pick(a){return a[Math.floor(Math.random()*a.length)];}
+function ri(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function sum(a){return a.reduce(function(x,y){return x+y;},0);}
+function grp(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,",");}
+function sorted(v){return v.slice().sort(function(a,b){return a-b;});}
+function distinctOpts(list){
+  const seen={}, out=[];
+  for(const o of list){ if(o&&o.label!=null&&!seen[o.label]){seen[o.label]=1;out.push(o);} }
+  return out;
+}
+/* One place decides how a number is printed and how two are compared. Every
+   answer is rounded to two decimal places; a value that lands on a whole number
+   or a single place is written that way rather than padded with zeros. */
+function r2(v){ return Math.round((v+Number.EPSILON)*100)/100; }
+function num2(v){
+  const r=r2(v);
+  if(Math.abs(r-Math.round(r))<1e-9) return grp(Math.round(r));
+  const s=Math.abs(r).toFixed(2);
+  const body=(s.charAt(s.length-1)==="0")?s.slice(0,-1):s;
+  return (r<0?"−":"")+body;
+}
+function numKey(v){ return r2(v).toFixed(2); }
+/* a deviation is a signed thing, and the sign is the whole point of it */
+function sgn(v){
+  const r=r2(v);
+  if(Math.abs(r)<1e-9) return "0";
+  return (r<0?"−":"+")+num2(Math.abs(r));
+}
+/* 1st, 2nd, 3rd, 4th ... a bare "th" gives "the 3th" */
+function ord(n){
+  const a=Math.abs(n)%100, b=Math.abs(n)%10;
+  const suf=(a>=11&&a<=13)?"th":(b===1?"st":(b===2?"nd":(b===3?"rd":"th")));
+  return n+suf;
+}
+function cnt(k,T){ return grp(k)+" "+(k===1?T.who:T.whoP); }
+/* whether a value needed rounding at all, so the working can say so honestly */
+function isExact(v){ return Math.abs(v-r2(v))<1e-12; }
+function divWork(t,n){
+  const m=t/n;
+  return isExact(m) ? (grp(t)+" ÷ "+grp(n)+" = "+num2(m))
+                    : (grp(t)+" ÷ "+grp(n)+" = "+m.toFixed(4)+"… ≈ "+num2(m));
+}
+function rootWork(v){
+  const s=Math.sqrt(v);
+  /* the number under the root is printed unrounded when it does not come out
+     exactly, so the digits after the equals sign are true of what is shown */
+  const shown=isExact(v) ? num2(v) : (v.toFixed(4)+"…");
+  return isExact(s) ? ("√"+shown+" = "+num2(s))
+                    : ("√"+shown+" = "+s.toFixed(4)+"… ≈ "+num2(s));
+}
+/* numeric options, deduplicated by rounded VALUE; `pinned` goes straight after
+   the answer when a distractor is the whole point of its rung, and `spares`
+   wait at the back for a coincidence to knock a main distractor out */
+function numOpts(ans,cands,note,spares,pinned){
+  const seen={}; seen[numKey(ans)]=1;
+  const opts=[{label:num2(ans), correct:true, note:note}];
+  (pinned||[]).concat(shuffle(cands.slice())).concat(spares||[]).forEach(function(x){
+    if(x==null||x.v==null||!Number.isFinite(x.v)||x.v<0)return;
+    const k=numKey(x.v); if(seen[k])return; seen[k]=1;
+    opts.push({label:num2(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+/* the same, but for quantities that are allowed to be negative */
+function sgnOpts(ans,cands,note,spares,pinned){
+  const seen={}; seen[numKey(ans)]=1;
+  const opts=[{label:sgn(ans), correct:true, note:note}];
+  (pinned||[]).concat(shuffle(cands.slice())).concat(spares||[]).forEach(function(x){
+    if(x==null||x.v==null||!Number.isFinite(x.v))return;
+    const k=numKey(x.v); if(seen[k])return; seen[k]=1;
+    opts.push({label:sgn(x.v), note:x.w});
+  });
+  return distinctOpts(opts).slice(0,4);
+}
+function textOpts(ans,note,cands){
+  const opts=[{label:ans, correct:true, note:note}];
+  shuffle(cands.slice()).forEach(function(x){ if(x&&x.t!=null) opts.push({label:x.t, note:x.w}); });
+  return distinctOpts(opts).slice(0,4);
+}
+
+/* ================= the measures of spread ================= */
+/* Everything any question asks for is computed here, once, from the list —
+   so a picture and the answer beside it cannot drift apart. */
+function stats(v){
+  const s=sorted(v), n=s.length, t=sum(s), m=t/n;
+  const dev=s.map(function(x){ return x-m; });
+  const sq=dev.map(function(d){ return d*d; });
+  const ss=sum(sq);
+  const varS=ss/(n-1), varP=ss/n;
+  return {
+    v:s, n:n, total:t, mean:m, dev:dev, sq:sq, ss:ss,
+    varS:varS, varP:varP, sd:Math.sqrt(varS), sdP:Math.sqrt(varP),
+    lo:s[0], hi:s[n-1], range:s[n-1]-s[0], mid:(s[0]+s[n-1])/2,
+    absSum:sum(dev.map(Math.abs)),
+    sqSum:sum(s.map(function(x){ return x*x; }))
+  };
+}
+
+/* ================= the worksheet's own data ================= */
+const WORK=[2,4,7,11];                 /* the lesson's step-by-step example */
+const QUIZ=[8,10,9,9,6,8,7,9];         /* the pop quiz carried over from ladders 1 and 2 */
+const SECA=[72,74,75,76,78];           /* two sections, one mean, two worlds */
+const SECB=[60,68,75,82,90];
+
+/* ================= drawing ================= */
+/* The deviation picture. One row per value, a bar running back to the mean
+   line, and the signed distance printed on the far side of the dot so the
+   label can never sit on top of its own bar. */
+function devHTML(S,o){
+  o=o||{};
+  const s=S.v, n=S.n, m=S.mean;
+  const lo=Math.min(s[0],m), hi=Math.max(s[n-1],m);
+  const W=560, ML=54, MR=54, MT=36, RH=25, MB=30;
+  const span=(hi-lo)||1;
+  const x=function(v){ return ML+((v-lo)/span)*(W-ML-MR); };
+  const H=MT+n*RH+MB, base=MT+n*RH;
+  let out='<svg class="dv" viewBox="0 0 '+W+" "+H+'" role="img" aria-label="each value and its distance from the mean">';
+  out+='<line class="mnl" x1="'+x(m).toFixed(1)+'" x2="'+x(m).toFixed(1)+'" y1="'+(MT-14)+'" y2="'+(base+5)+'"/>'
+     +'<text class="mnt" x="'+x(m).toFixed(1)+'" y="'+(MT-20)+'" text-anchor="middle">mean '+num2(m)+"</text>";
+  s.forEach(function(v,i){
+    const cy=MT+i*RH+RH/2, px=x(v), mx=x(m), d=v-m;
+    const hit=(o.hit!=null&&o.hit===i);
+    if(Math.abs(d)>1e-9)
+      out+='<line class="dvb'+(hit?" hit":"")+'" x1="'+mx.toFixed(1)+'" x2="'+px.toFixed(1)+'" y1="'+cy.toFixed(1)+'" y2="'+cy.toFixed(1)+'"/>';
+    out+='<circle class="dt'+(hit?" hit":"")+'" cx="'+px.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="6"/>';
+    /* the label goes on the far side of the dot from the mean */
+    const anchor=(d<0)?"end":"start", lx=px+(d<0?-11:11);
+    const txt=o.blank&&hit ? "?" : sgn(d);
+    out+='<text class="dvl" x="'+lx.toFixed(1)+'" y="'+(cy+4).toFixed(1)+'" text-anchor="'+anchor+'">'+txt+"</text>";
+  });
+  out+='<line class="axl" x1="'+(ML-20)+'" x2="'+(W-MR+20)+'" y1="'+base+'" y2="'+base+'"/>';
+  const step=span<=12?1:(span<=30?5:(span<=70?10:20));
+  for(let v=Math.ceil(lo/step)*step; v<=hi+1e-9; v+=step){
+    out+='<line class="tk" x1="'+x(v).toFixed(1)+'" x2="'+x(v).toFixed(1)+'" y1="'+base+'" y2="'+(base+5)+'"/>'
+      +'<text class="ax" x="'+x(v).toFixed(1)+'" y="'+(base+17)+'" text-anchor="middle">'+v+"</text>";
+  }
+  return out+"</svg>";
+}
+
+/* The squares. Side = the deviation, so the AREA printed under each one really
+   is the area of the shape above it. Two limits keep them on the page: nothing
+   taller than 96px, and they must all fit side by side. */
+function sqHTML(devs,o){
+  o=o||{};
+  const a=devs.map(Math.abs), mx=Math.max.apply(null,a), tot=sum(a);
+  const W=560, GAP=12, MT=22, MB=40;
+  const sc=Math.min(96/mx,(W-20-GAP*(a.length-1))/tot);
+  const SH=mx*sc, H=MT+SH+MB;
+  let xx=(W-(tot*sc+GAP*(a.length-1)))/2;
+  let out='<svg class="dv" viewBox="0 0 '+W+" "+H+'" role="img" aria-label="each deviation drawn as a square">';
+  out+='<text class="sqs" x="'+(W/2)+'" y="12" text-anchor="middle">side = the deviation, so the area is its square</text>';
+  devs.forEach(function(d,i){
+    const sd=Math.abs(d)*sc, y=MT+SH-sd, hit=(o.hit!=null&&o.hit===i);
+    out+='<rect class="sqr'+(hit?" hit":"")+'" x="'+xx.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+sd.toFixed(1)+'" height="'+sd.toFixed(1)+'"/>'
+       +'<text class="sqt" x="'+(xx+sd/2).toFixed(1)+'" y="'+(MT+SH+16)+'" text-anchor="middle">'+(o.blank?"?":num2(d*d))+"</text>"
+       +'<text class="sqs" x="'+(xx+sd/2).toFixed(1)+'" y="'+(MT+SH+30)+'" text-anchor="middle">('+sgn(d)+")²</text>";
+    xx+=sd+GAP;
+  });
+  return out+"</svg>";
+}
+
+/* Several sets drawn on ONE shared axis — the only way a reader can compare
+   their spreads honestly. They share a mean, so one line carries it. */
+function pairHTML(sets,o){
+  o=o||{};
+  let all=[]; sets.forEach(function(S){ all=all.concat(S.v); });
+  const lo=Math.min.apply(null,all), hi=Math.max.apply(null,all);
+  const W=560, ML=78, MR=o.sd?74:34, MT=28, RH=50, MB=34;
+  const pad=((hi-lo)*0.06)||1;
+  const x=function(v){ return ML+((v-lo+pad)/((hi-lo)+2*pad))*(W-ML-MR); };
+  const H=MT+sets.length*RH+MB;
+  const lastBase=MT+(sets.length-1)*RH+RH-16;
+  const m0=sum(sets[0].v)/sets[0].v.length;
+  let out='<svg class="dl" viewBox="0 0 '+W+" "+H+'" role="img" aria-label="data sets drawn on one shared scale">';
+  out+='<line class="ln" x1="'+x(m0).toFixed(1)+'" x2="'+x(m0).toFixed(1)+'" y1="'+(MT-10)+'" y2="'+(lastBase+6)+'"/>'
+     +'<text class="ml" x="'+x(m0).toFixed(1)+'" y="'+(MT-15)+'" text-anchor="middle">mean '+num2(m0)+"</text>";
+  sets.forEach(function(S,si){
+    const base=MT+si*RH+RH-16;
+    out+='<line class="axl" x1="'+(ML-10)+'" x2="'+(W-MR)+'" y1="'+base+'" y2="'+base+'"/>'
+       +'<text class="vlb" x="'+(ML-18)+'" y="'+(base+4)+'" text-anchor="end">'+S.name+"</text>";
+    const c={}; S.v.forEach(function(q){ c[q]=(c[q]||0)+1; });
+    Object.keys(c).map(Number).forEach(function(q){
+      for(let i=0;i<c[q];i++)
+        out+='<circle class="dt" cx="'+x(q).toFixed(1)+'" cy="'+(base-8-i*13).toFixed(1)+'" r="5"/>';
+    });
+    if(o.sd){
+      const T=stats(S.v);
+      out+='<text class="sdl" x="'+(W-MR+8)+'" y="'+(base+4)+'" text-anchor="start">s = '+num2(T.sd)+"</text>";
+    }
+  });
+  const span=hi-lo, step=span<=12?1:(span<=30?5:(span<=70?10:20));
+  for(let v=Math.ceil(lo/step)*step; v<=hi+1e-9; v+=step){
+    out+='<line class="tk" x1="'+x(v).toFixed(1)+'" x2="'+x(v).toFixed(1)+'" y1="'+lastBase+'" y2="'+(lastBase+5)+'"/>'
+      +'<text class="ax" x="'+x(v).toFixed(1)+'" y="'+(lastBase+18)+'" text-anchor="middle">'+v+"</text>";
+  }
+  return out+"</svg>";
+}
+
+/* The finished standard deviation as a DISTANCE: a band one s either side of
+   the mean, laid over the data it came from. */
+function bandHTML(S){
+  const s=S.v, n=S.n, m=S.mean, sd=S.sd;
+  const lo=Math.min(s[0],m-sd), hi=Math.max(s[n-1],m+sd);
+  const W=560, ML=40, MR=40, MT=46, MB=28, BH=56;
+  const span=(hi-lo)||1;
+  const x=function(v){ return ML+((v-lo)/span)*(W-ML-MR); };
+  const H=MT+BH+MB, base=MT+BH;
+  let out='<svg class="dv" viewBox="0 0 '+W+" "+H+'" role="img" aria-label="one standard deviation either side of the mean">';
+  out+='<rect class="bnd" x="'+x(m-sd).toFixed(1)+'" y="'+(MT-10)+'" width="'+(x(m+sd)-x(m-sd)).toFixed(1)+'" height="'+(BH+10)+'"/>';
+  out+='<text class="bndt" x="'+x(m).toFixed(1)+'" y="'+(MT-18)+'" text-anchor="middle">one standard deviation either side — '
+     +num2(m-sd)+" to "+num2(m+sd)+"</text>";
+  out+='<line class="mnl" x1="'+x(m).toFixed(1)+'" x2="'+x(m).toFixed(1)+'" y1="'+(MT-10)+'" y2="'+(base+5)+'"/>';
+  const c={}; s.forEach(function(q){ c[q]=(c[q]||0)+1; });
+  Object.keys(c).map(Number).forEach(function(q){
+    for(let i=0;i<c[q];i++)
+      out+='<circle class="dt" cx="'+x(q).toFixed(1)+'" cy="'+(base-9-i*13).toFixed(1)+'" r="5.5"/>';
+  });
+  out+='<line class="axl" x1="'+(ML-14)+'" x2="'+(W-MR+14)+'" y1="'+base+'" y2="'+base+'"/>';
+  const step=span<=12?1:(span<=30?5:(span<=70?10:20));
+  for(let v=Math.ceil(lo/step)*step; v<=hi+1e-9; v+=step){
+    out+='<line class="tk" x1="'+x(v).toFixed(1)+'" x2="'+x(v).toFixed(1)+'" y1="'+base+'" y2="'+(base+5)+'"/>'
+      +'<text class="ax" x="'+x(v).toFixed(1)+'" y="'+(base+17)+'" text-anchor="middle">'+v+"</text>";
+  }
+  return out+"</svg>";
+}
+
+/* The worksheet's own three columns. `cols` says how far along the working the
+   table has got; `blank` hides one cell behind a question mark. */
+function workHTML(S,o){
+  o=o||{};
+  const cols=o.cols||3;
+  let out='<table class="wkt"><thead><tr><th>x</th>';
+  if(cols>=2) out+='<th class="c2">x − x̄</th>';
+  if(cols>=3) out+='<th class="c3">(x − x̄)²</th>';
+  out+="</tr></thead><tbody>";
+  S.v.forEach(function(v,i){
+    const hit=(o.hit!=null&&o.hit===i);
+    out+='<tr'+(hit?' class="hit"':"")+'><td>'+grp(v)+"</td>";
+    if(cols>=2) out+='<td class="c2">'+((o.blank==="dev"&&hit)?'<span class="q">?</span>':sgn(S.dev[i]))+"</td>";
+    if(cols>=3) out+='<td class="c3">'+((o.blank==="sq"&&hit)?'<span class="q">?</span>':num2(S.sq[i]))+"</td>";
+    out+="</tr>";
+  });
+  if(o.tot){
+    out+='<tr class="tot"><td>'+(o.totLabel===false?"":grp(S.total))+"</td>";
+    if(cols>=2) out+='<td class="c2">'+((o.blank==="devtot")?'<span class="q">?</span>':"0")+"</td>";
+    if(cols>=3) out+='<td class="c3">'+((o.blank==="sstot")?'<span class="q">?</span>':num2(S.ss))+"</td>";
+    out+="</tr>";
+  }
+  return out+"</tbody></table>";
+}
+function listHTML(vals,o){
+  o=o||{};
+  return '<div class="lst">'+vals.map(function(v,i){
+      return '<span class="'+((o.hit!=null&&o.hit===i)?"hit":"")+'">'+grp(v)+"</span>";
+    }).join("")+"</div>"
+    +(o.cap?'<div class="cap">'+o.cap+"</div>":"");
+}
+function factsHTML(rows){
+  return '<div class="facts">'+rows.map(function(r){
+    return "<div><span class=\"lb\">"+r[0]+"</span><span>"+r[1]+"</span></div>";
+  }).join("")+"</div>";
+}
+
+/* ================= generated data ================= */
+const TOPICS=[
+  {q:"the number of goals scored in each match", who:"match", whoP:"matches", unit:"goals", lo:0, hi:14},
+  {q:"minutes spent waiting at a bus stop", who:"morning", whoP:"mornings", unit:"minutes", lo:2, hi:30},
+  {q:"the number of books read over a month", who:"reader", whoP:"readers", unit:"books", lo:0, hi:17},
+  {q:"scores out of 20 on a short quiz", who:"student", whoP:"students", unit:"marks", lo:3, hi:20},
+  {q:"the ages of the people in a book group", who:"member", whoP:"members", unit:"years", lo:18, hi:70},
+  {q:"daily high temperatures in degrees", who:"day", whoP:"days", unit:"degrees", lo:48, hi:95},
+  {q:"the number of customers in the first hour", who:"day", whoP:"days", unit:"customers", lo:4, hi:40},
+  {q:"the number of push-ups managed in one minute", who:"attempt", whoP:"attempts", unit:"push-ups", lo:6, hi:44}
+];
+
+/* A data set built so that every rung's own trap is a different number from
+   that rung's own answer. The mean is forced onto a whole number, which keeps
+   the deviations readable; everything else is a rejection. */
+function makeSet(o){
+  o=o||{};
+  for(let t=0;t<900;t++){
+    const T=pick(TOPICS);
+    const n=o.n||ri(4,o.maxN||7);
+    const v=[];
+    for(let i=0;i<n-1;i++) v.push(ri(T.lo,T.hi));
+    /* the last value is chosen so the total divides exactly by n */
+    const part=sum(v), cands=[];
+    for(let x=T.lo;x<=T.hi;x++) if((part+x)%n===0) cands.push(x);
+    if(!cands.length) continue;
+    v.push(pick(cands));
+
+    const S=stats(v);
+    if(S.range<3) continue;
+    if(S.ss===0) continue;
+    if(S.mean<=0) continue;
+    if(S.sd<1) continue;
+    /* rung 7: a variance of 1 would make the standard deviation equal to it,
+       and a variance of 4 would make it exactly half — both kill the rung */
+    if(numKey(S.varS)===numKey(1)) continue;
+    if(numKey(S.varS)===numKey(4)) continue;
+    /* rung 7 again: a student working from the PRINTED variance must land on
+       the same two decimal places we do */
+    if(numKey(Math.sqrt(S.varS))!==numKey(Math.sqrt(r2(S.varS)))) continue;
+    /* rung 6: dividing by n instead of n - 1 has to give a different answer */
+    if(numKey(S.sd)===numKey(S.sdP)) continue;
+    if(numKey(S.varS)===numKey(S.varP)) continue;
+    /* rung 1: the range must differ from everything it gets confused with */
+    if(numKey(S.range)===numKey(S.mid)) continue;
+    if(numKey(S.range)===numKey(S.hi)) continue;
+    if(numKey(S.range)===numKey(S.n)) continue;
+    if(numKey(S.range)===numKey(S.mean)) continue;
+    if(numKey(S.range)===numKey(S.lo+S.hi)) continue;
+    /* rung 5: the sum of the squares must differ from the two sums it is
+       mistaken for */
+    if(numKey(S.ss)===numKey(S.absSum)) continue;
+    if(numKey(S.ss)===numKey(S.sqSum)) continue;
+    /* rungs 2 and 4 need a value far enough out that doubling and squaring
+       its deviation are different things */
+    if(S.dev.filter(function(d){ return Math.abs(d)>=3; }).length<1) continue;
+    if(o.pos&&S.lo<1) continue;
+    S.T=T;
+    return S;
+  }
+  return null;
+}
+
+/* Four sets sharing one mean and four clearly different standard deviations,
+   for the rung that asks which is the most spread out. */
+function makeFamily(){
+  for(let t=0;t<400;t++){
+    const T=pick(TOPICS);
+    const m=ri(Math.max(T.lo+8,10), Math.max(T.hi-8,T.lo+12));
+    const steps=shuffle([1,2,3,4]).slice(0,4);
+    const sets=shuffle([0,1,2,3]).map(function(k,i){
+      const a=steps[i];
+      return {name:"Set "+"ABCD".charAt(k), v:[m-2*a,m-a,m,m+a,m+2*a], k:k};
+    });
+    if(sets.some(function(S){ return S.v.some(function(x){ return x<T.lo||x>T.hi; }); })) continue;
+    const sds=sets.map(function(S){ return numKey(stats(S.v).sd); });
+    if(new Set(sds).size!==4) continue;
+    sets.sort(function(a,b){ return a.name<b.name?-1:1; });
+    return {T:T, mean:m, sets:sets};
+  }
+  return null;
+}
+
+/* ================= rungs ================= */
+const STEPS=[
+  "find the mean",
+  "subtract the mean from each value",
+  "square each of those differences",
+  "add the squares together",
+  "divide by n − 1",
+  "take the square root"
+];
+const FAKESTEPS=[
+  {t:"divide by n", w:"That is the population standard deviation. For a sample the divisor is n − 1."},
+  {t:"subtract the smallest value from the largest", w:"That is the range — a different measure of spread altogether, and not a step in this one."},
+  {t:"divide by the mean", w:"Nothing in the standard deviation divides by the mean."}
+];
+function stripHTML(k,dir){
+  /* only the step you are standing on is shown, so the others cannot be read
+     off the strip by elimination */
+  const known='<span class="slot done"><span class="tg">step '+(k+1)+'</span>'+STEPS[k]+"</span>";
+  const ask='<span class="slot ask"><span class="tg">step '+(dir==="next"?k+2:k)+"</span>?</span>";
+  return '<div class="strip">'+(dir==="next"?(known+'<span class="arw">→</span>'+ask)
+                                            :(ask+'<span class="arw">→</span>'+known))+"</div>";
+}
+
+const RUNGS=[
+/* ---------- 1 ---------- */
+{
+  title:"The range",
+  sub:"The largest minus the smallest — nothing in between.",
+  gen:function(){
+    const S=makeSet();
+    if(!S) return {q:"",opts:[]};
+    const T=S.T;
+    const opts=numOpts(S.range,
+      [{v:S.mid, w:"That is the midrange — the two end values added and halved, not subtracted."},
+       {v:S.hi, w:"That is just the largest value. The range is a distance, so the smallest has to come off it."},
+       {v:S.lo+S.hi, w:"You added the two end values. The range subtracts them."},
+       {v:S.mean, w:"That is the mean. The range does not look at the middle at all."}],
+      "Largest minus smallest: "+grp(S.hi)+" − "+grp(S.lo)+" = "+num2(S.range)+" "+T.unit+".",
+      [{v:S.range+1, w:"Close, but the range is a plain subtraction — nothing is added on."},
+       {v:S.n, w:"That is how many values there are, not how far apart they reach."}]);
+    return {
+      scene:"A record of "+T.q+" was kept for "+cnt(S.n,T)+".",
+      vis:listHTML(S.v,{cap:"in order, smallest to largest"}),
+      q:"What is the range?",
+      opts:opts
+    };
+  }
+},
+/* ---------- 2 ---------- */
+{
+  title:"One deviation",
+  sub:"How far is this value from the mean, and which way?",
+  gen:function(){
+    const S=makeSet();
+    if(!S) return {q:"",opts:[]};
+    const T=S.T;
+    const idx=pick(S.dev.map(function(d,i){ return {d:d,i:i}; })
+                     .filter(function(o){ return Math.abs(o.d)>=1; })).i;
+    const x=S.v[idx], d=S.dev[idx];
+    const opts=sgnOpts(d,
+      [{v:x, w:"That is the value itself. A deviation is a distance from the mean, so the mean has to be subtracted."},
+       {v:x+S.mean, w:"You added the mean instead of subtracting it."},
+       {v:d*d, w:"That is the deviation squared. Squaring is the next step, not this one."}],
+      "The deviation is the value minus the mean: "+grp(x)+" − "+num2(S.mean)+" = "+sgn(d)+".",
+      [{v:S.mean, w:"That is the mean itself, not the distance from it."},
+       {v:2*d, w:"You doubled the distance instead of measuring it once."}],
+      [{v:-d, w:"Right size, wrong direction. It is value minus mean, not mean minus value — and a value "
+               +(d<0?"below":"above")+" the mean gives a "+(d<0?"negative":"positive")+" deviation."}]);
+    return {
+      scene:"A record of "+T.q+" was kept for "+cnt(S.n,T)+". The mean is "+num2(S.mean)+".",
+      vis:devHTML(S,{hit:idx, blank:true}),
+      q:"What is the deviation of the value "+grp(x)+"?",
+      opts:opts
+    };
+  }
+},
+/* ---------- 3 ---------- */
+{
+  title:"Why they add to zero",
+  sub:"The deviations always cancel — which is why they get squared.",
+  gen:function(){
+    const S=makeSet();
+    if(!S) return {q:"",opts:[]};
+    const T=S.T;
+    const form=pick(["miss","miss","why","sum"]);
+    if(form==="miss"){
+      const idx=pick(S.dev.map(function(d,i){ return {d:d,i:i}; })
+                       .filter(function(o){ return Math.abs(o.d)>=1; })).i;
+      const rest=S.dev.filter(function(d,i){ return i!==idx; });
+      const shown=sum(rest);
+      const opts=sgnOpts(S.dev[idx],
+        [{v:0, w:"Zero is what all "+S.n+" of them add to, not what the missing one is."},
+         {v:S.v[idx], w:"That is the value itself, not its distance from the mean."},
+         {v:S.mean, w:"That is the mean. The missing entry is a deviation from it."}],
+        "The whole column has to total 0. The others come to "+sgn(shown)+", so the missing one is "
+          +sgn(S.dev[idx])+" — and "+grp(S.v[idx])+" − "+num2(S.mean)+" confirms it.",
+        [{v:S.dev[idx]*2, w:"Twice the right distance. The column has to come to exactly 0, no more."},
+         {v:S.dev[idx]*S.dev[idx], w:"That is the square of the missing deviation, not the deviation."}],
+        [{v:shown, w:"That is the total of the other "+(S.n-1)+", copied straight down. The missing one has to cancel it, so it is the opposite sign."}]);
+      return {
+        scene:"A record of "+T.q+" was kept for "+cnt(S.n,T)+". The mean is "+num2(S.mean)+", and one entry in the deviation column has been smudged.",
+        vis:workHTML(S,{cols:2, hit:idx, blank:"dev"}),
+        q:"What has to go in the smudged cell?",
+        opts:opts
+      };
+    }
+    if(form==="sum"){
+      const opts=numOpts(0,
+        [{v:S.absSum, w:"That is what you get if you drop the minus signs first. The deviations keep their signs, and then they cancel."},
+         {v:S.ss, w:"That is the total after squaring. Before squaring, the column adds to zero."},
+         {v:S.mean, w:"That is the mean. The deviations are measured from it, and they cancel around it."}],
+        "Every deviation column adds to 0, on every data set. The mean is the balance point, so the distances below it exactly match the distances above.",
+        [{v:S.n, w:"That is how many values there are."},
+         {v:S.total, w:"That is the total of the values themselves, not of their deviations."}]);
+      return {
+        scene:"A record of "+T.q+" was kept for "+cnt(S.n,T)+". The mean is "+num2(S.mean)+".",
+        vis:workHTML(S,{cols:2}),
+        q:"What do all "+S.n+" deviations add up to?",
+        opts:opts
+      };
+    }
+    /* One of the wrong answers claims there are always as many values below the
+       mean as above it. The picture should argue against that, so this form
+       looks for a set where those two counts genuinely differ. */
+    let V=S;
+    for(let t=0;t<60;t++){
+      const bel=V.dev.filter(function(d){ return d<0; }).length;
+      const abv=V.dev.filter(function(d){ return d>0; }).length;
+      if(bel!==abv&&bel>0&&abv>0) break;
+      const nx=makeSet(); if(nx) V=nx;
+    }
+    const VT=V.T;
+    return {
+      scene:"A record of "+VT.q+" was kept for "+cnt(V.n,VT)+". The mean is "+num2(V.mean)+", and as always the deviations add to 0.",
+      vis:workHTML(V,{cols:2, tot:true, totLabel:false}),
+      q:"Why do the deviations add to zero on every data set?",
+      one:true,
+      opts:textOpts(
+        "Because the mean is the balance point — the distances below it must match the distances above.",
+        "That is exactly it, and it is why a plain average distance is useless as a measure of spread. Squaring removes the signs so the distances stop cancelling.",
+        [{t:"Because there are always as many values below the mean as above it.",
+          w:"Not so — a set can have one value far below and many just above. It is the total distance that balances, not the count."},
+         {t:"Because this particular data set happens to be symmetric.",
+          w:"It would still be zero if the data were lopsided. The balance is built into the mean."},
+         {t:"Because the deviations have already been squared.",
+          w:"Squaring comes afterwards, and it is what stops them cancelling. Before it, they cancel."},
+         {t:"Because the values were put in order first.",
+          w:"Ordering changes nothing here. The deviations cancel whatever order they are written in."}])
+    };
+  }
+},
+/* ---------- 4 ---------- */
+{
+  title:"Square the deviation",
+  sub:"Squaring throws away the sign, and that is the point.",
+  gen:function(){
+    const S=makeSet();
+    if(!S) return {q:"",opts:[]};
+    const T=S.T;
+    const far=S.dev.map(function(d,i){ return {d:d,i:i}; })
+                   .filter(function(o){ return Math.abs(o.d)>=3; });
+    if(!far.length) return {q:"",opts:[]};
+    const idx=pick(far).i, x=S.v[idx], d=S.dev[idx];
+    const opts=numOpts(d*d,
+      [{v:2*Math.abs(d), w:"You doubled the deviation instead of squaring it. Squaring multiplies it by itself."},
+       {v:x*x-S.mean*S.mean, w:"That is x² − x̄², which is not the same as (x − x̄)². Subtract first, then square."},
+       {v:x*x, w:"That is the value squared. The mean has to come off before the squaring."}],
+      "Subtract first, then square: ("+grp(x)+" − "+num2(S.mean)+")² = ("+sgn(d)+")² = "+num2(d*d)+".",
+      [{v:Math.abs(d)+Math.abs(d)*Math.abs(d), w:"Two steps run together. Only the square is wanted here."},
+       {v:S.ss, w:"That is the total of every squared deviation, not this one on its own."}],
+      [{v:Math.abs(d), w:"That is the deviation with its sign dropped, not squared. Squaring is what removes the sign properly — and it changes the size too."}]);
+    return {
+      scene:"A record of "+T.q+" was kept for "+cnt(S.n,T)+". The mean is "+num2(S.mean)+".",
+      vis:workHTML(S,{cols:3, hit:idx, blank:"sq"}),
+      q:"What goes in the squared cell for the value "+grp(x)+"?",
+      opts:opts
+    };
+  }
+},
+/* ---------- 5 ---------- */
+{
+  title:"Add the squares",
+  sub:"One total, from the third column only.",
+  gen:function(){
+    const S=makeSet();
+    if(!S) return {q:"",opts:[]};
+    const T=S.T;
+    const opts=numOpts(S.ss,
+      [{v:S.sqSum, w:"You squared the values themselves and added those. The mean has to be subtracted before the squaring."},
+       {v:S.varS, w:"That is the total after dividing by n − 1. The dividing is the next step."},
+       {v:S.total, w:"That is the total of the values, which is the first column, not the third."}],
+      "Add the third column: "+S.sq.map(num2).join(" + ")+" = "+num2(S.ss)+".",
+      [{v:S.sd, w:"That is the finished standard deviation, three steps further on."},
+       {v:S.range, w:"That is the range, which has nothing to do with this column."}],
+      [{v:S.absSum, w:"That is the total of the deviations with their signs dropped — the second column made positive. The squares are bigger than that."}]);
+    return {
+      scene:"A record of "+T.q+" was kept for "+cnt(S.n,T)+". The mean is "+num2(S.mean)+".",
+      vis:workHTML(S,{cols:3, tot:true, totLabel:false, blank:"sstot"}),
+      q:"What is the total of the squared deviations?",
+      opts:opts
+    };
+  }
+},
+/* ---------- 6 ---------- */
+{
+  title:"Divide by n − 1",
+  sub:"The step that costs the most marks.",
+  gen:function(){
+    const S=makeSet();
+    if(!S) return {q:"",opts:[]};
+    const T=S.T;
+    const opts=numOpts(S.varS,
+      [{v:S.ss, w:"That is the total before dividing. The dividing still has to happen."},
+       {v:S.ss/(S.n+1), w:"You divided by n + 1. It is one less than n, not one more."},
+       {v:S.sd, w:"That is the standard deviation — one step further on, after the square root."}],
+      "There are "+S.n+" values, so divide by "+(S.n-1)+": "+divWork(S.ss,S.n-1)+".",
+      [{v:S.ss/2, w:"Halving is not one of the steps."},
+       {v:S.varP*2, w:"Nothing in the recipe doubles."}],
+      [{v:S.varP, w:"You divided by n instead of n − 1. That gives the population standard deviation; for a sample, the divisor is one less than the count."}]);
+    return {
+      scene:"A record of "+T.q+" was kept for "+cnt(S.n,T)+". The squared deviations have already been added up.",
+      facts:factsHTML([["how many values","n = "+S.n],
+                       ["total of the squared deviations","Σ(x − x̄)² = "+num2(S.ss)]]),
+      q:"Divide, as the sample formula asks. What do you get?",
+      opts:opts
+    };
+  }
+},
+/* ---------- 7 ---------- */
+{
+  title:"Take the square root",
+  sub:"The last step, and the one that puts the units back.",
+  gen:function(){
+    const S=makeSet();
+    if(!S) return {q:"",opts:[]};
+    const T=S.T;
+    const opts=numOpts(S.sd,
+      [{v:S.varS/2, w:"Halving is not the same as taking a square root."},
+       {v:Math.sqrt(S.ss), w:"That is the root of the total before dividing. Divide first, then take the root."},
+       {v:S.varS*S.varS, w:"You squared it. The square root undoes a square — it does not make another one."}],
+      "The standard deviation is the square root of that: "+rootWork(S.varS)+" "+T.unit+".",
+      [{v:S.sd*2, w:"Twice the right answer."},
+       {v:Math.sqrt(S.varP), w:"That is the root of the n-divisor version. The dividing was already done, by n − 1."}],
+      [{v:S.varS, w:"That is the variance — the number before the root. It is in squared units, which is why the root is needed at all."}]);
+    return {
+      scene:"A record of "+T.q+" was kept for "+cnt(S.n,T)+". The squared deviations were added and divided by n − 1.",
+      facts:factsHTML([["total of the squared deviations","Σ(x − x̄)² = "+num2(S.ss)],
+                       ["divided by n − 1",divWork(S.ss,S.n-1)]]),
+      q:"What is the standard deviation?",
+      opts:opts
+    };
+  }
+},
+/* ---------- 8 ---------- */
+{
+  title:"Where are you?",
+  sub:"Six steps, in one order only.",
+  gen:function(){
+    const dir=pick(["next","prev"]);
+    const k=dir==="next" ? ri(0,4) : ri(1,5);
+    const ansIdx=dir==="next" ? k+1 : k-1;
+    const others=STEPS.map(function(s,i){ return {t:s, i:i}; })
+      .filter(function(o){ return o.i!==ansIdx && o.i!==k; })
+      .map(function(o){
+        return {t:o.t, w:"That is step "+(o.i+1)+", so it comes "+(o.i<ansIdx?"earlier":"later")+" than the one being asked for."};
+      });
+    return {
+      big:stripHTML(k,dir),
+      q:dir==="next" ? "You have just finished that step. What is the next one?"
+                     : "What is the step immediately before that one?",
+      one:true,
+      opts:textOpts(STEPS[ansIdx],
+        "Step "+(ansIdx+1)+" of six: "+STEPS[ansIdx]+". The full order is "+STEPS.join(", then ")+".",
+        others.concat(FAKESTEPS))
+    };
+  }
+},
+/* ---------- 9 ---------- */
+{
+  title:"Same mean, different spread",
+  sub:"An average on its own does not tell you the shape.",
+  gen:function(){
+    const form=pick(["which","value","value"]);
+    if(form==="which"){
+      const F=makeFamily();
+      if(!F) return {q:"",opts:[]};
+      const want=pick(["largest","smallest"]);
+      const withSd=F.sets.map(function(S){ return {name:S.name, sd:stats(S.v).sd, rng:stats(S.v).range}; });
+      const sortd=withSd.slice().sort(function(a,b){ return a.sd-b.sd; });
+      const ansRow=want==="largest" ? sortd[sortd.length-1] : sortd[0];
+      const opts=textOpts(ansRow.name,
+        ansRow.name+" has the "+want+" standard deviation, "+num2(ansRow.sd)
+          +". All four share a mean of "+num2(F.mean)+"; what differs is how far the values sit from it.",
+        withSd.filter(function(r){ return r.name!==ansRow.name; }).map(function(r){
+          return {t:r.name, w:r.name+" has a standard deviation of "+num2(r.sd)+", which is "
+            +(r.sd>ansRow.sd?"larger":"smaller")+" than the "+want+"."};
+        }));
+      return {
+        scene:"Four groups were measured on the same thing \u2014 "+F.T.q+". All four sets have the same mean.",
+        vis:pairHTML(F.sets,{}),
+        q:"Which set has the "+want+" standard deviation?",
+        opts:opts
+      };
+    }
+    /* Both sets are shifted onto one shared mean, so the only difference the
+       picture can show is spread. The shared mean is lifted far enough that
+       neither set can be pushed below zero by the shift. */
+    let A=null,B=null,SA=null,SB=null,m=0;
+    for(let t=0;t<40;t++){
+      const a=makeSet({n:5}), b=makeSet({n:5});
+      if(!a||!b) continue;
+      if(numKey(a.sd)===numKey(b.sd)) continue;
+      const need=Math.max(a.mean-a.lo, b.mean-b.lo);
+      const mm=Math.max(Math.round((a.mean+b.mean)/2), need+1);
+      const xa=stats(a.v.map(function(x){ return x-a.mean+mm; }));
+      const xb=stats(b.v.map(function(x){ return x-b.mean+mm; }));
+      if(xa.lo<0||xb.lo<0) continue;
+      A=a; B=b; SA=xa; SB=xb; m=mm; break;
+    }
+    if(!A) return {q:"",opts:[]};
+    const va=SA.v, vb=SB.v;
+    const which=pick([0,1]);
+    const S=which?SB:SA, O=which?SA:SB, nm=which?"Set B":"Set A", onm=which?"Set A":"Set B";
+    const opts=numOpts(S.sd,
+      [{v:S.range, w:"That is the range of "+nm+". The range and the standard deviation are both measures of spread, but they are different numbers."},
+       {v:S.varS, w:"That is the variance of "+nm+" — the step before the square root."},
+       {v:S.mean, w:"That is the mean, which both sets share. It says nothing about spread."}],
+      "For "+nm+": "+divWork(S.ss,S.n-1)+", then "+rootWork(S.varS)+".",
+      [{v:S.absSum/S.n, w:"That is the average distance with the signs dropped — a reasonable idea, but not the standard deviation."},
+       {v:S.ss, w:"That is the total of the squared deviations, before dividing and rooting."}],
+      [{v:O.sd, w:"That is "+onm+"'s standard deviation. The two sets share a mean but not a spread."},
+       {v:S.sdP, w:"You divided by n rather than n − 1."}]);
+    return {
+      scene:"Two groups were measured on the same thing \u2014 "+A.T.q+". The two sets have the same mean of "+num2(m)+".",
+      vis:pairHTML([{name:"Set A", v:va},{name:"Set B", v:vb}],{}),
+      q:"What is the standard deviation of "+nm+"?",
+      opts:opts
+    };
+  }
+},
+/* ---------- 10 ---------- */
+{
+  title:"The whole climb",
+  sub:"Any step, any data set, no warning which.",
+  gen:function(){
+    const S=makeSet();
+    if(!S) return {q:"",opts:[]};
+    const T=S.T;
+    const kind=pick(["range","dev","ss","var","sd"]);
+    const scene="A record of "+T.q+" was kept for "+cnt(S.n,T)+".";
+    if(kind==="range"){
+      return {scene:scene, vis:listHTML(S.v,{cap:"in order, smallest to largest"}),
+        q:"What is the range?",
+        opts:numOpts(S.range,
+          [{v:S.mid, w:"That is the midrange — added and halved rather than subtracted."},
+           {v:S.hi, w:"That is the largest value on its own."},
+           {v:S.mean, w:"That is the mean."}],
+          "Largest minus smallest: "+grp(S.hi)+" − "+grp(S.lo)+" = "+num2(S.range)+".",
+          [{v:S.sd, w:"That is the standard deviation, not the range."},
+           {v:S.n, w:"That is how many values there are."}])};
+    }
+    if(kind==="dev"){
+      const idx=pick(S.dev.map(function(d,i){ return {d:d,i:i}; })
+                       .filter(function(o){ return Math.abs(o.d)>=1; })).i;
+      const x=S.v[idx], d=S.dev[idx];
+      return {scene:scene+" The mean is "+num2(S.mean)+".",
+        vis:devHTML(S,{hit:idx, blank:true}),
+        q:"What is the deviation of the value "+grp(x)+"?",
+        opts:sgnOpts(d,
+          [{v:x, w:"That is the value itself, before the mean is taken off."},
+           {v:d*d, w:"That is the deviation squared."},
+           {v:S.mean, w:"That is the mean."}],
+          "Value minus mean: "+grp(x)+" − "+num2(S.mean)+" = "+sgn(d)+".",
+          [{v:2*d, w:"Twice the distance."},
+           {v:x+S.mean, w:"You added the mean instead of subtracting it."}],
+          [{v:-d, w:"Right size, wrong direction — it is value minus mean."}])};
+    }
+    if(kind==="ss"){
+      return {scene:scene+" The mean is "+num2(S.mean)+".",
+        vis:workHTML(S,{cols:3, tot:true, totLabel:false, blank:"sstot"}),
+        q:"What is the total of the squared deviations?",
+        opts:numOpts(S.ss,
+          [{v:S.sqSum, w:"You squared the values themselves rather than their deviations."},
+           {v:S.varS, w:"That is the total after dividing by n − 1."},
+           {v:S.total, w:"That is the total of the values."}],
+          "Add the third column: "+num2(S.ss)+".",
+          [{v:S.sd, w:"That is the finished standard deviation."},
+           {v:S.range, w:"That is the range."}],
+          [{v:S.absSum, w:"That is the deviations with their signs dropped, added up — not squared."}])};
+    }
+    if(kind==="var"){
+      return {scene:scene+" The squared deviations have already been added.",
+        facts:factsHTML([["how many values","n = "+S.n],
+                         ["total of the squared deviations","Σ(x − x̄)² = "+num2(S.ss)]]),
+        q:"Divide by n − 1. What do you get?",
+        opts:numOpts(S.varS,
+          [{v:S.ss, w:"That is the total before dividing."},
+           {v:S.ss/(S.n+1), w:"You divided by n + 1."},
+           {v:S.sd, w:"That is the standard deviation, after the square root."}],
+          divWork(S.ss,S.n-1)+".",
+          [{v:S.ss/2, w:"Halving is not one of the steps."},
+           {v:Math.sqrt(S.ss), w:"That is the root of the undivided total."}],
+          [{v:S.varP, w:"You divided by n instead of n − 1."}])};
+    }
+    return {scene:scene+" The mean is "+num2(S.mean)+".",
+      vis:workHTML(S,{cols:3, tot:true, totLabel:false}),
+      q:"What is the standard deviation?",
+      opts:numOpts(S.sd,
+        [{v:S.varS, w:"That is the variance — you stopped one step short of the square root."},
+         {v:Math.sqrt(S.ss), w:"That is the root of the total before dividing."},
+         {v:S.range, w:"That is the range."}],
+        divWork(S.ss,S.n-1)+", then "+rootWork(S.varS)+".",
+        [{v:S.ss, w:"That is the total of the squared deviations, two steps short."},
+         {v:S.absSum/S.n, w:"That is the plain average distance, not the standard deviation."}],
+        [{v:S.sdP, w:"You divided by n instead of n − 1."}])};
+  }
+}
+];
+
+/* ================= hero ================= */
+const HERO=[
+  {lbl:"same mean",         kind:"same"},
+  {lbl:"the deviations",    kind:"devs"},
+  {lbl:"square them",       kind:"sq"},
+  {lbl:"divide by n − 1", kind:"var"},
+  {lbl:"take the root",     kind:"root"},
+  {lbl:"the n trap",        kind:"trap"}
+];
+let heroSel=0;
+const W=stats(WORK);
+const A5=stats(SECA), B5=stats(SECB);
+
+/* every figure below is computed from the lists above, never typed */
+const HNOTES={
+  same:function(){
+    return "Two sections sat the same test and both averaged "+num2(A5.mean)
+      +". Section A ran from "+A5.lo+" to "+A5.hi+", a range of "+num2(A5.range)
+      +"; Section B from "+B5.lo+" to "+B5.hi+", a range of "+num2(B5.range)
+      +". Their standard deviations are "+num2(A5.sd)+" and "+num2(B5.sd)
+      +" — Section B's is more than "+Math.floor(B5.sd/A5.sd)
+      +" times Section A's. One number, the mean, told you nothing about that.";
+  },
+  devs:function(){
+    return "Your worksheet's own example: "+WORK.join(", ")+", with a mean of "+num2(W.mean)
+      +". Each value is asked the same question — how far from the mean, and which way? The answers are "
+      +W.dev.map(sgn).join(", ")+", and they add to "+num2(sum(W.dev))
+      +". They always do, on every data set, which is exactly why the next step has to square them.";
+  },
+  sq:function(){
+    return "Square each deviation and the minus signs disappear: "+W.dev.map(sgn).join(", ")+" becomes "
+      +W.sq.map(num2).join(", ")+". Drawn as real squares, the areas are the numbers — and notice how much of the total the far value at "
+      +W.v[W.n-1]+" contributes on its own: "+num2(W.sq[W.n-1])+" of "+num2(W.ss)
+      +". Squaring makes distant values count for much more than near ones.";
+  },
+  var:function(){
+    return "The squares total "+num2(W.ss)+", and there are "+W.n+" values, so divide by "+(W.n-1)+": "
+      +divWork(W.ss,W.n-1)+". That number is the <b>variance</b>. The divisor is one less than the count because this is a "
+      +"<b>sample</b> — the mean was estimated from the very values being measured, which uses one of them up.";
+  },
+  root:function(){
+    return "The variance is in squared units, so the last step undoes the squaring: "+rootWork(W.varS)
+      +". That is the standard deviation, and it is a distance you can mark on the data itself — from "
+      +num2(W.mean-W.sd)+" to "+num2(W.mean+W.sd)+", one s either side of the mean of "+num2(W.mean)+".";
+  },
+  trap:function(){
+    return "The same "+num2(W.ss)+", divided the two ways. By n − 1 = "+(W.n-1)+" it gives "+num2(W.varS)
+      +" and a standard deviation of "+num2(W.sd)+". By n = "+W.n+" it gives "+num2(W.varP)+" and "+num2(W.sdP)
+      +". The second is the population standard deviation; for the samples in this course the divisor is always n − 1, and the two answers differ by "
+      +num2(W.sd-W.sdP)+" here.";
+  }
+};
+
+function drawHero(){
+  const h=HERO[heroSel];
+  let body="";
+  if(h.kind==="same"){
+    body=pairHTML([{name:"Section A", v:SECA},{name:"Section B", v:SECB}],{sd:true})
+      +'<div class="duo" style="margin-top:16px">'
+        +'<div class="pane a"><div class="ttl2">what they share</div>'
+          +'<div class="fm">mean</div><div class="vl">'+num2(A5.mean)+"</div>"
+          +'<div class="wk">identical, to the decimal point</div></div>'
+        +'<div class="pane"><div class="ttl2">what they do not</div>'
+          +'<div class="fm">range '+num2(A5.range)+" against "+num2(B5.range)+"</div>"
+          +'<div class="vl">s = '+num2(A5.sd)+" against "+num2(B5.sd)+"</div>"
+          +'<div class="wk">the same average, two different classes</div></div></div>';
+  }else if(h.kind==="devs"){
+    body=devHTML(W,{})
+      +'<div style="margin-top:16px">'+workHTML(W,{cols:2, tot:true, totLabel:false})+"</div>"
+      +'<div class="cap">the second column always totals zero</div>';
+  }else if(h.kind==="sq"){
+    body=sqHTML(W.dev,{})
+      +'<div style="margin-top:10px">'+workHTML(W,{cols:3, tot:true, totLabel:false})+"</div>";
+  }else if(h.kind==="var"){
+    body='<div class="eq">Σ(x − x̄)² = <b class="sq">'+num2(W.ss)+"</b>, and n = "+W.n
+      +'<span class="lbl">the total of the squares, and how many values made it</span></div>'
+      +'<div class="duo" style="margin-top:6px">'
+        +'<div class="pane c"><div class="ttl2">divide by n − 1</div>'
+          +'<div class="fm">'+num2(W.ss)+" ÷ "+(W.n-1)+"</div>"
+          +'<div class="vl">'+num2(W.varS)+"</div>"
+          +'<div class="wk">the sample variance — what this course uses</div></div>'
+        +'<div class="pane x"><div class="ttl2">divide by n</div>'
+          +'<div class="fm">'+num2(W.ss)+" ÷ "+W.n+"</div>"
+          +'<div class="vl">'+num2(W.varP)+"</div>"
+          +'<div class="wk">the population variance — a different question</div></div></div>';
+  }else if(h.kind==="root"){
+    body=bandHTML(W)
+      +'<div class="eq" style="margin-top:8px">√<b class="sq">'+W.varS.toFixed(4)+"…</b> = "+W.sd.toFixed(4)
+      +"… ≈ <b class=\"gv\">"+num2(W.sd)+"</b>"
+      +'<span class="lbl">the variance, rooted — back in the units of the data</span></div>';
+  }else{
+    body='<div class="eq">Σ(x − x̄)² = <b class="sq">'+num2(W.ss)+"</b>"
+      +'<span class="lbl">one total, divided two ways</span></div>'
+      +'<div class="duo">'
+        +'<div class="pane"><div class="ttl2">÷ (n − 1) = '+(W.n-1)+"</div>"
+          +'<div class="fm">variance '+num2(W.varS)+"</div>"
+          +'<div class="vl">s = '+num2(W.sd)+"</div>"
+          +'<div class="wk">sample — the one to use here</div></div>'
+        +'<div class="pane x"><div class="ttl2">÷ n = '+W.n+"</div>"
+          +'<div class="fm">variance '+num2(W.varP)+"</div>"
+          +'<div class="vl">σ = '+num2(W.sdP)+"</div>"
+          +'<div class="wk">population — the common slip</div></div></div>'
+      +'<div class="cap">a gap of '+num2(W.sd-W.sdP)+" on a list of only "+W.n+" values</div>";
+  }
+  document.getElementById("heroBody").innerHTML=body;
+  document.getElementById("heroNote").innerHTML=HNOTES[h.kind]();
+  document.querySelectorAll("#heroBtns button").forEach(function(b,i){
+    b.setAttribute("aria-pressed",String(i===heroSel));
+  });
+}
+(function(){
+  document.getElementById("heroBtns").innerHTML=HERO.map(function(h,i){
+    return '<button data-i="'+i+'" aria-pressed="'+(i===0)+'">'+h.lbl+"</button>";
+  }).join("");
+  document.getElementById("heroBtns").addEventListener("click",function(e){
+    const b=e.target.closest("button"); if(!b)return;
+    heroSel=Number(b.dataset.i); drawHero();
+  });
+  drawHero();
+})();
+
+/* ================= ladder ================= */
+let current=0, streak=0, answered=false, q=null;
+const earned=RUNGS.map(function(){return false;});
+function buildRungList(){
+  document.getElementById("rungList").innerHTML=RUNGS.map(function(r,i){
+    return '<button class="rung'+(earned[i]?" done":"")+'" data-i="'+i+'" aria-current="'+(i===current)+'"><span class="no">'+(i+1)+'</span><span>'+r.title+'</span></button>';
+  }).join("");
+  document.getElementById("badgeCount").textContent=earned.filter(Boolean).length;
+}
+document.getElementById("rungList").addEventListener("click",function(e){
+  const b=e.target.closest(".rung"); if(!b)return;
+  current=Number(b.dataset.i); streak=0; buildRungList(); newQuestion();
+});
+document.getElementById("resetBtn").addEventListener("click",function(){
+  for(let i=0;i<earned.length;i++)earned[i]=false;
+  streak=0; buildRungList(); newQuestion();
+});
+function drawStreak(){for(let i=0;i<4;i++){document.getElementById("p"+i).className="pip"+(i<streak?" on":"");}}
+function newQuestion(){
+  answered=false;
+  const r=RUNGS[current];
+  let tries=0;
+  do{ q=r.gen(); tries++; }while(q.opts.length<4&&tries<40);
+  /* The generators build their options answer-first so the distractors can be
+     deduplicated against it. Shuffling here, once, is what stops the answer
+     from always being button 1 — and doing it in one place means no rung can
+     be written that forgets to. */
+  q.opts=shuffle(q.opts.slice());
+  document.getElementById("rungTitle").textContent="Rung "+(current+1)+" · "+r.title;
+  document.getElementById("rungSub").textContent=r.sub;
+  document.getElementById("stem").innerHTML=
+     (q.scene?'<div class="scene">'+q.scene+"</div>":"")
+    +(q.vis?'<div class="vis">'+q.vis+"</div>":"")
+    +(q.big?'<div class="big">'+q.big+"</div>":"")
+    +(q.facts||"")
+    +'<p class="q">'+q.q+"</p>";
+  const optEl=document.getElementById("options");
+  optEl.className="options"+(q.one?" one":(q.two?" two":""));
+  optEl.innerHTML=q.opts.map(function(o,i){
+    return '<button class="opt" data-i="'+i+'"><span class="k">'+(i+1)+'</span><span class="v">'+o.label+'</span></button>';
+  }).join("");
+  document.getElementById("feedback").innerHTML="";
+  document.getElementById("nextBtn").disabled=true;
+  drawStreak();
+}
+document.getElementById("options").addEventListener("click",function(e){
+  const b=e.target.closest(".opt"); if(!b)return;
+  answer(Number(b.dataset.i));
+});
+function answer(i){
+  if(answered||!q||i>=q.opts.length)return;
+  answered=true;
+  const chosen=q.opts[i];
+  document.querySelectorAll(".opt").forEach(function(b,j){
+    b.disabled=true;
+    if(q.opts[j].correct)b.classList.add("correct");
+    if(j===i&&!chosen.correct)b.classList.add("chosen-wrong");
+  });
+  let html;
+  if(chosen.correct){
+    streak++;
+    html='<div class="fbox good"><b>Correct.</b>'+chosen.note+'</div>';
+    if(streak>=4&&!earned[current]){
+      earned[current]=true;
+      html+='<div class="earned">🏅 <b>Badge earned</b> — rung '+(current+1)+", "+RUNGS[current].title.toLowerCase()+". Pick another rung, or keep going here.</div>";
+      buildRungList(); streak=0;
+    }else if(streak>=4){
+      html+='<div class="earned">Four in a row again. This rung is solid.</div>'; streak=0;
+    }
+  }else{
+    streak=0;
+    const right=q.opts.filter(function(o){return o.correct;})[0];
+    html='<div class="fbox bad"><b>Not that one.</b>'+chosen.note+' The answer is '+right.label+'. '+right.note+'</div>';
+  }
+  document.getElementById("feedback").innerHTML=html;
+  drawStreak();
+  const nb=document.getElementById("nextBtn"); nb.disabled=false; nb.focus();
+}
+document.getElementById("nextBtn").addEventListener("click",newQuestion);
+document.addEventListener("keydown",function(e){
+  if(e.target.tagName==="INPUT")return;
+  if(e.key>="1"&&e.key<="4"){
+    const box=document.getElementById("ladder").getBoundingClientRect();
+    if(box.top<window.innerHeight&&box.bottom>0)answer(Number(e.key)-1);
+  }else if(e.key==="Enter"&&answered){ e.preventDefault(); newQuestion(); }
+});
+buildRungList();
+newQuestion();
+</script>
+</body>
+</html>
