@@ -14,6 +14,9 @@
   --gold:#B58B15; --gold-soft:#F6EFD8;
   --plum:#6B3A7A; --plum-soft:#EFE6F3;
   --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+  /* The faces MathType and Word reach for first, then open equivalents, then
+     a plain serif. Variables are italicised by the renderer, not the font. */
+  --math:'Cambria Math','STIX Two Math','Latin Modern Math',Cambria,'Times New Roman',serif;
   --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   --mono:ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace;
 }
@@ -84,6 +87,8 @@ button{font-family:inherit;font-size:15px;cursor:pointer}
 .statusbar{display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--ink-soft);margin-bottom:14px}
 .statusbar b{font-family:var(--mono);color:var(--ink);font-size:16px}
 .pill{font-size:11.5px;font-family:var(--mono);padding:2px 9px;border-radius:10px;background:var(--rule-2);color:var(--ink-soft)}
+.question,.opt,.clue,.misslist div{line-height:1.85}
+.question>.qbody{width:100%}
 .question{background:#fff;border:1px solid var(--rule);border-left:4px solid var(--ink);border-radius:0 3px 3px 0;
   padding:20px 24px;font-family:var(--serif);font-size:20px;line-height:1.5;min-height:96px;display:flex;align-items:center}
 body.klass .question{font-size:clamp(24px,3.2vw,34px);padding:34px 30px;min-height:190px}
@@ -140,6 +145,39 @@ body.klass .clue{font-size:19px;padding:17px 21px}
 .misslist div span{display:block;font-size:12.5px;color:var(--ink-soft);margin-top:3px}
 .misslist div span.pick{color:var(--red)}
 .footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-soft);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+
+/* ---- rendered mathematics ----
+   Built from spans rather than Unicode so a radical gets a real vinculum that
+   spans its argument, and a bar or hat sits centred over its letter instead of
+   wherever the combining character happens to fall. */
+.mt{font-family:var(--math);white-space:nowrap;font-size:1.05em;line-height:1.15}
+.mt i{font-style:italic;padding-right:.02em}
+.mt-frac+.mt-frac{margin-left:.2em}
+
+.mt-frac{display:inline-flex;flex-direction:column;align-items:center;
+  vertical-align:middle;margin:0 .16em;line-height:1.1;text-align:center}
+.mt-num{padding:0 .32em .08em;border-bottom:1.3px solid currentColor}
+.mt-den{padding:.1em .32em 0}
+.mt-frac .mt-frac{font-size:.88em}
+
+.mt-sqrt{display:inline-flex;align-items:stretch;vertical-align:middle;white-space:nowrap}
+.mt-sqrt>.mt-sgn{width:.56em;flex:0 0 auto;align-self:stretch;overflow:visible}
+.mt-sqrt>.mt-rad{border-top:1.5px solid currentColor;padding:.1em .3em 0 .1em}
+
+.mt-paren{display:inline-flex;align-items:stretch;vertical-align:middle;white-space:nowrap}
+.mt-paren>.mt-par{width:.4em;flex:0 0 auto;align-self:stretch;overflow:visible}
+.mt-paren>.mt-pbody{padding:0 .08em}
+.mt-paren>.mt-pexp{align-self:flex-start;font-size:.68em;line-height:1;font-style:normal;padding-left:.06em}
+
+.mt-acc{position:relative;display:inline-block;line-height:1}
+.mt-acc>.mt-bar{position:absolute;left:-.04em;right:.02em;top:.1em;border-top:1.3px solid currentColor}
+.mt-acc>.mt-hat{position:absolute;left:.04em;right:.04em;top:-.2em;height:.3em;overflow:visible}
+.mt-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip-path:inset(50%);white-space:nowrap;border:0}
+
+.mt-sup{font-size:.72em;vertical-align:.46em;line-height:0;font-style:normal;margin-left:.02em}
+.mt-supchar{font-style:normal;line-height:1}
+.mt-star{font-size:.82em;vertical-align:.1em;line-height:0;font-style:normal;margin-left:-.04em;padding-right:.06em}
 
 @media print{
   body{background:#fff}
@@ -240,6 +278,192 @@ body.klass .clue{font-size:19px;padding:17px 21px}
    ============ CORE LOGIC — START (stress-tested in Node) ==========
    ================================================================== */
 
+/* ---------------- mathematical notation ----------------
+   Formulas are written between dollar signs in the question bank, using a few
+   commands, and converted to spans at render time. Writing "sigma over root n"
+   as @frac{σ}{@sqrt{n}} lets the page draw a real fraction rule and a
+   vinculum that spans the radicand, which plain Unicode cannot do. */
+
+var MATH_CMDS = ['sqrt', 'frac', 'sup', 'star', 'paren', 'powparen', 'xbar', 'pbar', 'yhat', 'phat', 'xhat'];
+var ACCENTS = {xbar:['x','bar'], pbar:['p','bar'], yhat:['y','hat'], phat:['p','hat'], xhat:['x','hat']};
+
+var MATH_ENT = {'&':'&amp;','<':'&lt;','>':'&gt;'};
+/* Escaping and italicising happen in the same pass, over the raw text. Doing
+   them separately corrupts the result: escape first and the letters inside
+   "&lt;" get italicised into "&<i>lt</i>;", italicise first and the escaper
+   mangles the tags it just produced.
+   Runs of Latin letters are variables, so they are set in italic. Greek and
+   digits are left as the font gives them. */
+function mathLit(s){
+  var out = '', re = /([A-Za-z]+)|([&<>])|([^A-Za-z&<>]+)/g, m;
+  while((m = re.exec(String(s))) !== null){
+    if(m[1]) out += '<i>' + m[1] + '</i>';
+    else if(m[2]) out += MATH_ENT[m[2]];
+    else out += m[3];
+  }
+  return out;
+}
+/* Read a {...} argument starting at i, respecting nesting. Returns null when
+   the braces do not balance, which is how a typo is caught rather than
+   silently rendered as literal text. */
+function mathArg(s, i){
+  if(s.charAt(i) !== '{') return null;
+  var depth = 0, j = i;
+  for(; j < s.length; j++){
+    var ch = s.charAt(j);
+    if(ch === '{') depth++;
+    else if(ch === '}'){
+      depth--;
+      if(depth === 0) return {body:s.slice(i + 1, j), end:j + 1};
+    }
+  }
+  return null;
+}
+/* Walk the markup once, handing each command to fn and each literal run to
+   lit. Both the HTML renderer and the plain-text reader are built on this, so
+   the two can never drift apart. */
+function mathWalk(src, h){
+  var out = '', i = 0, run = '';
+  function flush(){ if(run){ out += h.lit(run); run = ''; } }
+  while(i < src.length){
+    if(src.charAt(i) === '@'){
+      var m = /^@([a-z]+)/.exec(src.slice(i));
+      if(m && MATH_CMDS.indexOf(m[1]) >= 0){
+        var cmd = m[1], after = i + m[0].length;
+        if(cmd === 'sqrt' || cmd === 'sup' || cmd === 'paren'){
+          var a = mathArg(src, after);
+          if(a){ flush(); out += h[cmd](a.body); i = a.end; continue; }
+        } else if(cmd === 'frac' || cmd === 'powparen'){
+          var a1 = mathArg(src, after);
+          var a2 = a1 ? mathArg(src, a1.end) : null;
+          if(a2){ flush(); out += h[cmd](a1.body, a2.body); i = a2.end; continue; }
+        } else if(cmd === 'star'){
+          flush(); out += h.star(); i = after; continue;
+        } else if(ACCENTS[cmd]){
+          flush(); out += h.accent(ACCENTS[cmd][0], ACCENTS[cmd][1]); i = after; continue;
+        }
+      }
+    }
+    run += src.charAt(i); i++;
+  }
+  flush();
+  return out;
+}
+/* true when every command in the markup parsed, so authoring mistakes are
+   caught by a test instead of reaching a student */
+function mathValid(src){
+  var bad = false;
+  var seen = mathWalk(src, {
+    lit:function(t){ return t; },
+    sqrt:function(b){ return mathValid(b) ? '' : (bad = true, ''); },
+    paren:function(b){ return mathValid(b) ? '' : (bad = true, ''); },
+    powparen:function(a, b){ return (mathValid(a) && mathValid(b)) ? '' : (bad = true, ''); },
+    sup:function(b){ return mathValid(b) ? '' : (bad = true, ''); },
+    frac:function(a, b){ return (mathValid(a) && mathValid(b)) ? '' : (bad = true, ''); },
+    star:function(){ return ''; },
+    accent:function(){ return ''; }
+  });
+  /* an unconsumed @command, or a stray brace, means something did not parse */
+  if(/@[a-z]+/.test(seen)) bad = true;
+  if(/[{}]/.test(seen)) bad = true;
+  return !bad;
+}
+
+/* vector-effect keeps the stroke an even weight however far a shape is
+   stretched, and the paths finish flush with the top of their box so the
+   radical and the overline meet. */
+var STROKE = ' fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke"';
+var RADICAL_SVG = '<svg class="mt-sgn" viewBox="0 0 10 20" preserveAspectRatio="none" aria-hidden="true">' +
+  '<path d="M0,12 L2.4,12 L4.9,19.3 L8,0.8 L10,0.8"' + STROKE + ' stroke-linejoin="miter"/></svg>';
+/* a character that is in the text layer but not on the screen, so a drawn
+   bar or bracket still reads correctly when selected or spoken */
+function SR(t){ return '<span class="mt-sr">' + t + '</span>'; }
+var SUPDIG = {'0':'\u2070','1':'\u00b9','2':'\u00b2','3':'\u00b3','4':'\u2074',
+              '5':'\u2075','6':'\u2076','7':'\u2077','8':'\u2078','9':'\u2079'};
+function supHTML(e){
+  if(SUPDIG[e]) return '<span class="mt-supchar">' + SUPDIG[e] + '</span>';
+  return '<span class="mt-sup">' + mathHTML(e) + '</span>';
+}
+function supPlain(e){ return SUPDIG[e] || ('^' + mathPlain(e)); }
+var HAT_SVG = '<svg class="mt-hat" viewBox="0 0 10 6" preserveAspectRatio="none" aria-hidden="true">' +
+  '<path d="M1,5 L5,1 L9,5"' + STROKE + ' stroke-linejoin="miter"/></svg>';
+var PAREN_L = '<svg class="mt-par" viewBox="0 0 6 20" preserveAspectRatio="none" aria-hidden="true">' +
+  '<path d="M5,0.5 C1.2,5.5 1.2,14.5 5,19.5"' + STROKE + '/></svg>';
+var PAREN_R = '<svg class="mt-par" viewBox="0 0 6 20" preserveAspectRatio="none" aria-hidden="true">' +
+  '<path d="M1,0.5 C4.8,5.5 4.8,14.5 1,19.5"' + STROKE + '/></svg>';
+
+function mathHTML(src){
+  return mathWalk(src, {
+    lit:function(t){ return mathLit(t); },
+    sqrt:function(b){
+      /* The radical is drawn rather than typed. A font glyph is one fixed
+         height, so over a two-line radicand it either floats above or hangs
+         below; this path is stretched by the flexbox to whatever the radicand
+         needs, and its top right corner meets the overline that runs across
+         the radicand, so the extent of the root is unmistakable. */
+      return '<span class="mt-sqrt">' + RADICAL_SVG + SR('\u221A(') +
+             '<span class="mt-rad">' + mathHTML(b) + '</span>' + SR(')') + '</span>';
+    },
+    paren:function(b){
+      /* Parentheses stretch the same way, so a tall fraction is not left
+         wrapped in little ones that make the grouping hard to see. */
+      return '<span class="mt-paren">' + PAREN_L + SR('(') +
+             '<span class="mt-pbody">' + mathHTML(b) + '</span>' + SR(')') + PAREN_R + '</span>';
+    },
+    powparen:function(b, e){
+      /* the exponent is a flex child aligned to the top, so it tracks the
+         height of the bracket rather than sitting at a fixed offset */
+      return '<span class="mt-paren">' + PAREN_L + SR('(') +
+             '<span class="mt-pbody">' + mathHTML(b) + '</span>' + SR(')') + PAREN_R +
+             '<span class="mt-pexp">' + supHTML(e) + '</span></span>';
+    },
+    frac:function(a, b){
+      return '<span class="mt-frac">' +
+             '<span class="mt-num">' + mathHTML(a) + '</span>' + SR('/') +
+             '<span class="mt-den">' + mathHTML(b) + '</span></span>';
+    },
+    sup:function(b){ return supHTML(b); },
+    star:function(){ return '<span class="mt-star">*</span>'; },
+    accent:function(letter, kind){
+      /* the hat is drawn too, so it keeps an even weight at any size and adds
+         nothing of its own to the text layer */
+      var mark = (kind === 'hat') ? HAT_SVG : '<span class="mt-bar" aria-hidden="true"></span>';
+      return '<span class="mt-acc"><i>' + letter + '</i>' + mark +
+             SR(kind === 'hat' ? '\u0302' : '\u0304') + '</span>';
+    }
+  });
+}
+/* A linear reading of the same formula, used for the screen-reader label and
+   for measuring how long an option looks. */
+function mathPlain(src){
+  return mathWalk(src, {
+    lit:function(t){ return t; },
+    sqrt:function(b){ return '√(' + mathPlain(b) + ')'; },
+    paren:function(b){ return '(' + mathPlain(b) + ')'; },
+    powparen:function(b, e){ return '(' + mathPlain(b) + ')' + supPlain(e); },
+    frac:function(a, b){ return mathPlain(a) + '/' + mathPlain(b); },
+    sup:function(b){ return supPlain(b); },
+    star:function(){ return '*'; },
+    accent:function(letter, kind){ return letter + (kind === 'hat' ? '̂' : '̄'); }
+  });
+}
+/* Split a display string into prose and formula pieces on the dollar signs.
+   Prose is later inserted as a text node, so it can never carry markup. */
+function mathParts(s){
+  var parts = String(s).split('$'), out = [], i;
+  for(i = 0; i < parts.length; i++){
+    if(parts[i] === '') continue;
+    out.push({math:(i % 2 === 1), text:parts[i]});
+  }
+  return out;
+}
+/* The whole string as it reads, with formulas linearised. */
+function plainText(s){
+  return mathParts(s).map(function(p){
+    return p.math ? mathPlain(p.text) : p.text;
+  }).join('');
+}
+
 /* One topic per lesson, plus a cross-lesson topic for the decision that
    actually costs marks on this unit: which standard deviation, and which
    direction. */
@@ -287,32 +511,32 @@ var BANK = [
 {id:'u5', t:'contUnif', q:'A probability region under a density curve is a triangle with base 3 and height 0.4. What is the probability?',
  o:['0.6','1.2','0.12','0.7'],
  c:'Triangle area is one half base times height: ½(3)(0.4) = 0.6.'},
-{id:'u6', t:'contUnif', q:'A region is a trapezoid. Its area is ½(b₁ + b₂)h. In a density curve problem, what plays the role of h?',
+{id:'u6', t:'contUnif', q:'A region is a trapezoid. Its area is $@frac{1}{2}(b₁ + b₂)h$. In a density curve problem, what plays the role of h?',
  o:['The horizontal width along the x-axis','The taller of the two parallel sides','The shorter of the two parallel sides','The sum of the two parallel sides'],
  c:'The two parallel sides are the curve heights; h is the horizontal distance between them.'},
-{id:'u7', t:'contUnif', q:'A region is a trapezoid. Its area is ½(b₁ + b₂)h. What do b₁ and b₂ represent?',
+{id:'u7', t:'contUnif', q:'A region is a trapezoid. Its area is $@frac{1}{2}(b₁ + b₂)h$. What do b₁ and b₂ represent?',
  o:['The two curve heights at the edges','The two x-values at the edges','The width and the height','The mean and the median'],
  c:'b₁ and b₂ are the parallel sides, which on a density curve are the two heights.'},
 {id:'u8', t:'contUnif', q:'What shape is the density curve of a uniform distribution?',
  o:['A rectangle','A bell','A triangle','A decaying curve'],
  c:'Uniform means every value is equally likely, so the height never changes.'},
-{id:'u9', t:'contUnif', q:'A uniform distribution runs from a to b, and its height is 1/(b − a). Why that particular height?',
+{id:'u9', t:'contUnif', q:'A uniform distribution runs from a to b, and its height is $@frac{1}{b − a}$. Why that particular height?',
  o:['So the rectangle encloses a total area of 1','Because that value is the mean of the data','Because that value is the interval midpoint','So that the height matches the width exactly'],
  c:'Height times width has to be 1, so the height must be 1 over the width.'},
-{id:'u10', t:'contUnif', q:'For a uniform distribution the mean is (a + b)/2. What is that expression computing?',
+{id:'u10', t:'contUnif', q:'For a uniform distribution the mean is $@frac{a + b}{2}$. What is that expression computing?',
  o:['The midpoint of the interval','The width of the interval','The height of the curve','The area of the rectangle'],
  c:'A rectangle balances at its centre, so the mean sits at the midpoint.'},
-{id:'u11', t:'contUnif', q:'For a uniform distribution the standard deviation is (b − a)/√12. What does the (b − a) part represent?',
+{id:'u11', t:'contUnif', q:'For a uniform distribution the standard deviation is $@frac{b − a}{@sqrt{12}}$. What does the (b − a) part represent?',
  o:['The full width of the interval','The midpoint of the interval','The height of the curve','The size of the sample'],
- c:'(b − a) is the width; dividing by √12 scales it down to a standard deviation.'},
+ c:'(b − a) is the width; dividing by $@sqrt{12}$ scales it down to a standard deviation.'},
 {id:'u12', t:'contUnif', q:'A uniform distribution runs from 10 to 50. Which calculation gives P(X < 25)?',
- o:['(25 − 10)/(50 − 10)','(50 − 25)/(50 − 10)','(25 − 10)/(25 − 10)','(50 − 10)/(25 − 10)'],
+ o:['$@frac{25 − 10}{50 − 10}$','$@frac{50 − 25}{50 − 10}$','$@frac{25 − 10}{25 − 10}$','$@frac{50 − 10}{25 − 10}$'],
  c:'The width you want over the total width: 15 over 40.'},
 {id:'u13', t:'contUnif', q:'A uniform distribution runs from 10 to 50. Which calculation gives P(X > 25)?',
- o:['(50 − 25)/(50 − 10)','(25 − 10)/(50 − 10)','(50 − 25)/(25 − 10)','(50 − 10)/(50 − 25)'],
+ o:['$@frac{50 − 25}{50 − 10}$','$@frac{25 − 10}{50 − 10}$','$@frac{50 − 25}{25 − 10}$','$@frac{50 − 10}{50 − 25}$'],
  c:'Measure from 25 up to the right end, then divide by the total width.'},
 {id:'u14', t:'contUnif', q:'A uniform distribution runs from 0 to 20. Which calculation finds the value with 30% of the area below it?',
- o:['0 + 0.30(20 − 0)','0.30 ÷ (20 − 0)','(20 − 0) ÷ 0.30','0 + 0.70(20 − 0)'],
+ o:['$0 + 0.30(20 − 0)$','$@frac{0.30}{20 − 0}$','$@frac{20 − 0}{0.30}$','$0 + 0.70(20 − 0)$'],
  c:'Start at the left end and walk 30% of the way across the interval.'},
 {id:'u15', t:'contUnif', q:'Every uniform probability has the same shape. What is it?',
  o:['The width you want over the total width','The height you want over the total height','The mean over the standard deviation','One minus the height of the curve'],
@@ -340,10 +564,10 @@ var BANK = [
 {id:'n7', t:'normal', q:'A question asks what percent lies within 2 standard deviations. Which approach does this course want?',
  o:['The empirical rule, giving 95%','Technology, giving a table value','Either one, they disagree slightly','Neither, the question is unanswerable'],
  c:'Whole numbers of standard deviations are empirical rule questions, so use the family values.'},
-{id:'n8', t:'normal', q:'The z-score formula is (x − μ)/σ. What does the numerator (x − μ) measure?',
+{id:'n8', t:'normal', q:'The z-score formula is $@frac{x − μ}{σ}$. What does the numerator (x − $μ$) measure?',
  o:['How far the value sits from the mean','How many standard deviations from the mean','How much spread the distribution has','How much area lies to the left'],
  c:'The numerator is a raw distance. It is the division that turns it into standard deviations.'},
-{id:'n9', t:'normal', q:'The z-score formula is (x − μ)/σ. What does dividing by σ accomplish?',
+{id:'n9', t:'normal', q:'The z-score formula is $@frac{x − μ}{σ}$. What does dividing by $σ$ accomplish?',
  o:['It converts the distance into standard deviations','It shifts the centre of the distribution to zero','It converts the distance into a probability','It removes the mean from the calculation'],
  c:'Dividing a distance by the size of one standard deviation counts how many of them fit.'},
 {id:'n10', t:'normal', q:'A value has a z-score of −1.75. What does that tell you?',
@@ -356,7 +580,7 @@ var BANK = [
  o:['Four','Two','Three','Six'],
  c:'Four decimal places for any probability.'},
 {id:'n13', t:'normal', q:'You have a z-score and need the original measurement back. Which rearrangement is right?',
- o:['x = μ + zσ','x = μ − zσ','x = zσ ÷ μ','x = (z − μ) ÷ σ'],
+ o:['$x = μ + zσ$','$x = μ − zσ$','$x = @frac{zσ}{μ}$','$x = @frac{z − μ}{σ}$'],
  c:'Multiply the z by one standard deviation, then step out from the mean.'},
 {id:'n14', t:'normal', q:'What is true of the standard normal model?',
  o:['Its mean is 0 and its standard deviation is 1','Its mean is 1 and its standard deviation is 0','Its mean is 50 and its standard deviation is 10','Its mean and standard deviation are both 1'],
@@ -376,12 +600,12 @@ var BANK = [
  o:['It is approximately normal','It is approximately uniform','It copies the population shape','It is always skewed right'],
  c:'That is what lets you use a normal model even when the population is not normal.'},
 {id:'m2', t:'means', q:'What is the mean of the sampling distribution of the sample mean?',
- o:['μ, the population mean','x̄, the sample mean','μ divided by √n','Zero'],
+ o:['$μ$, the population mean','$@xbar$, the sample mean','$μ$ divided by $@sqrt{n}$','Zero'],
  c:'Sample means centre on the population mean, whatever the sample size.'},
-{id:'m3', t:'means', q:'The standard error of the mean is σ/√n. What does the σ on top represent?',
+{id:'m3', t:'means', q:'The standard error of the mean is $@frac{σ}{@sqrt{n}}$. What does the $σ$ on top represent?',
  o:['The spread of the individual values','The spread of the sample means','The size of the sample','The centre of the population'],
- c:'σ describes individuals. Dividing by √n converts it to the spread of means.'},
-{id:'m4', t:'means', q:'The standard error of the mean is σ/√n. What does dividing by √n accomplish?',
+ c:'$σ$ describes individuals. Dividing by $@sqrt{n}$ converts it to the spread of means.'},
+{id:'m4', t:'means', q:'The standard error of the mean is $@frac{σ}{@sqrt{n}}$. What does dividing by $@sqrt{n}$ accomplish?',
  o:['It shrinks the spread, since averages vary less','It shrinks the centre of the distribution too','It converts the spread into a probability value','It corrects for a population that is skewed'],
  c:'Averaging cancels out extremes, so sample means cluster more tightly than individuals.'},
 {id:'m5', t:'means', q:'The population shape is unknown. What sample size does the central limit theorem ask for?',
@@ -391,54 +615,54 @@ var BANK = [
  o:['Any size at all','At least 30','At least 10','At least 100'],
  c:'Averages of normal data are normal from the very first observation.'},
 {id:'m7', t:'means', q:'As the sample size increases, what happens to the standard error of the mean?',
- o:['It gets smaller','It gets larger','It stays exactly the same','It climbs towards σ'],
- c:'A bigger √n in the denominator makes the whole thing smaller.'},
+ o:['It gets smaller','It gets larger','It stays exactly the same','It climbs towards $σ$'],
+ c:'A bigger $@sqrt{n}$ in the denominator makes the whole thing smaller.'},
 {id:'m8', t:'means', q:'As the sample size increases, what happens to the centre of the sampling distribution?',
- o:['Nothing, it stays at μ','It gets smaller','It gets larger','It moves towards zero'],
+ o:['Nothing, it stays at $μ$','It gets smaller','It gets larger','It moves towards zero'],
  c:'Only the spread responds to sample size. The centre never moves.'},
 {id:'m9', t:'means', q:'Which z-score formula applies to a sample mean?',
- o:['(x̄ − μ) ÷ (σ/√n)','(x̄ − μ) ÷ σ','(x − μ) ÷ (σ/√n)','(μ − x̄) ÷ σ'],
- c:'A sample mean is measured against the standard error, not against σ.'},
+ o:['$@frac{@xbar − μ}{@frac{σ}{@sqrt{n}}}$','$@frac{@xbar − μ}{σ}$','$@frac{x − μ}{@frac{σ}{@sqrt{n}}}$','$@frac{μ − @xbar}{σ}$'],
+ c:'A sample mean is measured against the standard error, not against $σ$.'},
 {id:'m10', t:'means', q:'You need the sample mean that cuts off the bottom 5% of all samples. Which setup is right?',
- o:['x̄ = μ + z(σ/√n)','x̄ = μ + zσ','x̄ = μ − z ÷ √n','x̄ = z(σ/√n)'],
+ o:['$@xbar = μ + z(@frac{σ}{@sqrt{n}})$','$@xbar = μ + zσ$','$@xbar = μ − @frac{z}{@sqrt{n}}$','$@xbar = z(@frac{σ}{@sqrt{n}})$'],
  c:'Same as converting a z back to a value, but stepping out in standard errors.'},
-{id:'m11', t:'means', q:'What is the difference between σ and σ/√n?',
+{id:'m11', t:'means', q:'What is the difference between $σ$ and $@frac{σ}{@sqrt{n}}$?',
  o:['One describes individuals, the other describes sample means','One is a mean and the other is a standard deviation of it','They are two different names for one quantity','One is for means and the other is for proportions'],
  c:'Pick by what the question asks about: one value, or the average of many.'},
-{id:'m12', t:'means', q:'What is the preferred name for σ/√n in this course?',
+{id:'m12', t:'means', q:'What is the preferred name for $@frac{σ}{@sqrt{n}}$ in this course?',
  o:['The standard error','The standard deviation','The sample deviation','The margin of error'],
  c:'Standard error is the term reserved for the spread of a sampling distribution.'},
 
 /* ===================== L16 — Sample Proportions ===================== */
-{id:'p1', t:'props', q:'What does p̂ stand for?',
+{id:'p1', t:'props', q:'What does $@phat$ stand for?',
  o:['The sample proportion','The population proportion','The probability of one success','The predicted proportion'],
  c:'The hat marks it as coming from a sample rather than the whole population.'},
-{id:'p2', t:'props', q:'What is the mean of the sampling distribution of p̂?',
- o:['p, the population proportion','p̂, the sample proportion','n times p','Always 0.5'],
+{id:'p2', t:'props', q:'What is the mean of the sampling distribution of $@phat$?',
+ o:['p, the population proportion','$@phat$, the sample proportion','n times p','Always 0.5'],
  c:'Sample proportions centre on the population proportion.'},
-{id:'p3', t:'props', q:'The standard error of p̂ is √(p(1 − p)/n). What does the p inside represent?',
+{id:'p3', t:'props', q:'The standard error of $@phat$ is $@sqrt{@frac{p(1 − p)}{n}}$. What does the p inside represent?',
  o:['The population proportion','The proportion in your sample','The count of successes','The size of the sample'],
  c:'In a probability question you are told p, so the population value goes in.'},
-{id:'p4', t:'props', q:'The standard error of p̂ is √(p(1 − p)/n). What does dividing by n accomplish?',
+{id:'p4', t:'props', q:'The standard error of $@phat$ is $@sqrt{@frac{p(1 − p)}{n}}$. What does dividing by n accomplish?',
  o:['It shrinks the spread as the sample gets larger','It converts a raw count into a proportion','It moves the centre of the distribution over','It checks the two normality conditions'],
- c:'Same idea as √n for means: bigger samples vary less.'},
+ c:'Same idea as $@sqrt{n}$ for means: bigger samples vary less.'},
 {id:'p5', t:'props', q:'What are the two conditions for using a normal model for a sample proportion?',
- o:['np ≥ 10 and n(1 − p) ≥ 10','np̂ ≥ 10 and n(1 − p̂) ≥ 10','np ≥ 5 and n(1 − p) ≥ 5','n ≥ 30 and p is near 0.5'],
+ o:['np ≥ 10 and n(1 − p) ≥ 10','$n@phat ≥ 10$ and $n(1 − @phat) ≥ 10$','$np ≥ 5$ and $n(1 − p) ≥ 5$','n ≥ 30 and p is near 0.5'],
  c:'Both conditions use the population p, and the threshold in this course is 10.'},
-{id:'p6', t:'props', q:'Which proportion do you use when checking whether np ≥ 10?',
- o:['The population proportion p','The sample proportion p̂','Whichever of the two is larger','The average of the two values'],
+{id:'p6', t:'props', q:'Which proportion do you use when checking whether $np ≥ 10$?',
+ o:['The population proportion p','The sample proportion $@phat$','Whichever of the two is larger','The average of the two values'],
  c:'The condition is about the population, so it is checked on p.'},
 {id:'p7', t:'props', q:'A problem states that 35% of voters favour a measure. What value goes into the formula?',
  o:['0.35','35','0.65','3.5'],
  c:'Percent form has to be converted to a decimal before anything else happens.'},
 {id:'p8', t:'props', q:'Which z-score formula applies to a sample proportion?',
- o:['(p̂ − p) ÷ √(p(1 − p)/n)','(p − p̂) ÷ √(p̂(1 − p̂)/n)','(p̂ − p) ÷ √(p(1 − p))','(p̂ − p) ÷ (p ÷ √n)'],
+ o:['$@frac{@phat − p}{@sqrt{@frac{p(1 − p)}{n}}}$','$@frac{p − @phat}{@sqrt{@frac{@phat(1 − @phat)}{n}}}$','$@frac{@phat − p}{@sqrt{p(1 − p)}}$','$@frac{@phat − p}{@frac{p}{@sqrt{n}}}$'],
  c:'Sample value minus population value, over the standard error.'},
-{id:'p9', t:'props', q:'As the sample size increases, what happens to the standard error of p̂?',
+{id:'p9', t:'props', q:'As the sample size increases, what happens to the standard error of $@phat$?',
  o:['It gets smaller','It gets larger','It stays exactly the same','It climbs towards p'],
  c:'The n sits in the denominator, so a larger sample tightens the distribution.'},
 {id:'p10', t:'props', q:'You need the sample proportion that the top 2% of samples exceed. Which setup is right?',
- o:['p + z√(p(1 − p)/n)','p̂ + z√(p(1 − p)/n)','p + z√(p(1 − p))','p + z ÷ √n'],
+ o:['$p + z@sqrt{@frac{p(1 − p)}{n}}$','$@phat + z@sqrt{@frac{p(1 − p)}{n}}$','$p + z@sqrt{p(1 − p)}$','$p + @frac{z}{@sqrt{n}}$'],
  c:'Step out from the population proportion in standard errors.'},
 {id:'p11', t:'props', q:'A sample has n = 40 and the population has p = 0.10. Does the normal model apply?',
  o:['No, because np is only 4','Yes, because n is at least 30','Yes, because both conditions pass','No, because n(1 − p) is only 4'],
@@ -446,8 +670,8 @@ var BANK = [
 {id:'p12', t:'props', q:'A sample has n = 200 and the population has p = 0.94. Does the normal model apply?',
  o:['Yes, because np is 188 and n(1 − p) is 12','No, because p sits too close to 1','No, because n(1 − p) is under 10','Yes, because the sample size is large'],
  c:'Both products clear 10, which is all the condition asks, even with p near 1.'},
-{id:'p13', t:'props', q:'Which quantity plays the role for proportions that σ/√n plays for means?',
- o:['√(p(1 − p)/n)','p(1 − p)','np and n(1 − p)','p ÷ √n'],
+{id:'p13', t:'props', q:'Which quantity plays the role for proportions that $@frac{σ}{@sqrt{n}}$ plays for means?',
+ o:['$@sqrt{@frac{p(1 − p)}{n}}$','p(1 − p)','np and n(1 − p)','$@frac{p}{@sqrt{n}}$'],
  c:'Both are standard errors. They just come from different kinds of data.'},
 
 /* ===================== L17 — Confidence Intervals ===================== */
@@ -456,64 +680,64 @@ var BANK = [
  c:'Centre, then reach. Every interval in the unit is built that way.'},
 {id:'c2', t:'ci', q:'When do you use a z-interval rather than a t-interval?',
  o:['When the population standard deviation is known','When the data are proportions rather than means','When the sample size happens to be very small','When the sample size comfortably clears 30'],
- c:'Knowing σ is what buys you the z. Without it you are estimating, so t.'},
+ c:'Knowing $σ$ is what buys you the z. Without it you are estimating, so t.'},
 {id:'c3', t:'ci', q:'When do you use a t-interval?',
- o:['When σ is unknown and you have the sample s','When σ is already known from past data','When the data are proportions, not means','When the population is noticeably skewed'],
+ o:['When $σ$ is unknown and you have the sample s','When $σ$ is already known from past data','When the data are proportions, not means','When the population is noticeably skewed'],
  c:'The t accounts for the extra uncertainty in estimating the spread.'},
 {id:'c4', t:'ci', q:'What are the degrees of freedom for a t-interval?',
- o:['n − 1','n','n − 2','n + 1'],
+ o:['$n − 1$','n','n − 2','n + 1'],
  c:'One degree of freedom is spent estimating the mean.'},
-{id:'c5', t:'ci', q:'The margin of error for a z-interval is z*·σ/√n. What job does z* do?',
+{id:'c5', t:'ci', q:'The margin of error for a z-interval is $z@star · @frac{σ}{@sqrt{n}}$. What job does $z@star$ do?',
  o:['It sets how confident the interval is','It measures how spread out the data are','It corrects for the size of the sample','It supplies the centre of the interval'],
- c:'z* comes from the confidence level alone. The rest comes from the data.'},
-{id:'c6', t:'ci', q:'The margin of error for a z-interval is z*·σ/√n. Which part comes from the data rather than the confidence level?',
- o:['The σ/√n part','The z* part','Both parts equally','Neither part'],
- c:'σ and n are features of the study. z* is a choice you make.'},
-{id:'c7', t:'ci', q:'In a one-sample proportion interval the margin of error is z*√(p̂(1 − p̂)/n). Which proportion goes inside the root?',
- o:['p̂, because p is unknown','p, the population proportion','Always 0.5, to be safe','Whichever of the two is larger'],
- c:'You are estimating p, so you cannot use it. The interval leans on p̂ instead.'},
+ c:'$z@star$ comes from the confidence level alone. The rest comes from the data.'},
+{id:'c6', t:'ci', q:'The margin of error for a z-interval is $z@star · @frac{σ}{@sqrt{n}}$. Which part comes from the data rather than the confidence level?',
+ o:['The $@frac{σ}{@sqrt{n}}$ part','The $z@star$ part','Both parts equally','Neither part'],
+ c:'$σ$ and n are features of the study. $z@star$ is a choice you make.'},
+{id:'c7', t:'ci', q:'In a one-sample proportion interval the margin of error is $z@star@sqrt{@frac{@phat(1 − @phat)}{n}}$. Which proportion goes inside the root?',
+ o:['$@phat$, because p is unknown','p, the population proportion','Always 0.5, to be safe','Whichever of the two is larger'],
+ c:'You are estimating p, so you cannot use it. The interval leans on $@phat$ instead.'},
 {id:'c8', t:'ci', q:'A confidence interval runs from 12.4 to 18.6. What is the point estimate?',
  o:['15.5, the midpoint','6.2, the full width','3.1, half the width','31.0, the sum of the ends'],
- c:'The point estimate always sits dead centre: (12.4 + 18.6) ÷ 2.'},
+ c:'The point estimate always sits dead centre: $@frac{12.4 + 18.6}{2}$.'},
 {id:'c9', t:'ci', q:'A confidence interval runs from 12.4 to 18.6. What is the margin of error?',
  o:['3.1, half the width','6.2, the full width','15.5, the midpoint','1.55, a quarter of the width'],
- c:'The margin of error is the reach from the centre: (18.6 − 12.4) ÷ 2.'},
+ c:'The margin of error is the reach from the centre: $@frac{18.6 − 12.4}{2}$.'},
 {id:'c10', t:'ci', q:'How wide is a confidence interval, measured in margins of error?',
  o:['Twice the margin of error','The same as the margin of error','Half the margin of error','Four times the margin of error'],
  c:'It reaches one margin of error each way from the centre.'},
 {id:'c11', t:'ci', q:'You raise the confidence level from 90% to 99%. What happens to the margin of error?',
  o:['It gets bigger','It gets smaller','It stays the same','It depends on the sample size'],
- c:'More confidence needs a wider net, which means a bigger z*.'},
+ c:'More confidence needs a wider net, which means a bigger $z@star$.'},
 {id:'c12', t:'ci', q:'You collect four times as much data. What happens to the margin of error?',
  o:['It is cut in half','It is cut to one quarter','It doubles','It stays the same'],
- c:'The margin of error divides by √n, and √4 is 2.'},
+ c:'The margin of error divides by $@sqrt{n}$, and $@sqrt{4}$ is 2.'},
 {id:'c13', t:'ci', q:'What does 95% confidence actually mean?',
  o:['95% of intervals built this way capture the true parameter','There is a 95% chance the parameter is in this interval','95% of the data values fall inside the interval','The sample is 95% representative of the population'],
  c:'The confidence belongs to the method over many samples, not to this one interval.'},
-{id:'c14', t:'ci', q:'What is z* for a 95% confidence interval?',
+{id:'c14', t:'ci', q:'What is $z@star$ for a 95% confidence interval?',
  o:['1.96','1.645','2.576','1.282'],
  c:'1.96 for 95%, 1.645 for 90%, 2.576 for 99%.'},
-{id:'c15', t:'ci', q:'What is z* for a 90% confidence interval?',
+{id:'c15', t:'ci', q:'What is $z@star$ for a 90% confidence interval?',
  o:['1.645','1.96','2.576','1.282'],
  c:'Less confidence means a smaller critical value than 95%.'},
-{id:'c16', t:'ci', q:'What is z* for a 99% confidence interval?',
+{id:'c16', t:'ci', q:'What is $z@star$ for a 99% confidence interval?',
  o:['2.576','1.96','1.645','2.326'],
  c:'More confidence means a larger critical value than 95%.'},
-{id:'c17', t:'ci', q:'The sample size formula for a mean is n = (z*σ/E)². What does the E represent?',
+{id:'c17', t:'ci', q:'The sample size formula for a mean is n = $@powparen{@frac{z@starσ}{E}}{2}$. What does the E represent?',
  o:['The margin of error you are willing to accept','The standard error of the sampling distribution','The expected value of the data set','The upper endpoint of the interval'],
  c:'E is the precision you are demanding, and demanding more of it costs sample size.'},
-{id:'c18', t:'ci', q:'The sample size formula for a proportion is n = p̂(1 − p̂)(z*/E)². What p̂ do you use with no prior estimate?',
+{id:'c18', t:'ci', q:'The sample size formula for a proportion is n = $@phat(1 − @phat)@powparen{@frac{z@star}{E}}{2}$. What $@phat$ do you use with no prior estimate?',
  o:['0.5','0','1','0.1'],
  c:'Half, because that is the value that makes the required sample largest.'},
 {id:'c19', t:'ci', q:'Why use 0.5 for the proportion when you have no estimate at all?',
- o:['It makes p̂(1 − p̂) as large as it can be, so n is safe','It is simply the average of zero and one, nothing more','It makes the arithmetic come out evenly every time','It makes the resulting interval the narrowest'],
+ o:['It makes $@phat(1 − @phat)$ as large as it can be, so n is safe','It is simply the average of zero and one, nothing more','It makes the arithmetic come out evenly every time','It makes the resulting interval the narrowest'],
  c:'Planning for the worst case means the sample will be big enough whatever p turns out to be.'},
 {id:'c20', t:'ci', q:'A sample size calculation comes out as 184.3. What do you report?',
  o:['185','184','184.3','180'],
  c:'Always round a sample size up. Rounding down would miss the margin of error you asked for.'},
-{id:'c21', t:'ci', q:'You are given a sample mean and a sample standard deviation, with no σ. Which interval is it?',
+{id:'c21', t:'ci', q:'You are given a sample mean and a sample standard deviation, with no $σ$. Which interval is it?',
  o:['A t-interval','A z-interval','A one-sample proportion interval','Either z or t works equally'],
- c:'Having s instead of σ is exactly what the t-interval is for.'},
+ c:'Having s instead of $σ$ is exactly what the t-interval is for.'},
 
 /* ===================== L18 — Correlation ===================== */
 {id:'r1', t:'corr', q:'What does r measure?',
@@ -559,7 +783,7 @@ var BANK = [
  o:['Possibly near zero, since r sees only linear patterns','Near 1, since the pattern is obviously a strong one','Exactly zero, in every single case like this','Undefined, since the pattern is not a linear one'],
  c:'A strong curve can produce a tiny r. That is why the plot comes first.'},
 {id:'r15', t:'corr', q:'What should you always do before you trust a value of r?',
- o:['Look at the scatterplot','Compute the regression slope','Check the size of the sample','Square it to get r²'],
+ o:['Look at the scatterplot','Compute the regression slope','Check the size of the sample','Square it to get $r@sup{2}$'],
  c:'r summarises only linear structure, and a plot shows everything else.'},
 {id:'r16', t:'corr', q:'One point sits far away from all the others. What can it do to r?',
  o:['Change it substantially','Nothing, because r is resistant','Force it to exactly zero','Only flip its sign'],
@@ -581,19 +805,19 @@ var BANK = [
 {id:'g2', t:'reg', q:'What exactly does the least squares line minimise?',
  o:['The sum of the squared residuals','The sum of the residuals themselves','The single largest residual','The number of nonzero residuals'],
  c:'Squaring stops positives and negatives from cancelling, and punishes big misses.'},
-{id:'g3', t:'reg', q:'In ŷ = a + bx, what does ŷ represent?',
+{id:'g3', t:'reg', q:'In $@yhat = a + bx$, what does ŷ represent?',
  o:['The value the line predicts','The value actually observed','The size of the residual','The mean of all the y values'],
  c:'The hat means predicted. Plain y is what actually happened.'},
-{id:'g4', t:'reg', q:'In ŷ = a + bx, what does b tell you in context?',
+{id:'g4', t:'reg', q:'In $@yhat = a + bx$, what does b tell you in context?',
  o:['The predicted change in y for a one-unit rise in x','The predicted value of y when x is equal to zero','The strength of the linear association','The typical size of one of the residuals'],
  c:'Slope is a rate: per one unit of x, this much predicted change in y.'},
-{id:'g5', t:'reg', q:'In ŷ = a + bx, what does a tell you in context?',
+{id:'g5', t:'reg', q:'In $@yhat = a + bx$, what does a tell you in context?',
  o:['The predicted y when x equals zero','The predicted change in y per unit of x','The average of the residuals','The correlation between x and y'],
  c:'The intercept is the prediction at x = 0, which may or may not be meaningful.'},
-{id:'g6', t:'reg', q:'The residual formula is y − ŷ. What is the y in that expression?',
+{id:'g6', t:'reg', q:'The residual formula is $y − @yhat$. What is the y in that expression?',
  o:['The value that was actually observed','The value that the line predicts','The mean of all the y values','The slope multiplied by x'],
  c:'Observed minus predicted. The real data value always comes first.'},
-{id:'g7', t:'reg', q:'The residual formula is y − ŷ. What is the ŷ in that expression?',
+{id:'g7', t:'reg', q:'The residual formula is $y − @yhat$. What is the ŷ in that expression?',
  o:['The value that the line predicts','The value that was actually observed','The intercept of the line','The correlation coefficient'],
  c:'ŷ is what the model said would happen, and the residual is the shortfall.'},
 {id:'g8', t:'reg', q:'A residual comes out as +3.2. What does that tell you?',
@@ -608,10 +832,10 @@ var BANK = [
 {id:'g11', t:'reg', q:'A data point lies exactly on the regression line. What is its residual?',
  o:['Zero','One','Undefined','Equal to its ŷ'],
  c:'Observed and predicted agree, so the difference is nothing.'},
-{id:'g12', t:'reg', q:'What does r² tell you?',
+{id:'g12', t:'reg', q:'What does $r@sup{2}$ tell you?',
  o:['The proportion of the variation in y explained by x','The strength and the direction of the association','The steepness of the regression line','The typical size of a residual'],
- c:'r² is about explained variation, and unlike r it carries no direction.'},
-{id:'g13', t:'reg', q:'A regression has r² = 0.64 and a positive slope. What is r?',
+ c:'$r@sup{2}$ is about explained variation, and unlike r it carries no direction.'},
+{id:'g13', t:'reg', q:'A regression has $r@sup{2}$ = 0.64 and a positive slope. What is r?',
  o:['0.80','0.41','−0.80','0.32'],
  c:'Take the square root, then give it the sign of the slope.'},
 {id:'g14', t:'reg', q:'A regression line has a negative slope. What sign does r have?',
@@ -626,7 +850,7 @@ var BANK = [
 {id:'g17', t:'reg', q:'A residual plot shows a clear curved pattern. What does that mean?',
  o:['A linear model is not appropriate here','A linear model is appropriate here','The value of r must be zero','The residuals were computed incorrectly'],
  c:'Leftover curvature means a straight line was the wrong shape.'},
-{id:'g18', t:'reg', q:'The line is ŷ = 4 + 2x. At x = 5 the observed y is 16. What is the residual?',
+{id:'g18', t:'reg', q:'The line is $@yhat = 4 + 2x$. At x = 5 the observed y is 16. What is the residual?',
  o:['+2','−2','+14','+16'],
  c:'Predicted is 4 + 2(5) = 14, and observed minus predicted is 16 − 14 = 2.'},
 {id:'g19', t:'reg', q:'What does a residual measure, in one phrase?',
@@ -635,53 +859,53 @@ var BANK = [
 
 /* ===================== Cross-lesson — Choosing the Tool ===================== */
 {id:'x1', t:'choose', q:'The probability that one randomly chosen adult is taller than 72 inches.',
- o:['Forward, using σ','Forward, using σ/√n','Inverse, using σ','Inverse, using σ/√n'],
+ o:['Forward, using $σ$','Forward, using $@frac{σ}{@sqrt{n}}$','Inverse, using $σ$','Inverse, using $@frac{σ}{@sqrt{n}}$'],
  c:'One individual, and you are given a value and want a probability.'},
 {id:'x2', t:'choose', q:'The probability that the mean height of 36 randomly chosen adults is above 70 inches.',
- o:['Forward, using σ/√n','Forward, using σ','Inverse, using σ/√n','Inverse, using σ'],
- c:'"Mean of 36" makes this a sample mean, so the spread shrinks by √n.'},
+ o:['Forward, using $@frac{σ}{@sqrt{n}}$','Forward, using $σ$','Inverse, using $@frac{σ}{@sqrt{n}}$','Inverse, using $σ$'],
+ c:'"Mean of 36" makes this a sample mean, so the spread shrinks by $@sqrt{n}$.'},
 {id:'x3', t:'choose', q:'The height that only the tallest 5% of adults exceed.',
- o:['Inverse, using σ','Inverse, using σ/√n','Forward, using σ','Forward, using σ/√n'],
+ o:['Inverse, using $σ$','Inverse, using $@frac{σ}{@sqrt{n}}$','Forward, using $σ$','Forward, using $@frac{σ}{@sqrt{n}}$'],
  c:'You are handed a probability and asked for a value, for a single individual.'},
 {id:'x4', t:'choose', q:'The sample mean that the top 1% of samples of size 50 exceed.',
- o:['Inverse, using σ/√n','Inverse, using σ','Forward, using σ/√n','Forward, using σ'],
+ o:['Inverse, using $@frac{σ}{@sqrt{n}}$','Inverse, using $σ$','Forward, using $@frac{σ}{@sqrt{n}}$','Forward, using $σ$'],
  c:'A probability in, a value out, and it is about sample means.'},
 {id:'x5', t:'choose', q:'The probability that more than 60% of a sample of 150 voters approve.',
- o:['Forward, using √(p(1 − p)/n)','Forward, using σ/√n','Inverse, using √(p(1 − p)/n)','Forward, using σ'],
+ o:['Forward, using $@sqrt{@frac{p(1 − p)}{n}}$','Forward, using $@frac{σ}{@sqrt{n}}$','Inverse, using $@sqrt{@frac{p(1 − p)}{n}}$','Forward, using $σ$'],
  c:'A percent within a sample is a sample proportion.'},
 {id:'x6', t:'choose', q:'The sample proportion that the lowest 10% of samples fall below.',
- o:['Inverse, using √(p(1 − p)/n)','Forward, using √(p(1 − p)/n)','Inverse, using σ/√n','Inverse, using σ'],
+ o:['Inverse, using $@sqrt{@frac{p(1 − p)}{n}}$','Forward, using $@sqrt{@frac{p(1 − p)}{n}}$','Inverse, using $@frac{σ}{@sqrt{n}}$','Inverse, using $σ$'],
  c:'A probability in, a value out, and the value is a proportion.'},
 {id:'x7', t:'choose', q:'The problem asks about one individual value from a normal population. What do you divide by?',
- o:['σ, the standard deviation of the population','σ/√n, the standard error of the sample mean','√(p(1 − p)/n), the standard error of a proportion','s/√n, the estimated standard error of the mean'],
- c:'No averaging is happening, so no √n belongs in the denominator.'},
+ o:['$σ$, the standard deviation of the population','$@frac{σ}{@sqrt{n}}$, the standard error of the sample mean','$@sqrt{@frac{p(1 − p)}{n}}$, the standard error of a proportion','$@frac{s}{@sqrt{n}}$, the estimated standard error of the mean'],
+ c:'No averaging is happening, so no $@sqrt{n}$ belongs in the denominator.'},
 {id:'x8', t:'choose', q:'The problem asks about the mean of a sample. What do you divide by?',
- o:['σ/√n, the standard error of the sample mean','σ, the standard deviation of the population','√(p(1 − p)/n), the standard error of a proportion','s/√n, the estimated standard error of the mean'],
- c:'Averages vary less than individuals, and √n is what accounts for it.'},
+ o:['$@frac{σ}{@sqrt{n}}$, the standard error of the sample mean','$σ$, the standard deviation of the population','$@sqrt{@frac{p(1 − p)}{n}}$, the standard error of a proportion','$@frac{s}{@sqrt{n}}$, the estimated standard error of the mean'],
+ c:'Averages vary less than individuals, and $@sqrt{n}$ is what accounts for it.'},
 {id:'x9', t:'choose', q:'The problem asks about the proportion within a sample. What do you divide by?',
- o:['√(p(1 − p)/n), the standard error of a proportion','σ/√n, the standard error of the sample mean','σ, the standard deviation of the population','s/√n, the estimated standard error of the mean'],
+ o:['$@sqrt{@frac{p(1 − p)}{n}}$, the standard error of a proportion','$@frac{σ}{@sqrt{n}}$, the standard error of the sample mean','$σ$, the standard deviation of the population','$@frac{s}{@sqrt{n}}$, the estimated standard error of the mean'],
  c:'Proportions have a standard error of their own, built from p and n.'},
 {id:'x10', t:'choose', q:'The word "average" appears in a probability question. What does it signal?',
- o:['A sample mean, so divide σ by √n','A single individual, so just use σ','A proportion, so use the proportion standard error','Nothing useful about which formula to use'],
+ o:['A sample mean, so divide $σ$ by $@sqrt{n}$','A single individual, so just use $σ$','A proportion, so use the proportion standard error','Nothing useful about which formula to use'],
  c:'Average, mean and "the mean of n" all point to the standard error of the mean.'},
 {id:'x11', t:'choose', q:'A question hands you a probability and asks for a cutoff value. Which direction is it?',
  o:['Inverse, so invNorm','Forward, so normalcdf','Neither, no normal model is needed','Both, run in sequence'],
  c:'Probability in, value out, is always the inverse direction.'},
 {id:'x12', t:'choose', q:'A question asks for the middle 90% of all sample means. Which direction is it?',
- o:['Inverse, using σ/√n','Forward, using σ/√n','Inverse, using σ','Forward, using σ'],
+ o:['Inverse, using $@frac{σ}{@sqrt{n}}$','Forward, using $@frac{σ}{@sqrt{n}}$','Inverse, using $σ$','Forward, using $σ$'],
  c:'A central percentage means two cutoffs, so it is inverse, and on sample means.'},
-{id:'x13', t:'choose', q:'A question asks you to check whether np ≥ 10. Which lesson is this?',
+{id:'x13', t:'choose', q:'A question asks you to check whether $np ≥ 10$. Which lesson is this?',
  o:['Sample proportions','Sample means','Confidence intervals','Uniform distributions'],
  c:'That pair of conditions belongs to the proportion sampling distribution.'},
 {id:'x14', t:'choose', q:'A question asks you to check whether n ≥ 30. Which lesson is this?',
  o:['Sample means','Sample proportions','Correlation','Uniform distributions'],
  c:'Thirty is the central limit theorem threshold for means.'},
 {id:'x15', t:'choose', q:'You are building an interval to estimate an unknown proportion. Which proportion goes in the standard error?',
- o:['p̂, since p is the unknown being estimated','p, the population proportion you want','Always 0.5, which is the safe choice','Both of them, averaged together carefully'],
- c:'In a probability question you know p. In an interval you do not, so p̂ stands in.'},
-{id:'x16', t:'choose', q:'You have a sample standard deviation s and no σ, and you need an interval. Which one?',
+ o:['$@phat$, since p is the unknown being estimated','p, the population proportion you want','Always 0.5, which is the safe choice','Both of them, averaged together carefully'],
+ c:'In a probability question you know p. In an interval you do not, so $@phat$ stands in.'},
+{id:'x16', t:'choose', q:'You have a sample standard deviation s and no $σ$, and you need an interval. Which one?',
  o:['A t-interval','A z-interval','A proportion interval','Either z or t, they agree'],
- c:'No σ means the t-interval, with n − 1 degrees of freedom.'},
+ c:'No $σ$ means the t-interval, with $n − 1$ degrees of freedom.'},
 {id:'x17', t:'choose', q:'A question gives you a value and asks how likely it is. Which direction is it?',
  o:['Forward, so normalcdf','Inverse, so invNorm','Neither, no normal model is needed','Both, run in sequence'],
  c:'Value in, probability out, is the forward direction.'}
@@ -936,6 +1160,22 @@ function showPanel(i){
 function metric(b,s){
   var d = el('div','metric'); d.appendChild(el('b',null,b)); d.appendChild(el('small',null,s)); return d;
 }
+/* Prose goes in as a text node and formulas go in as rendered spans, so no
+   displayed string can carry markup of its own into the page. */
+function setMixed(node, s){
+  node.innerHTML = '';
+  mathParts(s).forEach(function(p){
+    if(!p.math){ node.appendChild(document.createTextNode(p.text)); return; }
+    var sp = document.createElement('span');
+    sp.className = 'mt';
+    sp.innerHTML = mathHTML(p.text);
+    sp.setAttribute('role', 'math');
+    sp.setAttribute('aria-label', mathPlain(p.text));
+    node.appendChild(sp);
+  });
+  return node;
+}
+function mixedEl(tag, cls, s){ return setMixed(el(tag, cls), s); }
 function stepper(hostId, get, set, lo, hi, what){
   var h = $(hostId); h.innerHTML = '';
   var minus = el('button', null, '−'); minus.type='button';
@@ -1039,7 +1279,7 @@ function drawProgress(){
       var it = itemById(id);
       if(!it) return;
       var tp = topicById(it.t);
-      var d = el('div', null, it.q);
+      var d = mixedEl('div', null, it.q);
       d.appendChild(el('span', null, tp.lesson + ' · ' + tp.label));
       list.appendChild(d);
     });
@@ -1085,7 +1325,8 @@ function drawPlay(){
     sb.appendChild(el('span','pill','from your review pile'));
   }
 
-  $('question').textContent = it.q;
+  $('question').innerHTML = '';
+  $('question').appendChild(mixedEl('div', 'qbody', it.q));
 
   var oh = $('opts'), fb = $('feedback'), pb = $('playbtns');
   oh.innerHTML = ''; fb.innerHTML = ''; pb.innerHTML = '';
@@ -1094,8 +1335,12 @@ function drawPlay(){
   opts.forEach(function(text, i){
     var b = el('button','opt');
     b.type = 'button';
+    /* the authored source stays on the element, so the marking logic and the
+       tests compare source text rather than rendered spans */
+    b.setAttribute('data-opt', text);
+    b.setAttribute('aria-label', LETTERS[i] + '. ' + plainText(text));
     b.appendChild(el('span','ltr', LETTERS[i]));
-    b.appendChild(el('span', null, text));
+    b.appendChild(mixedEl('span', null, text));
     if(S.revealed){
       b.disabled = true;
       if(i === right) b.className = 'opt right';
@@ -1146,9 +1391,7 @@ function tag(k, v){
   return s;
 }
 function clueBox(it){
-  var c = el('div','clue');
-  c.textContent = it.c;
-  return c;
+  return mixedEl('div','clue', it.c);
 }
 function answer(slot){
   var it = itemById(S.current);
@@ -1208,12 +1451,10 @@ function drawSummary(){
       var it = itemById(x.id);
       if(!it) return;
       var tp = topicById(it.t);
-      var dd = el('div', null, it.q);
-      var pk = el('span','pick');
-      pk.textContent = 'You chose: ' + x.picked;
-      dd.appendChild(pk);
-      dd.appendChild(el('span', null, 'Answer: ' + it.o[ANSWER_INDEX()]));
-      dd.appendChild(el('span', null, tp.lesson + ' · ' + it.c));
+      var dd = mixedEl('div', null, it.q);
+      dd.appendChild(mixedEl('span','pick', 'You chose: ' + x.picked));
+      dd.appendChild(mixedEl('span', null, 'Answer: ' + it.o[ANSWER_INDEX()]));
+      dd.appendChild(mixedEl('span', null, tp.lesson + ' · ' + it.c));
       list.appendChild(dd);
     });
     mi.appendChild(list);
