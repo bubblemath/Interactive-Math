@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conveyor Belt Film Explorer — ChE 353</title>
+<style>
+  :root{
+    --paper:#F6F8FA; --panel:#FFFFFF; --ink:#101823; --ink-soft:#5A6675;
+    --rule:#CBD5E1; --rule-soft:#E4EAF1; --navy:#16305C;
+    --flux:#0F7A6E; --temp:#B3202B; --gen:#6B4EA8; --clad:#4A6FA5;
+    --oil:#C9922B; --focus:#0F7A6E;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding:28px 20px 60px}
+  .wrap{max-width:1120px;margin:0 auto}
+
+  .masthead{border-bottom:2px solid var(--navy);padding-bottom:14px}
+  h1{font-family:Georgia,"Iowan Old Style","Times New Roman",serif;font-weight:600;
+     font-size:clamp(24px,4vw,34px);line-height:1.15;letter-spacing:-.01em;
+     color:var(--navy);margin:0 0 6px}
+  .standfirst{max-width:76ch;color:var(--ink-soft);font-size:15px;margin:0}
+
+  .tabs{display:flex;border-bottom:1px solid var(--rule);margin:0 0 22px;flex-wrap:wrap}
+  .tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;
+    padding:13px 18px 11px;font:inherit;font-size:14.5px;color:var(--ink-soft);
+    cursor:pointer;margin-bottom:-1px}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{color:var(--navy);font-weight:600;border-bottom-color:var(--navy)}
+  .tab:focus-visible{outline:2px solid var(--focus);outline-offset:-3px}
+
+  .lede{max-width:80ch;margin:0 0 20px;color:var(--ink-soft)}
+  .lede strong{color:var(--ink);font-weight:600}
+
+  .stage{display:grid;grid-template-columns:minmax(0,1fr) 332px;gap:22px;align-items:start}
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:900px){.stage,.duo{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--rule)}
+  .card>h2{font-family:Georgia,"Iowan Old Style",serif;font-size:15px;font-weight:600;
+    color:var(--navy);margin:0;padding:11px 16px 10px;border-bottom:1px solid var(--rule-soft)}
+  .card .body{padding:16px}
+
+  canvas{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
+  canvas:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .canvhost{padding:12px 0 0}
+  .hint{font-size:12.5px;color:var(--ink-soft);padding:4px 16px 10px}
+
+  .ctl{margin-bottom:13px}
+  .ctl:last-child{margin-bottom:0}
+  .ctl label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    font-size:13.5px;margin-bottom:5px}
+  .ctl .grouplabel{display:block;font-size:13.5px;margin-bottom:5px}
+  .val{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12.5px;
+    font-variant-numeric:tabular-nums;color:var(--navy)}
+  input[type=range]{width:100%;accent-color:var(--navy);margin:0}
+  input[type=range]:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+
+  .seg{display:flex;flex-wrap:wrap;border:1px solid var(--rule)}
+  .seg button{flex:1 1 auto;appearance:none;background:var(--panel);border:0;
+    border-right:1px solid var(--rule);padding:7px 5px;font:inherit;font-size:11.5px;
+    color:var(--ink-soft);cursor:pointer;white-space:nowrap}
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed="true"]{background:var(--navy);color:#fff}
+  .seg button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+  .btn{appearance:none;width:100%;background:var(--navy);color:#fff;border:0;
+    padding:9px;font:inherit;font-size:13px;cursor:pointer}
+  .btn:hover{background:#1d3f75}
+  .btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+  .divider{height:1px;background:var(--rule-soft);margin:15px 0}
+
+  .eqn{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12.5px;
+    font-variant-numeric:tabular-nums;line-height:1.9}
+  .eqn .row{display:flex;justify-content:space-between;gap:12px}
+  .eqn .k{color:var(--ink-soft)}
+  .eqn .v{color:var(--ink);font-weight:600}
+  .eqn .v.flux{color:var(--flux)}
+  .eqn .v.temp{color:var(--temp)}
+  .eqn .v.big{font-size:15px}
+  .fracline{border-top:1px solid var(--rule);margin:6px 0}
+
+  .flag{display:inline-block;padding:2px 8px;border-radius:2px;font-size:11.5px;
+    font-weight:600;font-family:ui-sans-serif,system-ui,sans-serif}
+  .flag.ok{background:#EAF3EC;color:var(--flux)}
+  .flag.warn{background:#FDF6E3;color:#8A6D1F}
+  .flag.bad{background:#FBE9E7;color:var(--temp)}
+
+  .note{margin-top:22px;padding:14px 18px;background:#EFF4F0;
+    border-left:3px solid var(--flux);max-width:84ch;font-size:14.5px}
+  .note b{color:var(--navy)}
+  .note.caution{background:#FDF6E3;border-left-color:#C9A227}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink-soft);
+    padding:0 16px 12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:16px;height:3px;border-radius:2px}
+
+  table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.tbl th{text-align:right;font-weight:600;font-size:11.5px;color:var(--ink-soft);
+    padding:5px 7px;border-bottom:1px solid var(--rule)}
+  table.tbl th:first-child,table.tbl td:first-child{text-align:left}
+  table.tbl td{padding:5px 7px;border-bottom:1px solid var(--rule-soft);
+    font-variant-numeric:tabular-nums;text-align:right}
+  table.tbl tr.on td{background:#EFF4F0;font-weight:600}
+
+  .foot{margin-top:34px;padding-top:12px;border-top:1px solid var(--rule);
+    font-size:12.5px;color:var(--ink-soft);max-width:84ch}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Conveyor Belt Film Explorer</h1>
+    <p class="standfirst">The belt drags oil up the incline; gravity pulls it back down. Those two effects fight inside the film, and the winner changes with depth — which is exactly what the velocity profile is telling you.</p>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-a" aria-controls="p-a" aria-selected="true">Inside the film</button>
+    <button class="tab" role="tab" id="tab-b" aria-controls="p-b" aria-selected="false">When the skimmer fails</button>
+    <button class="tab" role="tab" id="tab-c" aria-controls="p-c" aria-selected="false">What the boundary conditions do</button>
+  </div>
+
+  <!-- ===================== PANEL A ===================== -->
+  <section id="p-a" role="tabpanel" aria-labelledby="tab-a">
+    <p class="lede">Each arrow is the oil velocity at that depth. <strong>Thicken the film and watch the outer arrows shrink, stop, and turn around</strong> while the ones near the belt still march up the incline. The curve through the arrow tips is the profile V<sub>z</sub>(x).</p>
+
+    <div class="stage">
+      <div>
+        <div class="card">
+          <h2>The belt and the oil film</h2>
+          <div class="canvhost"><canvas id="cvA" tabindex="0" aria-label="Inclined belt with oil film and velocity arrows. Arrow keys move the measuring depth."></canvas></div>
+          <p class="hint">Drag across the film, or focus it and use ← → &nbsp;·&nbsp; green arrows go up the belt, red go back down</p>
+        </div>
+        <div class="duo" style="margin-top:18px">
+          <div class="card">
+            <h2>Velocity profile V<sub>z</sub>(x)</h2>
+            <div id="plotA1"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--flux)"></i>V<sub>z</sub>(x)</span>
+              <span><i class="swatch" style="background:var(--ink-soft)"></i>belt speed U</span>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Shear stress τ<sub>xz</sub>(x)</h2>
+            <div id="plotA2"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--temp)"></i>τ<sub>xz</sub>(x)</span>
+              <span>linear, and zero at the free surface</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <span class="grouplabel" id="aFlL">Fluid</span>
+            <div class="seg" id="aFl" role="group" aria-labelledby="aFlL">
+              <button data-f="lightoil" aria-pressed="false">Light oil</button>
+              <button data-f="crude" aria-pressed="true">Crude</button>
+              <button data-f="heavy" aria-pressed="false">Heavy oil</button>
+              <button data-f="water" aria-pressed="false">Water</button>
+            </div>
+          </div>
+          <div class="ctl">
+            <label for="aU">Belt speed U <span class="val" id="aUv"></span></label>
+            <input type="range" id="aU" min="0" max="1" step="0.005" value="0.30">
+          </div>
+          <div class="ctl">
+            <label for="aA">Film thickness a <span class="val" id="aAv"></span></label>
+            <input type="range" id="aA" min="0.2" max="12" step="0.05" value="2.0">
+          </div>
+          <div class="ctl">
+            <label for="aTh">Belt angle θ <span class="val" id="aThv"></span></label>
+            <input type="range" id="aTh" min="0" max="90" step="1" value="30">
+          </div>
+          <div class="ctl">
+            <label for="aMu">Viscosity μ <span class="val" id="aMuv"></span></label>
+            <input type="range" id="aMu" min="0.01" max="2" step="0.01" value="0.20">
+          </div>
+          <div class="ctl">
+            <label for="aRho">Density ρ <span class="val" id="aRhov"></span></label>
+            <input type="range" id="aRho" min="700" max="1200" step="5" value="900">
+          </div>
+          <div class="ctl">
+            <label for="aX">Depth into film x <span class="val" id="aXv"></span></label>
+            <input type="range" id="aX" min="0" max="12" step="0.02" value="1.0">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">ρg sinθ/μ</span><span class="v" id="aK"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">V<sub>z</sub> at this x</span><span class="v flux big" id="aVx"></span></div>
+            <div class="row"><span class="k">τ<sub>xz</sub> at this x</span><span class="v temp" id="aTx"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">V<sub>z</sub>(0) = U (max)</span><span class="v" id="aV0"></span></div>
+            <div class="row"><span class="k">V<sub>z</sub>(a) surface</span><span class="v" id="aVa"></span></div>
+            <div class="row"><span class="k">⟨V<sub>z</sub>⟩ average</span><span class="v" id="aVavg"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">Q (W = 1.5 m)</span><span class="v flux" id="aQ"></span></div>
+            <div class="row"><span class="k">τ on the belt</span><span class="v" id="aTau0"></span></div>
+            <div class="row"><span class="k">verdict</span><span id="aVerdict"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteA"></p>
+  </section>
+
+  <!-- ===================== PANEL B ===================== -->
+  <section id="p-b" role="tabpanel" aria-labelledby="tab-b">
+    <p class="lede">Everything about whether this machine works collapses onto one length, <strong>a* = √(μU / ρg sinθ)</strong>. The three things that can go wrong happen at <strong>a*, √2 a* and √3 a*</strong> — and that 1 : 1.414 : 1.732 spacing is fixed, whatever the oil or the angle.</p>
+
+    <div class="duo">
+      <div class="card">
+        <h2>Flow rate against film thickness</h2>
+        <div id="plotB1"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--flux)"></i>Q(a)</span>
+          <span>shaded bands mark the three regimes</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Surface velocity and average velocity</h2>
+        <div id="plotB2"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--clad)"></i>V<sub>z</sub>(a) surface</span>
+          <span><i class="swatch" style="background:var(--temp)"></i>⟨V<sub>z</sub>⟩ average</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage" style="margin-top:22px">
+      <div class="card">
+        <h2>Where your operating point sits</h2>
+        <div class="body"><div id="bTable"></div></div>
+      </div>
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="bU">Belt speed U <span class="val" id="bUv"></span></label>
+            <input type="range" id="bU" min="0.02" max="1" step="0.005" value="0.30">
+          </div>
+          <div class="ctl">
+            <label for="bA">Film thickness a <span class="val" id="bAv"></span></label>
+            <input type="range" id="bA" min="0.2" max="14" step="0.05" value="2.0">
+          </div>
+          <div class="ctl">
+            <label for="bTh">Belt angle θ <span class="val" id="bThv"></span></label>
+            <input type="range" id="bTh" min="5" max="90" step="1" value="30">
+          </div>
+          <div class="ctl">
+            <label for="bMu">Viscosity μ <span class="val" id="bMuv"></span></label>
+            <input type="range" id="bMu" min="0.01" max="2" step="0.01" value="0.20">
+          </div>
+
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">a* (peak flow)</span><span class="v flux big" id="bAst"></span></div>
+            <div class="row"><span class="k">√2 a* (surface stops)</span><span class="v" id="bA2"></span></div>
+            <div class="row"><span class="k">√3 a* (nothing out)</span><span class="v" id="bA3"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">your a / a*</span><span class="v big" id="bRatio"></span></div>
+            <div class="row"><span class="k">Q now</span><span class="v flux" id="bQ"></span></div>
+            <div class="row"><span class="k">Q at the peak</span><span class="v" id="bQmax"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">verdict</span><span id="bVerdict"></span></div>
+          </div>
+          <div class="divider"></div>
+          <div class="ctl">
+            <button class="btn" id="bSnap">Set a to the peak-flow value</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteB"></p>
+  </section>
+
+  <!-- ===================== PANEL C ===================== -->
+  <section id="p-c" role="tabpanel" aria-labelledby="tab-c">
+    <p class="lede">Each integration leaves behind a constant, and a boundary condition is what pins it down. Here you can <strong>set C₁ and C₂ by hand and watch what goes wrong</strong>. The physics is only satisfied at one pair of values — everything else is a perfectly good solution of the differential equation that describes a different world.</p>
+
+    <div class="stage">
+      <div>
+        <div class="duo">
+          <div class="card">
+            <h2>τ<sub>xz</sub> = −ρg sinθ·x + C₁</h2>
+            <div id="plotC1"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--temp)"></i>your τ</span>
+              <span><i class="swatch" style="background:var(--ink-soft)"></i>correct τ</span>
+            </div>
+          </div>
+          <div class="card">
+            <h2>V<sub>z</sub> from that τ</h2>
+            <div id="plotC2"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--flux)"></i>your V<sub>z</sub></span>
+              <span><i class="swatch" style="background:var(--ink-soft)"></i>correct V<sub>z</sub></span>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h2>Are the two boundary conditions satisfied?</h2>
+          <div class="body"><div id="cChecks"></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Set the constants yourself</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="cC1">C₁ <span class="val" id="cC1v"></span></label>
+            <input type="range" id="cC1" min="0" max="2" step="0.005" value="0.45">
+          </div>
+          <div class="ctl">
+            <label for="cC2">C₂ <span class="val" id="cC2v"></span></label>
+            <input type="range" id="cC2" min="-0.3" max="0.8" step="0.005" value="0.12">
+          </div>
+          <div class="ctl">
+            <button class="btn" id="cSnap">Snap both to the correct values</button>
+          </div>
+
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">correct C₁ = ρga sinθ</span><span class="v" id="cC1true"></span></div>
+            <div class="row"><span class="k">correct C₂ = U</span><span class="v" id="cC2true"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">τ at free surface</span><span class="v" id="cTauA"></span></div>
+            <div class="row"><span class="k">V<sub>z</sub> at the belt</span><span class="v" id="cV0"></span></div>
+            <div class="row"><span class="k">parabola vertex at x =</span><span class="v" id="cVert"></span></div>
+            <div class="row"><span class="k">free surface is at x =</span><span class="v" id="cFree"></span></div>
+          </div>
+
+          <div class="divider"></div>
+          <div class="ctl">
+            <label for="cA">Film thickness a <span class="val" id="cAv"></span></label>
+            <input type="range" id="cA" min="1" max="8" step="0.05" value="3.0">
+          </div>
+          <div class="ctl">
+            <label for="cU">Belt speed U <span class="val" id="cUv"></span></label>
+            <input type="range" id="cU" min="0.05" max="0.8" step="0.005" value="0.30">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteC"></p>
+  </section>
+
+  <p class="foot">Companion to the ChE 353 Topic 10 study guide. The model matches the lecture: steady, laminar, fully developed flow of a film of uniform thickness <em>a</em> on a belt inclined at θ from the horizontal, with no-slip at the belt and zero shear at the oil–air surface. Belt width is fixed at W = 1.5 m for the flow-rate figures. Setting U = 0 turns the belt off and reduces the problem to the falling film of BSL §2.2.</p>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Shorthands and number formatting
+   ============================================================ */
+const $  = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
+const MM = 1e-3;          // millimetres -> metres
+const G  = 9.81;          // m/s^2
+const W_BELT = 1.5;       // belt width, m
+
+function sup(n){
+  const m={"-":"⁻","0":"⁰","1":"¹","2":"²","3":"³",
+           "4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹"};
+  return String(n).split("").map(c=>m[c]||c).join("");
+}
+function fmt(v,d){
+  if(!isFinite(v)) return "—";
+  if(v===0) return "0";
+  const a=Math.abs(v);
+  if(a>=1e5||a<1e-3){ const e=Math.floor(Math.log10(a));
+    return (v/Math.pow(10,e)).toFixed(d===undefined?2:d)+"×10"+sup(e); }
+  if(a>=1000) return v.toFixed(0);
+  if(a>=100)  return v.toFixed(d===undefined?0:d);
+  if(a>=10)   return v.toFixed(d===undefined?1:d);
+  return v.toFixed(d===undefined?3:d);
+}
+function ticks(lo,hi,count){
+  if(!(hi>lo)) return [lo];
+  const raw=(hi-lo)/count, mag=Math.pow(10,Math.floor(Math.log10(raw))), n=raw/mag;
+  const step=(n<1.5?1:n<3?2:n<7?5:10)*mag, out=[];
+  for(let t=Math.ceil(lo/step)*step; t<=hi+step*1e-9; t+=step) out.push(t);
+  return out;
+}
+
+/* ============================================================
+   THE PHYSICS.  Every formula below is straight from the guide.
+     k      = rho g sin(theta) / mu          [1/(m.s)]
+     Vz(x)  = U - k (a x - x^2/2)
+     tau(x) = rho g sin(theta) (a - x)
+     <Vz>   = U - k a^2/3
+     Q      = <Vz> a W
+     a*     = sqrt(mu U / (rho g sin theta)) = sqrt(U/k)
+   Lengths arrive in millimetres from the sliders, so every call
+   converts to metres first.
+   ============================================================ */
+const kOf    = (rho,mu,thDeg) => rho*G*Math.sin(thDeg*Math.PI/180)/mu;
+const VzOf   = (x,a,U,k) => U - k*(a*x - x*x/2);     // x, a in metres
+const tauOf  = (x,a,rho,thDeg) => rho*G*Math.sin(thDeg*Math.PI/180)*(a-x);
+const VsurfOf= (a,U,k) => U - k*a*a/2;
+const VavgOf = (a,U,k) => U - k*a*a/3;
+const QOf    = (a,U,k) => VavgOf(a,U,k)*a*W_BELT;
+const aStarOf= (U,k) => k>0 ? Math.sqrt(U/k) : Infinity;
+
+/* ============================================================
+   SVG line plot — same renderer used across this ChE 353/319 set
+   ============================================================ */
+const PW=470, PH=250, PM={l:64,r:16,t:16,b:38};
+function drawPlot(host,cfg){
+  const iw=PW-PM.l-PM.r, ih=PH-PM.t-PM.b, NS=cfg.samples||280;
+  const {x0,x1}=cfg;
+  const data=(cfg.series||[]).map(s=>{
+    const pts=[];
+    for(let i=0;i<=NS;i++){
+      const x=x0+(x1-x0)*i/NS;
+      if(s.xmin!==undefined&&x<s.xmin) continue;
+      if(s.xmax!==undefined&&x>s.xmax) continue;
+      const y=s.f(x);
+      if(isFinite(y)) pts.push([x,y]);
+    }
+    return {...s,pts};
+  });
+
+  let ylo=Infinity,yhi=-Infinity;
+  data.forEach(s=>s.pts.forEach(p=>{ if(p[1]<ylo)ylo=p[1]; if(p[1]>yhi)yhi=p[1]; }));
+  (cfg.points||[]).forEach(p=>{ if(p.y<ylo)ylo=p.y; if(p.y>yhi)yhi=p.y; });
+  if(!isFinite(ylo)){ylo=0;yhi=1;}
+  if(cfg.yMin!==undefined) ylo=cfg.yMin;
+  if(cfg.yMax!==undefined) yhi=cfg.yMax;
+  else { const pad=(yhi-ylo)*0.12||1; yhi+=pad; }
+  if(cfg.yMin===undefined){ const pad=(yhi-ylo)*0.10||1; ylo = ylo>0 ? 0 : ylo-pad; }
+  if(yhi===ylo) yhi=ylo+1;
+
+  const X=v=>PM.l+(v-x0)/(x1-x0)*iw;
+  const Y=v=>PM.t+ih-(v-ylo)/(yhi-ylo)*ih;
+
+  let s=`<svg viewBox="0 0 ${PW} ${PH}" width="100%" role="img" aria-label="${cfg.aria||"plot"}" style="display:block">`;
+
+  // shaded regime bands sit behind everything
+  (cfg.regions||[]).forEach(r=>{
+    const a=clamp(X(r.x0),PM.l,PM.l+iw), b=clamp(X(r.x1),PM.l,PM.l+iw);
+    if(b>a) s+=`<rect x="${a.toFixed(1)}" y="${PM.t}" width="${(b-a).toFixed(1)}" height="${ih}" fill="${r.fill}"/>`;
+  });
+  // filled area under a curve, used for the "absorbed"-style shading
+  (cfg.areas||[]).forEach(ar=>{
+    const lo=ar.x0!==undefined?ar.x0:x0, hi=ar.x1!==undefined?ar.x1:x1;
+    if(hi<=lo) return;
+    const base=Y(clamp(0,ylo,yhi));
+    let d=`M ${X(lo).toFixed(1)} ${base.toFixed(1)} `;
+    for(let i=0;i<=140;i++){ const x=lo+(hi-lo)*i/140; d+=`L ${X(x).toFixed(1)} ${Y(ar.f(x)).toFixed(1)} `; }
+    d+=`L ${X(hi).toFixed(1)} ${base.toFixed(1)} Z`;
+    s+=`<path d="${d}" fill="${ar.color}"/>`;
+  });
+
+  ticks(ylo,yhi,4).forEach(t=>{
+    const y=Y(t).toFixed(1);
+    s+=`<line x1="${PM.l}" y1="${y}" x2="${PM.l+iw}" y2="${y}" stroke="#E4EAF1"/>`;
+    s+=`<text x="${PM.l-8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,2)}</text>`;
+  });
+  ticks(x0,x1,5).forEach(t=>{
+    const x=X(t).toFixed(1);
+    s+=`<line x1="${x}" y1="${PM.t+ih}" x2="${x}" y2="${PM.t+ih+4}" stroke="#CBD5E1"/>`;
+    s+=`<text x="${x}" y="${PM.t+ih+17}" text-anchor="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,1)}</text>`;
+  });
+
+  // a heavy zero line whenever the plot straddles zero — this is what makes
+  // "the arrows have reversed" legible on the velocity plots
+  if(ylo<0&&yhi>0){
+    const yz=Y(0).toFixed(1);
+    s+=`<line x1="${PM.l}" y1="${yz}" x2="${PM.l+iw}" y2="${yz}" stroke="#9AA7B6" stroke-width="1.3"/>`;
+  }
+  s+=`<line x1="${PM.l}" y1="${PM.t}" x2="${PM.l}" y2="${PM.t+ih}" stroke="#CBD5E1"/>`;
+  s+=`<line x1="${PM.l}" y1="${PM.t+ih}" x2="${PM.l+iw}" y2="${PM.t+ih}" stroke="#CBD5E1"/>`;
+
+  data.forEach(sr=>{
+    if(!sr.pts.length) return;
+    let d="",pen=false;
+    sr.pts.forEach(p=>{ d+=(pen?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)+" "; pen=true; });
+    s+=`<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"${sr.dash?` stroke-dasharray="${sr.dash}"`:""}/>`;
+  });
+
+  (cfg.marks||[]).forEach(mk=>{
+    const x=X(mk.x); if(x<PM.l-1||x>PM.l+iw+1) return;
+    s+=`<line x1="${x.toFixed(1)}" y1="${PM.t}" x2="${x.toFixed(1)}" y2="${PM.t+ih}" stroke="#9AA7B6" stroke-dasharray="2 3"/>`;
+    if(mk.label){
+      const anchor = x>PM.l+iw-34 ? "end" : x<PM.l+34 ? "start" : "middle";
+      const tx = anchor==="end" ? PM.l+iw : anchor==="start" ? PM.l : x;
+      s+=`<text x="${tx.toFixed(1)}" y="${PM.t-4}" text-anchor="${anchor}" font-size="10" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${mk.label}</text>`;
+    }
+  });
+
+  (cfg.points||[]).forEach(p=>{
+    s+=`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="4.5" fill="${p.color}" stroke="#fff" stroke-width="1.5"/>`;
+  });
+
+  if(cfg.cursor!==undefined){
+    const cx=X(cfg.cursor);
+    if(cx>=PM.l-0.5&&cx<=PM.l+iw+0.5){
+      s+=`<line x1="${cx.toFixed(1)}" y1="${PM.t}" x2="${cx.toFixed(1)}" y2="${PM.t+ih}" stroke="#16305C" stroke-width="1.4"/>`;
+      data.forEach(sr=>{
+        if(sr.nocursor) return;
+        if(sr.xmin!==undefined&&cfg.cursor<sr.xmin) return;
+        if(sr.xmax!==undefined&&cfg.cursor>sr.xmax) return;
+        const v=sr.f(cfg.cursor);
+        if(isFinite(v)){ const cy=Y(v);
+          if(cy>=PM.t-1&&cy<=PM.t+ih+1)
+            s+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${sr.color}" stroke="#fff" stroke-width="1.6"/>`; }
+      });
+    }
+  }
+
+  s+=`<text x="${PM.l+iw/2}" y="${PH-5}" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.xLabel}</text>`;
+  s+=`<text transform="translate(14,${PM.t+ih/2}) rotate(-90)" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.yLabel}</text>`;
+  s+="</svg>";
+  host.innerHTML=s;
+}
+
+function fitCanvas(cv,cssH){
+  const dpr=window.devicePixelRatio||1, w=cv.parentElement.clientWidth;
+  cv.style.height=cssH+"px";
+  cv.width=Math.max(1,Math.round(w*dpr));
+  cv.height=Math.round(cssH*dpr);
+  const ctx=cv.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h:cssH};
+}
+
+/* ============================================================
+   PANEL A — inside the film
+   ============================================================ */
+const FLUIDS={
+  lightoil:{name:"Light oil", rho:850, mu:0.05},
+  crude:   {name:"Crude",     rho:900, mu:0.20},
+  heavy:   {name:"Heavy oil", rho:950, mu:0.80},
+  water:   {name:"Water",     rho:998, mu:0.001}
+};
+const A={fluid:"crude", U:0.30, a:2.0, th:30, mu:0.20, rho:900, x:1.0};
+
+/* The belt is drawn rotated by theta.  d = along the belt (up-slope),
+   n = out of the belt into the oil.  Screen y grows downward, hence the
+   minus signs.  These two vectors do all the geometry on this canvas,
+   including turning a pointer position back into a depth x. */
+function beltAxes(thDeg){
+  const t=thDeg*Math.PI/180;
+  return { d:[Math.cos(t), -Math.sin(t)], n:[-Math.sin(t), -Math.cos(t)] };
+}
+
+function renderA(){
+  const f=FLUIDS[A.fluid];
+  A.x=clamp(A.x,0,A.a);
+  $("aX").max=A.a;
+
+  $("aUv").textContent  = A.U.toFixed(3)+" m/s";
+  $("aAv").textContent  = A.a.toFixed(2)+" mm";
+  $("aThv").textContent = A.th+"°";
+  $("aMuv").textContent = A.mu.toFixed(2)+" Pa·s";
+  $("aRhov").textContent= A.rho+" kg/m³";
+  $("aXv").textContent  = A.x.toFixed(2)+" mm";
+  ["aU","aA","aTh","aMu","aRho","aX"].forEach((id,i)=>
+    $(id).value=[A.U,A.a,A.th,A.mu,A.rho,A.x][i]);
+  [...$("aFl").querySelectorAll("button")].forEach(b=>
+    b.setAttribute("aria-pressed", String(b.dataset.f===A.fluid)));
+
+  const k  = kOf(A.rho,A.mu,A.th);
+  const am = A.a*MM, xm = A.x*MM;
+  const Vz = x => VzOf(x,am,A.U,k);
+  const tau= x => tauOf(x,am,A.rho,A.th);
+  const Vs = VsurfOf(am,A.U,k), Va = VavgOf(am,A.U,k), Q = QOf(am,A.U,k);
+  const ast= aStarOf(A.U,k);
+
+  $("aK").textContent    = fmt(k,1)+" 1/(m·s)";
+  $("aVx").textContent   = Vz(xm).toFixed(4)+" m/s";
+  $("aTx").textContent   = tau(xm).toFixed(3)+" Pa";
+  $("aV0").textContent   = A.U.toFixed(4)+" m/s";
+  $("aVa").textContent   = Vs.toFixed(4)+" m/s";
+  $("aVavg").textContent = Va.toFixed(4)+" m/s";
+  $("aQ").textContent    = (Q*60000).toFixed(1)+" L/min";
+  $("aTau0").textContent = tau(0).toFixed(2)+" Pa";
+  $("aVerdict").innerHTML =
+      Va<=0 ? '<span class="flag bad">net backflow</span>'
+    : Vs<0  ? '<span class="flag warn">surface reversed</span>'
+    :         '<span class="flag ok">all forward</span>';
+
+  /* ---------- the belt canvas ---------- */
+  const {ctx,w,h}=fitCanvas($("cvA"),300);
+  ctx.clearRect(0,0,w,h);
+  const {d,n}=beltAxes(A.th);
+  const cx=w*0.46, cy=h*0.58;                 // where the belt line sits
+  const half=Math.min(w,h)*0.40;              // half-length of the drawn belt
+  // film is drawn at a fixed on-screen thickness so thin films stay visible;
+  // the number under the slider carries the real value
+  const filmPx=Math.min(h*0.30, 96);
+  const pxPerMM=filmPx/Math.max(A.a,0.001);
+
+  const P=(s,t)=>[cx+d[0]*s+n[0]*t, cy+d[1]*s+n[1]*t];   // s along belt, t out of it
+
+  // belt slab, drawn just under the oil
+  const beltT=-16;
+  ctx.beginPath();
+  let p=P(-half,0); ctx.moveTo(p[0],p[1]);
+  p=P(half,0);      ctx.lineTo(p[0],p[1]);
+  p=P(half,beltT);  ctx.lineTo(p[0],p[1]);
+  p=P(-half,beltT); ctx.lineTo(p[0],p[1]);
+  ctx.closePath();
+  ctx.fillStyle="#D8DEE7"; ctx.fill();
+  ctx.strokeStyle="#8C98A8"; ctx.lineWidth=1.2; ctx.stroke();
+  // belt cleats
+  ctx.save(); ctx.beginPath();
+  p=P(-half,0); ctx.moveTo(p[0],p[1]);
+  p=P(half,0);  ctx.lineTo(p[0],p[1]);
+  p=P(half,beltT); ctx.lineTo(p[0],p[1]);
+  p=P(-half,beltT);ctx.lineTo(p[0],p[1]);
+  ctx.closePath(); ctx.clip();
+  ctx.strokeStyle="#B6C0CD"; ctx.lineWidth=1;
+  for(let s=-half;s<half;s+=14){
+    ctx.beginPath();
+    const q1=P(s,0), q2=P(s,beltT);
+    ctx.moveTo(q1[0],q1[1]); ctx.lineTo(q2[0],q2[1]); ctx.stroke();
+  }
+  ctx.restore();
+
+  // oil film
+  ctx.beginPath();
+  p=P(-half,0);       ctx.moveTo(p[0],p[1]);
+  p=P(half,0);        ctx.lineTo(p[0],p[1]);
+  p=P(half,filmPx);   ctx.lineTo(p[0],p[1]);
+  p=P(-half,filmPx);  ctx.lineTo(p[0],p[1]);
+  ctx.closePath();
+  ctx.fillStyle="rgba(201,146,43,0.20)"; ctx.fill();
+  ctx.strokeStyle="rgba(201,146,43,0.85)"; ctx.lineWidth=1.6; ctx.stroke();
+
+  // velocity arrows, one per depth station
+  const maxAbs=Math.max(Math.abs(A.U), Math.abs(Vs), 1e-9);
+  const arrowMax=half*0.52;
+  const NA=11;
+  for(let i=0;i<=NA;i++){
+    const xx=A.a*i/NA, v=Vz(xx*MM);
+    const len=(v/maxAbs)*arrowMax;
+    const base=P(-half*0.34, xx*pxPerMM);
+    const tip =[base[0]+d[0]*len, base[1]+d[1]*len];
+    const col = v>=0 ? "#0F7A6E" : "#B3202B";
+    ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.moveTo(base[0],base[1]); ctx.lineTo(tip[0],tip[1]); ctx.stroke();
+    if(Math.abs(len)>4){
+      const sgn=Math.sign(len);
+      const hx=d[0]*sgn, hy=d[1]*sgn;            // unit vector toward the tip
+      const px_=-hy, py_=hx;                      // perpendicular, for the barbs
+      ctx.beginPath();
+      ctx.moveTo(tip[0],tip[1]);
+      ctx.lineTo(tip[0]-hx*7+px_*3.4, tip[1]-hy*7+py_*3.4);
+      ctx.lineTo(tip[0]-hx*7-px_*3.4, tip[1]-hy*7-py_*3.4);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  // the profile envelope through the arrow tips
+  ctx.beginPath();
+  for(let i=0;i<=60;i++){
+    const xx=A.a*i/60, v=Vz(xx*MM), len=(v/maxAbs)*arrowMax;
+    const b=P(-half*0.34, xx*pxPerMM);
+    const q=[b[0]+d[0]*len, b[1]+d[1]*len];
+    if(i===0) ctx.moveTo(q[0],q[1]); else ctx.lineTo(q[0],q[1]);
+  }
+  ctx.strokeStyle="#16305C"; ctx.lineWidth=2; ctx.stroke();
+  // the baseline the arrows grow from
+  ctx.beginPath();
+  let b0=P(-half*0.34,0), b1=P(-half*0.34,filmPx);
+  ctx.moveTo(b0[0],b0[1]); ctx.lineTo(b1[0],b1[1]);
+  ctx.strokeStyle="#16305C"; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // the depth marker the student drags
+  const mA=P(-half,A.x*pxPerMM), mB=P(half,A.x*pxPerMM);
+  ctx.beginPath(); ctx.moveTo(mA[0],mA[1]); ctx.lineTo(mB[0],mB[1]);
+  ctx.strokeStyle="#16305C"; ctx.lineWidth=1.6; ctx.setLineDash([6,4]); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // belt motion arrow, drawn below the slab
+  const ga=P(-half*0.80,beltT-14), gb=P(-half*0.10,beltT-14);
+  ctx.strokeStyle="#5A6675"; ctx.fillStyle="#5A6675"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(ga[0],ga[1]); ctx.lineTo(gb[0],gb[1]); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(gb[0]+d[0]*7, gb[1]+d[1]*7);
+  ctx.lineTo(gb[0]-d[1]*4, gb[1]+d[0]*4);
+  ctx.lineTo(gb[0]+d[1]*4, gb[1]-d[0]*4);
+  ctx.closePath(); ctx.fill();
+
+  ctx.font="11.5px ui-monospace, Menlo, monospace";
+  ctx.textAlign="center"; ctx.fillStyle="#5A6675";
+  const lbl=P(-half*0.45,beltT-26);
+  ctx.fillText("belt, U = "+A.U.toFixed(2)+" m/s", lbl[0], lbl[1]);
+  const fs=P(half*0.55, filmPx+13);
+  ctx.fillText("free surface  x = a", fs[0], fs[1]);
+  const bs=P(half*0.55, -6);
+  ctx.fillText("belt surface  x = 0", bs[0], bs[1]);
+  ctx.textAlign="left"; ctx.fillStyle="#101823";
+  ctx.fillText("θ = "+A.th+"°", 10, h-10);
+
+  /* ---------- the two plots ---------- */
+  drawPlot($("plotA1"),{
+    x0:0, x1:A.a, cursor:A.x,
+    series:[
+      {f:()=>A.U, color:"#5A6675", dash:"5 4"},
+      {f:xx=>Vz(xx*MM), color:"#0F7A6E"}
+    ],
+    xLabel:"depth into film x  (mm)", yLabel:"V₂  (m/s)",
+    aria:"Velocity profile across the film"});
+
+  drawPlot($("plotA2"),{
+    x0:0, x1:A.a, cursor:A.x, yMin:0,
+    series:[{f:xx=>tau(xx*MM), color:"#B3202B"}],
+    xLabel:"depth into film x  (mm)", yLabel:"τₓ₂  (Pa)",
+    aria:"Shear stress across the film"});
+
+  const pctLag=A.U>0 ? 100*(A.U-Vs)/A.U : 0;
+  let msg;
+  if(A.U===0){
+    msg="With the belt switched off this is no longer a conveyor problem at all — it is the <b>falling film</b> of BSL §2.2. Every arrow points down the slope, driven purely by gravity, and the profile has exactly the same parabolic shape.";
+  } else if(Va<=0){
+    msg="The average velocity has gone negative, so the device is now <b>pumping oil back into the sea</b>. Notice the arrows near the belt are still green — some oil is genuinely climbing — but the red ones outweigh them.";
+  } else if(Vs<0){
+    msg="Look carefully at the arrows: the ones near the belt point up the slope, the outer ones point <b>back down</b>. The film is moving in two directions at once. The net flow is still positive, so the skimmer works, but the surface layer is sliding backwards over the top of it.";
+  } else {
+    msg="Every arrow points up the slope. The one touching the belt is the longest — nothing in this problem can move faster than the belt, because the belt is the only thing driving the flow and gravity can only subtract from it.";
+  }
+  $("noteA").innerHTML="<b>What to notice.</b> "+msg+
+    " The free surface lags the belt by "+pctLag.toFixed(0)+"%, and the shear stress plot shows why the profile flattens out there: "+
+    "τ falls linearly to <b>exactly zero</b> at x = a, because air is too thin to grip the oil. Zero stress means zero slope, which is why the velocity curve always arrives at the free surface horizontally.";
+}
+
+/* ============================================================
+   PANEL B — the failure regimes
+   ============================================================ */
+const B={U:0.30, a:2.0, th:30, mu:0.20, rho:900};
+
+function renderB(){
+  $("bUv").textContent  = B.U.toFixed(3)+" m/s";
+  $("bAv").textContent  = B.a.toFixed(2)+" mm";
+  $("bThv").textContent = B.th+"°";
+  $("bMuv").textContent = B.mu.toFixed(2)+" Pa·s";
+  ["bU","bA","bTh","bMu"].forEach((id,i)=>$(id).value=[B.U,B.a,B.th,B.mu][i]);
+
+  const k=kOf(B.rho,B.mu,B.th);
+  const ast=aStarOf(B.U,k);                       // metres
+  const astMM=ast/MM;
+  const Qmm = aMM => QOf(aMM*MM,B.U,k);           // flow for a film of aMM mm
+  const Qnow= Qmm(B.a);
+  const Qmax= QOf(ast,B.U,k);
+
+  $("bAst").textContent  = astMM.toFixed(2)+" mm";
+  $("bA2").textContent   = (Math.SQRT2*astMM).toFixed(2)+" mm";
+  $("bA3").textContent   = (Math.sqrt(3)*astMM).toFixed(2)+" mm";
+  $("bRatio").textContent= (B.a/astMM).toFixed(3);
+  $("bQ").textContent    = (Qnow*60000).toFixed(1)+" L/min";
+  $("bQmax").textContent = (Qmax*60000).toFixed(1)+" L/min";
+
+  const Vs=VsurfOf(B.a*MM,B.U,k), Va=VavgOf(B.a*MM,B.U,k);
+  $("bVerdict").innerHTML =
+      Va<=0 ? '<span class="flag bad">delivers nothing</span>'
+    : Vs<0  ? '<span class="flag warn">surface reversed</span>'
+    :         '<span class="flag ok">all forward</span>';
+
+  // plot across a window that always shows all three thresholds
+  const xMax=Math.max(B.a*1.25, Math.sqrt(3)*astMM*1.3, 1);
+  const bands=[
+    {x0:0, x1:astMM, fill:"#EAF3EC"},
+    {x0:astMM, x1:Math.SQRT2*astMM, fill:"#F2F6F3"},
+    {x0:Math.SQRT2*astMM, x1:Math.sqrt(3)*astMM, fill:"#FBF4E0"},
+    {x0:Math.sqrt(3)*astMM, x1:xMax, fill:"#FBE9E7"}
+  ];
+  const marks=[
+    {x:astMM,label:"a*"},
+    {x:Math.SQRT2*astMM,label:"√2a*"},
+    {x:Math.sqrt(3)*astMM,label:"√3a*"}
+  ];
+
+  drawPlot($("plotB1"),{
+    x0:0, x1:xMax, cursor:B.a, regions:bands, marks,
+    series:[{f:aa=>Qmm(aa)*60000, color:"#0F7A6E"}],
+    points:[{x:B.a,y:Qnow*60000,color:"#16305C"}],
+    xLabel:"film thickness a  (mm)", yLabel:"Q  (L/min)",
+    aria:"Flow rate against film thickness"});
+
+  drawPlot($("plotB2"),{
+    x0:0, x1:xMax, cursor:B.a, regions:bands, marks,
+    series:[
+      {f:aa=>VsurfOf(aa*MM,B.U,k), color:"#4A6FA5"},
+      {f:aa=>VavgOf(aa*MM,B.U,k), color:"#B3202B"}
+    ],
+    xLabel:"film thickness a  (mm)", yLabel:"velocity  (m/s)",
+    aria:"Surface and average velocity against film thickness"});
+
+  const rows=[
+    ["below a*",      "0 – "+astMM.toFixed(2),  "all forward, flow still rising"],
+    ["at a*",         astMM.toFixed(2),              "peak flow, "+(Qmax*60000).toFixed(1)+" L/min"],
+    ["a* – √2a*", astMM.toFixed(2)+" – "+(Math.SQRT2*astMM).toFixed(2), "all forward, but past the peak"],
+    ["√2a* – √3a*", (Math.SQRT2*astMM).toFixed(2)+" – "+(Math.sqrt(3)*astMM).toFixed(2), "surface flows backwards, net still positive"],
+    ["beyond √3a*", "> "+(Math.sqrt(3)*astMM).toFixed(2), "net backflow — oil returns to the sea"]
+  ];
+  const idx = B.a<astMM?0 : Math.abs(B.a-astMM)<1e-9?1 : B.a<Math.SQRT2*astMM?2 : B.a<Math.sqrt(3)*astMM?3 : 4;
+  let t='<table class="tbl"><tr><th>Band</th><th>a (mm)</th><th style="text-align:left">What happens</th></tr>';
+  rows.forEach((r,i)=>{
+    t+=`<tr${i===idx?' class="on"':''}><td>${r[0]}</td><td>${r[1]}</td><td style="text-align:left">${r[2]}</td></tr>`;
+  });
+  t+="</table>";
+  $("bTable").innerHTML=t;
+
+  $("noteB").innerHTML="<b>What to notice.</b> Change the oil, the angle or the belt speed and <b>a* moves, but the three markers keep their 1 : 1.414 : 1.732 spacing</b> — that ratio comes from the 2 and the 3 in V₂(a) and ⟨V₂⟩, so no fluid property can shift it. "+
+    "The Q curve is worth staring at: it rises, peaks at a*, and then falls off a cliff, because the gravity penalty grows as a³ while the belt's contribution only grows as a. "+
+    "Right now a* = "+astMM.toFixed(2)+" mm and you are running at "+(B.a/astMM).toFixed(2)+"× that. "+
+    (B.a>Math.sqrt(3)*astMM
+      ? "You are past √3a*, so the machine is a very expensive way of stirring the ocean."
+      : B.a>astMM
+        ? "You are past the peak — a <i>thinner</i> film would deliver more oil, which is not the intuition most people start with."
+        : "You are below the peak, so thickening the film would still buy you more throughput.");
+}
+
+/* ============================================================
+   PANEL C — what the boundary conditions actually do
+   ============================================================ */
+const C={C1:0.45, C2:0.12, a:3.0, U:0.30, th:30, mu:0.20, rho:900};
+
+function renderC(){
+  const k=kOf(C.rho,C.mu,C.th);
+  const am=C.a*MM;
+  const rgs=C.rho*G*Math.sin(C.th*Math.PI/180);     // rho g sin(theta)
+  const C1true=rgs*am;                              // from tau(a)=0
+  const C2true=C.U;                                 // from no-slip at x=0
+
+  // keep the C1 slider's range sensible as a and theta change
+  $("cC1").max=(C1true*2.2).toFixed(3);
+  $("cC1").step=(C1true*2.2/400).toFixed(5);
+  C.C1=clamp(C.C1,0,C1true*2.2);
+
+  $("cC1v").textContent  = C.C1.toFixed(3)+" Pa";
+  $("cC2v").textContent  = C.C2.toFixed(3)+" m/s";
+  $("cAv").textContent   = C.a.toFixed(2)+" mm";
+  $("cUv").textContent   = C.U.toFixed(3)+" m/s";
+  ["cC1","cC2","cA","cU"].forEach((id,i)=>$(id).value=[C.C1,C.C2,C.a,C.U][i]);
+
+  /* With the constants left free:
+       tau(x) = -rho g sin(th) x + C1
+       Vz(x)  = (rho g sin(th)/mu) x^2/2  -  (C1/mu) x  +  C2
+     The vertex of that parabola sits where dVz/dx = 0, i.e. x = C1/(rho g sin th).
+     The free-surface condition is precisely the statement "put the vertex at x = a". */
+  const tauTrial = x => -rgs*x + C.C1;
+  const VzTrial  = x => (rgs/C.mu)*x*x/2 - (C.C1/C.mu)*x + C.C2;
+  const tauTrue  = x => rgs*(am-x);
+  const VzTrue   = x => VzOf(x,am,C.U,k);
+  const vertex   = rgs>0 ? C.C1/rgs : 0;            // metres
+
+  const tauAtA = tauTrial(am), V0 = VzTrial(0);
+  const okTau  = Math.abs(tauAtA) < Math.max(1e-6, 0.01*Math.abs(C1true));
+  const okNoSlip = Math.abs(V0-C.U) < Math.max(1e-6, 0.01*Math.max(C.U,1e-6));
+
+  $("cC1true").textContent = C1true.toFixed(3)+" Pa";
+  $("cC2true").textContent = C2true.toFixed(3)+" m/s";
+  $("cTauA").textContent   = tauAtA.toFixed(3)+" Pa";
+  $("cV0").textContent     = V0.toFixed(3)+" m/s";
+  $("cVert").textContent   = (vertex/MM).toFixed(2)+" mm";
+  $("cFree").textContent   = C.a.toFixed(2)+" mm";
+
+  drawPlot($("plotC1"),{
+    x0:0, x1:C.a,
+    series:[
+      {f:xx=>tauTrue(xx*MM), color:"#5A6675", dash:"5 4"},
+      {f:xx=>tauTrial(xx*MM), color:"#B3202B"}
+    ],
+    marks:[{x:C.a,label:"free surface"}],
+    xLabel:"x  (mm)", yLabel:"τₓ₂  (Pa)",
+    aria:"Trial and correct shear stress"});
+
+  drawPlot($("plotC2"),{
+    x0:0, x1:C.a,
+    series:[
+      {f:xx=>VzTrue(xx*MM), color:"#5A6675", dash:"5 4"},
+      {f:xx=>VzTrial(xx*MM), color:"#0F7A6E"}
+    ],
+    marks:[{x:clamp(vertex/MM,0,C.a), label:"vertex"}],
+    xLabel:"x  (mm)", yLabel:"V₂  (m/s)",
+    aria:"Trial and correct velocity profile"});
+
+  const chip=(ok,txt)=>`<span class="flag ${ok?'ok':'bad'}">${ok?'satisfied':'violated'}</span> ${txt}`;
+  $("cChecks").innerHTML=
+    `<div style="display:grid;gap:10px">
+       <div>${chip(okTau,
+         `<b>Free surface:</b> τ<sub>xz</sub>(a) must be 0. Yours is <b>${tauAtA.toFixed(3)} Pa</b>.` +
+         (okTau?"" : ` A non-zero value here means the air is gripping the oil and shearing it — air is far too thin to do that.`))}</div>
+       <div>${chip(okNoSlip,
+         `<b>No-slip at the belt:</b> V<sub>z</sub>(0) must equal U = ${C.U.toFixed(3)} m/s. Yours is <b>${V0.toFixed(3)} m/s</b>.` +
+         (okNoSlip?"" : ` A mismatch means the oil is sliding over the belt surface without gripping it.`))}</div>
+     </div>`;
+
+  const off=(vertex/MM - C.a);
+  $("noteC").innerHTML="<b>What to notice.</b> The two constants do completely different jobs. "+
+    "<b>C₂ just slides the whole velocity curve up and down</b> — it sets the speed, not the shape, and no-slip is what nails it to U. "+
+    "<b>C₁ moves the vertex of the parabola</b>, the one place where the curve is flat. Right now your vertex is at "+
+    (vertex/MM).toFixed(2)+" mm and the free surface is at "+C.a.toFixed(2)+" mm"+
+    (Math.abs(off)<0.02 ? " — they coincide, which is exactly what τ(a) = 0 is asking for."
+      : off<0 ? " — the vertex is <i>inside</i> the oil, so the curve turns back up before it reaches the surface. That would mean the air is dragging the oil forwards."
+              : " — the vertex is <i>past</i> the surface, so the curve is still falling when it gets there. That would mean the air is dragging the oil backwards.")+
+    " Only one value of C₁ puts the flat spot exactly at the surface, and that value is ρga sinθ.";
+}
+
+/* ============================================================
+   Wiring
+   ============================================================ */
+function bindRange(id,obj,key,after){
+  $(id).addEventListener("input",e=>{ obj[key]=parseFloat(e.target.value); after(); });
+}
+
+["aU|U","aA|a","aTh|th","aMu|mu","aRho|rho","aX|x"].forEach(s=>{
+  const [id,key]=s.split("|"); bindRange(id,A,key,renderA);
+});
+$("aFl").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  A.fluid=b.dataset.f; A.mu=FLUIDS[A.fluid].mu; A.rho=FLUIDS[A.fluid].rho; renderA();
+});
+
+["bU|U","bA|a","bTh|th","bMu|mu"].forEach(s=>{
+  const [id,key]=s.split("|"); bindRange(id,B,key,renderB);
+});
+$("bSnap").addEventListener("click",()=>{
+  const k=kOf(B.rho,B.mu,B.th);
+  B.a=clamp(aStarOf(B.U,k)/MM, 0.2, 14); renderB();
+});
+
+["cC1|C1","cC2|C2","cA|a","cU|U"].forEach(s=>{
+  const [id,key]=s.split("|"); bindRange(id,C,key,renderC);
+});
+$("cSnap").addEventListener("click",()=>{
+  const rgs=C.rho*G*Math.sin(C.th*Math.PI/180);
+  C.C1=rgs*C.a*MM; C.C2=C.U; renderC();
+});
+
+/* Drag on the belt canvas: project the pointer onto the belt normal to
+   recover a depth, which keeps the interaction correct at every angle. */
+(function(){
+  const cv=$("cvA"); let down=false;
+  const pick=ev=>{
+    const r=cv.getBoundingClientRect();
+    const {n}=beltAxes(A.th);
+    const cx=r.width*0.46, cy=r.height*0.58;
+    const filmPx=Math.min(r.height*0.30, 96);
+    const pxPerMM=filmPx/Math.max(A.a,0.001);
+    const vx=(ev.clientX-r.left)-cx, vy=(ev.clientY-r.top)-cy;
+    const t=vx*n[0]+vy*n[1];                       // component out of the belt
+    A.x=clamp(t/pxPerMM, 0, A.a); renderA();
+  };
+  cv.addEventListener("pointerdown",e=>{down=true;cv.setPointerCapture(e.pointerId);pick(e);});
+  cv.addEventListener("pointermove",e=>{ if(down) pick(e); });
+  cv.addEventListener("pointerup",()=>{down=false;});
+  cv.addEventListener("keydown",e=>{
+    const st=(e.shiftKey?5:1)*A.a/60;
+    if(e.key==="ArrowRight"){A.x=clamp(A.x+st,0,A.a);renderA();e.preventDefault();}
+    if(e.key==="ArrowLeft"){ A.x=clamp(A.x-st,0,A.a);renderA();e.preventDefault();}
+  });
+})();
+
+const panels={"tab-a":"p-a","tab-b":"p-b","tab-c":"p-c"};
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    Object.entries(panels).forEach(([tid,pid])=>{
+      const on=tid===t.id;
+      $(tid).setAttribute("aria-selected",String(on));
+      $(pid).hidden=!on;
+    });
+    renderAll();
+  });
+});
+function renderAll(){
+  if(!$("p-a").hidden) renderA();
+  if(!$("p-b").hidden) renderB();
+  if(!$("p-c").hidden) renderC();
+}
+let rt;
+window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(renderAll,120);});
+renderAll();
+</script>
+</body>
+</html>
