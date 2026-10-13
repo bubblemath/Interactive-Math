@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Circular Tube Flow Explorer — ChE 353</title>
+<style>
+  :root{
+    --paper:#F6F8FA; --panel:#FFFFFF; --ink:#101823; --ink-soft:#5A6675;
+    --rule:#CBD5E1; --rule-soft:#E4EAF1; --navy:#16305C;
+    --flux:#0F7A6E; --temp:#B3202B; --gen:#6B4EA8; --clad:#4A6FA5;
+    --focus:#0F7A6E;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding:28px 20px 60px}
+  .wrap{max-width:1120px;margin:0 auto}
+
+  .masthead{border-bottom:2px solid var(--navy);padding-bottom:14px}
+  h1{font-family:Georgia,"Iowan Old Style","Times New Roman",serif;font-weight:600;
+     font-size:clamp(24px,4vw,34px);line-height:1.15;letter-spacing:-.01em;
+     color:var(--navy);margin:0 0 6px}
+  .standfirst{max-width:76ch;color:var(--ink-soft);font-size:15px;margin:0}
+
+  .tabs{display:flex;border-bottom:1px solid var(--rule);margin:0 0 22px;flex-wrap:wrap}
+  .tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;
+    padding:13px 18px 11px;font:inherit;font-size:14.5px;color:var(--ink-soft);
+    cursor:pointer;margin-bottom:-1px}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{color:var(--navy);font-weight:600;border-bottom-color:var(--navy)}
+  .tab:focus-visible{outline:2px solid var(--focus);outline-offset:-3px}
+
+  .lede{max-width:80ch;margin:0 0 20px;color:var(--ink-soft)}
+  .lede strong{color:var(--ink);font-weight:600}
+
+  .stage{display:grid;grid-template-columns:minmax(0,1fr) 332px;gap:22px;align-items:start}
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:900px){.stage,.duo{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--rule)}
+  .card>h2{font-family:Georgia,"Iowan Old Style",serif;font-size:15px;font-weight:600;
+    color:var(--navy);margin:0;padding:11px 16px 10px;border-bottom:1px solid var(--rule-soft)}
+  .card .body{padding:16px}
+
+  canvas{display:block;width:100%;height:auto;touch-action:none;cursor:ns-resize}
+  canvas:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .canvhost{padding:12px 0 0}
+  .hint{font-size:12.5px;color:var(--ink-soft);padding:4px 16px 10px}
+
+  .ctl{margin-bottom:13px}
+  .ctl:last-child{margin-bottom:0}
+  .ctl label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+    font-size:13.5px;margin-bottom:5px}
+  .ctl .grouplabel{display:block;font-size:13.5px;margin-bottom:5px}
+  .val{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12.5px;
+    font-variant-numeric:tabular-nums;color:var(--navy)}
+  input[type=range]{width:100%;accent-color:var(--navy);margin:0}
+  input[type=range]:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+
+  .seg{display:flex;flex-wrap:wrap;border:1px solid var(--rule)}
+  .seg button{flex:1 1 auto;appearance:none;background:var(--panel);border:0;
+    border-right:1px solid var(--rule);padding:7px 5px;font:inherit;font-size:11.5px;
+    color:var(--ink-soft);cursor:pointer;white-space:nowrap}
+  .seg button:last-child{border-right:0}
+  .seg button[aria-pressed="true"]{background:var(--navy);color:#fff}
+  .seg button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+
+  .divider{height:1px;background:var(--rule-soft);margin:15px 0}
+
+  .eqn{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12.5px;
+    font-variant-numeric:tabular-nums;line-height:1.9}
+  .eqn .row{display:flex;justify-content:space-between;gap:12px}
+  .eqn .k{color:var(--ink-soft)}
+  .eqn .v{color:var(--ink);font-weight:600}
+  .eqn .v.flux{color:var(--flux)}
+  .eqn .v.temp{color:var(--temp)}
+  .eqn .v.big{font-size:15px}
+  .fracline{border-top:1px solid var(--rule);margin:6px 0}
+
+  .flag{display:inline-block;padding:2px 8px;border-radius:2px;font-size:11.5px;
+    font-weight:600;font-family:ui-sans-serif,system-ui,sans-serif}
+  .flag.ok{background:#EAF3EC;color:var(--flux)}
+  .flag.warn{background:#FDF6E3;color:#8A6D1F}
+  .flag.bad{background:#FBE9E7;color:var(--temp)}
+
+  .note{margin-top:22px;padding:14px 18px;background:#EFF4F0;
+    border-left:3px solid var(--flux);max-width:84ch;font-size:14.5px}
+  .note b{color:var(--navy)}
+  .note.caution{background:#FDF6E3;border-left-color:#C9A227}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink-soft);
+    padding:0 16px 12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .swatch{width:16px;height:3px;border-radius:2px}
+  .swatch.box{height:11px;border-radius:1px}
+
+  table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.tbl th{text-align:right;font-weight:600;font-size:11.5px;color:var(--ink-soft);
+    padding:5px 7px;border-bottom:1px solid var(--rule)}
+  table.tbl th:first-child,table.tbl td:first-child{text-align:left}
+  table.tbl td{padding:5px 7px;border-bottom:1px solid var(--rule-soft);
+    font-variant-numeric:tabular-nums;text-align:right}
+  table.tbl tr.on td{background:#EFF4F0;font-weight:600}
+
+  .foot{margin-top:34px;padding-top:12px;border-top:1px solid var(--rule);
+    font-size:12.5px;color:var(--ink-soft);max-width:84ch}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Circular Tube Flow Explorer</h1>
+    <p class="standfirst">Hagen–Poiseuille, taken apart. Why the profile is a parabola, why the average is exactly half the maximum, why flow goes as the fourth power of radius — and why the one term you throw away in a tube is the one you must keep on a rod.</p>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-a" aria-controls="p-a" aria-selected="true">Inside the pipe</button>
+    <button class="tab" role="tab" id="tab-b" aria-controls="p-b" aria-selected="false">Where the flow comes from</button>
+    <button class="tab" role="tab" id="tab-c" aria-controls="p-c" aria-selected="false">Tube vs rod</button>
+  </div>
+
+  <!-- ===================== PANEL A ===================== -->
+  <section id="p-a" role="tabpanel" aria-labelledby="tab-a">
+    <p class="lede">The tube is cut through its axis. Each arrow is the fluid velocity at that radius, and the envelope through the tips is the parabola. <strong>Drag up and down to move the measuring radius</strong> and watch the shear stress do the opposite of the velocity — zero where the velocity peaks, biggest where the velocity dies.</p>
+
+    <div class="stage">
+      <div>
+        <div class="card">
+          <h2>Cut through the tube, with the velocity profile</h2>
+          <div class="canvhost"><canvas id="cvA" tabindex="0" aria-label="Tube cut along its axis showing the parabolic velocity profile. Arrow keys move the measuring radius."></canvas></div>
+          <p class="hint">Drag vertically, or focus it and use ↑ ↓ &nbsp;·&nbsp; the dashed line is the centreline</p>
+        </div>
+        <div class="duo" style="margin-top:18px">
+          <div class="card">
+            <h2>Velocity V<sub>z</sub>(r)</h2>
+            <div id="plotA1"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--flux)"></i>V<sub>z</sub>(r)</span>
+              <span>flat at the axis, zero at the wall</span>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Shear stress τ<sub>rz</sub>(r)</h2>
+            <div id="plotA2"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--temp)"></i>τ<sub>rz</sub>(r)</span>
+              <span>linear: zero at the axis, max at the wall</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <span class="grouplabel" id="aFlL">Fluid</span>
+            <div class="seg" id="aFl" role="group" aria-labelledby="aFlL">
+              <button data-f="water" aria-pressed="false">Water</button>
+              <button data-f="light" aria-pressed="false">Light oil</button>
+              <button data-f="oil" aria-pressed="true">Oil</button>
+              <button data-f="glyc" aria-pressed="false">Glycerin</button>
+            </div>
+          </div>
+          <div class="ctl">
+            <span class="grouplabel" id="aOrL">Orientation</span>
+            <div class="seg" id="aOr" role="group" aria-labelledby="aOrL">
+              <button data-o="vert" aria-pressed="true">Vertical (gravity helps)</button>
+              <button data-o="horiz" aria-pressed="false">Horizontal</button>
+            </div>
+          </div>
+          <div class="ctl">
+            <label for="aR">Tube radius R <span class="val" id="aRv"></span></label>
+            <input type="range" id="aR" min="1" max="25" step="0.1" value="5">
+          </div>
+          <div class="ctl">
+            <label for="aL">Tube length L <span class="val" id="aLv"></span></label>
+            <input type="range" id="aL" min="0.2" max="10" step="0.1" value="2">
+          </div>
+          <div class="ctl">
+            <label for="aDp">Pressure drop p₀ − p<sub>L</sub> <span class="val" id="aDpv"></span></label>
+            <input type="range" id="aDp" min="0" max="100" step="0.5" value="20">
+          </div>
+          <div class="ctl">
+            <label for="aMu">Viscosity μ <span class="val" id="aMuv"></span></label>
+            <input type="range" id="aMu" min="0.001" max="2" step="0.001" value="0.50">
+          </div>
+          <div class="ctl">
+            <label for="aRho">Density ρ <span class="val" id="aRhov"></span></label>
+            <input type="range" id="aRho" min="700" max="1400" step="5" value="1200">
+          </div>
+          <div class="ctl">
+            <label for="aPos">Radius r <span class="val" id="aPosv"></span></label>
+            <input type="range" id="aPos" min="0" max="25" step="0.05" value="2">
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="eqn">
+            <div class="row"><span class="k">Φ = Δp/L + ρg</span><span class="v big" id="aPhi"></span></div>
+            <div class="row"><span class="k">&nbsp;&nbsp;from pressure</span><span class="v" id="aPhiP"></span></div>
+            <div class="row"><span class="k">&nbsp;&nbsp;from gravity</span><span class="v" id="aPhiG"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">V<sub>z</sub> at this r</span><span class="v flux" id="aVr"></span></div>
+            <div class="row"><span class="k">τ<sub>rz</sub> at this r</span><span class="v temp" id="aTr"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">V<sub>max</sub> (at r = 0)</span><span class="v" id="aVmax"></span></div>
+            <div class="row"><span class="k">⟨V<sub>z</sub>⟩</span><span class="v" id="aVavg"></span></div>
+            <div class="row"><span class="k">⟨V<sub>z</sub>⟩ / V<sub>max</sub></span><span class="v big" id="aRatio"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">Q</span><span class="v flux big" id="aQ"></span></div>
+            <div class="row"><span class="k">τ at the wall</span><span class="v" id="aTw"></span></div>
+            <div class="row"><span class="k">F<sub>z</sub> on the wall</span><span class="v" id="aFz"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">Re</span><span class="v" id="aRe"></span></div>
+            <div class="row"><span class="k">regime</span><span id="aFlag"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteA"></p>
+    <p class="note caution" id="cautionA"></p>
+  </section>
+
+  <!-- ===================== PANEL B ===================== -->
+  <section id="p-b" role="tabpanel" aria-labelledby="tab-b">
+    <p class="lede">Two results everyone memorises and almost nobody can explain. The left plot shows <strong>how much flow each ring of radius actually contributes</strong> — that is where the factor of ½ comes from. The right plot shows what happens when you change the pipe size, on log axes where a power law is a straight line.</p>
+
+    <div class="duo">
+      <div class="card">
+        <h2>Flow contributed by each ring: dQ/dr = 2πr·V<sub>z</sub>(r)</h2>
+        <div id="plotB1"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--gen)"></i>dQ/dr</span>
+          <span><i class="swatch box" style="background:#6B4EA833;border:1px solid var(--gen)"></i>shaded = flow so far</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Q against tube radius, log–log</h2>
+        <div id="plotB2"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--flux)"></i>Q(R)</span>
+          <span>a straight line of slope 4</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage" style="margin-top:22px">
+      <div class="card">
+        <h2>Scaling the pipe</h2>
+        <div class="body"><div id="bTable"></div></div>
+      </div>
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="bFrac">Integrate out to r/R <span class="val" id="bFracv"></span></label>
+            <input type="range" id="bFrac" min="0" max="1" step="0.005" value="0.5">
+          </div>
+          <div class="ctl">
+            <label for="bR">Tube radius R <span class="val" id="bRv"></span></label>
+            <input type="range" id="bR" min="1" max="25" step="0.1" value="5">
+          </div>
+
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">area inside r/R</span><span class="v" id="bArea"></span></div>
+            <div class="row"><span class="k">flow inside r/R</span><span class="v big" id="bFlow"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">dQ/dr peaks at r/R</span><span class="v flux" id="bPeak"></span></div>
+            <div class="row"><span class="k">&nbsp;&nbsp;exactly</span><span class="v">1/√3 = 0.5774</span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">⟨V⟩/V<sub>max</sub>, area-weighted</span><span class="v flux big">0.500</span></div>
+            <div class="row"><span class="k">if you forgot the 2πr</span><span class="v temp big">0.667</span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">Q now</span><span class="v" id="bQ"></span></div>
+            <div class="row"><span class="k">double R → Q ×</span><span class="v">16</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteB"></p>
+  </section>
+
+  <!-- ===================== PANEL C ===================== -->
+  <section id="p-c" role="tabpanel" aria-labelledby="tab-c">
+    <p class="lede">Both problems start from the <em>same</em> general solution, V<sub>z</sub> = −Φr²/4μ + C₁ ln r + C₂. In the tube you delete the ln r term; on the rod you must keep it. <strong>The difference is simply whether r = 0 is somewhere the fluid actually exists.</strong></p>
+
+    <div class="duo">
+      <div class="card">
+        <h2>Tube — r = 0 is in the fluid, so C₁ = 0</h2>
+        <div id="plotC1"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--flux)"></i>V<sub>z</sub>(r)</span>
+          <span>fastest on the axis, zero at the wall</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Rod — r = 0 is inside the solid, so C₁ ≠ 0</h2>
+        <div id="plotC2"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--clad)"></i>V<sub>z</sub>(r)</span>
+          <span>zero on the rod, fastest at the free surface</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage" style="margin-top:22px">
+      <div class="card">
+        <h2>What if you deleted the ln r term anyway?</h2>
+        <div id="plotC3"></div>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--clad)"></i>correct, C₁ kept</span>
+          <span><i class="swatch" style="background:var(--temp)"></i>C₁ set to 0</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="cR1">Rod radius r₁ <span class="val" id="cR1v"></span></label>
+            <input type="range" id="cR1" min="0.2" max="18" step="0.1" value="10">
+          </div>
+          <div class="ctl">
+            <label for="cFilm">Film thickness δ = r₂ − r₁ <span class="val" id="cFilmv"></span></label>
+            <input type="range" id="cFilm" min="0.1" max="6" step="0.05" value="2">
+          </div>
+          <div class="ctl">
+            <label for="cMu">Viscosity μ <span class="val" id="cMuv"></span></label>
+            <input type="range" id="cMu" min="0.01" max="2" step="0.01" value="0.10">
+          </div>
+
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">tube C₁</span><span class="v flux">0 (killed)</span></div>
+            <div class="row"><span class="k">rod C₁ = ρgr₂²/2μ</span><span class="v" id="cC1"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">V<sub>z</sub>(r₂) if C₁ = 0</span><span class="v temp" id="cVwrong"></span></div>
+            <div class="row"><span class="k">dV<sub>z</sub>/dr at r₂ if C₁ = 0</span><span class="v temp" id="cSlopeWrong"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">V<sub>z</sub> at the free surface</span><span class="v big" id="cVs"></span></div>
+            <div class="row"><span class="k">Q on the rod</span><span class="v flux" id="cQ"></span></div>
+            <div class="row"><span class="k">film Reynolds 4Γ/μ</span><span id="cRe"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">δ / r₁</span><span class="v" id="cRatio"></span></div>
+            <div class="row"><span class="k">exact Q / flat-plate Q</span><span class="v big" id="cFlat"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteC"></p>
+  </section>
+
+  <p class="foot">Companion to the ChE 353 Topic 11 study guide. The tube model matches the lecture: steady, laminar, fully developed flow of a Newtonian fluid of constant ρ and μ in a long vertical tube with z downward, no-slip at the wall and finite velocity on the axis. The rod problem is the lecture's assigned exercise — a film falling under gravity alone on the outside of a vertical rod, with no-slip on the rod and zero shear at the free surface.</p>
+</div>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const MM=1e-3, G=9.81, TAU=Math.PI*2;
+
+function sup(n){
+  const m={"-":"⁻","0":"⁰","1":"¹","2":"²","3":"³",
+           "4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹"};
+  return String(n).split("").map(c=>m[c]||c).join("");
+}
+function fmt(v,d){
+  if(!isFinite(v)) return "—";
+  if(v===0) return "0";
+  const a=Math.abs(v);
+  if(a>=1e5||a<1e-3){ const e=Math.floor(Math.log10(a));
+    return (v/Math.pow(10,e)).toFixed(d===undefined?2:d)+"×10"+sup(e); }
+  if(a>=1000) return v.toFixed(0);
+  if(a>=100)  return v.toFixed(d===undefined?0:d);
+  if(a>=10)   return v.toFixed(d===undefined?1:d);
+  return v.toFixed(d===undefined?3:d);
+}
+function ticks(lo,hi,count){
+  if(!(hi>lo)) return [lo];
+  const raw=(hi-lo)/count, mag=Math.pow(10,Math.floor(Math.log10(raw))), n=raw/mag;
+  const step=(n<1.5?1:n<3?2:n<7?5:10)*mag, out=[];
+  for(let t=Math.ceil(lo/step)*step; t<=hi+step*1e-9; t+=step) out.push(t);
+  return out;
+}
+
+/* ============================================================
+   THE PHYSICS — transcribed from the study guide.
+     Phi    = (p0-pL)/L + rho g      [Pa/m]   the push per metre
+     Vz(r)  = Phi (R^2 - r^2) / (4 mu)
+     tau(r) = Phi r / 2
+     Vmax   = Phi R^2 / (4 mu)       <Vz> = Phi R^2 / (8 mu) = Vmax/2
+     Q      = pi R^4 Phi / (8 mu)
+     Fz     = pi R^2 L Phi
+   Radii arrive in millimetres from the sliders; every call converts first.
+   ============================================================ */
+const PhiOf  = (dpPa,L,rho,vertical) => dpPa/L + (vertical ? rho*G : 0);
+const VzTube = (r,R,Phi,mu) => Phi*(R*R - r*r)/(4*mu);
+const TauTube= (r,Phi) => Phi*r/2;
+const VmaxOf = (R,Phi,mu) => Phi*R*R/(4*mu);
+const QTube  = (R,Phi,mu) => Math.PI*Math.pow(R,4)*Phi/(8*mu);
+const ReOf   = (rho,Vavg,R,mu) => rho*Vavg*2*R/mu;
+
+/* Rod problem: gravity only, no-slip at r1, zero shear at r2. */
+const VzRod = (r,r1,r2,rho,mu) =>
+  rho*G/(4*mu)*(r1*r1 - r*r) + rho*G*r2*r2/(2*mu)*Math.log(r/r1);
+const QRod  = (r1,r2,rho,mu) =>
+  2*Math.PI*rho*G/(16*mu)*(4*Math.pow(r2,4)*Math.log(r2/r1)
+    + 4*r2*r2*r1*r1 - Math.pow(r1,4) - 3*Math.pow(r2,4));
+
+/* ============================================================
+   SVG plot — the same renderer used across this ChE 319/353 set
+   ============================================================ */
+const PW=470, PH=250, PM={l:64,r:16,t:16,b:38};
+function drawPlot(host,cfg){
+  const iw=PW-PM.l-PM.r, ih=PH-PM.t-PM.b, NS=cfg.samples||300;
+  const logX=!!cfg.logX, logY=!!cfg.logY, {x0,x1}=cfg;
+  const xAt=i=>logX?Math.pow(10,Math.log10(x0)+(Math.log10(x1)-Math.log10(x0))*i/NS)
+                   :x0+(x1-x0)*i/NS;
+  const data=(cfg.series||[]).map(s=>{
+    const pts=[];
+    for(let i=0;i<=NS;i++){
+      const x=xAt(i);
+      if(s.xmin!==undefined&&x<s.xmin) continue;
+      if(s.xmax!==undefined&&x>s.xmax) continue;
+      const y=s.f(x);
+      if(isFinite(y)&&(!logY||y>0)) pts.push([x,y]);
+    }
+    return {...s,pts};
+  });
+
+  let ylo=Infinity,yhi=-Infinity;
+  data.forEach(s=>s.pts.forEach(p=>{ if(p[1]<ylo)ylo=p[1]; if(p[1]>yhi)yhi=p[1]; }));
+  (cfg.points||[]).forEach(p=>{ if(logY&&p.y<=0)return; if(p.y<ylo)ylo=p.y; if(p.y>yhi)yhi=p.y; });
+  if(!isFinite(ylo)){ylo=0;yhi=1;}
+  if(cfg.yMin!==undefined) ylo=cfg.yMin;
+  if(cfg.yMax!==undefined) yhi=cfg.yMax;
+  else if(logY) yhi*=1.7; else yhi+=(yhi-ylo)*0.12||1;
+  if(!logY&&cfg.yMin===undefined) ylo = ylo>0 ? 0 : ylo-(yhi-ylo)*0.08;
+  if(logY) ylo=Math.max(ylo/1.7,yhi/1e8);
+  if(yhi===ylo) yhi=ylo+1;
+
+  const X=logX?v=>PM.l+(Math.log10(Math.max(v,x0))-Math.log10(x0))/(Math.log10(x1)-Math.log10(x0))*iw
+             :v=>PM.l+(v-x0)/(x1-x0)*iw;
+  const Y=logY?v=>PM.t+ih-(Math.log10(Math.max(v,ylo))-Math.log10(ylo))/(Math.log10(yhi)-Math.log10(ylo))*ih
+             :v=>PM.t+ih-(v-ylo)/(yhi-ylo)*ih;
+
+  let s=`<svg viewBox="0 0 ${PW} ${PH}" width="100%" role="img" aria-label="${cfg.aria||"plot"}" style="display:block">`;
+
+  (cfg.regions||[]).forEach(rg=>{
+    const a=clamp(X(rg.x0),PM.l,PM.l+iw), b=clamp(X(rg.x1),PM.l,PM.l+iw);
+    if(b>a) s+=`<rect x="${a.toFixed(1)}" y="${PM.t}" width="${(b-a).toFixed(1)}" height="${ih}" fill="${rg.fill}"/>`;
+  });
+  (cfg.areas||[]).forEach(ar=>{
+    const lo=ar.x0!==undefined?ar.x0:x0, hi=ar.x1!==undefined?ar.x1:x1;
+    if(hi<=lo) return;
+    const base=Y(clamp(0,ylo,yhi));
+    let d=`M ${X(lo).toFixed(1)} ${base.toFixed(1)} `;
+    for(let i=0;i<=160;i++){ const x=lo+(hi-lo)*i/160; d+=`L ${X(x).toFixed(1)} ${Y(ar.f(x)).toFixed(1)} `; }
+    d+=`L ${X(hi).toFixed(1)} ${base.toFixed(1)} Z`;
+    s+=`<path d="${d}" fill="${ar.color}"/>`;
+  });
+
+  const yt=logY?(()=>{const o=[];for(let e=Math.ceil(Math.log10(ylo));e<=Math.log10(yhi);e++)o.push(Math.pow(10,e));return o;})()
+               :ticks(ylo,yhi,4);
+  yt.forEach(t=>{ const y=Y(t).toFixed(1);
+    s+=`<line x1="${PM.l}" y1="${y}" x2="${PM.l+iw}" y2="${y}" stroke="#E4EAF1"/>`;
+    s+=`<text x="${PM.l-8}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,2)}</text>`;});
+  const xt=logX?(()=>{const o=[];for(let e=Math.ceil(Math.log10(x0));e<=Math.log10(x1);e++)o.push(Math.pow(10,e));return o;})()
+               :ticks(x0,x1,5);
+  xt.forEach(t=>{ const x=X(t).toFixed(1);
+    s+=`<line x1="${x}" y1="${PM.t+ih}" x2="${x}" y2="${PM.t+ih+4}" stroke="#CBD5E1"/>`;
+    s+=`<text x="${x}" y="${PM.t+ih+17}" text-anchor="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${fmt(t,1)}</text>`;});
+
+  if(!logY&&ylo<0&&yhi>0){
+    const yz=Y(0).toFixed(1);
+    s+=`<line x1="${PM.l}" y1="${yz}" x2="${PM.l+iw}" y2="${yz}" stroke="#9AA7B6" stroke-width="1.3"/>`;
+  }
+  s+=`<line x1="${PM.l}" y1="${PM.t}" x2="${PM.l}" y2="${PM.t+ih}" stroke="#CBD5E1"/>`;
+  s+=`<line x1="${PM.l}" y1="${PM.t+ih}" x2="${PM.l+iw}" y2="${PM.t+ih}" stroke="#CBD5E1"/>`;
+
+  data.forEach(sr=>{
+    if(!sr.pts.length) return;
+    let d="",pen=false;
+    sr.pts.forEach(p=>{ d+=(pen?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)+" "; pen=true; });
+    s+=`<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"${sr.dash?` stroke-dasharray="${sr.dash}"`:""}/>`;
+  });
+
+  (cfg.marks||[]).forEach(mk=>{
+    const x=X(mk.x); if(x<PM.l-1||x>PM.l+iw+1) return;
+    s+=`<line x1="${x.toFixed(1)}" y1="${PM.t}" x2="${x.toFixed(1)}" y2="${PM.t+ih}" stroke="#9AA7B6" stroke-dasharray="2 3"/>`;
+    if(mk.label){
+      const anchor = x>PM.l+iw-36 ? "end" : x<PM.l+36 ? "start" : "middle";
+      const tx = anchor==="end" ? PM.l+iw : anchor==="start" ? PM.l : x;
+      s+=`<text x="${tx.toFixed(1)}" y="${PM.t-4}" text-anchor="${anchor}" font-size="10" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">${mk.label}</text>`;
+    }
+  });
+  (cfg.points||[]).forEach(p=>{
+    if(logY&&p.y<=0) return;
+    s+=`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.y).toFixed(1)}" r="4.5" fill="${p.color}" stroke="#fff" stroke-width="1.5"/>`;
+  });
+  if(cfg.cursor!==undefined){
+    const cx=X(cfg.cursor);
+    if(cx>=PM.l-0.5&&cx<=PM.l+iw+0.5){
+      s+=`<line x1="${cx.toFixed(1)}" y1="${PM.t}" x2="${cx.toFixed(1)}" y2="${PM.t+ih}" stroke="#16305C" stroke-width="1.4"/>`;
+      data.forEach(sr=>{
+        if(sr.xmin!==undefined&&cfg.cursor<sr.xmin) return;
+        if(sr.xmax!==undefined&&cfg.cursor>sr.xmax) return;
+        const v=sr.f(cfg.cursor);
+        if(isFinite(v)&&(!logY||v>0)){ const cy=Y(v);
+          if(cy>=PM.t-1&&cy<=PM.t+ih+1)
+            s+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${sr.color}" stroke="#fff" stroke-width="1.6"/>`; }
+      });
+    }
+  }
+  s+=`<text x="${PM.l+iw/2}" y="${PH-5}" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.xLabel}</text>`;
+  s+=`<text transform="translate(14,${PM.t+ih/2}) rotate(-90)" text-anchor="middle" font-size="11.5" fill="#5A6675">${cfg.yLabel}</text>`;
+  s+="</svg>";
+  host.innerHTML=s;
+}
+
+function fitCanvas(cv,cssH){
+  const dpr=window.devicePixelRatio||1, w=cv.parentElement.clientWidth;
+  cv.style.height=cssH+"px";
+  cv.width=Math.max(1,Math.round(w*dpr));
+  cv.height=Math.round(cssH*dpr);
+  const ctx=cv.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx,w,h:cssH};
+}
+function speedColor(t){
+  t=clamp(t,0,1);
+  const st=[[0,[226,232,240]],[0.5,[74,111,165]],[1,[15,122,110]]];
+  let a=st[0],b=st[st.length-1];
+  for(let i=0;i<st.length-1;i++){ if(t>=st[i][0]&&t<=st[i+1][0]){a=st[i];b=st[i+1];break;} }
+  const f=(t-a[0])/((b[0]-a[0])||1);
+  const c=a[1].map((v,i)=>Math.round(v+(b[1][i]-v)*f));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/* ============================================================
+   PANEL A
+   ============================================================ */
+const FLUIDS={
+  water:{name:"Water",      rho:998,  mu:0.001},
+  light:{name:"Light oil",  rho:850,  mu:0.05},
+  oil:  {name:"Oil",        rho:1200, mu:0.50},
+  glyc: {name:"Glycerin",   rho:1260, mu:1.41}
+};
+const A={fluid:"oil", vertical:true, R:5, L:2, dp:20, mu:0.50, rho:1200, pos:2};
+
+function renderA(){
+  A.pos=clamp(A.pos,0,A.R);
+  $("aPos").max=A.R;
+
+  $("aRv").textContent  = A.R.toFixed(1)+" mm";
+  $("aLv").textContent  = A.L.toFixed(1)+" m";
+  $("aDpv").textContent = A.dp.toFixed(1)+" kPa";
+  $("aMuv").textContent = A.mu.toFixed(3)+" Pa·s";
+  $("aRhov").textContent= A.rho+" kg/m³";
+  $("aPosv").textContent= A.pos.toFixed(2)+" mm";
+  ["aR","aL","aDp","aMu","aRho","aPos"].forEach((id,i)=>
+    $(id).value=[A.R,A.L,A.dp,A.mu,A.rho,A.pos][i]);
+  [...$("aFl").querySelectorAll("button")].forEach(b=>
+    b.setAttribute("aria-pressed",String(b.dataset.f===A.fluid)));
+  [...$("aOr").querySelectorAll("button")].forEach(b=>
+    b.setAttribute("aria-pressed",String((b.dataset.o==="vert")===A.vertical)));
+
+  const Rm=A.R*MM, dpPa=A.dp*1000;
+  const Phi  = PhiOf(dpPa,A.L,A.rho,A.vertical);
+  const PhiP = dpPa/A.L, PhiG = A.vertical ? A.rho*G : 0;
+  const Vz = r => VzTube(r,Rm,Phi,A.mu);
+  const Tu = r => TauTube(r,Phi);
+  const Vmax = VmaxOf(Rm,Phi,A.mu), Vavg = Vmax/2;
+  const Q = QTube(Rm,Phi,A.mu);
+  const Re = ReOf(A.rho,Vavg,Rm,A.mu);
+  const Fz = Math.PI*Rm*Rm*A.L*Phi;
+
+  $("aPhi").textContent  = fmt(Phi,0)+" Pa/m";
+  $("aPhiP").textContent = fmt(PhiP,0)+" Pa/m"+(Phi>0?"  ("+(100*PhiP/Phi).toFixed(0)+"%)":"");
+  $("aPhiG").textContent = fmt(PhiG,0)+" Pa/m"+(Phi>0?"  ("+(100*PhiG/Phi).toFixed(0)+"%)":"");
+  $("aVr").textContent   = Vz(A.pos*MM).toFixed(4)+" m/s";
+  $("aTr").textContent   = Tu(A.pos*MM).toFixed(2)+" Pa";
+  $("aVmax").textContent = Vmax.toFixed(4)+" m/s";
+  $("aVavg").textContent = Vavg.toFixed(4)+" m/s";
+  $("aRatio").textContent= Vmax>0 ? (Vavg/Vmax).toFixed(3) : "—";
+  $("aQ").textContent    = fmt(Q*60000,3)+" L/min";
+  $("aTw").textContent   = Tu(Rm).toFixed(2)+" Pa";
+  $("aFz").textContent   = fmt(Fz,3)+" N";
+  $("aRe").textContent   = fmt(Re,0);
+  $("aFlag").innerHTML   = Re<2000 ? '<span class="flag ok">laminar</span>'
+                         : Re<4000 ? '<span class="flag warn">transitional</span>'
+                                   : '<span class="flag bad">turbulent</span>';
+
+  /* ---- the cut-through-the-tube canvas ---- */
+  const {ctx,w,h}=fitCanvas($("cvA"),280);
+  ctx.clearRect(0,0,w,h);
+  const fL=PM.l/PW, fR=PM.r/PW;
+  const x0=w*fL, x1=w*(1-fR), cy=h/2;
+  const wallPx=Math.min(h*0.38, 96);        // drawn half-height of the bore
+  const pxPerMM=wallPx/Math.max(A.R,0.001);
+
+  // fluid, banded by speed, mirrored about the axis
+  const bands=56;
+  for(let i=0;i<bands;i++){
+    const ra=A.R*i/bands, rb=A.R*(i+1)/bands;
+    const v=Vz(((ra+rb)/2)*MM);
+    ctx.fillStyle=speedColor(Vmax>0 ? v/Vmax : 0);
+    const ya=ra*pxPerMM, yb=rb*pxPerMM;
+    ctx.fillRect(x0, cy-yb, x1-x0, yb-ya+0.8);   // upper half
+    ctx.fillRect(x0, cy+ya, x1-x0, yb-ya+0.8);   // lower half
+  }
+  // pipe walls
+  ctx.fillStyle="#C6CEDA";
+  ctx.fillRect(x0, cy-wallPx-11, x1-x0, 11);
+  ctx.fillRect(x0, cy+wallPx,    x1-x0, 11);
+  ctx.strokeStyle="#5A6675"; ctx.lineWidth=1.1;
+  ctx.strokeRect(x0, cy-wallPx-11, x1-x0, 2*wallPx+22);
+  ctx.beginPath();
+  ctx.moveTo(x0,cy-wallPx); ctx.lineTo(x1,cy-wallPx);
+  ctx.moveTo(x0,cy+wallPx); ctx.lineTo(x1,cy+wallPx);
+  ctx.stroke();
+  // centreline
+  ctx.beginPath(); ctx.moveTo(x0,cy); ctx.lineTo(x1,cy);
+  ctx.strokeStyle="#9AA7B6"; ctx.lineWidth=1; ctx.setLineDash([7,5]); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // velocity arrows forming the parabola
+  const baseX=x0+(x1-x0)*0.30, arrowMax=(x1-x0)*0.52;
+  const NA=9;
+  ctx.strokeStyle="#0F7A6E"; ctx.fillStyle="#0F7A6E"; ctx.lineWidth=1.8;
+  for(let i=-NA;i<=NA;i++){
+    const rr=A.R*Math.abs(i)/NA, sgn=Math.sign(i);
+    const v=Vz(rr*MM), len=Vmax>0 ? (v/Vmax)*arrowMax : 0;
+    const yy=cy+sgn*rr*pxPerMM;
+    ctx.beginPath(); ctx.moveTo(baseX,yy); ctx.lineTo(baseX+len,yy); ctx.stroke();
+    if(len>5){
+      ctx.beginPath();
+      ctx.moveTo(baseX+len,yy);
+      ctx.lineTo(baseX+len-7, yy-3.4);
+      ctx.lineTo(baseX+len-7, yy+3.4);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  // the parabola through the arrow tips
+  ctx.beginPath();
+  for(let i=-80;i<=80;i++){
+    const rr=A.R*Math.abs(i)/80, sgn=Math.sign(i)||1;
+    const len=Vmax>0 ? (Vz(rr*MM)/Vmax)*arrowMax : 0;
+    const yy=cy+sgn*rr*pxPerMM;
+    if(i===-80) ctx.moveTo(baseX+len,yy); else ctx.lineTo(baseX+len,yy);
+  }
+  ctx.strokeStyle="#16305C"; ctx.lineWidth=2; ctx.stroke();
+  // the baseline the arrows grow from
+  ctx.beginPath(); ctx.moveTo(baseX,cy-wallPx); ctx.lineTo(baseX,cy+wallPx);
+  ctx.strokeStyle="#16305C"; ctx.lineWidth=1; ctx.setLineDash([3,3]); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // the radius marker, mirrored
+  [-1,1].forEach(sg=>{
+    const yy=cy+sg*A.pos*pxPerMM;
+    ctx.beginPath(); ctx.moveTo(x0,yy); ctx.lineTo(x1,yy);
+    ctx.strokeStyle="#B3202B"; ctx.lineWidth=1.5; ctx.setLineDash([6,4]); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  ctx.font="11.5px ui-monospace, Menlo, monospace";
+  ctx.textAlign="left"; ctx.fillStyle="#5A6675";
+  ctx.fillText("wall  r = R", x0+6, cy-wallPx-16);
+  ctx.fillText("axis  r = 0", x0+6, cy-6);
+  ctx.textAlign="right"; ctx.fillStyle="#B3202B";
+  ctx.fillText("r = "+A.pos.toFixed(2)+" mm", x1-4, cy-A.pos*pxPerMM-5);
+  ctx.textAlign="center"; ctx.fillStyle="#5A6675";
+  ctx.fillText(A.vertical?"vertical tube, flow downward":"horizontal tube", (x0+x1)/2, h-6);
+
+  /* ---- plots ---- */
+  drawPlot($("plotA1"),{
+    x0:0, x1:A.R, cursor:A.pos,
+    series:[{f:rr=>Vz(rr*MM), color:"#0F7A6E"}],
+    marks:[{x:A.R,label:"wall"}],
+    xLabel:"radius r  (mm)", yLabel:"V₂  (m/s)",
+    aria:"Velocity profile across the tube"});
+
+  drawPlot($("plotA2"),{
+    x0:0, x1:A.R, cursor:A.pos, yMin:0,
+    series:[{f:rr=>Tu(rr*MM), color:"#B3202B"}],
+    marks:[{x:A.R,label:"wall"}],
+    xLabel:"radius r  (mm)", yLabel:"τᵣ₂  (Pa)",
+    aria:"Shear stress across the tube"});
+
+  $("noteA").innerHTML="<b>What to notice.</b> The two plots are mirror images in a precise sense: "+
+    "<b>velocity is flat where stress is zero</b> (the axis) and <b>steepest where stress is largest</b> (the wall). "+
+    "That is Newton's law, τ = −μ dV/dr, drawn twice. The flat top at r = 0 is not an accident of the algebra — "+
+    "it is the finiteness condition doing its job, and it is why the C₁ ln r term had to be thrown away. "+
+    "Note also that ⟨V₂⟩/V<sub>max</sub> reads <b>0.500</b> no matter what you move; the next tab explains why.";
+
+  let caution;
+  if(Re>=4000) caution="<b>This answer is no longer valid.</b> Re is above 4000, so the flow is turbulent: the real profile is blunt — nearly flat in the core with a thin steep layer at the wall — not the parabola drawn here. Hagen–Poiseuille does not apply. Thicken the fluid or narrow the tube to get back into range.";
+  else if(Re>=2000) caution="<b>Careful.</b> Re is past 2000, the lecture's cut-off, so the flow is transitional and the parabola is becoming unreliable. Everything on this page assumes laminar flow.";
+  else caution="<b>Laminar, so the derivation holds.</b> Re = "+fmt(Re,0)+", comfortably under 2000. Worth doing this check every time: the entire parabolic result is void above it, and nothing in the formulas warns you — they return a confident number either way.";
+  $("cautionA").innerHTML=caution;
+}
+
+/* ============================================================
+   PANEL B — where the flow comes from, and the R^4 law
+   ============================================================ */
+const B={frac:0.5, R:5};
+
+function renderB(){
+  $("bFracv").textContent = B.frac.toFixed(3);
+  $("bRv").textContent    = B.R.toFixed(1)+" mm";
+  $("bFrac").value=B.frac; $("bR").value=B.R;
+
+  /* Shapes only — the physical constants cancel out of every ratio on this
+     tab, so we work with Vmax = 1 and R in millimetres. */
+  const R=B.R;
+  const dQdr = rr => 2*Math.PI*rr*(1-(rr/R)*(rr/R));   // per unit Vmax
+  // fraction of total flow inside r = x R  is  2x^2 - x^4
+  const flowFrac = x => 2*x*x - Math.pow(x,4);
+  const areaFrac = x => x*x;
+
+  $("bArea").textContent = (100*areaFrac(B.frac)).toFixed(1)+"%";
+  $("bFlow").textContent = (100*flowFrac(B.frac)).toFixed(1)+"%";
+  $("bPeak").textContent = (1/Math.sqrt(3)).toFixed(4);
+
+  // a reference tube so the R^4 plot carries real units
+  const Phi=PhiOf(20000,2,1200,true), mu=0.5;
+  $("bQ").textContent = fmt(QTube(B.R*MM,Phi,mu)*60000,3)+" L/min";
+
+  drawPlot($("plotB1"),{
+    x0:0, x1:R, cursor:B.frac*R,
+    areas:[{f:dQdr, color:"rgba(107,78,168,0.22)", x0:0, x1:B.frac*R}],
+    series:[{f:dQdr, color:"#6B4EA8"}],
+    marks:[{x:R/Math.sqrt(3), label:"R/√3"}],
+    xLabel:"radius r  (mm)", yLabel:"dQ/dr  (per unit Vₘₐₓ)",
+    aria:"Flow contributed by each ring of radius"});
+
+  drawPlot($("plotB2"),{
+    x0:1, x1:25, logX:true, logY:true,
+    series:[{f:RR=>QTube(RR*MM,Phi,mu)*60000, color:"#0F7A6E"}],
+    points:[{x:B.R, y:QTube(B.R*MM,Phi,mu)*60000, color:"#16305C"}],
+    marks:[{x:B.R,label:"your R"}],
+    xLabel:"tube radius R  (mm)", yLabel:"Q  (L/min)",
+    aria:"Flow rate against tube radius on log axes"});
+
+  const rows=[[0.5,"half"],[1,"your R"],[2,"double"],[4,"quadruple"]];
+  const Qbase=QTube(B.R*MM,Phi,mu)*60000;
+  let t='<table class="tbl"><tr><th>Radius</th><th>R (mm)</th><th>Q (L/min)</th><th>vs yours</th></tr>';
+  rows.forEach(([k,lab])=>{
+    const RR=B.R*k, q=QTube(RR*MM,Phi,mu)*60000;
+    t+=`<tr${k===1?' class="on"':''}><td>${lab}</td><td>${RR.toFixed(1)}</td>`+
+       `<td>${fmt(q,3)}</td><td>${(q/Qbase).toFixed(3)}×</td></tr>`;
+  });
+  t+="</table>";
+  $("bTable").innerHTML=t;
+
+  const af=100*areaFrac(B.frac), ff=100*flowFrac(B.frac);
+  $("noteB").innerHTML="<b>What to notice.</b> The left curve is <b>zero at both ends</b>, and for opposite reasons: "+
+    "at the axis the ring has no circumference, at the wall the fluid has no speed. In between it peaks at "+
+    "<b>r = R/√3 ≈ 0.577R</b>. Right now the inner <b>"+(100*B.frac).toFixed(0)+
+    "%</b> of the radius is <b>"+af.toFixed(1)+"%</b> of the area but carries <b>"+ff.toFixed(1)+
+    "%</b> of the flow. Slide to 0.5 and you get the striking case: a quarter of the area delivering 43.8% of the flow. "+
+    "<br><br>This weighting is exactly why ⟨V₂⟩ = V<sub>max</sub>/2. If you averaged the parabola without the 2πr — "+
+    "treating the tube like a flat slot — you would get 2/3 instead. "+
+    "<br><br>On the right, <b>Q ∝ R⁴</b>: V<sub>max</sub> grows as R² and the area grows as R² again. On log axes that is a straight line of slope 4, "+
+    "and in practice it means a 10% error in diameter is a 46% error in flow.";
+}
+
+/* ============================================================
+   PANEL C — tube vs rod
+   ============================================================ */
+const C={r1:10, film:2, mu:0.10, rho:900};
+
+function renderC(){
+  $("cR1v").textContent   = C.r1.toFixed(1)+" mm";
+  $("cFilmv").textContent = C.film.toFixed(2)+" mm";
+  $("cMuv").textContent   = C.mu.toFixed(2)+" Pa·s";
+  ["cR1","cFilm","cMu"].forEach((id,i)=>$(id).value=[C.r1,C.film,C.mu][i]);
+
+  const r1=C.r1*MM, r2=(C.r1+C.film)*MM;
+  const Vrod = rr => VzRod(rr*MM,r1,r2,C.rho,C.mu);
+  const Q    = QRod(r1,r2,C.rho,C.mu);
+  const Vs   = Vrod(C.r1+C.film);
+  const C1   = C.rho*G*r2*r2/(2*C.mu);
+
+  // a tube of the same outer radius, driven by gravity alone, for comparison
+  const PhiT=C.rho*G;
+  const Vtube = rr => VzTube(rr*MM,r2,PhiT,C.mu);
+
+  $("cC1").textContent = fmt(C1,3)+" m/s";
+  $("cVs").textContent = Vs.toFixed(4)+" m/s";
+  $("cQ").textContent  = fmt(Q*60000,4)+" L/min";
+  $("cRatio").textContent = (C.film/C.r1).toFixed(4);
+
+  const Gam=C.rho*Q/(2*Math.PI*r1), ReFilm=4*Gam/C.mu;
+  $("cRe").innerHTML = ReFilm<25 ? '<span class="flag ok">'+ReFilm.toFixed(1)+' — laminar</span>'
+                     : ReFilm<1000 ? '<span class="flag warn">'+ReFilm.toFixed(0)+' — wavy</span>'
+                     : '<span class="flag bad">'+fmt(ReFilm,0)+' — turbulent</span>';
+
+  const qFlat = 2*Math.PI*r1*(C.rho*G*Math.pow(C.film*MM,3)/(3*C.mu));
+  $("cFlat").textContent = qFlat>0 ? (Q/qFlat).toFixed(4) : "—";
+
+  drawPlot($("plotC1"),{
+    x0:0, x1:C.r1+C.film,
+    series:[{f:Vtube, color:"#0F7A6E"}],
+    marks:[{x:C.r1+C.film,label:"wall"}],
+    xLabel:"radius r  (mm)", yLabel:"V₂  (m/s)",
+    aria:"Tube velocity profile"});
+
+  drawPlot($("plotC2"),{
+    x0:C.r1, x1:C.r1+C.film,
+    series:[{f:Vrod, color:"#4A6FA5"}],
+    marks:[{x:C.r1,label:"rod"},{x:C.r1+C.film,label:"free surface"}],
+    xLabel:"radius r  (mm)", yLabel:"V₂  (m/s)",
+    aria:"Rod film velocity profile"});
+
+  /* Delete the ln r term and only C2 is left.  No-slip at r1 then forces
+     C2 = rho g r1^2/(4 mu), giving V = rho g (r1^2 - r^2)/(4 mu) -- negative
+     for every r > r1, and with a slope that can never be zero at r2. */
+  const VrodWrong = rr => C.rho*G*(r1*r1 - (rr*MM)*(rr*MM))/(4*C.mu);
+  const slopeWrong = -C.rho*G*r2/(2*C.mu);
+  $("cVwrong").textContent     = VrodWrong(C.r1+C.film).toFixed(4)+" m/s";
+  $("cSlopeWrong").textContent = fmt(slopeWrong,0)+" 1/s";
+
+  drawPlot($("plotC3"),{
+    x0:C.r1, x1:C.r1+C.film,
+    series:[
+      {f:Vrod,      color:"#4A6FA5"},
+      {f:VrodWrong, color:"#B3202B", dash:"5 4"}
+    ],
+    marks:[{x:C.r1,label:"rod"},{x:C.r1+C.film,label:"free surface"}],
+    xLabel:"radius r  (mm)", yLabel:"V₂  (m/s)",
+    aria:"Correct rod profile against the profile with the logarithm removed"});
+
+  $("noteC").innerHTML="<b>What to notice.</b> Both profiles come from the same three-term general solution. "+
+    "In the <b>tube</b> the axis is inside the fluid, so C₁ ln r would be infinite there and must be deleted — which is what makes the profile a clean parabola, flat on top. "+
+    "On the <b>rod</b> the axis is buried in solid metal, the fluid never goes near it, and C₁ = ρgr₂²/2μ = "+fmt(C1,3)+
+    " survives. That logarithm is what tilts the profile so the maximum sits at the free surface instead of the middle."+
+    "<br><br>The bottom plot is what happens if you delete that logarithm out of habit. Only C₂ is left, no-slip fixes it, and the profile you get is <b>negative everywhere</b> — a film running <i>up</i> the rod against gravity. Worse, its slope at the free surface is "+fmt(slopeWrong,0)+" 1/s, and no choice of constant can make that zero, so the second boundary condition cannot be satisfied at all. The ln r term is not optional decoration — without it the problem has no solution."+
+    "<br><br>Right now δ/r₁ = "+(C.film/C.r1).toFixed(3)+", and the exact Q is <b>"+
+    (qFlat>0?(Q/qFlat).toFixed(3):"—")+"×</b> the flat-plate falling-film estimate from Topic 10. "+
+    "Thin the film and that ratio walks down to 1, which is both a check on the messy formula and a licence to use the simple one when δ ≪ r₁.";
+}
+
+/* ============================================================
+   Wiring
+   ============================================================ */
+function bindRange(id,obj,key,after){
+  $(id).addEventListener("input",e=>{ obj[key]=parseFloat(e.target.value); after(); });
+}
+["aR|R","aL|L","aDp|dp","aMu|mu","aRho|rho","aPos|pos"].forEach(s=>{
+  const [id,key]=s.split("|"); bindRange(id,A,key,renderA);
+});
+$("aFl").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  A.fluid=b.dataset.f; A.mu=FLUIDS[A.fluid].mu; A.rho=FLUIDS[A.fluid].rho; renderA();
+});
+$("aOr").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  A.vertical=(b.dataset.o==="vert"); renderA();
+});
+
+bindRange("bFrac",B,"frac",renderB);
+bindRange("bR",B,"R",renderB);
+
+["cR1|r1","cFilm|film","cMu|mu"].forEach(s=>{
+  const [id,key]=s.split("|"); bindRange(id,C,key,renderC);
+});
+
+/* Drag on the tube canvas: distance from the centreline is the radius, so take
+   the absolute vertical offset and scale it back to millimetres. */
+(function(){
+  const cv=$("cvA"); let down=false;
+  const pick=ev=>{
+    const r=cv.getBoundingClientRect();
+    const wallPx=Math.min(r.height*0.38, 96);
+    const pxPerMM=wallPx/Math.max(A.R,0.001);
+    const dy=Math.abs((ev.clientY-r.top)-r.height/2);
+    A.pos=clamp(dy/pxPerMM, 0, A.R); renderA();
+  };
+  cv.addEventListener("pointerdown",e=>{down=true;cv.setPointerCapture(e.pointerId);pick(e);});
+  cv.addEventListener("pointermove",e=>{ if(down) pick(e); });
+  cv.addEventListener("pointerup",()=>{down=false;});
+  cv.addEventListener("keydown",e=>{
+    const st=(e.shiftKey?5:1)*A.R/60;
+    if(e.key==="ArrowDown"||e.key==="ArrowRight"){A.pos=clamp(A.pos+st,0,A.R);renderA();e.preventDefault();}
+    if(e.key==="ArrowUp"||e.key==="ArrowLeft"){ A.pos=clamp(A.pos-st,0,A.R);renderA();e.preventDefault();}
+  });
+})();
+
+const panels={"tab-a":"p-a","tab-b":"p-b","tab-c":"p-c"};
+document.querySelectorAll(".tab").forEach(t=>{
+  t.addEventListener("click",()=>{
+    Object.entries(panels).forEach(([tid,pid])=>{
+      const on=tid===t.id;
+      $(tid).setAttribute("aria-selected",String(on));
+      $(pid).hidden=!on;
+    });
+    renderAll();
+  });
+});
+function renderAll(){
+  if(!$("p-a").hidden) renderA();
+  if(!$("p-b").hidden) renderB();
+  if(!$("p-c").hidden) renderC();
+}
+let rt;
+window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(renderAll,120);});
+renderAll();
+</script>
+</body>
+</html>
