@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Course Document Accessibility Fixer</title>
+<!-- Atkinson Hyperlegible was designed by the Braille Institute for low-vision readers -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<!-- JSZip opens and rewrites .docx files (a .docx is a zip of XML files) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- pdf-lib reads a PDF's structure tags and writes title/language fixes -->
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<!-- pdf.js extracts the text of a PDF so it can be rebuilt as an accessible Word file -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<style>
+  /* ---------- Color tokens (light) ---------- */
+  :root {
+    --bg: #F2F4F8;
+    --surface: #FFFFFF;
+    --ink: #16233F;
+    --muted: #4A5670;
+    --line: #CDD4E0;
+    --accent: #1F4FC7;
+    --accent-ink: #FFFFFF;
+    --good: #17663F;  --good-bg: #E4F3EA;
+    --warn: #8A4A00;  --warn-bg: #FCEFDC;
+    --bad:  #A3232B;  --bad-bg:  #FBE6E7;
+    --fold: #DCE2EC;
+    color-scheme: light dark;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  /* ---------- Color tokens (dark, from the OS setting) ---------- */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0F1626; --surface: #172136; --ink: #E7ECF6; --muted: #AAB5CA; --line: #2E3C58;
+      --accent: #93B2FF; --accent-ink: #0F1626;
+      --good: #82D6A8; --good-bg: #16301F; --warn: #F2BA70; --warn-bg: #36270F; --bad: #FF9EA5; --bad-bg: #3A1A1D;
+      --fold: #24314B;
+    }
+  }
+  /* ---------- Color tokens (dark, when the viewer forces it) ---------- */
+  :root[data-theme="dark"] {
+    --bg: #0F1626; --surface: #172136; --ink: #E7ECF6; --muted: #AAB5CA; --line: #2E3C58;
+    --accent: #93B2FF; --accent-ink: #0F1626;
+    --good: #82D6A8; --good-bg: #16301F; --warn: #F2BA70; --warn-bg: #36270F; --bad: #FF9EA5; --bad-bg: #3A1A1D;
+    --fold: #24314B;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 1.0625rem; line-height: 1.55;
+  }
+  .wrap { max-width: 58rem; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+  .skip { position: absolute; left: -999px; top: 0; background: var(--accent); color: var(--accent-ink); padding: .5rem 1rem; }
+  .skip:focus { left: 1rem; top: 1rem; z-index: 10; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+  h1 { font-size: clamp(2rem, 5.5vw, 3.25rem); line-height: 1.08; letter-spacing: -0.015em; margin: 0 0 .75rem; max-width: 16ch; }
+  h2 { font-size: 1.6rem; line-height: 1.2; margin: 0 0 .5rem; }
+  h3 { font-size: 1.2rem; margin: 0; }
+  p { margin: 0 0 .9rem; max-width: 68ch; }
+  .lede { font-size: 1.2rem; color: var(--muted); max-width: 52ch; }
+  a { color: var(--accent); }
+  img { max-width: 100%; }
+
+  /* ---------- The upload "page" with a folded corner ---------- */
+  .sheet {
+    position: relative; margin: 2rem 0 1rem; background: var(--surface);
+    border: 2px solid var(--line); border-radius: 4px;
+    clip-path: polygon(0 0, calc(100% - 56px) 0, 100% 56px, 100% 100%, 0 100%);
+    padding: 2.5rem 2rem; min-height: 15rem;
+    display: grid; align-content: center; gap: .6rem; text-align: left;
+  }
+  .sheet::after {
+    content: ""; position: absolute; top: 0; right: 0; width: 56px; height: 56px;
+    background: linear-gradient(225deg, var(--bg) 50%, var(--fold) 50%);
+  }
+  .sheet.dragging { border-color: var(--accent); border-style: dashed; }
+  .sheet .rule { height: 10px; background: repeating-linear-gradient(var(--line) 0 2px, transparent 2px 10px); width: 60%; opacity: .7; }
+  .sheet .rule.short { width: 38%; }
+  .file-label { display: inline-block; justify-self: start; margin-top: .75rem; }
+  input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .hint { color: var(--muted); font-size: .95rem; margin: 0; }
+
+  button, .btn {
+    font: inherit; font-weight: 700; border-radius: 6px; cursor: pointer;
+    border: 2px solid var(--accent); background: var(--accent); color: var(--accent-ink);
+    padding: .65rem 1.2rem; min-height: 44px;
+  }
+  button.secondary { background: transparent; color: var(--accent); }
+  button.small { padding: .35rem .8rem; min-height: 36px; font-size: .95rem; }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+
+  #status { min-height: 1.5rem; margin: 1rem 0; font-weight: 700; }
+  #status.bad { color: var(--bad); } #status.good { color: var(--good); }
+
+  /* ---------- Report ---------- */
+  .report-head { border-top: 4px solid var(--ink); padding-top: 1.25rem; margin-top: 2.5rem; }
+  .toc { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: .35rem; }
+  .toc a { text-decoration: none; color: var(--ink); display: flex; gap: .6rem; align-items: baseline; }
+  .toc a:hover span.t { text-decoration: underline; }
+  .check { border-top: 1px solid var(--line); padding: 1.75rem 0 .5rem; }
+  .check-head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; margin-bottom: .6rem; }
+  .why { color: var(--muted); font-size: .98rem; }
+  .mark { display: inline-block; font-weight: 700; font-size: .9rem; padding: .1rem .55rem; border-radius: 3px; white-space: nowrap; }
+  .mark.good { color: var(--good); background: var(--good-bg); }
+  .mark.warn { color: var(--warn); background: var(--warn-bg); }
+  .mark.bad  { color: var(--bad);  background: var(--bad-bg); }
+  .mark.info { color: var(--muted); background: var(--bg); border: 1px solid var(--line); }
+
+  label.field { display: block; font-weight: 700; margin: .75rem 0 .3rem; }
+  input[type=text], select, textarea {
+    font: inherit; color: var(--ink); background: var(--surface); width: 100%;
+    border: 2px solid var(--line); border-radius: 5px; padding: .5rem .6rem;
+  }
+  textarea { resize: vertical; min-height: 4.5rem; }
+  .inline-check { display: flex; gap: .5rem; align-items: flex-start; margin: .5rem 0; }
+  .inline-check input { width: 1.2rem; height: 1.2rem; margin-top: .2rem; flex: none; }
+
+  .img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1.25rem; margin-top: 1rem; }
+  .img-item { background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--line); padding: .9rem; border-radius: 4px; }
+  .img-item[data-status=bad] { border-left-color: var(--bad); }
+  .img-item[data-status=warn] { border-left-color: var(--warn); }
+  .img-item[data-status=good] { border-left-color: var(--good); }
+  .thumb { background: #FFFFFF; border: 1px solid var(--line); height: 9rem; display: grid; place-items: center; overflow: hidden; margin-bottom: .6rem; }
+  .thumb img { max-height: 100%; object-fit: contain; }
+  .thumb span { color: #4A5670; font-size: .9rem; padding: .5rem; text-align: center; }
+  .img-meta { font-size: .95rem; margin: 0 0 .25rem; }
+  .img-meta .mark { white-space: normal; }
+  .ctx { font-size: .85rem; color: var(--muted); margin: .25rem 0 .4rem; }
+
+  .rows { display: grid; gap: .9rem; margin-top: .75rem; }
+  .row { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: .8rem .9rem; }
+  .row-grid { display: grid; grid-template-columns: 11rem 1fr; gap: .75rem; align-items: start; }
+  @media (max-width: 560px) { .row-grid { grid-template-columns: 1fr; } }
+  .quote { font-style: italic; overflow-wrap: anywhere; }
+  .outline { list-style: none; padding: 0; margin: .5rem 0; }
+  .outline li { padding: .15rem 0; }
+  .swatch { display: inline-block; width: 1.1rem; height: 1.1rem; border-radius: 2px; vertical-align: -3px; border: 1px solid var(--line); margin-right: .35rem; }
+  .callout { background: var(--surface); border: 2px solid var(--ink); border-radius: 4px; padding: 1rem 1.1rem; margin: 1rem 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .scroll-x { overflow-x: auto; }
+  table.facts { border-collapse: collapse; width: 100%; margin: .5rem 0 1rem; }
+  table.facts th, table.facts td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.facts th[scope=row] { font-weight: 700; width: 38%; }
+
+  .block { display: grid; grid-template-columns: 10rem 1fr; gap: .6rem; padding: .55rem 0; border-bottom: 1px solid var(--line); }
+  @media (max-width: 560px) { .block { grid-template-columns: 1fr; } }
+  .block textarea { min-height: 2.6rem; }
+  .block[data-type=h1] textarea { font-weight: 700; font-size: 1.25rem; }
+  .block[data-type=h2] textarea { font-weight: 700; font-size: 1.12rem; }
+  .block[data-type=h3] textarea { font-weight: 700; }
+  .block[data-type=remove] textarea { text-decoration: line-through; color: var(--muted); }
+
+  .actionbar {
+    position: sticky; bottom: 0; background: var(--surface); border-top: 2px solid var(--ink);
+    padding: .9rem 1.25rem calc(.9rem + env(safe-area-inset-bottom, 0px));
+    display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; justify-content: center;
+  }
+  .actionbar[hidden] { display: none; }
+  #dlStatus { font-weight: 700; }
+  details { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+  summary { font-weight: 700; cursor: pointer; }
+  details ul { max-width: 68ch; }
+  .next-steps { margin-top: .5rem; }
+  @media (prefers-reduced-motion: no-preference) {
+    .check { animation: none; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<div class="wrap">
+  <header>
+    <h1>Make a course document accessible</h1>
+    <p class="lede">Upload a Word or PDF file. This page checks it against the WCAG 2.1 AA items that matter most for course documents, fixes what it can, and hands you a corrected copy.</p>
+  </header>
+
+  <main id="main">
+    <!-- The dropzone: a label wraps the hidden file input so keyboard and screen-reader users get a real control -->
+    <div class="sheet" id="drop">
+      <div class="rule" aria-hidden="true"></div>
+      <div class="rule short" aria-hidden="true"></div>
+      <label class="btn file-label" for="file">Choose a Word or PDF file</label>
+      <input type="file" id="file" accept=".docx,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+      <p class="hint">Or drop it on this page. Your file stays in your browser; nothing is uploaded to a server.</p>
+    </div>
+
+    <div id="status" role="status" aria-live="polite"></div>
+    <section id="report" hidden aria-labelledby="reportTitle"></section>
+
+    <details>
+      <summary>What this tool cannot judge for you</summary>
+      <ul>
+        <li>Whether alt text is <em>accurate</em>. Suggestions are a starting point; you know what each image is teaching.</li>
+        <li>Math that exists only as a picture. Alt text makes it readable, but retyping problems with Word's Equation editor (Insert, then Equation) is the most accessible form, because screen readers can step through each term.</li>
+        <li>Reading order of floating pictures and text boxes, meaning carried by color alone, and videos (which need captions).</li>
+        <li>Content inside headers, footers, and comments.</li>
+      </ul>
+      <p>After downloading, open the file in Word and run Review, then Check Accessibility, for a final pass. When you need a PDF, use File, then Save As, PDF, and keep "Document structure tags for accessibility" turned on.</p>
+    </details>
+  </main>
+</div>
+<div class="actionbar" id="actionbar" hidden>
+  <button id="downloadBtn" type="button">Download fixed file</button>
+  <span id="dlStatus" role="status" aria-live="polite"></span>
+</div>
+
+<script>
+/* =====================================================================
+   0. Setup: namespaces, small helpers, and optional Claude capabilities
+   ===================================================================== */
+
+// XML namespaces used inside Word files
+const NS = {
+  w: 'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
+  wp: 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',
+  a: 'http://schemas.openxmlformats.org/drawingml/2006/main',
+  r: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+  m: 'http://schemas.openxmlformats.org/officeDocument/2006/math',
+  pic: 'http://schemas.openxmlformats.org/drawingml/2006/picture',
+  dc: 'http://purl.org/dc/elements/1.1/',
+  adec: 'http://schemas.microsoft.com/office/drawing/2017/decorative'
+};
+const DECOR_URI = '{C183D7F6-B498-43B3-948B-1728B52AA6E4}'; // Word's "Mark as decorative" flag
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const XML_DECL = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n';
+
+// Image types Claude can look at, keyed by file extension
+const IMG_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
+
+const $ = s => document.querySelector(s);
+let uid = 0; const nextId = p => `${p}-${++uid}`;
+
+// h(): build DOM safely; text always goes in via textContent, never innerHTML
+function h(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k === 'value') e.value = v;
+    else if (k === 'checked' || k === 'disabled' || k === 'selected') e[k] = !!v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return e;
+}
+
+// XML helpers for WordprocessingML
+const parseXml = s => new DOMParser().parseFromString(s, 'application/xml');
+const toXml = d => { const s = new XMLSerializer().serializeToString(d); return s.startsWith('<?xml') ? s : XML_DECL + s; };
+const wAll = (n, name) => Array.from(n.getElementsByTagNameNS(NS.w, name));
+const kid = (n, name, ns = NS.w) => n ? Array.from(n.children).find(c => c.namespaceURI === ns && c.localName === name) || null : null;
+const wVal = n => n ? n.getAttributeNS(NS.w, 'val') : null;
+const mkW = (doc, name, val) => { const e = doc.createElementNS(NS.w, 'w:' + name); if (val != null) e.setAttributeNS(NS.w, 'w:val', val); return e; };
+const isOn = n => !!n && !['0', 'false', 'off'].includes((wVal(n) || '').toLowerCase());
+const within = (n, name, ns = NS.w) => { for (let p = n.parentNode; p && p.nodeType === 1; p = p.parentNode) if (p.namespaceURI === ns && p.localName === name) return p; return null; };
+const paraText = p => wAll(p, 't').map(t => t.textContent).join('');
+const clip = (s, n = 140) => (s = s.replace(/\s+/g, ' ').trim()).length > n ? s.slice(0, n - 1) + '…' : s;
+const escXml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// Insert `node` into `parent`, before the first child whose name appears in `beforeNames` (keeps Word's required element order)
+function insertOrdered(parent, node, beforeNames) {
+  const ref = Array.from(parent.children).find(c => beforeNames.includes(c.localName));
+  parent.insertBefore(node, ref || null);
+}
+
+// Get (or create as first child) a paragraph's w:pPr
+function ensurePPr(p) {
+  let pPr = kid(p, 'pPr');
+  if (!pPr) { pPr = mkW(p.ownerDocument, 'pPr'); p.insertBefore(pPr, p.firstChild); }
+  return pPr;
+}
+
+// Status line under the upload area (announced to screen readers)
+function announce(msg, kind = '') { const s = $('#status'); s.textContent = msg; s.className = kind; }
+
+// Optional platform features: exist only when the page runs inside Claude. Elsewhere (e.g., GitHub Pages) these stay null.
+const hasRuntime = typeof window.claude?.use === 'function';
+const downloadsP = hasRuntime ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+const sampleP = hasRuntime ? window.claude.use('sample').catch(() => null) : Promise.resolve(null);
+
+// Save a file: through Claude's download capability when present, otherwise an ordinary browser download
+async function offerDownload(blob, filename) {
+  const dl = await downloadsP;
+  if (dl) {
+    try { await dl.save({ filename, data: blob }); return 'Saved ' + filename; }
+    catch (e) { if (e && e.code && e.code !== 'unavailable') return e.code === 'declined' || e.code === 'cancelled' ? 'Download cancelled.' : 'Download failed (' + e.code + ').'; }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = h('a', { href: url, download: filename });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  return 'Downloaded ' + filename;
+}
+
+// Contrast math from WCAG 2.1
+function lum(hex) {
+  const c = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+const contrast = (a, b = 'FFFFFF') => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+// Darken a color (keeping its hue) until it passes against white
+function darkenToPass(hex, target) {
+  const rgb = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
+  for (let f = 1; f >= 0; f -= 0.02) {
+    const c = rgb.map(v => Math.round(v * f).toString(16).padStart(2, '0')).join('').toUpperCase();
+    if (contrast(c) >= target + 0.1) return c;
+  }
+  return '000000';
+}
+
+// Status badge: text + color so meaning never depends on color alone
+const LABEL = { good: 'Looks good', warn: 'Review', bad: 'Needs fixing', info: 'For your review' };
+const mark = (kind, text) => h('span', { class: 'mark ' + kind, text: (kind === 'good' ? '✓ ' : kind === 'bad' ? '✕ ' : kind === 'warn' ? '! ' : 'i ') + (text || LABEL[kind]) });
+
+/* =====================================================================
+   1. File intake
+   ===================================================================== */
+let S = null; // everything about the currently loaded document
+
+const fileInput = $('#file'), drop = $('#drop');
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+// Let people drop a file anywhere on the page
+['dragenter', 'dragover'].forEach(t => window.addEventListener(t, e => { e.preventDefault(); drop.classList.add('dragging'); }));
+['dragleave', 'drop'].forEach(t => window.addEventListener(t, e => { e.preventDefault(); if (t === 'drop' || e.target === document.documentElement) drop.classList.remove('dragging'); }));
+window.addEventListener('drop', e => { drop.classList.remove('dragging'); handleFile(e.dataTransfer?.files?.[0]); });
+
+async function handleFile(file) {
+  if (!file) return;
+  S = null; $('#report').hidden = true; $('#report').replaceChildren(); $('#actionbar').hidden = true; $('#dlStatus').textContent = '';
+  const ext = file.name.split('.').pop().toLowerCase();
+  announce('Reading ' + file.name + '…');
+  try {
+    if (ext === 'docx') await openDocx(file);
+    else if (ext === 'pdf') await openPdf(file);
+    else if (ext === 'doc') announce('This is the older .doc format. Open it in Word, choose File, Save As, Word Document (.docx), then upload that copy.', 'bad');
+    else announce('Please choose a .docx or .pdf file.', 'bad');
+  } catch (err) {
+    console.error(err);
+    announce('This file could not be read: ' + (err.message || err), 'bad');
+  }
+  fileInput.value = '';
+}
+
+/* =====================================================================
+   2. Word (.docx): read the package and run each check
+   ===================================================================== */
+async function openDocx(file) {
+  const zip = await JSZip.loadAsync(file);
+  const read = async p => zip.file(p) ? parseXml(await zip.file(p).async('string')) : null;
+  const doc = await read('word/document.xml');
+  if (!doc) throw new Error('it does not look like a Word document.');
+  const stylesDoc = await read('word/styles.xml');
+  const coreDoc = await read('docProps/core.xml');
+  const relsDoc = await read('word/_rels/document.xml.rels');
+  // Relationship id -> target path (how pictures and links are wired up)
+  const rels = {};
+  if (relsDoc) for (const r of relsDoc.getElementsByTagName('Relationship'))
+    rels[r.getAttribute('Id')] = { target: r.getAttribute('Target'), external: r.getAttribute('TargetMode') === 'External' };
+
+  S = { kind: 'docx', file, zip, doc, stylesDoc, coreDoc, rels, body: wAll(doc, 'body')[0] };
+  S.styles = readStyles(stylesDoc);
+  S.checks = [
+    checkTitle(), checkLanguage(), await checkImages(), checkHeadings(), checkTables(),
+    checkContrast(), checkLinks(), checkBlankLines(), checkOtherNotes()
+  ].filter(Boolean);
+  renderReport(file.name, 'Word document', S.checks);
+  $('#downloadBtn').textContent = 'Download fixed Word file';
+  $('#actionbar').hidden = false;
+  announce('Checked ' + file.name + '. Review the results below.', 'good');
+}
+
+// Map each paragraph style id -> its heading level (from the style's name or outline level)
+function readStyles(stylesDoc) {
+  const map = {};
+  if (!stylesDoc) return map;
+  for (const s of wAll(stylesDoc, 'style')) {
+    if (s.getAttributeNS(NS.w, 'type') !== 'paragraph') continue;
+    const id = s.getAttributeNS(NS.w, 'styleId');
+    const name = (wVal(kid(s, 'name')) || '').toLowerCase();
+    let level = null;
+    const m = name.match(/^heading (\d)$/);
+    if (m) level = +m[1];
+    else if (name === 'title') level = 1;
+    else { const o = kid(kid(s, 'pPr'), 'outlineLvl'); if (o && +wVal(o) < 9) level = +wVal(o) + 1; }
+    map[id] = { name, level };
+  }
+  return map;
+}
+const headingLevel = p => { const id = wVal(kid(kid(p, 'pPr'), 'pStyle')); return id && S.styles[id] ? S.styles[id].level : null; };
+
+/* ---------- Check: document title ---------- */
+function checkTitle() {
+  const titleEl = S.coreDoc ? S.coreDoc.getElementsByTagNameNS(NS.dc, 'title')[0] : null;
+  const current = titleEl ? titleEl.textContent.trim() : '';
+  // Suggest the first heading, else a cleaned-up file name
+  const firstH = wAll(S.body, 'p').find(p => headingLevel(p) === 1 && paraText(p).trim());
+  const guess = current || (firstH ? clip(paraText(firstH), 90) : S.file.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').replace(/\s*\(\d+\)/g, '').trim());
+  const c = { id: 'title', title: 'Document title', status: current ? 'good' : 'bad', value: guess };
+  c.summary = current ? `Title is "${current}".` : 'No title is set, so screen readers announce the file name instead.';
+  c.render = () => {
+    const id = nextId('title');
+    return [
+      h('p', { class: 'why', text: 'The title is the first thing a screen reader announces, and it becomes the PDF title when you export.' }),
+      !S.coreDoc ? h('p', { text: 'This file has no properties section, so set the title in Word: File, Info, Properties, Title.' }) :
+      [h('label', { class: 'field', for: id, text: 'Title' }),
+       h('input', { type: 'text', id, value: c.value, oninput: e => c.value = e.target.value })]
+    ];
+  };
+  c.apply = () => {
+    if (!S.coreDoc || !c.value.trim()) return;
+    let t = S.coreDoc.getElementsByTagNameNS(NS.dc, 'title')[0];
+    if (!t) { t = S.coreDoc.createElementNS(NS.dc, 'dc:title'); S.coreDoc.documentElement.prepend(t); }
+    t.textContent = c.value.trim();
+  };
+  return c;
+}
+
+/* ---------- Check: document language ---------- */
+const LANGS = [['en-US', 'English (United States)'], ['es-US', 'Spanish (United States)'], ['es-MX', 'Spanish (Mexico)'], ['fr-FR', 'French'], ['vi-VN', 'Vietnamese'], ['zh-CN', 'Chinese (Simplified)']];
+function langOptions(current, onChange) {
+  const list = LANGS.some(l => l[0] === current) || !current ? LANGS : [[current, current], ...LANGS];
+  return h('select', { onchange: e => onChange(e.target.value) }, list.map(([v, t]) => h('option', { value: v, selected: v === (current || 'en-US'), text: t })));
+}
+function checkLanguage() {
+  const langEl = S.stylesDoc ? kid(kid(kid(kid(S.stylesDoc.documentElement, 'docDefaults'), 'rPrDefault'), 'rPr'), 'lang') : null;
+  const current = langEl ? wVal(langEl) : '';
+  const c = { id: 'lang', title: 'Document language', status: current ? 'good' : 'bad', value: current || 'en-US' };
+  c.summary = current ? `Language is ${current}.` : 'No default language is set, so screen readers may mispronounce words.';
+  c.render = () => {
+    const id = nextId('lang'); const sel = langOptions(c.value, v => c.value = v); sel.id = id;
+    return [h('p', { class: 'why', text: 'Screen readers choose a pronunciation voice from the document language (WCAG 3.1.1).' }),
+      h('label', { class: 'field', for: id, text: 'Main language of the document' }), sel];
+  };
+  c.apply = () => {
+    if (!S.stylesDoc) return;
+    const d = S.stylesDoc, root = d.documentElement;
+    let dd = kid(root, 'docDefaults'); if (!dd) { dd = mkW(d, 'docDefaults'); root.prepend(dd); }
+    let rd = kid(dd, 'rPrDefault'); if (!rd) { rd = mkW(d, 'rPrDefault'); dd.prepend(rd); }
+    let rPr = kid(rd, 'rPr'); if (!rPr) { rPr = mkW(d, 'rPr'); rd.append(rPr); }
+    let lang = kid(rPr, 'lang');
+    if (!lang) { lang = mkW(d, 'lang'); insertOrdered(rPr, lang, ['eastAsianLayout', 'specVanish', 'oMath']); }
+    lang.setAttributeNS(NS.w, 'w:val', c.value);
+  };
+  return c;
+}
+
+/* ---------- Check: pictures, shapes, and their alt text ---------- */
+async function checkImages() {
+  const items = [];
+  const docPrs = Array.from(S.doc.getElementsByTagNameNS(NS.wp, 'docPr'));
+  for (const docPr of docPrs) {
+    const holder = docPr.parentNode; // wp:inline or wp:anchor
+    const blip = holder.getElementsByTagNameNS(NS.a, 'blip')[0];
+    const embed = blip ? blip.getAttributeNS(NS.r, 'embed') : null;
+    const rel = embed ? S.rels[embed] : null;
+    // Targets are relative to the word/ folder unless they start with "/"
+    const zipPath = rel && !rel.external ? (rel.target.startsWith('/') ? rel.target.slice(1) : 'word/' + rel.target.replace(/^\.\//, '')) : null;
+    const ext = zipPath ? zipPath.split('.').pop().toLowerCase() : '';
+    const decorative = Array.from(docPr.getElementsByTagNameNS(NS.adec, 'decorative')).some(d => ['1', 'true'].includes(d.getAttribute('val')));
+    const descr = (docPr.getAttribute('descr') || '').trim();
+    const item = {
+      docPr, holder, zipPath, ext, decorative, descr, n: items.length + 1,
+      name: docPr.getAttribute('name') || 'Picture',
+      isPicture: !!blip,
+      floating: holder.localName === 'anchor',
+      context: imageContext(docPr),
+      alt: descr.replace(/\s*description automatically generated\s*$/i, '').trim()
+    };
+    // Grade the existing alt text
+    if (decorative) { item.status = 'good'; item.note = 'Marked decorative'; }
+    else if (!descr) { item.status = 'bad'; item.note = 'No alt text'; }
+    else if (/automatically generated/i.test(descr)) { item.status = 'warn'; item.note = 'Auto alt text, check it'; }
+    else if (/\.(png|jpe?g|gif|bmp|tiff?|emf|wmf)$/i.test(descr) || /^(picture|image|img|photo|graphic|screenshot)\s*\d*$/i.test(descr)) { item.status = 'bad'; item.note = 'Alt text is a file name or placeholder'; }
+    else if (descr.length > 250) { item.status = 'warn'; item.note = 'Very long; consider moving detail into the text'; }
+    else { item.status = 'good'; item.note = 'Has alt text'; }
+    if (zipPath && zip_has(zipPath)) {
+      const buf = await S.zip.file(zipPath).async('arraybuffer');
+      item.blob = new Blob([buf], { type: IMG_TYPES[ext] || (ext === 'svg' ? 'image/svg+xml' : 'application/octet-stream') });
+      if (IMG_TYPES[ext] || ext === 'svg') item.url = URL.createObjectURL(item.blob);
+    }
+    items.push(item);
+  }
+  const vml = S.doc.getElementsByTagNameNS('urn:schemas-microsoft-com:vml', 'imagedata').length;
+  const needs = items.filter(i => i.status !== 'good');
+  const c = { id: 'images', title: 'Pictures and alt text', items };
+  c.status = !items.length ? 'good' : needs.some(i => i.status === 'bad') ? 'bad' : needs.length ? 'warn' : 'good';
+  c.summary = !items.length ? 'No pictures found.' : `${items.length} picture${items.length > 1 ? 's' : ''} or shapes; ${needs.length} need${needs.length === 1 ? 's' : ''} attention.`;
+  c.render = () => renderImages(c, vml);
+  c.apply = () => items.forEach(applyImageFix);
+  return c;
+}
+const zip_has = p => !!S.zip.file(p);
+
+// Text around a picture helps you (and Claude) write accurate alt text
+function imageContext(docPr) {
+  const p = within(docPr, 'p'); if (!p) return '';
+  const bits = [];
+  let prev = p.previousElementSibling, k = 0;
+  while (prev && k < 3) { if (prev.localName === 'p' && paraText(prev).trim()) { bits.unshift(paraText(prev)); k++; } prev = prev.previousElementSibling; }
+  if (paraText(p).trim()) bits.push(paraText(p));
+  let next = p.nextElementSibling; k = 0;
+  while (next && k < 1) { if (next.localName === 'p' && paraText(next).trim()) { bits.push(paraText(next)); k++; } next = next.nextElementSibling; }
+  return clip(bits.join(' / '), 300);
+}
+
+function renderImages(c, vml) {
+  const out = [h('p', { class: 'why', text: 'Every informative picture needs alt text that says what it teaches (WCAG 1.1.1). Borders, dividers, and mood photos can be marked decorative so screen readers skip them.' })];
+  if (!c.items.length) return out;
+  const aiBox = h('div', { class: 'callout', hidden: true });
+  out.push(aiBox);
+  // Offer Claude suggestions only when the page runs inside Claude and can send images
+  (async () => {
+    const sample = await sampleP; if (!sample) return;
+    const lim = await sample.limits().catch(() => null); if (!lim?.images) return;
+    c.limits = lim.images;
+    const btn = h('button', { type: 'button', text: 'Suggest alt text for pictures that need it' });
+    const msg = h('p', { class: 'hint', role: 'status' });
+    btn.onclick = async () => {
+      const todo = c.items.filter(i => i.status !== 'good' && !i.decorative && i.blob && c.limits.mediaTypes.includes(i.blob.type) && i.blob.size <= c.limits.maxInputBytes);
+      if (!todo.length) { msg.textContent = 'No pictures in a supported format need suggestions.'; return; }
+      btn.disabled = true;
+      await suggestAlt(todo, sample, msg);
+      btn.disabled = false;
+    };
+    aiBox.append(h('p', { text: 'Claude can draft alt text from each picture and the words around it. Math is transcribed, never solved. Read every suggestion before you download.' }), btn, msg);
+    aiBox.hidden = false;
+    c.items.forEach(i => i.aiSlot && i.aiSlot.append(h('button', { type: 'button', class: 'small secondary', text: 'Suggest for this one', onclick: async e => { e.target.disabled = true; await suggestAlt([i], sample, i.aiMsg); e.target.disabled = false; } })));
+  })();
+  const grid = h('div', { class: 'img-grid' });
+  for (const i of c.items) {
+    const taId = nextId('alt'), ckId = nextId('dec');
+    const ta = h('textarea', { id: taId, value: i.alt, disabled: i.decorative, oninput: e => i.alt = e.target.value });
+    i.textarea = ta;
+    const ck = h('input', { type: 'checkbox', id: ckId, checked: i.decorative, onchange: e => { i.decorative = e.target.checked; ta.disabled = i.decorative; } });
+    i.checkbox = ck;
+    i.aiSlot = h('div'); i.aiMsg = h('p', { class: 'hint', role: 'status' });
+    const thumb = h('div', { class: 'thumb' },
+      i.url ? h('img', { src: i.url, alt: `Preview of ${i.name}` }) :
+      h('span', { text: i.isPicture ? `No preview for .${i.ext || 'unknown'} files. Open the document to see it.` : 'Shape or text box (no picture file)' }));
+    grid.append(h('div', { class: 'img-item', 'data-status': i.status },
+      thumb,
+      h('p', { class: 'img-meta' }, mark(i.status, i.note), ' ', h('strong', { text: `${i.n}. ${i.name}` }), i.floating ? ' (floating)' : ''),
+      i.context ? h('p', { class: 'ctx', text: 'Nearby text: ' + i.context }) : null,
+      h('label', { class: 'field', for: taId, text: 'Alt text' }), ta,
+      h('div', { class: 'inline-check' }, ck, h('label', { for: ckId, text: 'Decorative (screen readers skip it)' })),
+      i.aiSlot, i.aiMsg));
+  }
+  out.push(grid);
+  if (vml) out.push(h('p', { class: 'hint', text: `${vml} older-format picture${vml > 1 ? 's or equation objects' : ' or equation object'} (such as MathType or Equation 3.0) also found. These are invisible to screen readers unless you right-click each in Word and add alt text, or retype the math with Insert, Equation.` }));
+  return out;
+}
+
+// Ask Claude for alt text, a few pictures per request, and fill the text boxes
+async function suggestAlt(items, sample, msg) {
+  const per = Math.max(1, Math.min(4, S.checks.find(c => c.id === 'images').limits?.maxCount || 1));
+  for (let start = 0; start < items.length; start += per) {
+    const batch = items.slice(start, start + per);
+    msg.textContent = `Thinking… (${Math.min(start + per, items.length)} of ${items.length})`;
+    const lines = batch.map((it, k) => `${k + 1}. Picture "${it.name}". Nearby text: "${it.context || 'none'}".${it.descr ? ` Current alt text: "${clip(it.descr, 200)}".` : ''}`).join('\n');
+    const prompt = `You write alt text for pictures in a college course document so that blind students using screen readers get the same information as sighted students.
+The images are attached in the same order as this list:
+${lines}
+
+Rules:
+- Under 150 characters. Do not start with "Image of" or "Picture of".
+- If the picture shows math (a problem, fraction, equation, expression, graph), transcribe it exactly in plain linear text a screen reader can read, e.g. "3/4 + 5/6" or "x^2 - 5x + 6 = 0". Never solve it or add answers.
+- If it shows words, include the words.
+- If it shows a person or setup that demonstrates something (like camera placement), describe what it demonstrates.
+- If it only decorates (border, divider, stock flourish), set decorative to true and alt to "".
+Reply with only a JSON array like [{"n":1,"alt":"...","decorative":false}].`;
+    try {
+      const res = await sample.json(prompt, { images: batch.map(b => b.blob), modelTier: 'default' });
+      for (const r of Array.isArray(res) ? res : []) {
+        const it = batch[(r.n | 0) - 1]; if (!it) continue;
+        it.decorative = !!r.decorative; it.checkbox.checked = it.decorative; it.textarea.disabled = it.decorative;
+        it.alt = String(r.alt || ''); it.textarea.value = it.alt;
+      }
+    } catch (e) {
+      msg.textContent = e.code === 'not_granted' ? 'Suggestions were not allowed, so you can type alt text yourself.' :
+        e.code === 'rate_limited' ? 'Too many requests at once. Wait a minute, then try again.' : 'Suggestions stopped: ' + (e.message || e.code);
+      return;
+    }
+  }
+  msg.textContent = 'Suggestions filled in. Read each one before downloading.';
+}
+
+// Write alt text or the decorative flag back into the picture's XML
+function applyImageFix(i) {
+  const d = i.docPr, doc = d.ownerDocument;
+  const existing = Array.from(d.getElementsByTagNameNS(NS.a, 'ext')).find(e => e.getAttribute('uri') === DECOR_URI);
+  const pics = Array.from(i.holder.getElementsByTagNameNS(NS.pic, 'cNvPr'));
+  if (i.decorative) {
+    d.removeAttribute('descr');
+    if (!existing) {
+      let lst = kid(d, 'extLst', NS.a);
+      if (!lst) { lst = doc.createElementNS(NS.a, 'a:extLst'); d.append(lst); }
+      const ext = doc.createElementNS(NS.a, 'a:ext'); ext.setAttribute('uri', DECOR_URI);
+      const flag = doc.createElementNS(NS.adec, 'adec:decorative'); flag.setAttribute('val', '1');
+      ext.append(flag); lst.append(ext);
+    }
+    if (pics.length === 1) pics[0].removeAttribute('descr');
+  } else if (i.alt.trim()) {
+    if (existing) existing.remove();
+    d.setAttribute('descr', i.alt.trim());
+    if (pics.length === 1) pics[0].setAttribute('descr', i.alt.trim());
+  }
+}
+
+/* ---------- Check: headings ---------- */
+function checkHeadings() {
+  const paras = wAll(S.body, 'p');
+  const existing = paras.map(p => ({ p, level: headingLevel(p), text: paraText(p).trim() })).filter(x => x.level && x.text);
+  // Look for "fake headings": short standalone lines that are bold or large but use the Normal style
+  const candidates = [];
+  let hasH1 = existing.some(x => x.level === 1);
+  for (const p of paras) {
+    if (headingLevel(p) || within(p, 'tbl') || within(p, 'txbxContent') || kid(kid(p, 'pPr'), 'numPr')) continue;
+    const text = paraText(p).trim();
+    if (text.length < 2 || text.length > 90 || /[.,;]$/.test(text) || /^note:?$/i.test(text)) continue;
+    const runs = wAll(p, 'r').filter(r => wAll(r, 't').some(t => t.textContent.trim()));
+    if (!runs.length) continue;
+    const bold = runs.every(r => { const rp = kid(r, 'rPr'); return isOn(kid(rp, 'b')) || /strong|bold/i.test(wVal(kid(rp, 'rStyle')) || ''); });
+    const big = runs.every(r => +(wVal(kid(kid(r, 'rPr'), 'sz')) || 0) >= 28);
+    if (!bold && !big) continue;
+    const suggest = hasH1 ? 2 : 1; if (suggest === 1) hasH1 = true;
+    candidates.push({ p, text, choice: String(suggest) });
+  }
+  // Skipped levels (for example Heading 1 straight to Heading 3)
+  const jumps = []; let prev = 0;
+  for (const x of existing) { if (x.level > prev + 1) jumps.push(x); prev = x.level; }
+  const c = { id: 'headings', title: 'Headings', candidates };
+  const noHeads = !existing.length && !candidates.length;
+  c.status = noHeads ? 'warn' : candidates.length || !existing.some(x => x.level === 1) ? 'bad' : jumps.length ? 'warn' : 'good';
+  c.summary = noHeads ? 'No headings found. Longer documents should have them.' :
+    `${existing.length} real heading${existing.length === 1 ? '' : 's'}; ${candidates.length} line${candidates.length === 1 ? '' : 's'} look like headings but are only bold or large text.`;
+  c.render = () => {
+    const out = [h('p', { class: 'why', text: 'Screen-reader users jump between headings the way sighted readers skim. Bold text is not a heading unless it uses a Heading style (WCAG 1.3.1).' })];
+    if (existing.length) out.push(h('p', { class: 'field', text: 'Current outline' }),
+      h('ul', { class: 'outline' }, existing.map(x => h('li', { style: `padding-left:${(x.level - 1) * 1.25}rem` }, h('strong', { text: `H${x.level} ` }), clip(x.text, 90)))));
+    if (!existing.some(x => x.level === 1) && existing.length) out.push(h('p', { text: 'There is no Heading 1. The document title line should usually be Heading 1.' }));
+    for (const j of jumps) out.push(h('p', { text: `"${clip(j.text, 60)}" skips a level (it is Heading ${j.level}). Change it in Word so levels go in order.` }));
+    if (candidates.length) {
+      out.push(h('p', { class: 'field', text: 'Lines that look like headings' }));
+      out.push(h('div', { class: 'rows' }, candidates.map(cd => {
+        const id = nextId('hd');
+        return h('div', { class: 'row row-grid' },
+          h('select', { id, 'aria-label': `Style for "${clip(cd.text, 40)}"`, onchange: e => cd.choice = e.target.value },
+            [['0', 'Keep as text'], ['1', 'Heading 1'], ['2', 'Heading 2'], ['3', 'Heading 3']].map(([v, t]) => h('option', { value: v, selected: v === cd.choice, text: t }))),
+          h('label', { for: id, class: 'quote', text: cd.text }));
+      })));
+    }
+    return out;
+  };
+  c.apply = () => candidates.forEach(cd => { if (cd.choice !== '0') ensurePPrStyle(cd.p, ensureHeadingStyle(+cd.choice)); });
+  return c;
+}
+function ensurePPrStyle(p, styleId) {
+  const pPr = ensurePPr(p);
+  let ps = kid(pPr, 'pStyle');
+  if (!ps) { ps = mkW(p.ownerDocument, 'pStyle'); pPr.insertBefore(ps, pPr.firstChild); }
+  ps.setAttributeNS(NS.w, 'w:val', styleId);
+}
+// Find Word's built-in heading style, or add it if this document never defined it
+function ensureHeadingStyle(level) {
+  const found = Object.entries(S.styles).find(([, s]) => s.name === 'heading ' + level);
+  if (found) return found[0];
+  const id = 'Heading' + level, d = S.stylesDoc;
+  if (!d) return id;
+  const size = { 1: 32, 2: 28, 3: 24 }[level];
+  const frag = parseXml(`<w:style xmlns:w="${NS.w}" w:type="paragraph" w:styleId="${id}"><w:name w:val="heading ${level}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="80"/><w:outlineLvl w:val="${level - 1}"/></w:pPr><w:rPr><w:b/><w:sz w:val="${size}"/><w:szCs w:val="${size}"/></w:rPr></w:style>`);
+  d.documentElement.append(d.importNode(frag.documentElement, true));
+  S.styles[id] = { name: 'heading ' + level, level };
+  return id;
+}
+
+/* ---------- Check: tables ---------- */
+function checkTables() {
+  const tables = wAll(S.body, 'tbl').map((tbl, k) => {
+    const rows = Array.from(tbl.children).filter(r => r.localName === 'tr');
+    const first = rows[0];
+    const cells = first ? Array.from(first.children).filter(x => x.localName === 'tc') : [];
+    const has = !!first && isOn(kid(kid(first, 'trPr'), 'tblHeader'));
+    const layoutish = rows.length < 2 || cells.length < 2; // one row or one column: probably layout, not data
+    const descEl = kid(kid(tbl, 'tblPr'), 'tblDescription');
+    return { tbl, first, n: k + 1, rows: rows.length, cols: cells.length, has, header: has || !layoutish,
+      preview: clip(cells.map(x => paraText(x).trim() || '(empty)').join(' | '), 120), desc: wVal(descEl) || '' };
+  });
+  const missing = tables.filter(t => !t.has && t.rows > 1 && t.cols > 1);
+  const c = { id: 'tables', title: 'Tables', status: missing.length ? 'bad' : 'good', tables };
+  c.summary = !tables.length ? 'No tables found.' : `${tables.length} table${tables.length > 1 ? 's' : ''}; ${missing.length} without a marked header row.`;
+  c.render = () => {
+    if (!tables.length) return [h('p', { class: 'why', text: 'Nothing to fix here.' })];
+    return [h('p', { class: 'why', text: 'A marked header row lets screen readers announce the column name with each cell. Tables used only for layout should not have one (WCAG 1.3.1).' }),
+      h('div', { class: 'rows' }, tables.map(t => {
+        const ck = nextId('th'), ds = nextId('td');
+        return h('div', { class: 'row' },
+          h('p', {}, h('strong', { text: `Table ${t.n}` }), ` (${t.rows} rows, ${t.cols} columns). First row: `, h('span', { class: 'quote', text: t.preview })),
+          h('div', { class: 'inline-check' }, h('input', { type: 'checkbox', id: ck, checked: t.header, onchange: e => t.header = e.target.checked }),
+            h('label', { for: ck, text: 'First row is a header row' })),
+          h('label', { class: 'field', for: ds, text: 'Short description (optional)' }),
+          h('input', { type: 'text', id: ds, value: t.desc, placeholder: 'For example: Grading scale by letter grade', oninput: e => t.desc = e.target.value }));
+      }))];
+  };
+  c.apply = () => tables.forEach(t => {
+    const d = t.tbl.ownerDocument;
+    if (t.header && t.first && !t.has) {
+      let trPr = kid(t.first, 'trPr');
+      if (!trPr) { trPr = mkW(d, 'trPr'); const ex = kid(t.first, 'tblPrEx'); t.first.insertBefore(trPr, ex ? ex.nextSibling : t.first.firstChild); }
+      insertOrdered(trPr, mkW(d, 'tblHeader'), ['tblCellSpacing', 'jc', 'hidden', 'ins', 'del', 'trPrChange']);
+      t.has = true;
+    }
+    if (t.desc.trim()) {
+      let tblPr = kid(t.tbl, 'tblPr'); if (!tblPr) { tblPr = mkW(d, 'tblPr'); t.tbl.prepend(tblPr); }
+      let de = kid(tblPr, 'tblDescription'); if (!de) { de = mkW(d, 'tblDescription'); insertOrdered(tblPr, de, ['tblPrChange']); }
+      de.setAttributeNS(NS.w, 'w:val', t.desc.trim());
+    }
+  });
+  return c;
+}
+
+/* ---------- Check: text color contrast ---------- */
+function checkContrast() {
+  const colors = {};
+  for (const r of wAll(S.body, 'r')) {
+    const text = wAll(r, 't').map(t => t.textContent).join('');
+    if (!text.trim()) continue;
+    const rp = kid(r, 'rPr'), col = kid(rp, 'color'), v = (wVal(col) || '').toUpperCase();
+    if (!/^[0-9A-F]{6}$/.test(v)) continue;
+    if (kid(rp, 'shd') || (kid(rp, 'highlight') && wVal(kid(rp, 'highlight')) !== 'none') || within(r, 'tc')) continue; // skip shaded text; background is not white
+    const sz = +(wVal(kid(rp, 'sz')) || 22), bold = isOn(kid(rp, 'b'));
+    const large = sz >= 36 || (sz >= 28 && bold); // 18pt, or 14pt bold
+    const need = large ? 3 : 4.5;
+    const e = colors[v] || (colors[v] = { hex: v, runs: [], need: 3, samples: [] });
+    e.runs.push(col); e.need = Math.max(e.need, need);
+    if (e.samples.length < 2) e.samples.push(clip(text, 50));
+  }
+  const all = Object.values(colors).map(e => ({ ...e, ratio: contrast(e.hex) }));
+  const fails = all.filter(e => e.ratio < e.need).map(e => ({ ...e, fix: darkenToPass(e.hex, e.need), on: true }));
+  const c = { id: 'contrast', title: 'Text color contrast', status: fails.length ? 'bad' : 'good', fails };
+  c.summary = !all.length ? 'All text uses the default color.' : `${all.length} text color${all.length > 1 ? 's' : ''} used; ${fails.length} too light to read against white.`;
+  c.render = () => {
+    const out = [h('p', { class: 'why', text: 'Regular text needs a contrast ratio of at least 4.5 to 1 against its background; large text needs 3 to 1 (WCAG 1.4.3). Color also should not be the only way meaning is shown, for example "problems in red are due Friday."' })];
+    for (const f of fails) {
+      const id = nextId('cc');
+      out.push(h('div', { class: 'row' },
+        h('p', {}, h('span', { class: 'swatch', style: `background:#${f.hex}`, 'aria-hidden': 'true' }), h('strong', { text: '#' + f.hex }),
+          ` has a ratio of ${f.ratio.toFixed(2)} to 1 (needs ${f.need}). Used ${f.runs.length} time${f.runs.length > 1 ? 's' : ''}, e.g. `, h('span', { class: 'quote', text: f.samples.join('; ') })),
+        h('div', { class: 'inline-check' }, h('input', { type: 'checkbox', id, checked: true, onchange: e => f.on = e.target.checked }),
+          h('label', { for: id }, 'Change to ', h('span', { class: 'swatch', style: `background:#${f.fix}`, 'aria-hidden': 'true' }), `#${f.fix} (ratio ${contrast(f.fix).toFixed(2)} to 1)`))));
+    }
+    return out;
+  };
+  c.apply = () => fails.forEach(f => {
+    if (!f.on) return;
+    for (const col of f.runs) {
+      col.setAttributeNS(NS.w, 'w:val', f.fix);
+      ['themeColor', 'themeShade', 'themeTint'].forEach(a => col.removeAttributeNS(NS.w, a)); // theme colors would override the new value
+    }
+  });
+  return c;
+}
+
+/* ---------- Check: link text ---------- */
+function checkLinks() {
+  const links = wAll(S.body, 'hyperlink').map(hl => {
+    const text = wAll(hl, 't').map(t => t.textContent).join('').trim();
+    const rid = hl.getAttributeNS(NS.r, 'id');
+    return { hl, text, url: rid && S.rels[rid] ? S.rels[rid].target : (hl.getAttributeNS(NS.w, 'anchor') ? '#' + hl.getAttributeNS(NS.w, 'anchor') : ''), newText: '' };
+  }).filter(l => l.text);
+  const vague = links.filter(l => /^(https?:\/\/|www\.)/i.test(l.text) || /^(click here|here|link|this link|more|read more|click|this)$/i.test(l.text));
+  const c = { id: 'links', title: 'Link text', status: vague.length ? 'warn' : 'good', vague };
+  c.summary = !links.length ? 'No links found.' : `${links.length} link${links.length > 1 ? 's' : ''}; ${vague.length} with a bare web address or vague text.`;
+  c.render = () => {
+    const out = [h('p', { class: 'why', text: 'Link text should say where it goes, such as "Respondus LockDown Browser download page". Screen readers read raw web addresses letter by letter (WCAG 2.4.4).' })];
+    if (vague.length) out.push(h('div', { class: 'rows' }, vague.map(l => {
+      const id = nextId('ln');
+      return h('div', { class: 'row' },
+        h('p', {}, 'Current text: ', h('span', { class: 'quote', text: l.text }), l.url && l.url !== l.text ? [' (goes to ', h('span', { class: 'quote', text: l.url }), ')'] : ''),
+        h('label', { class: 'field', for: id, text: 'New link text (leave blank to keep)' }),
+        h('input', { type: 'text', id, oninput: e => l.newText = e.target.value }));
+    })));
+    return out;
+  };
+  c.apply = () => vague.forEach(l => {
+    if (!l.newText.trim()) return;
+    const ts = wAll(l.hl, 't');
+    ts.forEach((t, k) => { t.textContent = k === 0 ? l.newText.trim() : ''; });
+    ts[0].setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
+  });
+  return c;
+}
+
+/* ---------- Check: repeated blank lines ---------- */
+function isBlankPara(p) {
+  if (paraText(p).trim()) return false;
+  for (const tag of ['drawing', 'pict', 'object', 'sectPr', 'br', 'fldSimple', 'instrText', 'tab'])
+    if (p.getElementsByTagNameNS(NS.w, tag).length) return false;
+  return !p.getElementsByTagNameNS(NS.m, 'oMath').length;
+}
+function checkBlankLines() {
+  const extras = []; let run = 0;
+  for (const n of Array.from(S.body.children)) {
+    if (n.localName === 'p' && isBlankPara(n)) { run++; if (run >= 2) extras.push(n); }
+    else run = 0;
+  }
+  const c = { id: 'blank', title: 'Blank lines used for spacing', status: extras.length ? 'info' : 'good', on: false };
+  c.summary = extras.length ? `${extras.length} extra empty paragraph${extras.length > 1 ? 's' : ''} in a row.` : 'No stacked blank lines.';
+  c.render = () => {
+    if (!extras.length) return [h('p', { class: 'why', text: 'Nothing to change.' })];
+    const id = nextId('bl');
+    return [h('p', { class: 'why', text: 'Screen readers announce each empty line as "blank." Paragraph spacing is the better way to add space. On exams where blank lines give students room to work, you may want to keep them.' }),
+      h('div', { class: 'inline-check' }, h('input', { type: 'checkbox', id, onchange: e => c.on = e.target.checked }),
+        h('label', { for: id, text: 'Remove the extra blank lines (one blank line is kept in each group)' }))];
+  };
+  c.apply = () => { if (c.on) extras.forEach(p => p.parentNode && p.remove()); };
+  return c;
+}
+
+/* ---------- Other things only a person can fix ---------- */
+function checkOtherNotes() {
+  const notes = [];
+  const typedLists = wAll(S.body, 'p').filter(p => !kid(kid(p, 'pPr'), 'numPr') && /^\s*([•●○▪■◦\-–*]|\(?\d{1,2}[.)])\s+\S/.test(paraText(p)));
+  if (typedLists.length) notes.push(`${typedLists.length} line${typedLists.length > 1 ? 's' : ''} start with a typed bullet or number, e.g. "${clip(paraText(typedLists[0]), 60)}". Use Word's Bullets or Numbering buttons so screen readers announce a list.`);
+  const floats = S.doc.getElementsByTagNameNS(NS.wp, 'anchor').length;
+  if (floats) notes.push(`${floats} picture${floats > 1 ? 's float' : ' floats'} over the text. Floating objects can be read out of order; in Word, set Wrap Text to "In Line with Text" where you can.`);
+  const boxes = wAll(S.body, 'txbxContent').length;
+  if (boxes) notes.push(`${boxes} text box${boxes > 1 ? 'es' : ''} found. Text boxes are often skipped or read out of order; move their text into the main body if possible.`);
+  const underlined = wAll(S.body, 'r').filter(r => { const u = kid(kid(r, 'rPr'), 'u'); return u && wVal(u) !== 'none' && !within(r, 'hyperlink') && paraText(r).trim(); }).length;
+  if (underlined) notes.push(`${underlined} piece${underlined > 1 ? 's' : ''} of underlined text that are not links. Readers expect underlines to be links; use bold for emphasis instead.`);
+  const eq = S.body.getElementsByTagNameNS(NS.m, 'oMath').length;
+  if (eq) notes.push(`${eq} equation${eq > 1 ? 's use' : ' uses'} Word's Equation editor. Good: screen readers can read these.`);
+  if (!notes.length) return null;
+  return { id: 'other', title: 'Also worth a look', status: 'info', summary: `${notes.length} item${notes.length > 1 ? 's' : ''} to check by hand.`,
+    render: () => [h('ul', {}, notes.map(n => h('li', { text: n })))] };
+}
+
+/* =====================================================================
+   3. Shared report rendering
+   ===================================================================== */
+function renderReport(filename, kind, checks) {
+  const rep = $('#report');
+  const bad = checks.filter(c => c.status === 'bad').length, warn = checks.filter(c => c.status === 'warn').length;
+  rep.append(h('div', { class: 'report-head' },
+    h('h2', { id: 'reportTitle', text: filename }),
+    h('p', { text: `${kind}. ${bad} area${bad === 1 ? '' : 's'} need fixing and ${warn} need${warn === 1 ? 's' : ''} review. Make your choices below, then download the fixed copy.` }),
+    h('ul', { class: 'toc', 'aria-label': 'Results' }, checks.map(c => h('li', {}, h('a', { href: '#chk-' + c.id }, mark(c.status), h('span', { class: 't', text: `${c.title}: ${c.summary}` })))))));
+  for (const c of checks) {
+    rep.append(h('section', { class: 'check', id: 'chk-' + c.id, 'aria-labelledby': 'h-' + c.id },
+      h('div', { class: 'check-head' }, h('h3', { id: 'h-' + c.id, text: c.title }), mark(c.status)),
+      h('p', { text: c.summary }), c.render()));
+  }
+  rep.hidden = false;
+}
+
+$('#downloadBtn').addEventListener('click', async () => {
+  const btn = $('#downloadBtn'), st = $('#dlStatus');
+  if (!S) return;
+  btn.disabled = true; st.textContent = 'Preparing file…';
+  try {
+    if (S.kind === 'docx') st.textContent = await downloadDocx();
+    else if (S.kind === 'pdf') st.textContent = await downloadPdfFix();
+  } catch (e) { console.error(e); st.textContent = 'Could not build the file: ' + (e.message || e); }
+  btn.disabled = false;
+});
+
+async function downloadDocx() {
+  S.checks.forEach(c => c.apply && c.apply());
+  S.zip.file('word/document.xml', toXml(S.doc));
+  if (S.stylesDoc) S.zip.file('word/styles.xml', toXml(S.stylesDoc));
+  if (S.coreDoc) S.zip.file('docProps/core.xml', toXml(S.coreDoc));
+  const blob = await S.zip.generateAsync({ type: 'blob', mimeType: DOCX_MIME, compression: 'DEFLATE' });
+  return offerDownload(blob, S.file.name.replace(/\.docx$/i, '') + '-accessible.docx');
+}
+
+/* =====================================================================
+   4. PDF: inspect tags, fix title and language, or rebuild as Word
+   ===================================================================== */
+const pdfText = o => { try { return o && o.decodeText ? o.decodeText() : o ? String(o) : ''; } catch { return ''; } };
+
+async function openPdf(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const { PDFDocument, PDFName } = PDFLib;
+  const pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false });
+  const cat = pdfDoc.catalog, ctx = pdfDoc.context;
+  const deref = o => (o instanceof PDFLib.PDFRef ? ctx.lookup(o) : o);
+  const vp = deref(cat.get(PDFName.of('ViewerPreferences')));
+  const info = {
+    title: (pdfDoc.getTitle() || '').trim(),
+    lang: pdfText(deref(cat.get(PDFName.of('Lang')))).trim(),
+    showTitle: vp instanceof PDFLib.PDFDict && String(vp.get(PDFName.of('DisplayDocTitle'))) === 'true',
+    creator: [pdfDoc.getCreator(), pdfDoc.getProducer()].filter(Boolean).join(', '),
+    encrypted: pdfDoc.isEncrypted, pages: pdfDoc.getPageCount(),
+    ...structInfo(pdfDoc, deref)
+  };
+  // Pull text with pdf.js (used for the scan check and the Word rebuild)
+  const lines = await extractLines(bytes);
+  info.chars = lines.reduce((s, l) => s + l.text.length, 0);
+  // Lines like "1. 2." mean problem numbers exist but the problems themselves are drawn graphics with no readable text
+  info.bareNumbers = lines.filter(l => /^(\d{1,3}\.\s*){1,4}$/.test(l.text)).length;
+  info.scanned = info.chars < 40 * info.pages;
+  S = { kind: 'pdf', file, pdfDoc, info, fixTitle: info.title || guessTitle(lines, file.name), fixLang: info.lang || 'en-US' };
+  S.blocks = info.scanned ? [] : linesToBlocks(lines);
+  renderPdfReport();
+}
+
+// Walk the PDF's tag tree and count figures (with and without alt text), headings, tables, and lists
+function structInfo(pdfDoc, deref) {
+  const { PDFName, PDFArray, PDFDict, PDFRef } = PDFLib;
+  const root = deref(pdfDoc.catalog.get(PDFName.of('StructTreeRoot')));
+  const out = { tagged: root instanceof PDFDict, figures: 0, figAlt: 0, headings: 0, tables: 0, th: 0, lists: 0 };
+  if (!out.tagged) return out;
+  const roleMap = deref(root.get(PDFName.of('RoleMap')));
+  const std = t => { for (let i = 0; i < 5 && roleMap instanceof PDFDict; i++) { const m = roleMap.get(PDFName.of(t)); if (!m) break; t = String(m).replace(/^\//, ''); } return t; };
+  const seen = new Set(), stack = [root.get(PDFName.of('K'))];
+  let guard = 0;
+  while (stack.length && guard++ < 60000) {
+    let o = stack.pop();
+    if (o instanceof PDFRef) { const k = o.toString(); if (seen.has(k)) continue; seen.add(k); o = deref(o); }
+    if (o instanceof PDFArray) { for (let i = 0; i < o.size(); i++) stack.push(o.get(i)); continue; }
+    if (!(o instanceof PDFDict)) continue;
+    const s = o.get(PDFName.of('S'));
+    if (s) {
+      const tag = std(String(s).replace(/^\//, ''));
+      if (tag === 'Figure') { out.figures++; if (pdfText(deref(o.get(PDFName.of('Alt')))).trim()) out.figAlt++; }
+      else if (/^H[1-6]?$/.test(tag)) out.headings++;
+      else if (tag === 'Table') out.tables++;
+      else if (tag === 'TH') out.th++;
+      else if (tag === 'L') out.lists++;
+    }
+    const k = o.get(PDFName.of('K')); if (k) stack.push(k);
+  }
+  return out;
+}
+
+// Read text lines (with font size and position) from every page
+async function extractLines(bytes) {
+  if (!window.pdfjsLib) return [];
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+  const lines = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const height = page.getViewport({ scale: 1 }).height;
+    const items = (await page.getTextContent()).items.filter(it => it.str && it.str.trim()).map(it => ({
+      str: it.str, x: it.transform[4], y: it.transform[5], w: it.width,
+      size: Math.round(Math.hypot(it.transform[2], it.transform[3]) * 2) / 2 || 10
+    })).sort((a, b) => b.y - a.y || a.x - b.x);
+    let cur = null;
+    for (const it of items) {
+      if (cur && Math.abs(cur.y - it.y) <= Math.max(cur.size, it.size) * 0.45) cur.items.push(it);
+      else { cur = { y: it.y, size: it.size, items: [it], page: p, height }; lines.push(cur); }
+      cur.size = Math.max(cur.size, it.size);
+    }
+  }
+  for (const l of lines) {
+    l.items.sort((a, b) => a.x - b.x);
+    l.x = l.items[0].x;
+    l.text = l.items.reduce((s, it, k) => {
+      if (!k) return it.str;
+      const prev = l.items[k - 1], gap = it.x - (prev.x + prev.w);
+      return s + (gap > l.size * 0.15 && !s.endsWith(' ') && !it.str.startsWith(' ') ? ' ' : '') + it.str;
+    }, '').replace(/\s+/g, ' ').trim();
+    delete l.items;
+  }
+  // Drop page numbers and running headers/footers repeated on several pages (keep the first copy)
+  const seenOn = {};
+  lines.forEach(l => { const key = l.text.toLowerCase(); (seenOn[key] = seenOn[key] || new Set()).add(l.page); });
+  const kept = new Set();
+  return lines.filter(l => {
+    if (/^(page\s*)?\d+(\s*(of|\/)\s*\d+)?$/i.test(l.text)) return false;
+    const key = l.text.toLowerCase(), edge = l.y < 72 || l.height - l.y < 90;
+    if (edge && seenOn[key].size > 1) { if (kept.has(key)) return false; kept.add(key); }
+    return true;
+  });
+}
+
+// Turn lines into structured blocks: headings by font size, lists by their markers, paragraphs by spacing
+function linesToBlocks(lines) {
+  if (!lines.length) return [];
+  const weight = {}; lines.forEach(l => weight[l.size] = (weight[l.size] || 0) + l.text.length);
+  const body = +Object.entries(weight).sort((a, b) => b[1] - a[1])[0][0];
+  const bigSizes = [...new Set(lines.map(l => l.size).filter(s => s >= body * 1.15))].sort((a, b) => b - a);
+  const blocks = [];
+  for (const l of lines) {
+    let type = 'p', text = l.text, m;
+    if ((m = text.match(/^[•●○▪■◦‣∙·\-–*]\s*(.+)$/))) { type = 'ul'; text = m[1]; }
+    else if ((m = text.match(/^\(?(\d{1,3}|[a-z])[.)]\s+(.+)$/i))) { type = 'ol'; text = m[2]; }
+    else if (bigSizes.includes(l.size)) type = 'h' + Math.min(3, bigSizes.indexOf(l.size) + 1);
+    else if (/^(option|part|section|unit|chapter|module|lesson|step|appendix)\s+[\w.]+\s*[:.–-]/i.test(text) && text.length < 100) type = 'h2';
+    const prev = blocks[blocks.length - 1];
+    const close = prev && prev.page === l.page && prev.y - l.y <= l.size * 1.8 && Math.abs(prev.size - l.size) <= 0.5;
+    if (close && type === 'p' && (prev.type === 'p' || ((prev.type === 'ul' || prev.type === 'ol') && l.x > prev.x + 3))) { prev.text += ' ' + text; prev.y = l.y; continue; }
+    if (close && type[0] === 'h' && prev.type === type) { prev.text += ' ' + text; prev.y = l.y; continue; }
+    blocks.push({ type, text, page: l.page, y: l.y, x: l.x, size: l.size });
+  }
+  if (!blocks.some(b => b.type === 'h1') && blocks[0] && blocks[0].text.length < 110) blocks[0].type = 'h1';
+  return blocks;
+}
+function guessTitle(lines, name) {
+  const b = lines.length ? linesToBlocks(lines).find(x => x.type === 'h1') : null;
+  return b ? clip(b.text, 100) : name.replace(/\.[^.]+$/, '').replace(/_+/g, ' ').replace(/\s*\(\d+\)/g, '').trim();
+}
+
+function renderPdfReport() {
+  const { info } = S, rep = $('#report');
+  const fromWord = /word|pdfmaker/i.test(info.creator);
+  const row = (label, ok, text) => h('tr', {}, h('th', { scope: 'row', text: label }), h('td', {}, mark(ok === null ? 'info' : ok === 'warn' ? 'warn' : ok ? 'good' : 'bad', ok === null ? 'Info' : undefined), ' ', text));
+  const figOk = !info.figures ? true : info.figAlt === info.figures ? true : 'warn';
+  const facts = h('div', { class: 'scroll-x' }, h('table', { class: 'facts' },
+    h('caption', { class: 'hint', style: 'text-align:left', text: 'Accessibility facts for this PDF' }),
+    h('tbody', {},
+      row('Tagged (has structure for screen readers)', info.tagged, info.tagged ? 'Yes' : 'No. Screen readers get an unstructured stream of text.'),
+      row('Real text (not a scan)', !info.scanned, info.scanned ? 'Little or no text found. This looks like a scanned image of a page.' : 'Yes'),
+      row('Title', !!info.title, info.title || 'Not set'),
+      row('Title shown instead of file name', info.showTitle, info.showTitle ? 'Yes' : 'No'),
+      row('Language', !!info.lang, info.lang || 'Not set'),
+      info.tagged ? row('Pictures with alt text', figOk, info.figures ? `${info.figAlt} of ${info.figures}` : 'No tagged pictures') : null,
+      info.tagged ? row('Headings tagged', info.headings > 0 || 'warn', String(info.headings)) : null,
+      info.tagged && info.tables ? row('Tables with header cells', info.th > 0, `${info.tables} table${info.tables > 1 ? 's' : ''}, ${info.th} header cells`) : null,
+      row('Made with', null, info.creator || 'Unknown'))));
+  const bad = [!info.tagged, info.scanned, !info.title, !info.lang, info.figures > info.figAlt].filter(Boolean).length;
+  rep.append(h('div', { class: 'report-head' }, h('h2', { id: 'reportTitle', text: S.file.name }),
+    h('p', { text: `PDF, ${info.pages} page${info.pages > 1 ? 's' : ''}. ${bad ? bad + ' problem' + (bad > 1 ? 's' : '') + ' found.' : 'The basics are in place.'}` }), facts));
+
+  // Best path for PDFs exported from Word: fix the Word file instead
+  if (fromWord) rep.append(h('div', { class: 'callout' },
+    h('p', {}, h('strong', { text: 'This PDF was made from a Word file. ' }), 'The most reliable fix is to upload the original .docx here, download the fixed copy, then in Word choose File, Save As, PDF with "Document structure tags for accessibility" turned on. Tags, alt text, and headings then carry into the PDF automatically.'),
+    info.figures > info.figAlt ? h('p', { text: `${info.figures - info.figAlt} picture${info.figures - info.figAlt > 1 ? 's have' : ' has'} no alt text. If these are math problems saved as pictures, give each one alt text in Word, or retype them with Insert, Equation.` }) : null));
+
+  if (info.bareNumbers >= 3) rep.append(h('div', { class: 'callout' },
+    h('p', {}, h('strong', { text: 'The problems themselves are not readable. ' }), `${info.bareNumbers} lines contain only problem numbers (like "1. 2."). The math next to them is drawn as graphics with no text or alt text, so a screen reader announces the numbers and nothing else. In the Word source, retype each problem with Insert, Equation, or give each math object alt text such as "3/4 + 5/6".`)));
+
+  // Quick fix: title + language (does not add tags)
+  const tId = nextId('pt'), lId = nextId('pl');
+  const lang = langOptions(S.fixLang, v => S.fixLang = v); lang.id = lId;
+  rep.append(h('section', { class: 'check', id: 'chk-pdfmeta', 'aria-labelledby': 'h-pdfmeta' },
+    h('div', { class: 'check-head' }, h('h3', { id: 'h-pdfmeta', text: 'Quick fix: title and language' }), mark(info.title && info.lang && info.showTitle ? 'good' : 'bad')),
+    info.encrypted ? h('p', { text: 'This PDF is password-protected, so it cannot be changed here.' }) : [
+      h('p', { class: 'why', text: 'This saves a copy of the PDF with its title and language set. It does not add tags; if the PDF is untagged, use the Word rebuild below or fix the source file.' }),
+      h('label', { class: 'field', for: tId, text: 'Title' }), h('input', { type: 'text', id: tId, value: S.fixTitle, oninput: e => S.fixTitle = e.target.value }),
+      h('label', { class: 'field', for: lId, text: 'Language' }), lang]));
+
+  // Rebuild: turn an untagged, text-based PDF into a structured Word document
+  if (!info.scanned && S.blocks.length) {
+    const TYPES = [['h1', 'Heading 1'], ['h2', 'Heading 2'], ['h3', 'Heading 3'], ['p', 'Paragraph'], ['ul', 'Bulleted item'], ['ol', 'Numbered item'], ['remove', 'Leave out']];
+    const list = h('div', {}, S.blocks.map(b => {
+      const sid = nextId('bt'), tid = nextId('bx');
+      const wrap = h('div', { class: 'block', 'data-type': b.type });
+      const ta = h('textarea', { id: tid, value: b.text, 'aria-labelledby': sid, rows: Math.min(6, Math.ceil(b.text.length / 70)), oninput: e => b.text = e.target.value });
+      const sel = h('select', { id: sid, 'aria-label': 'Type of this block', onchange: e => { b.type = e.target.value; wrap.dataset.type = b.type; } },
+        TYPES.map(([v, t]) => h('option', { value: v, selected: v === b.type, text: t })));
+      wrap.append(sel, ta);
+      return wrap;
+    }));
+    const btn = h('button', { type: 'button', text: 'Download as accessible Word file' });
+    const msg = h('span', { role: 'status', class: 'hint' });
+    btn.onclick = async () => { btn.disabled = true; msg.textContent = 'Building…'; try { msg.textContent = await downloadRebuild(); } catch (e) { msg.textContent = 'Could not build: ' + e.message; } btn.disabled = false; };
+    rep.append(h('section', { class: 'check', id: 'chk-rebuild', 'aria-labelledby': 'h-rebuild' },
+      h('div', { class: 'check-head' }, h('h3', { id: 'h-rebuild', text: 'Rebuild as an accessible Word document' }), mark(info.tagged ? 'info' : 'warn', info.tagged ? 'Optional' : 'Recommended')),
+      h('p', { class: 'why', text: 'The text below was read from the PDF and sorted into headings, paragraphs, and lists. Check each block type and fix any wording, then download a Word file with real headings, real lists, a title, and a language. Export it to PDF from Word if you need a PDF.' }),
+      info.figures || fromWord ? h('p', { text: 'Pictures are not carried over. Insert them in Word and give each one alt text.' }) : null,
+      list, h('p', { style: 'margin-top:1rem' }, btn, ' ', msg)));
+  } else if (info.scanned) {
+    rep.append(h('div', { class: 'callout' }, h('p', { text: 'This PDF is a picture of text, so screen readers find nothing to read. Run text recognition (OCR) with Adobe Acrobat or Microsoft Lens, or retype it in Word, then check the new file here.' })));
+  }
+  rep.hidden = false;
+  $('#downloadBtn').textContent = 'Download PDF with title and language fixed';
+  $('#actionbar').hidden = info.encrypted;
+  announce('Checked ' + S.file.name + '. Review the results below.', 'good');
+}
+
+async function downloadPdfFix() {
+  const d = S.pdfDoc;
+  if (S.fixTitle.trim()) d.setTitle(S.fixTitle.trim(), { showInWindowTitleBar: true });
+  d.setLanguage(S.fixLang);
+  const bytes = await d.save();
+  return offerDownload(new Blob([bytes], { type: 'application/pdf' }), S.file.name.replace(/\.pdf$/i, '') + '-titled.pdf');
+}
+
+// Assemble a brand-new .docx from the reviewed blocks
+async function downloadRebuild() {
+  const W = NS.w, lang = S.fixLang, title = S.fixTitle.trim() || 'Document';
+  const numXml = []; let numId = 1, olOpen = false; // numId 1 = bullets; each numbered list gets its own id so it restarts at 1
+  const paras = S.blocks.filter(b => b.type !== 'remove' && b.text.trim()).map(b => {
+    let pPr = '';
+    if (b.type[0] === 'h') pPr = `<w:pStyle w:val="Heading${b.type[1]}"/>`;
+    else if (b.type === 'ul') pPr = `<w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>`;
+    else if (b.type === 'ol') {
+      if (!olOpen) { numId++; numXml.push(`<w:num w:numId="${numId}"><w:abstractNumId w:val="1"/><w:lvlOverride w:ilvl="0"><w:startOverride w:val="1"/></w:lvlOverride></w:num>`); }
+      pPr = `<w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="${numId}"/></w:numPr>`;
+    }
+    olOpen = b.type === 'ol'; // any other block ends the numbered list
+    return `<w:p><w:pPr>${pPr}</w:pPr><w:r><w:t xml:space="preserve">${escXml(b.text.trim())}</w:t></w:r></w:p>`;
+  }).join('');
+  const heading = (n, sz, before) => `<w:style w:type="paragraph" w:styleId="Heading${n}"><w:name w:val="heading ${n}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="${before}" w:after="120"/><w:outlineLvl w:val="${n - 1}"/></w:pPr><w:rPr><w:b/><w:color w:val="1F3864"/><w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr></w:style>`;
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', XML_DECL + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`);
+  zip.file('_rels/.rels', XML_DECL + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`);
+  zip.file('word/_rels/document.xml.rels', XML_DECL + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/></Relationships>`);
+  zip.file('docProps/core.xml', XML_DECL + `<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${escXml(title)}</dc:title><dc:language>${escXml(lang)}</dc:language></cp:coreProperties>`);
+  zip.file('word/styles.xml', XML_DECL + `<w:styles xmlns:w="${W}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="${escXml(lang)}"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="160" w:line="276" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>${heading(1, 36, 240)}${heading(2, 30, 320)}${heading(3, 26, 240)}<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:basedOn w:val="Normal"/><w:uiPriority w:val="34"/><w:qFormat/><w:pPr><w:spacing w:after="80"/><w:ind w:left="720"/></w:pPr></w:style></w:styles>`);
+  const lvl = (fmt, text) => `<w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="${fmt}"/><w:lvlText w:val="${text}"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr></w:lvl>`;
+  zip.file('word/numbering.xml', XML_DECL + `<w:numbering xmlns:w="${W}"><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="singleLevel"/>${lvl('bullet', '•')}</w:abstractNum><w:abstractNum w:abstractNumId="1"><w:multiLevelType w:val="singleLevel"/>${lvl('decimal', '%1.')}</w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>${numXml.join('')}</w:numbering>`);
+  zip.file('word/document.xml', XML_DECL + `<w:document xmlns:w="${W}"><w:body>${paras}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>`);
+  const blob = await zip.generateAsync({ type: 'blob', mimeType: DOCX_MIME, compression: 'DEFLATE' });
+  return offerDownload(blob, S.file.name.replace(/\.pdf$/i, '') + '-accessible.docx');
+}
+</script>
+</body>
+</html>
