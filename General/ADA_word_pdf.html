@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!doctype html>
 <html lang="en">
 <head>
@@ -115,11 +116,14 @@
   .mark.info { color: var(--muted); background: var(--bg); border: 1px solid var(--line); }
 
   label.field { display: block; font-weight: 700; margin: .75rem 0 .3rem; }
+  p.field { font-weight: 700; margin: 1.1rem 0 .3rem; }
   input[type=text], select, textarea {
     font: inherit; color: var(--ink); background: var(--surface); width: 100%;
     border: 2px solid var(--line); border-radius: 5px; padding: .5rem .6rem;
   }
   textarea { resize: vertical; min-height: 4.5rem; }
+  fieldset.plain { border: 0; padding: 0; margin: .25rem 0; }
+  fieldset.plain legend { padding: 0; margin-bottom: .25rem; }
   .inline-check { display: flex; gap: .5rem; align-items: flex-start; margin: .5rem 0; }
   .inline-check input { width: 1.2rem; height: 1.2rem; margin-top: .2rem; flex: none; }
 
@@ -226,7 +230,8 @@ const NS = {
   m: 'http://schemas.openxmlformats.org/officeDocument/2006/math',
   pic: 'http://schemas.openxmlformats.org/drawingml/2006/picture',
   dc: 'http://purl.org/dc/elements/1.1/',
-  adec: 'http://schemas.microsoft.com/office/drawing/2017/decorative'
+  adec: 'http://schemas.microsoft.com/office/drawing/2017/decorative',
+  mc: 'http://schemas.openxmlformats.org/markup-compatibility/2006'
 };
 const DECOR_URI = '{C183D7F6-B498-43B3-948B-1728B52AA6E4}'; // Word's "Mark as decorative" flag
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -310,11 +315,11 @@ function lum(hex) {
 }
 const contrast = (a, b = 'FFFFFF') => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 // Darken a color (keeping its hue) until it passes against white
-function darkenToPass(hex, target) {
+function darkenToPass(hex, target, bg = 'FFFFFF') {
   const rgb = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
   for (let f = 1; f >= 0; f -= 0.02) {
     const c = rgb.map(v => Math.round(v * f).toString(16).padStart(2, '0')).join('').toUpperCase();
-    if (contrast(c) >= target + 0.1) return c;
+    if (contrast(c, bg) >= target + 0.1) return c;
   }
   return '000000';
 }
@@ -368,12 +373,21 @@ async function openDocx(file) {
   if (relsDoc) for (const r of relsDoc.getElementsByTagName('Relationship'))
     rels[r.getAttribute('Id')] = { target: r.getAttribute('Target'), external: r.getAttribute('TargetMode') === 'External' };
 
-  S = { kind: 'docx', file, zip, doc, stylesDoc, coreDoc, rels, body: wAll(doc, 'body')[0] };
+  // Headers, footers, footnotes, and list numbering can carry colored text too
+  const extraParts = [];
+  for (const path of Object.keys(zip.files).filter(p => /^word\/(header\d*|footer\d*|footnotes|endnotes|numbering)\.xml$/.test(p)))
+    extraParts.push({ path, doc: await read(path), label: /numbering/.test(path) ? 'list bullets and numbers' : /note/.test(path) ? 'footnotes' : 'headers and footers' });
+
+  S = { kind: 'docx', file, zip, doc, stylesDoc, coreDoc, rels, extraParts, body: wAll(doc, 'body')[0] };
   S.styles = readStyles(stylesDoc);
+  S.styleNames = readStyleNames(stylesDoc);
+  S.headOverride = new Map(); // paragraph -> heading level chosen on this page (0 = plain text)
+  S.insertTitle = false;      // true when a new title line will be added at the top
   S.checks = [
     checkTitle(), checkLanguage(), await checkImages(), checkHeadings(), checkTables(),
-    checkContrast(), checkLinks(), checkBlankLines(), checkOtherNotes()
+    checkColors(), checkLinks(), checkBlankLines(), checkOtherNotes()
   ].filter(Boolean);
+  S.refreshHeadings && S.refreshHeadings();
   renderReport(file.name, 'Word document', S.checks);
   $('#downloadBtn').textContent = 'Download fixed Word file';
   $('#actionbar').hidden = false;
@@ -391,34 +405,87 @@ function readStyles(stylesDoc) {
     let level = null;
     const m = name.match(/^heading (\d)$/);
     if (m) level = +m[1];
-    else if (name === 'title') level = 1;
+    else if (name === 'title' || name === 'subtitle') level = null; // not in the heading outline; screen readers skip it
     else { const o = kid(kid(s, 'pPr'), 'outlineLvl'); if (o && +wVal(o) < 9) level = +wVal(o) + 1; }
     map[id] = { name, level };
   }
   return map;
 }
+// Every style id -> its name (paragraph and character styles), used to spot link styles and the Title style
+function readStyleNames(stylesDoc) {
+  const map = {};
+  if (stylesDoc) for (const s of wAll(stylesDoc, 'style')) map[s.getAttributeNS(NS.w, 'styleId')] = (wVal(kid(s, 'name')) || '').toLowerCase();
+  return map;
+}
+const styleNameOf = p => S.styleNames[wVal(kid(kid(p, 'pPr'), 'pStyle'))] || '';
 const headingLevel = p => { const id = wVal(kid(kid(p, 'pPr'), 'pStyle')); return id && S.styles[id] ? S.styles[id].level : null; };
 
-/* ---------- Check: document title ---------- */
+/* ---------- Check: title (file property + visible title at the top) ---------- */
+const WEAK_TITLE = /^(document\s*\d*|untitled|title|new document|microsoft word\b.*|.*\.(docx?|pdf|rtf))$/i;
+// The first paragraph with words in it, ignoring text boxes (their XML is stored twice)
+const firstTextPara = () => wAll(S.body, 'p').find(p => !within(p, 'txbxContent') && !within(p, 'Fallback', NS.mc) && paraText(p).trim());
+
 function checkTitle() {
+  // Part 1: the title saved in File > Info > Properties
   const titleEl = S.coreDoc ? S.coreDoc.getElementsByTagNameNS(NS.dc, 'title')[0] : null;
   const current = titleEl ? titleEl.textContent.trim() : '';
-  // Suggest the first heading, else a cleaned-up file name
-  const firstH = wAll(S.body, 'p').find(p => headingLevel(p) === 1 && paraText(p).trim());
-  const guess = current || (firstH ? clip(paraText(firstH), 90) : S.file.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').replace(/\s*\(\d+\)/g, '').trim());
-  const c = { id: 'title', title: 'Document title', status: current ? 'good' : 'bad', value: guess };
-  c.summary = current ? `Title is "${current}".` : 'No title is set, so screen readers announce the file name instead.';
+  const stem = S.file.name.replace(/\.[^.]+$/, '');
+  const weak = !current || WEAK_TITLE.test(current) || current === stem;
+  // Part 2: the visible title, which should be the first line and use Heading 1
+  const first = firstTextPara();
+  const firstText = first ? paraText(first).trim() : '';
+  const firstLvl = first ? headingLevel(first) : null;
+  const visibleOk = firstLvl === 1;
+  const looksLikeTitle = firstText && firstText.length <= 120 && !/[.;,:]$/.test(firstText);
+  const cleanStem = stem.replace(/_+/g, ' ').replace(/\s*\(\d+\)/g, '').trim();
+
+  const c = { id: 'title', title: 'Title' };
+  c.value = !weak ? current : looksLikeTitle ? clip(firstText, 100) : cleanStem;
+  c.visible = visibleOk ? 'keep' : looksLikeTitle ? 'first' : 'insert';
+  if (!visibleOk) S.titleFirst = first; // the heading check leaves this line to this check
+  S.titleCheck = c;
+
+  // Tell the heading plan what this check will do to the top of the page
+  c.sync = () => {
+    if (first && !visibleOk) { if (c.visible === 'first') S.headOverride.set(first, 1); else S.headOverride.delete(first); }
+    S.insertTitle = c.visible === 'insert';
+    S.refreshHeadings && S.refreshHeadings();
+  };
+  c.sync();
+
+  const firstDesc = !first ? 'The document has no text.' :
+    firstLvl ? `The first line uses Heading ${firstLvl}, not Heading 1.` :
+    /title/.test(styleNameOf(first)) ? `The first line uses Word's Title style, which screen readers do not treat as a heading.` :
+    'The first line is plain text, not a Heading 1.';
+  c.status = weak || !visibleOk ? 'bad' : 'good';
+  c.summary = [weak ? (current ? `The saved title "${clip(current, 50)}" is not descriptive.` : 'No title is saved in the file properties.') : `Saved title is "${clip(current, 60)}".`,
+    visibleOk ? 'The first line is a Heading 1.' : firstDesc].join(' ');
+
   c.render = () => {
-    const id = nextId('title');
-    return [
-      h('p', { class: 'why', text: 'The title is the first thing a screen reader announces, and it becomes the PDF title when you export.' }),
-      !S.coreDoc ? h('p', { text: 'This file has no properties section, so set the title in Word: File, Info, Properties, Title.' }) :
-      [h('label', { class: 'field', for: id, text: 'Title' }),
-       h('input', { type: 'text', id, value: c.value, oninput: e => c.value = e.target.value })]
-    ];
+    const id = nextId('title'), out = [
+      h('p', { class: 'why', text: 'Checkers look for two titles: one saved in the file properties (announced first by screen readers, and used as the PDF title) and a visible title at the top of the page that uses Heading 1 (WCAG 2.4.2 and 1.3.1).' }),
+      h('p', { class: 'field', text: '1. Saved title' })];
+    if (!S.coreDoc) out.push(h('p', { text: 'This file has no properties section, so set the title in Word: File, Info, Properties, Title.' }));
+    else out.push(h('label', { class: 'hint', for: id, text: 'Use the name students know the document by, such as "Math 0332 Exam A" or "Exam Expectations".' }),
+      h('input', { type: 'text', id, value: c.value, oninput: e => { c.value = e.target.value; S.refreshHeadings && S.refreshHeadings(); } }));
+    out.push(h('p', { class: 'field', text: '2. Visible title at the top of the page' }));
+    if (visibleOk) { out.push(h('p', {}, 'The first line, ', h('span', { class: 'quote', text: clip(firstText, 90) }), ', is already a Heading 1.')); return out; }
+    const name = nextId('vis');
+    const opt = (val, label) => {
+      const rid = nextId('vr');
+      return h('div', { class: 'inline-check' },
+        h('input', { type: 'radio', name, id: rid, value: val, checked: c.visible === val, onchange: () => { c.visible = val; c.sync(); } }),
+        h('label', { for: rid }, label));
+    };
+    out.push(h('fieldset', { class: 'plain' }, h('legend', { class: 'hint', text: firstDesc + ' Choose a fix:' }),
+      first ? opt('first', ['Make the first line a Heading 1: ', h('span', { class: 'quote', text: clip(firstText, 90) })]) : null,
+      opt('insert', 'Add a new Heading 1 line at the very top, using the saved title above'),
+      opt('keep', 'Leave the top of the page as it is')));
+    return out;
   };
   c.apply = () => {
-    if (!S.coreDoc || !c.value.trim()) return;
+    if (!c.value.trim()) c.value = cleanStem;
+    if (!S.coreDoc) return;
     let t = S.coreDoc.getElementsByTagNameNS(NS.dc, 'title')[0];
     if (!t) { t = S.coreDoc.createElementNS(NS.dc, 'dc:title'); S.coreDoc.documentElement.prepend(t); }
     t.textContent = c.value.trim();
@@ -617,15 +684,31 @@ function applyImageFix(i) {
   }
 }
 
-/* ---------- Check: headings ---------- */
+/* ---------- Check: headings (fake headings, empty headings, and numerical order) ---------- */
+// Paragraphs in reading order, skipping the duplicate copy Word stores for text boxes
+const bodyParas = () => wAll(S.body, 'p').filter(p => !within(p, 'Fallback', NS.mc));
+
+// Renumber headings so the first is Heading 1 and no level is skipped.
+// A stack remembers the open sections: each heading sits one level below the nearest earlier heading that was "bigger" in the original.
+function orderLevels(items) {
+  const stack = [];
+  for (const it of items) {
+    while (stack.length && stack[stack.length - 1].orig >= it.orig) stack.pop();
+    it.lvl = stack.length ? stack[stack.length - 1].lvl + 1 : 1;
+    stack.push(it);
+  }
+  return items;
+}
+
 function checkHeadings() {
-  const paras = wAll(S.body, 'p');
+  const paras = bodyParas();
   const existing = paras.map(p => ({ p, level: headingLevel(p), text: paraText(p).trim() })).filter(x => x.level && x.text);
-  // Look for "fake headings": short standalone lines that are bold or large but use the Normal style
+  const empties = paras.filter(p => headingLevel(p) && !paraText(p).trim() && !p.getElementsByTagNameNS(NS.w, 'drawing').length);
+
+  // "Fake headings": short standalone lines that are bold or large but use the Normal style
   const candidates = [];
-  let hasH1 = existing.some(x => x.level === 1);
   for (const p of paras) {
-    if (headingLevel(p) || within(p, 'tbl') || within(p, 'txbxContent') || kid(kid(p, 'pPr'), 'numPr')) continue;
+    if (p === S.titleFirst || headingLevel(p) || within(p, 'tbl') || within(p, 'txbxContent') || kid(kid(p, 'pPr'), 'numPr')) continue;
     const text = paraText(p).trim();
     if (text.length < 2 || text.length > 90 || /[.,;]$/.test(text) || /^note:?$/i.test(text)) continue;
     const runs = wAll(p, 'r').filter(r => wAll(r, 't').some(t => t.textContent.trim()));
@@ -633,36 +716,102 @@ function checkHeadings() {
     const bold = runs.every(r => { const rp = kid(r, 'rPr'); return isOn(kid(rp, 'b')) || /strong|bold/i.test(wVal(kid(rp, 'rStyle')) || ''); });
     const big = runs.every(r => +(wVal(kid(kid(r, 'rPr'), 'sz')) || 0) >= 28);
     if (!bold && !big) continue;
-    const suggest = hasH1 ? 2 : 1; if (suggest === 1) hasH1 = true;
-    candidates.push({ p, text, choice: String(suggest) });
+    candidates.push({ p, text, choice: '2' });
+    S.headOverride.set(p, 2);
   }
-  // Skipped levels (for example Heading 1 straight to Heading 3)
-  const jumps = []; let prev = 0;
+
+  // Problems in the document as it is now
+  let prev = 0; const jumps = [];
   for (const x of existing) { if (x.level > prev + 1) jumps.push(x); prev = x.level; }
-  const c = { id: 'headings', title: 'Headings', candidates };
+  const startsLow = existing.length && existing[0].level !== 1;
+
+  const c = { id: 'headings', title: 'Headings', candidates, fixOrder: true, clearEmpty: true };
   const noHeads = !existing.length && !candidates.length;
-  c.status = noHeads ? 'warn' : candidates.length || !existing.some(x => x.level === 1) ? 'bad' : jumps.length ? 'warn' : 'good';
+  c.status = noHeads ? 'warn' : candidates.length || startsLow || jumps.length || empties.length ? 'bad' : 'good';
+  const probs = [];
+  if (startsLow) probs.push(`the first heading is Heading ${existing[0].level}, not Heading 1`);
+  if (jumps.length) probs.push(`${jumps.length} heading${jumps.length > 1 ? 's skip' : ' skips'} a level`);
+  if (candidates.length) probs.push(`${candidates.length} line${candidates.length > 1 ? 's look' : ' looks'} like a heading but ${candidates.length > 1 ? 'are' : 'is'} only bold or large text`);
+  if (empties.length) probs.push(`${empties.length} empty heading line${empties.length > 1 ? 's' : ''}`);
   c.summary = noHeads ? 'No headings found. Longer documents should have them.' :
-    `${existing.length} real heading${existing.length === 1 ? '' : 's'}; ${candidates.length} line${candidates.length === 1 ? '' : 's'} look like headings but are only bold or large text.`;
+    `${existing.length} heading${existing.length === 1 ? '' : 's'}` + (probs.length ? '; ' + probs.join('; ') + '.' : ', in order.');
+
+  // The outline after every choice on this page, used for the preview and the download
+  c.plan = () => {
+    const items = [];
+    if (S.insertTitle) items.push({ p: null, text: (S.titleCheck && S.titleCheck.value.trim()) || '(new title)', orig: 1, isNew: true });
+    for (const p of bodyParas()) {
+      const orig = S.headOverride.has(p) ? S.headOverride.get(p) : headingLevel(p);
+      const text = paraText(p).trim();
+      if (orig && text) items.push({ p, text, orig, was: headingLevel(p) });
+    }
+    return c.fixOrder ? orderLevels(items) : items.map(it => Object.assign(it, { lvl: it.orig }));
+  };
+
+  const preview = h('div', { 'aria-live': 'polite' });
+  S.refreshHeadings = () => {
+    const items = c.plan();
+    const changed = items.filter(it => it.isNew || it.lvl !== it.was).length;
+    preview.replaceChildren(
+      h('p', { class: 'field', text: items.length ? `Outline after download (${changed} change${changed === 1 ? '' : 's'})` : 'Outline after download' }),
+      items.length ? h('ul', { class: 'outline' }, items.map(it => h('li', { style: `padding-left:${(it.lvl - 1) * 1.25}rem` },
+        h('strong', { text: `H${it.lvl} ` }), clip(it.text, 80),
+        it.isNew ? h('span', { class: 'hint', text: '  (new line)' }) :
+        it.lvl !== it.was ? h('span', { class: 'hint', text: it.was ? `  (was H${it.was})` : '  (was plain text)' }) : null)))
+        : h('p', { text: 'No headings. Pick a fix in the Title section or mark some lines below as headings.' }));
+  };
+
   c.render = () => {
-    const out = [h('p', { class: 'why', text: 'Screen-reader users jump between headings the way sighted readers skim. Bold text is not a heading unless it uses a Heading style (WCAG 1.3.1).' })];
-    if (existing.length) out.push(h('p', { class: 'field', text: 'Current outline' }),
-      h('ul', { class: 'outline' }, existing.map(x => h('li', { style: `padding-left:${(x.level - 1) * 1.25}rem` }, h('strong', { text: `H${x.level} ` }), clip(x.text, 90)))));
-    if (!existing.some(x => x.level === 1) && existing.length) out.push(h('p', { text: 'There is no Heading 1. The document title line should usually be Heading 1.' }));
-    for (const j of jumps) out.push(h('p', { text: `"${clip(j.text, 60)}" skips a level (it is Heading ${j.level}). Change it in Word so levels go in order.` }));
+    const out = [h('p', { class: 'why', text: 'Screen-reader users jump between headings the way sighted readers skim, so headings must go in order: the title is Heading 1, sections under it are Heading 2, parts of a section are Heading 3, and no level is skipped. Bold text is not a heading unless it uses a Heading style (WCAG 1.3.1).' })];
+    const ordId = nextId('ord');
+    out.push(h('div', { class: 'inline-check' },
+      h('input', { type: 'checkbox', id: ordId, checked: c.fixOrder, onchange: e => { c.fixOrder = e.target.checked; S.refreshHeadings(); } }),
+      h('label', { for: ordId, text: 'Put heading levels in order automatically (start at Heading 1, never skip a level)' })));
+    if (empties.length) {
+      const eId = nextId('emp');
+      out.push(h('div', { class: 'inline-check' },
+        h('input', { type: 'checkbox', id: eId, checked: c.clearEmpty, onchange: e => c.clearEmpty = e.target.checked }),
+        h('label', { for: eId, text: `Turn ${empties.length} empty heading line${empties.length > 1 ? 's' : ''} back into normal text` })));
+    }
+    out.push(preview);
     if (candidates.length) {
-      out.push(h('p', { class: 'field', text: 'Lines that look like headings' }));
+      out.push(h('p', { class: 'field', text: 'Lines that look like headings' }),
+        h('p', { class: 'hint', text: 'Pick the level each should have. The automatic ordering above adjusts these too.' }));
       out.push(h('div', { class: 'rows' }, candidates.map(cd => {
         const id = nextId('hd');
         return h('div', { class: 'row row-grid' },
-          h('select', { id, 'aria-label': `Style for "${clip(cd.text, 40)}"`, onchange: e => cd.choice = e.target.value },
+          h('select', { id, 'aria-label': `Style for "${clip(cd.text, 40)}"`, onchange: e => {
+              cd.choice = e.target.value;
+              if (+cd.choice) S.headOverride.set(cd.p, +cd.choice); else S.headOverride.delete(cd.p);
+              S.refreshHeadings();
+            } },
             [['0', 'Keep as text'], ['1', 'Heading 1'], ['2', 'Heading 2'], ['3', 'Heading 3']].map(([v, t]) => h('option', { value: v, selected: v === cd.choice, text: t }))),
           h('label', { for: id, class: 'quote', text: cd.text }));
       })));
     }
+    S.refreshHeadings();
     return out;
   };
-  c.apply = () => candidates.forEach(cd => { if (cd.choice !== '0') ensurePPrStyle(cd.p, ensureHeadingStyle(+cd.choice)); });
+
+  c.apply = () => {
+    // 1. Lines picked as headings on this page (including the first line, if the Title section chose it)
+    for (const [p, lvl] of S.headOverride) if (lvl) ensurePPrStyle(p, ensureHeadingStyle(lvl));
+    // 2. A brand-new title line at the very top
+    if (S.insertTitle) {
+      const d = S.doc, p = mkW(d, 'p'), pPr = mkW(d, 'pPr'), r = mkW(d, 'r'), t = mkW(d, 't');
+      pPr.append(mkW(d, 'pStyle', ensureHeadingStyle(1)));
+      t.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
+      t.textContent = S.titleCheck.value.trim();
+      r.append(t); p.append(pPr, r);
+      S.body.insertBefore(p, S.body.firstElementChild);
+      S.insertTitle = false; // it is now a real paragraph, so the plan below sees it
+    }
+    // 3. Empty heading lines become normal text
+    if (c.clearEmpty) empties.forEach(p => { const ps = kid(kid(p, 'pPr'), 'pStyle'); if (ps) ps.remove(); });
+    // 4. Renumber every heading in reading order
+    S.headOverride.clear();
+    if (c.fixOrder) for (const it of c.plan()) if (it.lvl !== headingLevel(it.p)) ensurePPrStyle(it.p, ensureHeadingStyle(it.lvl));
+  };
   return c;
 }
 function ensurePPrStyle(p, styleId) {
@@ -677,10 +826,11 @@ function ensureHeadingStyle(level) {
   if (found) return found[0];
   const id = 'Heading' + level, d = S.stylesDoc;
   if (!d) return id;
-  const size = { 1: 32, 2: 28, 3: 24 }[level];
+  const size = { 1: 32, 2: 28, 3: 26 }[level] || 24;
   const frag = parseXml(`<w:style xmlns:w="${NS.w}" w:type="paragraph" w:styleId="${id}"><w:name w:val="heading ${level}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="80"/><w:outlineLvl w:val="${level - 1}"/></w:pPr><w:rPr><w:b/><w:sz w:val="${size}"/><w:szCs w:val="${size}"/></w:rPr></w:style>`);
   d.documentElement.append(d.importNode(frag.documentElement, true));
   S.styles[id] = { name: 'heading ' + level, level };
+  S.styleNames[id] = 'heading ' + level;
   return id;
 }
 
@@ -729,45 +879,152 @@ function checkTables() {
   return c;
 }
 
-/* ---------- Check: text color contrast ---------- */
-function checkContrast() {
-  const colors = {};
-  for (const r of wAll(S.body, 'r')) {
-    const text = wAll(r, 't').map(t => t.textContent).join('');
-    if (!text.trim()) continue;
-    const rp = kid(r, 'rPr'), col = kid(rp, 'color'), v = (wVal(col) || '').toUpperCase();
-    if (!/^[0-9A-F]{6}$/.test(v)) continue;
-    if (kid(rp, 'shd') || (kid(rp, 'highlight') && wVal(kid(rp, 'highlight')) !== 'none') || within(r, 'tc')) continue; // skip shaded text; background is not white
-    const sz = +(wVal(kid(rp, 'sz')) || 22), bold = isOn(kid(rp, 'b'));
-    const large = sz >= 36 || (sz >= 28 && bold); // 18pt, or 14pt bold
-    const need = large ? 3 : 4.5;
-    const e = colors[v] || (colors[v] = { hex: v, runs: [], need: 3, samples: [] });
-    e.runs.push(col); e.need = Math.max(e.need, need);
-    if (e.samples.length < 2) e.samples.push(clip(text, 50));
+/* ---------- Check: colored text ---------- */
+// Word's highlighter colors as hex values
+const HIGHLIGHT = { yellow: 'FFFF00', green: '00FF00', cyan: '00FFFF', magenta: 'FF00FF', blue: '0000FF', red: 'FF0000', darkBlue: '000080', darkCyan: '008080', darkGreen: '008000', darkMagenta: '800080', darkRed: '800000', darkYellow: '808000', darkGray: '808080', lightGray: 'C0C0C0', black: '000000', white: 'FFFFFF' };
+const isHex = v => /^[0-9A-F]{6}$/i.test(v || '');
+const fillOf = shd => { const f = shd && shd.getAttributeNS(NS.w, 'fill'); return isHex(f) ? f.toUpperCase() : null; };
+// What is behind a run of text: highlighter, then run shading, paragraph shading, table-cell shading, otherwise white paper
+function backgroundOf(r) {
+  const rp = kid(r, 'rPr'), hl = wVal(kid(rp, 'highlight'));
+  if (hl && HIGHLIGHT[hl]) return HIGHLIGHT[hl];
+  const p = within(r, 'p'), tc = within(r, 'tc');
+  return fillOf(kid(rp, 'shd')) || (p && fillOf(kid(kid(p, 'pPr'), 'shd'))) || (tc && fillOf(kid(kid(tc, 'tcPr'), 'shd'))) || 'FFFFFF';
+}
+const runText = r => Array.from(r.children).filter(n => n.localName === 't').map(t => t.textContent).join('');
+
+// Style ids the document really uses (directly, or as the parent a used style is based on)
+function usedStyleIds(docs) {
+  const used = new Set();
+  for (const d of docs) for (const tag of ['pStyle', 'rStyle']) for (const n of wAll(d, tag)) used.add(wVal(n));
+  if (S.stylesDoc) {
+    const byId = {};
+    for (const st of wAll(S.stylesDoc, 'style')) {
+      const id = st.getAttributeNS(NS.w, 'styleId'); byId[id] = st;
+      if (st.getAttributeNS(NS.w, 'default') === '1') used.add(id);                    // default paragraph/character style
+      if (/^(heading [1-3])$/.test(S.styleNames[id] || '')) used.add(id);              // headings this page may assign
+    }
+    for (const id of [...used]) {                                                       // follow "based on" and "linked" chains
+      let st = byId[id], guard = 0;
+      while (st && guard++ < 20) {
+        const link = wVal(kid(st, 'link')); if (link) used.add(link);
+        const parent = wVal(kid(st, 'basedOn')); if (!parent) break;
+        used.add(parent); st = byId[parent];
+      }
+    }
   }
-  const all = Object.values(colors).map(e => ({ ...e, ratio: contrast(e.hex) }));
-  const fails = all.filter(e => e.ratio < e.need).map(e => ({ ...e, fix: darkenToPass(e.hex, e.need), on: true }));
-  const c = { id: 'contrast', title: 'Text color contrast', status: fails.length ? 'bad' : 'good', fails };
-  c.summary = !all.length ? 'All text uses the default color.' : `${all.length} text color${all.length > 1 ? 's' : ''} used; ${fails.length} too light to read against white.`;
+  return used;
+}
+
+function checkColors() {
+  const groups = {};
+  const used = usedStyleIds([S.doc, ...S.extraParts.map(x => x.doc).filter(Boolean)]);
+  const parts = [{ doc: S.doc, label: 'body' }, ...(S.stylesDoc ? [{ doc: S.stylesDoc, label: 'styles' }] : []), ...S.extraParts];
+  let highlighted = 0;
+  for (const part of parts) {
+    for (const col of wAll(part.doc, 'color')) {
+      const v = (wVal(col) || '').toUpperCase();
+      if (!isHex(v) || v === '000000' || within(col, 'rPrChange') || within(col, 'pPrChange')) continue;
+      const rPr = col.parentNode, host = rPr && rPr.parentNode;
+      if (!host || rPr.localName !== 'rPr') continue;
+      let bg = 'FFFFFF', link = false, text = '', where = part.label, need = 4.5;
+      if (host.localName === 'r') {            // a run of text (w:r, or m:r inside an equation)
+        text = host.namespaceURI === NS.m ? Array.from(host.getElementsByTagNameNS(NS.m, 't')).map(t => t.textContent).join('') : runText(host);
+        bg = backgroundOf(host);
+        link = !!within(host, 'hyperlink') || /hyperlink/.test(S.styleNames[wVal(kid(rPr, 'rStyle'))] || '');
+        const sz = +(wVal(kid(rPr, 'sz')) || 22);
+        if (sz >= 36 || (sz >= 28 && isOn(kid(rPr, 'b')))) need = 3; // large text: 18pt, or 14pt bold
+        if (part.label === 'body') where = within(host, 'txbxContent') ? 'text boxes' : 'the body';
+      } else if (host.localName === 'style') { // a style, e.g. Heading 1 in blue
+        if (host.getAttributeNS(NS.w, 'type') === 'table') continue; // table styles pair their colors with their own shading
+        const name = (wVal(kid(host, 'name')) || '').toLowerCase();
+        link = /hyperlink/.test(name);
+        where = used.has(host.getAttributeNS(NS.w, 'styleId')) ? `the ${name} style` : null; // unused style: change it quietly, do not list it
+        if (/^(heading [1-3]|title)$/.test(name)) need = 3;
+      } else if (host.localName === 'rPrDefault') where = 'the default text color';
+      else if (host.localName !== 'pPr' && host.localName !== 'lvl') continue;
+      // Group by color + background, so white-on-dark-cell text is kept apart from colored text on white
+      const key = `${v}|${bg}|${link ? 'L' : ''}`;
+      const g = groups[key] || (groups[key] = { hex: v, bg, link, els: [], count: 0, samples: [], where: new Set(), need: 3 });
+      g.els.push(col);
+      g.need = Math.max(g.need, need);
+      if (text.trim()) { g.count++; if (g.samples.length < 3) g.samples.push(clip(text, 40)); g.where.add(where); }
+      else if ((host.localName === 'style' || host.localName === 'rPrDefault') && where) g.where.add(where);
+    }
+    for (const r of wAll(part.doc, 'r')) {
+      const rp = kid(r, 'rPr'), hl = wVal(kid(rp, 'highlight'));
+      if ((hl && hl !== 'none') || fillOf(kid(rp, 'shd'))) highlighted++;
+    }
+  }
+  const list = Object.values(groups).map(g => {
+    g.ratio = contrast(g.hex, g.bg);
+    g.pass = g.ratio >= g.need;
+    g.blackOk = contrast('000000', g.bg) >= 4.5;  // black is only an option on a light background
+    g.fix = g.pass ? null : darkenToPass(g.hex, g.need, g.bg);
+    if (g.fix && contrast(g.fix, g.bg) < g.need) g.fix = null;
+    g.action = g.blackOk ? 'black' : g.fix ? 'darken' : 'keep';
+    g.visible = g.count > 0 || g.where.size > 0;
+    return g;
+  }).sort((a, b) => a.pass - b.pass || b.count - a.count);
+  const shown = list.filter(g => g.visible);
+  const fails = shown.filter(g => !g.pass);
+
+  const c = { id: 'colors', title: 'Colored text', groups: list, removeHighlight: false };
+  c.status = fails.length ? 'bad' : shown.length ? 'warn' : 'good';
+  c.summary = !shown.length ? 'All text is black or automatic.' :
+    `${shown.length} text color${shown.length > 1 ? 's' : ''} found; ${fails.length} fail${fails.length === 1 ? 's' : ''} the contrast test. All are set to change to black.`;
+
   c.render = () => {
-    const out = [h('p', { class: 'why', text: 'Regular text needs a contrast ratio of at least 4.5 to 1 against its background; large text needs 3 to 1 (WCAG 1.4.3). Color also should not be the only way meaning is shown, for example "problems in red are due Friday."' })];
-    for (const f of fails) {
-      const id = nextId('cc');
-      out.push(h('div', { class: 'row' },
-        h('p', {}, h('span', { class: 'swatch', style: `background:#${f.hex}`, 'aria-hidden': 'true' }), h('strong', { text: '#' + f.hex }),
-          ` has a ratio of ${f.ratio.toFixed(2)} to 1 (needs ${f.need}). Used ${f.runs.length} time${f.runs.length > 1 ? 's' : ''}, e.g. `, h('span', { class: 'quote', text: f.samples.join('; ') })),
-        h('div', { class: 'inline-check' }, h('input', { type: 'checkbox', id, checked: true, onchange: e => f.on = e.target.checked }),
-          h('label', { for: id }, 'Change to ', h('span', { class: 'swatch', style: `background:#${f.fix}`, 'aria-hidden': 'true' }), `#${f.fix} (ratio ${contrast(f.fix).toFixed(2)} to 1)`))));
+    const out = [h('p', { class: 'why', text: 'Regular text needs a contrast ratio of at least 4.5 to 1 with its background, and large text 3 to 1 (WCAG 1.4.3). Black on white is 21 to 1, so changing colored text to black clears these flags. If color carries meaning (for example "answers in red"), say it in words too (WCAG 1.4.1).' })];
+    if (!shown.length) return out;
+    const selects = [];
+    const setAll = action => { for (const g of list) { const ok = action === 'keep' || (action === 'black' && g.blackOk); if (ok) g.action = action; } selects.forEach(s => s.sync()); };
+    out.push(h('p', {}, h('button', { type: 'button', class: 'small', text: 'Make all text black', onclick: () => setAll('black') }), ' ',
+      h('button', { type: 'button', class: 'small secondary', text: 'Keep all colors', onclick: () => setAll('keep') })));
+    out.push(h('div', { class: 'rows' }, shown.map(g => {
+      const id = nextId('col');
+      const opts = [g.blackOk && ['black', 'Change to black'], g.fix && ['darken', `Darken to #${g.fix} (passes)`], ['keep', 'Keep this color']].filter(Boolean);
+      const sel = h('select', { id, onchange: e => g.action = e.target.value }, opts.map(([v, t]) => h('option', { value: v, text: t })));
+      sel.sync = () => { sel.value = g.action; };
+      sel.sync(); selects.push(sel);
+      const whereText = [...g.where].join(', ');
+      return h('div', { class: 'row row-grid' },
+        h('div', {},
+          h('p', { class: 'img-meta' }, h('span', { class: 'swatch', style: `background:#${g.hex}`, 'aria-hidden': 'true' }), h('strong', { text: '#' + g.hex }),
+            g.bg !== 'FFFFFF' ? [' on ', h('span', { class: 'swatch', style: `background:#${g.bg}`, 'aria-hidden': 'true' }), '#' + g.bg] : null),
+          mark(g.pass ? 'good' : 'bad', `${g.ratio.toFixed(1)} to 1${g.pass ? ', passes' : ', fails'}`)),
+        h('div', {},
+          h('p', { class: 'img-meta' }, g.link ? 'Links. ' : '', g.count ? `${g.count} piece${g.count > 1 ? 's' : ''} of text` : '', g.count && whereText ? ' in ' : '', whereText,
+            g.samples.length ? ['. Example: ', h('span', { class: 'quote', text: g.samples.join('; ') })] : ''),
+          g.link ? h('p', { class: 'hint', text: 'Black links are fine as long as they stay underlined.' }) : null,
+          !g.blackOk ? h('p', { class: 'hint', text: 'The background here is dark, so black text would be unreadable. Keep the light text, or change the cell or highlight color in Word.' }) : null,
+          h('label', { class: 'field', for: id, text: 'Change' }), sel));
+    })));
+    out.push(h('p', { class: 'hint', text: 'Bullets and numbers set in the same color change with their text.' }));
+    if (highlighted) {
+      const hid = nextId('hl');
+      out.push(h('div', { class: 'inline-check' },
+        h('input', { type: 'checkbox', id: hid, onchange: e => c.removeHighlight = e.target.checked }),
+        h('label', { for: hid, text: `Also remove highlighting and shading from ${highlighted} piece${highlighted > 1 ? 's' : ''} of text (black on yellow highlight already passes, so only do this if your checker flags it)` })));
     }
     return out;
   };
-  c.apply = () => fails.forEach(f => {
-    if (!f.on) return;
-    for (const col of f.runs) {
-      col.setAttributeNS(NS.w, 'w:val', f.fix);
-      ['themeColor', 'themeShade', 'themeTint'].forEach(a => col.removeAttributeNS(NS.w, a)); // theme colors would override the new value
+
+  c.apply = () => {
+    for (const g of list) {
+      if (g.action === 'keep') continue;
+      const val = g.action === 'black' ? '000000' : g.fix;
+      for (const col of g.els) {
+        col.setAttributeNS(NS.w, 'w:val', val);
+        ['themeColor', 'themeShade', 'themeTint'].forEach(a => col.removeAttributeNS(NS.w, a)); // theme colors would override the new value
+      }
     }
-  });
+    if (c.removeHighlight) for (const part of parts) for (const r of wAll(part.doc, 'r')) {
+      const rp = kid(r, 'rPr'); if (!rp) continue;
+      const hl = kid(rp, 'highlight'); if (hl) hl.remove();
+      const sh = kid(rp, 'shd'); if (sh) sh.remove();
+    }
+  };
   return c;
 }
 
@@ -879,6 +1136,7 @@ async function downloadDocx() {
   S.zip.file('word/document.xml', toXml(S.doc));
   if (S.stylesDoc) S.zip.file('word/styles.xml', toXml(S.stylesDoc));
   if (S.coreDoc) S.zip.file('docProps/core.xml', toXml(S.coreDoc));
+  for (const part of S.extraParts) if (part.doc) S.zip.file(part.path, toXml(part.doc));
   const blob = await S.zip.generateAsync({ type: 'blob', mimeType: DOCX_MIME, compression: 'DEFLATE' });
   return offerDownload(blob, S.file.name.replace(/\.docx$/i, '') + '-accessible.docx');
 }
@@ -1035,7 +1293,7 @@ function renderPdfReport() {
 
   // Best path for PDFs exported from Word: fix the Word file instead
   if (fromWord) rep.append(h('div', { class: 'callout' },
-    h('p', {}, h('strong', { text: 'This PDF was made from a Word file. ' }), 'The most reliable fix is to upload the original .docx here, download the fixed copy, then in Word choose File, Save As, PDF with "Document structure tags for accessibility" turned on. Tags, alt text, and headings then carry into the PDF automatically.'),
+    h('p', {}, h('strong', { text: 'This PDF was made from a Word file. ' }), 'The most reliable fix is to upload the original .docx here, download the fixed copy, then in Word choose File, Save As, PDF with "Document structure tags for accessibility" turned on. Tags, alt text, headings, and color fixes then carry into the PDF automatically. Text colors and heading levels inside a PDF cannot be changed here.'),
     info.figures > info.figAlt ? h('p', { text: `${info.figures - info.figAlt} picture${info.figures - info.figAlt > 1 ? 's have' : ' has'} no alt text. If these are math problems saved as pictures, give each one alt text in Word, or retype them with Insert, Equation.` }) : null));
 
   if (info.bareNumbers >= 3) rep.append(h('div', { class: 'callout' },
@@ -1068,7 +1326,7 @@ function renderPdfReport() {
     btn.onclick = async () => { btn.disabled = true; msg.textContent = 'Building…'; try { msg.textContent = await downloadRebuild(); } catch (e) { msg.textContent = 'Could not build: ' + e.message; } btn.disabled = false; };
     rep.append(h('section', { class: 'check', id: 'chk-rebuild', 'aria-labelledby': 'h-rebuild' },
       h('div', { class: 'check-head' }, h('h3', { id: 'h-rebuild', text: 'Rebuild as an accessible Word document' }), mark(info.tagged ? 'info' : 'warn', info.tagged ? 'Optional' : 'Recommended')),
-      h('p', { class: 'why', text: 'The text below was read from the PDF and sorted into headings, paragraphs, and lists. Check each block type and fix any wording, then download a Word file with real headings, real lists, a title, and a language. Export it to PDF from Word if you need a PDF.' }),
+      h('p', { class: 'why', text: 'The text below was read from the PDF and sorted into headings, paragraphs, and lists. Check each block type and fix any wording, then download a Word file with real headings (put in order automatically, starting at Heading 1), real lists, black text, a title, and a language. Export it to PDF from Word if you need a PDF.' }),
       info.figures || fromWord ? h('p', { text: 'Pictures are not carried over. Insert them in Word and give each one alt text.' }) : null,
       list, h('p', { style: 'margin-top:1rem' }, btn, ' ', msg)));
   } else if (info.scanned) {
@@ -1092,9 +1350,13 @@ async function downloadPdfFix() {
 async function downloadRebuild() {
   const W = NS.w, lang = S.fixLang, title = S.fixTitle.trim() || 'Document';
   const numXml = []; let numId = 1, olOpen = false; // numId 1 = bullets; each numbered list gets its own id so it restarts at 1
-  const paras = S.blocks.filter(b => b.type !== 'remove' && b.text.trim()).map(b => {
+  const kept = S.blocks.filter(b => b.type !== 'remove' && b.text.trim());
+  // Put heading levels in order: first heading is Heading 1, no skipped levels
+  const heads = orderLevels(kept.filter(b => b.type[0] === 'h').map(b => ({ b, orig: +b.type[1] })));
+  const levelOf = new Map(heads.map(x => [x.b, Math.min(3, x.lvl)]));
+  const paras = kept.map(b => {
     let pPr = '';
-    if (b.type[0] === 'h') pPr = `<w:pStyle w:val="Heading${b.type[1]}"/>`;
+    if (b.type[0] === 'h') pPr = `<w:pStyle w:val="Heading${levelOf.get(b)}"/>`;
     else if (b.type === 'ul') pPr = `<w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>`;
     else if (b.type === 'ol') {
       if (!olOpen) { numId++; numXml.push(`<w:num w:numId="${numId}"><w:abstractNumId w:val="1"/><w:lvlOverride w:ilvl="0"><w:startOverride w:val="1"/></w:lvlOverride></w:num>`); }
@@ -1103,7 +1365,7 @@ async function downloadRebuild() {
     olOpen = b.type === 'ol'; // any other block ends the numbered list
     return `<w:p><w:pPr>${pPr}</w:pPr><w:r><w:t xml:space="preserve">${escXml(b.text.trim())}</w:t></w:r></w:p>`;
   }).join('');
-  const heading = (n, sz, before) => `<w:style w:type="paragraph" w:styleId="Heading${n}"><w:name w:val="heading ${n}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="${before}" w:after="120"/><w:outlineLvl w:val="${n - 1}"/></w:pPr><w:rPr><w:b/><w:color w:val="1F3864"/><w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr></w:style>`;
+  const heading = (n, sz, before) => `<w:style w:type="paragraph" w:styleId="Heading${n}"><w:name w:val="heading ${n}"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="${before}" w:after="120"/><w:outlineLvl w:val="${n - 1}"/></w:pPr><w:rPr><w:b/><w:color w:val="000000"/><w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr></w:style>`;
   const zip = new JSZip();
   zip.file('[Content_Types].xml', XML_DECL + `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`);
   zip.file('_rels/.rels', XML_DECL + `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`);
@@ -1119,3 +1381,5 @@ async function downloadRebuild() {
 </script>
 </body>
 </html>
+
+</body></html>
