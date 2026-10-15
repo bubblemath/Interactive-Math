@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Sieve of Eratosthenes — cross out the composites, the primes remain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#10333A; --ground-2:#0C282E; --paper:#F6F2E8; --ink:#0B2025;
+    --teal:#2FA39B; --teal-bright:#57C7BE; --amber:#EFB53F; --green:#57B87F; --clay:#D77149;
+    --muted:#8FB0B2; --line:rgba(255,255,255,0.12); --line-strong:rgba(255,255,255,0.22);
+    --shadow:0 18px 45px -20px rgba(0,0,0,0.6);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  sup{font-size:.62em;vertical-align:super;line-height:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(120% 90% at 85% -10%, #164048 0%, transparent 55%),
+      radial-gradient(120% 90% at 0% 0%, #143a41 0%, transparent 50%),
+      var(--ground);
+    color:var(--paper);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased;min-height:100vh;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:34px 34px;
+    -webkit-mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+            mask-image:radial-gradient(140% 100% at 50% 0%,#000 30%,transparent 80%);
+  }
+  main{position:relative;z-index:1}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0;flex-wrap:wrap;gap:12px}
+  .brand{display:flex;align-items:center;gap:12px;font-family:"Space Grotesk";font-weight:600;letter-spacing:.02em}
+  .brand .glyph{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--teal),var(--teal-bright));color:var(--ground-2);
+    font-weight:700;font-size:1.1rem;box-shadow:var(--shadow);font-family:"Space Mono"}
+  .topnav{display:flex;gap:6px;flex-wrap:wrap}
+  .topnav a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 12px;border-radius:8px;transition:.18s}
+  .topnav a:hover{color:var(--paper);background:rgba(255,255,255,.06)}
+
+  .hero{padding:28px 0 6px}
+  .eyebrow{font-family:"Space Mono";font-size:.76rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:16px}
+  h1{font-family:"Space Grotesk";font-weight:700;line-height:1.05;font-size:clamp(1.9rem,4.6vw,3.1rem);letter-spacing:-.02em;margin-bottom:16px}
+  h1 .hl{color:var(--amber)}
+  .lede{font-size:clamp(1rem,2.1vw,1.14rem);color:#DCEAE9;max-width:64ch}
+  .lede strong{color:var(--paper)}
+  .lede code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 7px;border-radius:6px;font-size:.92em}
+
+  /* ---- setup ---- */
+  .setup{margin-top:24px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:14px;padding:16px 18px;
+    display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-family:"Space Mono";font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .field input[type=number],.field select{background:rgba(255,255,255,.07);border:1px solid var(--line-strong);
+    color:var(--paper);font:inherit;font-family:"Space Mono";font-weight:700;font-size:1rem;
+    padding:9px 12px;border-radius:9px;width:118px}
+  .field select{width:92px}
+  .btn{background:var(--amber);color:var(--ground-2);border:none;font-family:"Space Grotesk";font-weight:600;
+    font-size:.92rem;padding:11px 18px;border-radius:9px;cursor:pointer;transition:.16s}
+  .btn:hover:not(:disabled){filter:brightness(1.08)}
+  .btn:disabled{opacity:.38;cursor:default}
+  .btn.sec{background:rgba(255,255,255,.07);color:var(--paper);border:1px solid var(--line-strong)}
+  .btn.sec:hover:not(:disabled){background:rgba(255,255,255,.12)}
+  .hint{font-family:"Space Mono";font-size:.72rem;color:var(--muted);flex-basis:100%}
+
+  /* ---- narration ---- */
+  .narrate{margin-top:16px;background:var(--paper);color:var(--ink);border-radius:14px;
+    padding:16px 18px;box-shadow:var(--shadow);min-height:92px;display:flex;gap:14px;align-items:flex-start}
+  .narrate .badge{flex:none;width:44px;height:44px;border-radius:11px;display:grid;place-items:center;
+    font-family:"Space Mono";font-weight:700;font-size:1.15rem;background:#EFE9DA;color:#5C6E6D}
+  .narrate .badge.p{background:var(--green);color:#fff}
+  .narrate .badge.x{background:var(--clay);color:#fff}
+  .narrate .badge.d{background:var(--amber);color:var(--ground-2)}
+  .narrate .body{flex:1}
+  .narrate h3{font-family:"Space Grotesk";font-weight:600;font-size:1.04rem;margin-bottom:4px;line-height:1.3}
+  .narrate p{font-size:.93rem;color:#3A4746;line-height:1.55}
+  .narrate code{font-family:"Space Mono";background:#EDE7D8;padding:1px 6px;border-radius:5px;font-weight:700}
+  .narrate .why{display:block;margin-top:7px;padding-top:7px;border-top:1px dashed #C6BFAD;color:#5C6E6D;font-style:italic;font-size:.89rem}
+
+  /* ---- controls ---- */
+  .controls{margin-top:14px;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .prog{flex:1;min-width:150px;height:8px;border-radius:20px;background:rgba(255,255,255,.08);overflow:hidden}
+  .prog span{display:block;height:100%;width:0;border-radius:20px;
+    background:linear-gradient(90deg,var(--teal),var(--amber));transition:width .25s}
+  .speed{display:flex;align-items:center;gap:7px;font-family:"Space Mono";font-size:.72rem;color:var(--muted)}
+  .speed input{width:92px;accent-color:var(--teal-bright)}
+
+  /* ---- the grid ---- */
+  .board{margin-top:18px;background:var(--paper);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+  /* margin:auto centres the grid in the board — justify-content only positions
+     the tracks inside the grid box, not the box itself */
+  .grid{display:grid;gap:5px;justify-content:center;margin:0 auto}
+  .cell{aspect-ratio:1;display:grid;place-items:center;border-radius:7px;
+    font-family:"Space Mono";font-weight:700;font-size:clamp(.6rem,1.5vw,.95rem);
+    background:#EFE9DA;color:#3A4746;border:1.5px solid #E1DAC8;
+    transition:background .18s,color .18s,border-color .18s,transform .18s;position:relative}
+  .cell.one{background:#E6E0D2;color:#A79C82;border-style:dashed}
+  .cell.prime{background:#D9F0E2;color:#1E5F4F;border-color:var(--green)}
+  .cell.composite{background:#F2EDE1;color:#B9AF99;border-color:#E6E0D2;text-decoration:line-through;
+    text-decoration-thickness:2px;text-decoration-color:#C98F8F}
+  .cell.current{background:var(--amber);color:var(--ground-2);border-color:#B07800;
+    transform:scale(1.12);z-index:3;box-shadow:0 0 0 3px rgba(239,181,63,.35)}
+  .cell.hit{background:#F6D9CC;color:#8C3F20;border-color:var(--clay);transform:scale(1.1);z-index:2}
+  .cell.already{background:#EDE4DA;color:#9C8878;border-color:#D8C6B6;transform:scale(1.06);z-index:2}
+  .cell.mult{box-shadow:inset 0 0 0 2px rgba(239,181,63,.55)}
+  .cell.survivor{background:#CFEBDC;color:#15584A;border-color:var(--green);
+    box-shadow:0 0 0 2px rgba(87,184,127,.3)}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:14px;padding-top:13px;
+    border-top:1px solid #E1DAC8;font-family:"Space Mono";font-size:.72rem;color:#5C6E6D}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .sw{width:14px;height:14px;border-radius:4px;border:1.5px solid #E1DAC8;display:inline-block}
+  .sw.p{background:#D9F0E2;border-color:var(--green)}
+  .sw.c{background:#F2EDE1;border-color:#E6E0D2}
+  .sw.cur{background:var(--amber);border-color:#B07800}
+  .sw.o{background:#E6E0D2;border-style:dashed;border-color:#A79C82}
+
+  /* ---- results ---- */
+  .results{margin-top:18px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:14px;padding:18px;display:none}
+  .results.show{display:block}
+  .rstat{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+  @media (max-width:620px){.rstat{grid-template-columns:repeat(3,1fr);gap:8px}}
+  /* the child combinator matters: ".rstat div" also matched the .v and .l divs
+     inside each card and drew a box around every number and label too */
+  .rstat > div{text-align:center;background:rgba(255,255,255,.04);border:1px solid var(--line);
+    border-radius:11px;padding:13px 8px}
+  .rstat .v{font-family:"Space Grotesk";font-weight:700;font-size:1.55rem;color:var(--amber);line-height:1.1}
+  .rstat .l{font-family:"Space Mono";font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:6px;line-height:1.4}
+  .plist{font-family:"Space Mono";font-size:.84rem;color:#CFE2E0;line-height:2;
+    background:rgba(0,0,0,.14);border-radius:10px;padding:13px 15px;word-spacing:.18em;
+    max-height:190px;overflow-y:auto}
+  .plist b{color:var(--teal-bright)}
+  .rfoot{margin-top:12px;font-family:"Space Mono";font-size:.76rem;color:var(--muted);text-align:center;line-height:1.8}
+  .rfoot b{color:var(--amber)}
+
+  .section{padding:52px 0 8px}
+  .kicker{font-family:"Space Mono";font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--teal-bright);margin-bottom:12px}
+  h2{font-family:"Space Grotesk";font-weight:600;font-size:clamp(1.4rem,3.2vw,2rem);letter-spacing:-.01em;margin-bottom:8px}
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
+  @media (max-width:760px){.why-grid{grid-template-columns:1fr}}
+  .why-card{border-top:2px solid var(--teal);padding-top:15px}
+  .why-card h3{font-family:"Space Grotesk";font-weight:600;font-size:1.02rem;margin-bottom:6px}
+  .why-card p{font-size:.89rem;color:#C6D8D6}
+  .why-card code{font-family:"Space Mono";background:rgba(255,255,255,.08);padding:1px 5px;border-radius:5px;font-size:.92em}
+  .closing{margin-top:24px;font-size:1rem;color:#DCEAE9;max-width:66ch}
+  .closing b{color:var(--paper)}
+  footer{margin:52px 0 38px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);
+    font-family:"Space Mono";font-size:.76rem;text-align:center}
+  :focus-visible{outline:2.5px solid var(--teal-bright);outline-offset:2px;border-radius:6px}
+  @media (prefers-reduced-motion:reduce){.cell{transition:none}}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><span class="glyph">⊘</span> The Sieve of Eratosthenes</div>
+    <nav class="topnav"><a href="#why">Why it works</a></nav>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Math 1350 · Lesson 7 · number theory</div>
+    <h1>Cross out the composites.<br><span class="hl">The primes remain.</span></h1>
+    <p class="lede">Rather than testing each number for primality, the sieve works by <strong>elimination</strong>: take the smallest number not yet crossed out, declare it prime, and cross out all of its multiples. Whatever survives has no factors — and must be prime.</p>
+
+    <div class="setup">
+      <div class="field">
+        <label for="maxN">Sieve up to</label>
+        <input id="maxN" type="number" min="10" max="400" step="1" value="100">
+      </div>
+      <div class="field">
+        <label for="cols">Columns</label>
+        <select id="cols"><option>10</option><option>12</option><option>20</option><option>25</option></select>
+      </div>
+      <button class="btn" id="buildBtn">Build the grid</button>
+      <button class="btn sec" id="resetBtn">Reset</button>
+      <span class="hint">Any whole number from 10 to 400. Ten columns makes the multiples of 2 and 5 line up as vertical stripes.</span>
+    </div>
+
+    <div class="narrate" id="narrate">
+      <div class="badge" id="nBadge">?</div>
+      <div class="body">
+        <h3 id="nTitle">Choose a maximum and build the grid</h3>
+        <p id="nText">Every number from 2 up to your maximum starts as a candidate. We will work through them in order, and by the end every number will be marked either prime or composite.</p>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="stepBtn" disabled>Step &rsaquo;</button>
+      <button class="btn sec" id="playBtn" disabled>Play</button>
+      <button class="btn sec" id="passBtn" disabled>Finish this pass</button>
+      <button class="btn sec" id="endBtn" disabled>Run to the end</button>
+      <div class="prog"><span id="progBar"></span></div>
+      <div class="speed"><label for="spd">speed</label><input id="spd" type="range" min="1" max="10" value="6"></div>
+    </div>
+
+    <div class="board">
+      <div class="grid" id="grid"></div>
+      <div class="legend">
+        <span><i class="sw o"></i> 1 — neither</span>
+        <span><i class="sw cur"></i> current prime</span>
+        <span><i class="sw p"></i> prime</span>
+        <span><i class="sw c"></i> crossed out</span>
+      </div>
+    </div>
+
+    <div class="results" id="results">
+      <div class="rstat">
+        <div><div class="v" id="rPrimes">0</div><div class="l">primes found</div></div>
+        <div><div class="v" id="rComposite">0</div><div class="l">crossed out</div></div>
+        <div><div class="v" id="rPasses">0</div><div class="l">passes needed</div></div>
+      </div>
+      <div class="plist" id="rList"></div>
+      <div class="rfoot" id="rFoot"></div>
+    </div>
+  </section>
+
+  <section class="section" id="why">
+    <div class="kicker">Why it works</div>
+    <h2>Two ideas do all the work</h2>
+    <div class="why-grid">
+      <div class="why-card"><h3>Start crossing at <code>p²</code></h3>
+        <p>Any smaller multiple of <code>p</code> is <code>p × k</code> with <code>k &lt; p</code>, so it has a smaller prime factor and was already crossed out on an earlier pass. Beginning at <code>p²</code> skips work that is already done.</p></div>
+      <div class="why-card"><h3>Stop when <code>p² &gt; N</code></h3>
+        <p>A composite number <code>n</code> must have a prime factor no larger than <code>√n</code>. So once <code>p² &gt; N</code>, every composite has already been caught, and everything still standing is prime.</p></div>
+      <div class="why-card"><h3>1 is neither</h3>
+        <p>A prime has exactly two distinct divisors, 1 and itself. The number 1 has only one divisor, so it is neither prime nor composite — it simply sits outside the question.</p></div>
+    </div>
+    <p class="closing">Eratosthenes was librarian at Alexandria around 240 BC, and this is still essentially how a computer builds a table of primes today. <b>The sieve never tests whether a number is prime — it only ever crosses out multiples, and lets the survivors speak for themselves.</b></p>
+  </section>
+
+  <footer>BubbleMath · Math 1350 · the Sieve of Eratosthenes</footer>
+</main>
+
+<script>
+/* ============================================================
+   STATE
+   ============================================================ */
+let N = 100;            /* the maximum being sieved          */
+let events = [];        /* the full scripted walkthrough     */
+let at = 0;             /* how many events have been applied */
+let composite = [];     /* composite[n] === true when crossed */
+let timer = null;       /* the autoplay interval handle      */
+
+const $ = id => document.getElementById(id);
+
+/* ============================================================
+   BUILDING THE EVENT LIST
+   This runs the sieve once, up front, recording every action as
+   an event. Stepping forward then means replaying events in
+   order — which keeps the animation and the mathematics in
+   exactly one place rather than two.
+   ============================================================ */
+function buildEvents(n){
+  const ev = [];
+  const comp = new Array(n + 1).fill(false);
+  ev.push({t:'one'});                       /* deal with 1 first */
+  let passes = 0;
+  for(let p = 2; p * p <= n; p++){
+    if(comp[p]) continue;                   /* already crossed → not prime */
+    passes++;
+    ev.push({t:'prime', p, start:p*p});     /* p survives, so p is prime  */
+    for(let m = p * p; m <= n; m += p){     /* begin at p², not at 2p     */
+      if(comp[m]){
+        ev.push({t:'already', p, m});       /* caught on an earlier pass  */
+      }else{
+        comp[m] = true;
+        ev.push({t:'cross', p, m});
+      }
+    }
+  }
+  /* every number ≤ n that is still standing is prime */
+  const survivors = [];
+  for(let k = 2; k <= n; k++) if(!comp[k]) survivors.push(k);
+  ev.push({t:'done', passes, primes:survivors});
+  return ev;
+}
+
+/* ============================================================
+   DRAWING THE GRID
+   ============================================================ */
+function drawGrid(){
+  const cols = +$('cols').value;
+  const g = $('grid');
+  g.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+  /* keep cells from becoming tiny on a wide screen with few columns */
+  g.style.maxWidth = Math.min(cols * 54, 900) + 'px';
+  g.innerHTML = '';
+  for(let k = 1; k <= N; k++){
+    const c = document.createElement('div');
+    c.className = 'cell' + (k === 1 ? ' one' : '');
+    c.id = 'c' + k;
+    c.textContent = k;
+    g.appendChild(c);
+  }
+}
+
+/* ============================================================
+   APPLYING ONE EVENT
+   ============================================================ */
+function clearTransient(){
+  document.querySelectorAll('.cell.hit,.cell.already,.cell.current,.cell.mult')
+    .forEach(c => c.classList.remove('hit','already','current','mult'));
+}
+/* outline every multiple of p still on the board, so the pass is visible */
+function outlineMultiples(p){
+  for(let m = p * p; m <= N; m += p){
+    const c = $('c' + m);
+    if(c && !c.classList.contains('composite')) c.classList.add('mult');
+  }
+}
+
+function applyEvent(e){
+  clearTransient();
+  const B = $('nBadge'), T = $('nTitle'), X = $('nText');
+  if(e.t === 'one'){
+    B.className = 'badge'; B.textContent = '1';
+    T.textContent = '1 is neither prime nor composite';
+    X.innerHTML = 'A prime number has exactly two distinct divisors. 1 has only one, so it sits outside the classification and takes no further part in the sieve.';
+  }
+  else if(e.t === 'prime'){
+    const c = $('c' + e.p);
+    c.classList.remove('composite'); c.classList.add('prime','current');
+    outlineMultiples(e.p);
+    B.className = 'badge p'; B.textContent = e.p;
+    T.innerHTML = `<b>${e.p}</b> was never crossed out, so <b>${e.p} is prime</b>`;
+    X.innerHTML = `Now cross out every multiple of ${e.p}, starting at <code>${e.p}² = ${e.start}</code>.`
+      + (e.p > 2
+        ? `<span class="why">Why start at ${e.start} rather than ${2*e.p}? Any multiple ${e.p} × k with k &lt; ${e.p} has a prime factor smaller than ${e.p}, so it was already crossed out on an earlier pass.</span>`
+        : `<span class="why">For the first prime there is nothing earlier to rely on, so 2² = 4 is simply the first multiple of 2 above 2 itself.</span>`);
+  }
+  else if(e.t === 'cross'){
+    const c = $('c' + e.m);
+    c.classList.add('composite','hit');
+    $('c' + e.p).classList.add('prime','current');
+    outlineMultiples(e.p);
+    B.className = 'badge x'; B.textContent = '✕';
+    T.innerHTML = `Cross out <b>${e.m}</b>`;
+    X.innerHTML = `<code>${e.m} = ${e.p} × ${e.m / e.p}</code>, so ${e.m} has a divisor other than 1 and itself — it is composite.`;
+  }
+  else if(e.t === 'already'){
+    const c = $('c' + e.m);
+    c.classList.add('already');
+    $('c' + e.p).classList.add('prime','current');
+    outlineMultiples(e.p);
+    B.className = 'badge'; B.textContent = '•';
+    T.innerHTML = `<b>${e.m}</b> is already crossed out`;
+    X.innerHTML = `${e.m} is a multiple of ${e.p}, but it was caught on an earlier pass by a smaller prime. Nothing to do.`
+      + `<span class="why">This overlap is why the sieve does less work than it first appears — many numbers are multiples of several primes.</span>`;
+  }
+  else if(e.t === 'done'){
+    /* mark every survivor as prime in one sweep */
+    e.primes.forEach(k => $('c' + k).classList.add('prime'));
+    for(let k = 2; k <= N; k++){
+      const c = $('c' + k);
+      if(!c.classList.contains('composite') && !c.classList.contains('prime')) c.classList.add('prime');
+    }
+    /* highlight the ones that were never explicitly crossed and never a pass leader */
+    const lim = Math.floor(Math.sqrt(N));
+    e.primes.filter(k => k > lim).forEach(k => $('c' + k).classList.add('survivor'));
+    B.className = 'badge d'; B.textContent = '✓';
+    const nextP = smallestPrimeAbove(lim, e.primes);
+    T.innerHTML = `Finished — every remaining number is prime`;
+    X.innerHTML = `The next prime to try would be ${nextP}, and <code>${nextP}² = ${nextP*nextP}</code> is greater than ${N}. `
+      + `A composite number must have a prime factor no bigger than its own square root, so every composite up to ${N} has already been crossed out.`
+      + `<span class="why">The numbers outlined in green were never touched by any pass — they survived, and that alone proves they are prime.</span>`;
+    showResults(e);
+  }
+}
+function smallestPrimeAbove(lim, primes){
+  for(const p of primes) if(p > lim) return p;
+  return lim + 1;
+}
+
+/* ============================================================
+   RESULTS PANEL
+   ============================================================ */
+function showResults(e){
+  const lim = Math.floor(Math.sqrt(N));
+  $('rPrimes').textContent = e.primes.length;
+  $('rComposite').textContent = (N - 1) - e.primes.length;   /* exclude 1 */
+  $('rPasses').textContent = e.passes;
+  $('rList').innerHTML = e.primes
+    .map(p => p <= lim ? `<b>${p}</b>` : String(p)).join('&nbsp; ');
+  $('rFoot').innerHTML =
+    `<b>${e.primes.length}</b> primes up to ${N} · the ${e.passes} highlighted above are the only ones we had to sieve with, `
+    + `because ${lim+1}² = ${(lim+1)*(lim+1)} already exceeds ${N}`;
+  $('results').classList.add('show');
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+function stepForward(){
+  if(at >= events.length){ stop(); return false; }
+  applyEvent(events[at]);
+  at++;
+  $('progBar').style.width = (100 * at / events.length) + '%';
+  const finished = at >= events.length;
+  ['stepBtn','passBtn','endBtn'].forEach(b => $(b).disabled = finished);
+  if(finished) stop();
+  return !finished;
+}
+/* Complete the pass in progress; if no pass is in progress, run the next one
+   whole. The distinction matters: sitting at the very start, the next event is
+   the "1 is neither" note, and simply running until the next 'prime' event
+   would consume that one note and stop without sieving anything. */
+function finishPass(){
+  stop();
+  const nextIs = () => at < events.length ? events[at].t : null;
+  const runCrosses = () => { while(nextIs() === 'cross' || nextIs() === 'already') stepForward(); };
+
+  /* Look FORWARD, not back: a pass is still under way only when crosses remain.
+     Testing the previous event instead left this stuck after every completed
+     pass, because the last event consumed is always a cross. */
+  if(nextIs() === 'cross' || nextIs() === 'already'){
+    runCrosses();                       /* finish the crosses already under way */
+  }else{
+    while(nextIs() && nextIs() !== 'prime' && nextIs() !== 'done') stepForward();
+    if(nextIs() === 'prime'){ stepForward(); runCrosses(); }   /* leader, then its crosses */
+  }
+  if(nextIs() === 'done') stepForward();   /* nothing left but the summary */
+}
+function runToEnd(){
+  stop();
+  while(at < events.length) { applyEvent(events[at]); at++; }
+  $('progBar').style.width = '100%';
+  ['stepBtn','passBtn','endBtn'].forEach(b => $(b).disabled = true);
+  clearTransient();
+}
+function delay(){ return 620 - 58 * (+$('spd').value); }   /* 10 → 40ms, 1 → 562ms */
+function play(){
+  if(timer) return stop();
+  $('playBtn').textContent = 'Pause';
+  timer = setInterval(() => { if(!stepForward()) stop(); }, delay());
+}
+function stop(){
+  if(timer){ clearInterval(timer); timer = null; }
+  $('playBtn').textContent = 'Play';
+}
+
+/* ============================================================
+   SETUP
+   ============================================================ */
+function build(){
+  stop();
+  let v = parseInt($('maxN').value, 10);
+  if(isNaN(v)) v = 100;
+  v = Math.max(10, Math.min(400, v));       /* clamp, and show the clamped value */
+  $('maxN').value = v;
+  N = v;
+  events = buildEvents(N);
+  at = 0;
+  drawGrid();
+  $('results').classList.remove('show');
+  $('progBar').style.width = '0%';
+  ['stepBtn','playBtn','passBtn','endBtn'].forEach(b => $(b).disabled = false);
+  $('nBadge').className = 'badge'; $('nBadge').textContent = '▸';
+  $('nTitle').textContent = `Ready — sieving the numbers up to ${N}`;
+  $('nText').innerHTML = `Press <b>Step</b> to move one action at a time, <b>Play</b> to watch it run, `
+    + `or <b>Finish this pass</b> to cross out every multiple of the current prime at once.`;
+}
+
+$('buildBtn').onclick = build;
+$('resetBtn').onclick = () => { $('maxN').value = 100; $('cols').value = '10'; build(); };
+$('stepBtn').onclick = () => { stop(); stepForward(); };
+$('playBtn').onclick = play;
+$('passBtn').onclick = finishPass;
+$('endBtn').onclick = runToEnd;
+$('cols').onchange = () => { const keep = at; build(); for(let i=0;i<keep;i++) stepForward(); };
+$('spd').oninput = () => { if(timer){ stop(); play(); } };
+$('maxN').addEventListener('keydown', e => { if(e.key === 'Enter') build(); });
+document.addEventListener('keydown', e => {
+  if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if(e.key === 'ArrowRight'){ e.preventDefault(); stop(); stepForward(); }
+  if(e.key === ' '){ e.preventDefault(); play(); }
+});
+build();
+</script>
+</body>
+</html>
