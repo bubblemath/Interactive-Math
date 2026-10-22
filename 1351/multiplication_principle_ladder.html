@@ -121,12 +121,6 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--ground); colo
 .q-text { font-size: 1rem; line-height: 1.65; margin-bottom: 1rem; color: rgba(255,255,255,.9); }
 .q-text strong { color: var(--amber); }
 
-/* Slot machine display — shows the __ × __ × __ structure */
-.slot-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin: .75rem 0 1rem; font-family: 'Space Mono', monospace; }
-.slot-box { display: inline-flex; flex-direction: column; align-items: center; min-width: 2.8rem; }
-.slot-num  { font-size: 1.4rem; font-weight: 700; color: var(--amber); line-height: 1.2; }
-.slot-label{ font-size: .6rem; color: rgba(255,255,255,.45); text-align: center; margin-top: .15rem; line-height: 1.2; max-width: 5rem; }
-.slot-op   { font-size: 1.2rem; color: rgba(255,255,255,.4); align-self: flex-start; margin-top: .2rem; }
 
 .choices { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: 1rem; }
 .choice-btn { font-family: 'Space Mono', monospace; font-size: .95rem; padding: .7rem 1rem; background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.12); border-radius: 8px; color: var(--paper); cursor: pointer; transition: all .2s; text-align: center; }
@@ -275,21 +269,6 @@ function fourNums(correctVal, distractors) {
   return opts.map(v => ({ label: v, text: v, correct: v === correctStr }));
 }
 
-// Build a visual "slot machine" row showing the multiplication setup.
-// slots: array of {count, label} — one entry per decision step.
-// Returns an HTML string.
-function slotRow(slots) {
-  let html = '<div class="slot-row">';
-  slots.forEach((s, i) => {
-    html += `<div class="slot-box">
-               <span class="slot-num">${s.count}</span>
-               <span class="slot-label">${s.label}</span>
-             </div>`;
-    if (i < slots.length - 1) html += '<span class="slot-op">×</span>';
-  });
-  html += '</div>';
-  return html;
-}
 
 /* ══════════════════════════════════════════════════
    DOMAIN DATA — realistic pools for variety
@@ -351,7 +330,6 @@ const GEN = {
       html:
         `You have <strong>${sc.n1} ${sc.item1}</strong> and <strong>${sc.n2} ${sc.item2}</strong>.<br><br>
          How many different outfits can you create?`,
-      slotData: [{ count: sc.n1, label: sc.item1 }, { count: sc.n2, label: sc.item2 }],
       explanation:
         `Multiply the choices at each step:<br>
          ${sc.n1} ${sc.item1} × ${sc.n2} ${sc.item2} = <strong>${correct}</strong>`,
@@ -372,7 +350,6 @@ const GEN = {
         `At ${sc.venue}, there are <strong>${sc.n1} ${sc.item1}</strong> and
          <strong>${sc.n2} ${sc.item2}</strong> to choose from.<br><br>
          How many different two-course meals are possible?`,
-      slotData: [{ count: sc.n1, label: sc.item1 }, { count: sc.n2, label: sc.item2 }],
       explanation:
         `${sc.n1} ${sc.item1} × ${sc.n2} ${sc.item2} = <strong>${correct}</strong>`,
       opts
@@ -400,7 +377,6 @@ const GEN = {
          <strong>${n2} ${sc.items[1]}</strong>, and
          <strong>${n3} ${sc.items[2]}</strong>.<br><br>
          How many different combinations are possible?`,
-      slotData: sc.counts.map((c, i) => ({ count: c, label: sc.items[i] })),
       explanation:
         `${n1} × ${n2} × ${n3} = <strong>${correct}</strong>`,
       opts
@@ -430,7 +406,6 @@ const GEN = {
         `${sc.item.charAt(0).toUpperCase() + sc.item.slice(1)} comes in one base model. You can configure it
          <strong>${fList}</strong>.<br><br>
          How many different configurations are possible?`,
-      slotData: sc.features.map(f => ({ count: 2, label: f })),
       explanation:
         `Each feature has 2 options (include or not), so:<br>
          2 × 2 × 2 = 2³ = <strong>${correct}</strong>`,
@@ -465,7 +440,6 @@ const GEN = {
         `${sc.q} <strong>${sc.nQ} questions</strong>. Each question has
          <strong>${sc.nC} answer choices</strong> and only one correct choice.<br><br>
          If you choose one answer for every question, in how many ways could you answer the quiz?`,
-      slotData: qLabel.map(l => ({ count: sc.nC, label: l })),
       explanation:
         `Each of the ${sc.nQ} questions has ${sc.nC} options independently:<br>
          ${Array(sc.nQ).fill(sc.nC).join(' × ')} = ${sc.nC}^${sc.nQ} = <strong>${correct}</strong>`,
@@ -498,7 +472,6 @@ const GEN = {
       html:
         `How many <strong>${sc.label} whole numbers</strong> are there?<br><br>
          <em>(Remember: the leading digit cannot be 0, or it would no longer be a ${sc.label} number.)</em>`,
-      slotData: slots,
       explanation:
         `The first digit: 9 choices (1–9, no zero).<br>
          Each remaining digit: 10 choices (0–9).<br>
@@ -527,7 +500,6 @@ const GEN = {
       html:
         `How many <strong>${sc.label} whole numbers</strong> are there?<br><br>
          <em>Hint: fill the units digit first (it's restricted), then the leading digit, then the rest.</em>`,
-      slotData: sc.slots,
       explanation:
         `Units digit (even): 5 choices (0, 2, 4, 6, 8).<br>
          Leading digit (not 0): 9 choices.<br>
@@ -575,7 +547,6 @@ const GEN = {
     const opts = fourNums(sc.correct, distractors);
     return {
       html: sc.q,
-      slotData: sc.slots,
       explanation:
         `Multiply the choices at each position:<br>
          ${sc.slots.map(s=>s.count).join(' × ')} = <strong>${sc.correct.toLocaleString()}</strong>`,
@@ -627,7 +598,6 @@ const GEN = {
     const opts = fourNums(sc.correct, distractors);
     return {
       html: sc.q,
-      slotData: sc.slots,
       explanation: sc.note + `<br>Total: ${sc.slots.map(s=>s.count).join(' × ')} = <strong>${sc.correct}</strong>`,
       opts
     };
@@ -738,7 +708,6 @@ function buildRail() {
       </div>
       <div class="rung-body" id="body-${rung.id}">
         <div class="q-text"   id="qtext-${rung.id}"></div>
-        <div id="slots-${rung.id}"></div>
         <div class="choices"  id="choices-${rung.id}"></div>
         <div class="feedback" id="feedback-${rung.id}"></div>
         <button class="btn-next" id="next-${rung.id}" onclick="nextQ(${rung.id})">Next question →</button>
@@ -786,10 +755,6 @@ function loadQuestion(rungId) {
 
   // Paint the question text
   document.getElementById('qtext-' + rungId).innerHTML = q.html;
-
-  // Paint the slot-machine row showing the multiplication structure
-  const slotsEl = document.getElementById('slots-' + rungId);
-  slotsEl.innerHTML = q.slotData ? slotRow(q.slotData) : '';
 
   // Paint the answer choices
   renderChoices(rungId, q.opts);
