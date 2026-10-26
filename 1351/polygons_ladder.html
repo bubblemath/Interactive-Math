@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polygons · Math 1351</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ── Design tokens ── */
+:root {
+  --ground:  #10333A;
+  --ground2: #0D2A30;
+  --ground3: #1A4A54;
+  --paper:   #F6F2E8;
+  --ink:     #1A1A1A;
+  --teal:    #2A9D8F;
+  --teal2:   #1F7A6E;
+  --amber:   #E9C46A;
+  --amber2:  #D4A843;
+  --green:   #52B788;
+  --green2:  #3D9A6A;
+  --clay:    #E76F51;
+  --clay2:   #C9583C;
+  --purple:  #9B72CF;
+  --purple2: #7D54B0;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--ground); color: var(--paper); min-height: 100vh; }
+
+/* ── Top nav ── */
+.topbar { background: var(--ground2); border-bottom: 1px solid rgba(255,255,255,.08); padding: .75rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
+.topbar-brand { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: .9rem; color: var(--teal); letter-spacing: .04em; text-transform: uppercase; }
+.topbar-sep   { color: rgba(255,255,255,.2); }
+.topbar-title { font-size: .9rem; color: rgba(255,255,255,.7); }
+
+/* ── Hero ── */
+.hero { background: linear-gradient(135deg, var(--ground2) 0%, var(--ground3) 100%); border-bottom: 1px solid rgba(255,255,255,.08); padding: 3rem 1.5rem 2.5rem; text-align: center; }
+.hero-eyebrow { font-family: 'Space Mono', monospace; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--teal); margin-bottom: .75rem; }
+.hero-glyph { display: inline-flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--teal2); color: #fff; font-size: 1.6rem; margin-bottom: 1rem; }
+.hero h1 { font-family: 'Space Grotesk', sans-serif; font-size: clamp(1.4rem,4vw,2.1rem); font-weight: 700; line-height: 1.2; margin-bottom: .9rem; max-width: 640px; margin-left: auto; margin-right: auto; }
+.hero-sub { font-size: .95rem; color: rgba(255,255,255,.65); max-width: 600px; margin: 0 auto 2rem; line-height: 1.6; }
+
+/* ── Reference table ── */
+.ref-wrap { max-width: 900px; margin: 0 auto 1rem; padding: 0 1.5rem; }
+.ref-table-box { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; overflow: hidden; }
+.ref-table-label { font-family: 'Space Mono', monospace; font-size: .68rem; text-transform: uppercase; letter-spacing: .12em; color: rgba(255,255,255,.35); padding: .6rem 1rem .3rem; }
+table.ref { width: 100%; border-collapse: collapse; }
+table.ref th { font-family: 'Space Grotesk', sans-serif; font-size: .78rem; font-weight: 600; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .05em; padding: .5rem 1rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,.08); }
+table.ref td { font-size: .86rem; padding: .65rem 1rem; border-bottom: 1px solid rgba(255,255,255,.05); color: rgba(255,255,255,.82); vertical-align: middle; line-height: 1.5; }
+table.ref tr:last-child td { border-bottom: none; }
+table.ref td:first-child { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--amber); width: 10rem; }
+table.ref td:nth-child(2) { font-family: 'Space Mono', monospace; font-size: .78rem; color: var(--teal); width: 7rem; }
+table.ref tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+
+/* ── Callouts ── */
+.callout-row { max-width: 900px; margin: 1rem auto 2rem; padding: 0 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+.callout { flex: 1; min-width: 200px; border-radius: 10px; padding: .85rem 1.1rem; display: flex; align-items: flex-start; gap: .65rem; }
+.callout.tip  { background: rgba(42,157,143,.12);  border: 1px solid rgba(42,157,143,.3); }
+.callout.warn { background: rgba(231,111,81,.12);  border: 1px solid rgba(231,111,81,.3); }
+.callout.note { background: rgba(155,114,207,.12); border: 1px solid rgba(155,114,207,.3); }
+.callout-icon { font-size: 1rem; flex-shrink: 0; margin-top: .05rem; }
+.callout-text { font-size: .84rem; color: rgba(255,255,255,.8); line-height: 1.5; }
+.callout-text strong { color: var(--teal); }
+.callout.warn .callout-text strong { color: var(--clay); }
+.callout.note .callout-text strong { color: var(--purple); }
+
+/* ════ LADDER ════ */
+.ladder-section { max-width: 780px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+.ladder-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
+.ladder-header h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.2rem; }
+.btn-reset { font-family:'Space Mono',monospace; font-size:.75rem; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); color:rgba(255,255,255,.6); border-radius:6px; padding:.4rem .9rem; cursor:pointer; transition:all .2s; }
+.btn-reset:hover { background:rgba(255,255,255,.12); color:rgba(255,255,255,.9); }
+
+.rail { display: flex; flex-direction: column; gap: .75rem; }
+.rung-row { display: flex; align-items: stretch; gap: .75rem; }
+
+.rung-badge { flex-shrink:0; width:2.6rem; display:flex; flex-direction:column; align-items:center; gap:.25rem; padding-top:.1rem; }
+.badge-circle { width:2.2rem; height:2.2rem; border-radius:50%; border:2px solid rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-family:'Space Mono',monospace; font-size:.8rem; color:rgba(255,255,255,.45); transition:all .4s; background:rgba(255,255,255,.04); }
+.badge-circle.earned { background:var(--green); border-color:var(--green); color:#fff; }
+.connector { width:2px; flex:1; min-height:12px; background:rgba(255,255,255,.1); border-radius:1px; }
+.rung-row:last-child .connector { display:none; }
+
+/* Rung card */
+.rung-card { flex:1; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); border-radius:12px; overflow:hidden; transition:border-color .25s; }
+.rung-card.name-rung   { border-left:3px solid rgba(42,157,143,.4); }
+.rung-card.id-rung     { border-left:3px solid rgba(155,114,207,.4); }
+.rung-card.find-rung   { border-left:3px solid rgba(233,196,106,.4); }
+.rung-card.alg-rung    { border-left:3px solid rgba(231,111,81,.4); }
+.rung-card.proof-rung  { border-left:3px solid rgba(82,183,136,.4); }
+.rung-card.boss-rung   { border-left:3px solid rgba(233,196,106,.6); }
+
+.rung-card.name-rung.active   { border-color:var(--teal);   background:rgba(42,157,143,.05);  }
+.rung-card.id-rung.active     { border-color:var(--purple); background:rgba(155,114,207,.05); }
+.rung-card.find-rung.active   { border-color:var(--amber);  background:rgba(233,196,106,.05); }
+.rung-card.alg-rung.active    { border-color:var(--clay);   background:rgba(231,111,81,.05);  }
+.rung-card.proof-rung.active  { border-color:var(--green);  background:rgba(82,183,136,.05);  }
+.rung-card.boss-rung.active   { border-color:var(--amber);  background:rgba(233,196,106,.06); }
+
+.rung-head { padding:.75rem 1rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; gap:.75rem; }
+.rung-head:hover { background:rgba(255,255,255,.03); }
+.rung-head-left  { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+.rung-num-label   { font-family:'Space Mono',monospace; font-size:.72rem; color:var(--teal); white-space:nowrap; }
+.rung-title-label { font-family:'Space Grotesk',sans-serif; font-size:.9rem; font-weight:500; }
+.rung-short       { font-size:.78rem; color:rgba(255,255,255,.4); font-style:italic; margin-left:.25rem; }
+.rung-status      { font-size:.78rem; color:rgba(255,255,255,.35); white-space:nowrap; font-family:'Space Mono',monospace; }
+.rung-status.done { color:var(--green); }
+
+/* Zone chips */
+.name-tag  { font-family:'Space Mono',monospace; font-size:.64rem; background:rgba(42,157,143,.2);  color:var(--teal);   border:1px solid rgba(42,157,143,.4);  border-radius:4px; padding:.12rem .4rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.id-tag    { font-family:'Space Mono',monospace; font-size:.64rem; background:rgba(155,114,207,.2); color:var(--purple); border:1px solid rgba(155,114,207,.4); border-radius:4px; padding:.12rem .4rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.find-tag  { font-family:'Space Mono',monospace; font-size:.64rem; background:rgba(233,196,106,.2); color:var(--amber);  border:1px solid rgba(233,196,106,.4); border-radius:4px; padding:.12rem .4rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.alg-tag   { font-family:'Space Mono',monospace; font-size:.64rem; background:rgba(231,111,81,.2);  color:var(--clay);   border:1px solid rgba(231,111,81,.4);  border-radius:4px; padding:.12rem .4rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.proof-tag { font-family:'Space Mono',monospace; font-size:.64rem; background:rgba(82,183,136,.2);  color:var(--green);  border:1px solid rgba(82,183,136,.4);  border-radius:4px; padding:.12rem .4rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.boss-tag  { font-family:'Space Mono',monospace; font-size:.64rem; background:var(--amber); color:var(--ink); border-radius:4px; padding:.12rem .38rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+
+/* Pips */
+.pip-strip { display:flex; gap:.35rem; padding:0 1rem .75rem; }
+.pip { width:.5rem; height:.5rem; border-radius:50%; background:rgba(255,255,255,.15); transition:background .3s; }
+.pip.lit  { background:var(--teal); }
+.pip.done { background:var(--green); }
+
+/* Rung body */
+.rung-body { display:none; padding:1rem 1.2rem 1.2rem; border-top:1px solid rgba(255,255,255,.07); }
+.rung-card.active .rung-body { display:block; }
+
+/* Question */
+.q-text { font-size:.97rem; line-height:1.65; margin-bottom:.85rem; color:rgba(255,255,255,.9); }
+.q-text strong { color:var(--amber); }
+.q-text em { color:rgba(255,255,255,.7); }
+
+/* Choices */
+.choices { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-bottom:1rem; }
+.choices.one-col { grid-template-columns:1fr; }
+.choice-btn { font-family:'IBM Plex Sans',sans-serif; font-size:.87rem; padding:.65rem 1rem; background:rgba(255,255,255,.06); border:1.5px solid rgba(255,255,255,.12); border-radius:8px; color:var(--paper); cursor:pointer; transition:all .2s; text-align:left; line-height:1.4; }
+.choice-btn:hover   { background:rgba(255,255,255,.11); border-color:var(--teal); }
+.choice-btn.correct { background:rgba(82,183,136,.2);  border-color:var(--green); color:var(--green); }
+.choice-btn.wrong   { background:rgba(231,111,81,.15); border-color:var(--clay);  color:var(--clay);  }
+
+/* Feedback */
+.feedback { display:none; font-size:.87rem; line-height:1.65; padding:.75rem 1rem; border-radius:8px; margin-bottom:.9rem; }
+.feedback.show { display:block; }
+.feedback.ok  { background:rgba(82,183,136,.12);  border:1px solid rgba(82,183,136,.3);  color:var(--green); }
+.feedback.err { background:rgba(231,111,81,.1);   border:1px solid rgba(231,111,81,.25); color:rgba(255,255,255,.85); }
+.feedback .hint-label { color:var(--clay); font-weight:600; }
+.feedback code { font-family:'Space Mono',monospace; font-size:.84rem; background:rgba(255,255,255,.08); padding:.1rem .3rem; border-radius:3px; color:var(--amber); }
+
+/* Next button */
+.btn-next { font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:.9rem; padding:.6rem 1.4rem; background:var(--teal); border:none; border-radius:8px; color:#fff; cursor:pointer; display:none; transition:background .2s; }
+.btn-next:hover { background:var(--teal2); }
+.btn-next.show  { display:inline-block; }
+
+/* Congrats */
+.congrats-banner { display:none; background:linear-gradient(135deg,rgba(82,183,136,.15),rgba(42,157,143,.1)); border:1px solid var(--green); border-radius:14px; padding:1.5rem; text-align:center; margin-bottom:1.5rem; }
+.congrats-banner.show { display:block; }
+.congrats-banner h3 { font-family:'Space Grotesk',sans-serif; font-size:1.2rem; font-weight:700; color:var(--green); margin-bottom:.4rem; }
+.congrats-banner p  { font-size:.9rem; color:rgba(255,255,255,.7); }
+
+footer { border-top:1px solid rgba(255,255,255,.07); padding:1.5rem; text-align:center; font-size:.78rem; color:rgba(255,255,255,.3); }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <span class="topbar-brand">Math 1351</span>
+  <span class="topbar-sep">›</span>
+  <span class="topbar-title">Lesson 10 · Skill Ladders</span>
+</nav>
+
+<header class="hero">
+  <div class="hero-eyebrow">Math 1351 · Lesson 10 · Polygons</div>
+  <div class="hero-glyph">⬡</div>
+  <h1>Polygons: Names, Interior Angles &amp; Classification</h1>
+  <p class="hero-sub">
+    Name polygons by side count, compute interior angle sums and individual angles,
+    find exterior angles, count diagonals, and classify by regularity and convexity.
+  </p>
+</header>
+
+<!-- ── Reference table ── -->
+<div class="ref-wrap">
+  <div class="ref-table-box">
+    <div class="ref-table-label">Quick Reference — Polygon Names &amp; Formulas</div>
+    <table class="ref">
+      <thead>
+        <tr><th>Sides (n)</th><th>Name</th><th>Interior sum</th><th>Each angle (regular)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>3</td><td>Triangle</td><td>(3−2)×180° = 180°</td><td>60°</td></tr>
+        <tr><td>4</td><td>Quadrilateral</td><td>(4−2)×180° = 360°</td><td>90°</td></tr>
+        <tr><td>5</td><td>Pentagon</td><td>(5−2)×180° = 540°</td><td>108°</td></tr>
+        <tr><td>6</td><td>Hexagon</td><td>(6−2)×180° = 720°</td><td>120°</td></tr>
+        <tr><td>7</td><td>Heptagon</td><td>(7−2)×180° = 900°</td><td>≈ 128.6°</td></tr>
+        <tr><td>8</td><td>Octagon</td><td>(8−2)×180° = 1080°</td><td>135°</td></tr>
+        <tr><td>9</td><td>Nonagon</td><td>(9−2)×180° = 1260°</td><td>140°</td></tr>
+        <tr><td>10</td><td>Decagon</td><td>(10−2)×180° = 1440°</td><td>144°</td></tr>
+        <tr><td>11</td><td>Hendecagon</td><td>(11−2)×180° = 1620°</td><td>≈ 147.3°</td></tr>
+        <tr><td>12</td><td>Dodecagon</td><td>(12−2)×180° = 1800°</td><td>150°</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="callout-row">
+  <div class="callout tip">
+    <span class="callout-icon">💡</span>
+    <div class="callout-text">
+      <strong>Interior angle sum:</strong> For any polygon with <em>n</em> sides, the interior angle sum = <em>(n − 2) × 180°</em>. Divide by <em>n</em> to get each angle of a <em>regular</em> polygon.
+    </div>
+  </div>
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-text">
+      <strong>Exterior angles always sum to 360°</strong> for any convex polygon — regardless of the number of sides. Each exterior angle of a regular <em>n</em>-gon = 360° ÷ <em>n</em>.
+    </div>
+  </div>
+  <div class="callout note">
+    <span class="callout-icon">📐</span>
+    <div class="callout-text">
+      <strong>Diagonals:</strong> A polygon with <em>n</em> sides has <em>n(n − 3) / 2</em> diagonals. <strong>Regular</strong> = all sides &amp; angles equal. <strong>Convex</strong> = all interior angles &lt; 180°.
+    </div>
+  </div>
+</div>
+
+<!-- ════ LADDER ════ -->
+<section class="ladder-section">
+  <div class="ladder-header">
+    <h2>Ladder 3 — Polygons</h2>
+    <button class="btn-reset" id="btn-reset">Reset all badges</button>
+  </div>
+  <div class="congrats-banner" id="congrats-banner">
+    <h3>🎉 Ladder Complete!</h3>
+    <p>All 10 badges earned! You can name polygons, apply interior and exterior angle formulas, and classify by regularity and convexity.</p>
+  </div>
+  <div class="rail" id="rail"></div>
+</section>
+
+<footer>Math 1351 · Lesson 10 · Polygons · Skill Ladder</footer>
+
+<script>
+/* ══════════════════════════════════════
+   HELPERS
+══════════════════════════════════════ */
+function shuffle(a) {
+  const b = a.slice();
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [b[i], b[j]] = [b[j], b[i]];
+  }
+  return b;
+}
+function rand(lo, hi) { return lo + Math.floor(Math.random() * (hi - lo + 1)); }
+function pick(a)      { return a[Math.floor(Math.random() * a.length)]; }
+
+/* ══════════════════════════════════════
+   POLYGON DATA
+══════════════════════════════════════ */
+const POLYS = [
+  { n:3,  name:'Triangle',     sum:180,  regAngle:60,   extAngle:120, diag:0  },
+  { n:4,  name:'Quadrilateral',sum:360,  regAngle:90,   extAngle:90,  diag:2  },
+  { n:5,  name:'Pentagon',     sum:540,  regAngle:108,  extAngle:72,  diag:5  },
+  { n:6,  name:'Hexagon',      sum:720,  regAngle:120,  extAngle:60,  diag:9  },
+  { n:7,  name:'Heptagon',     sum:900,  regAngle:null, extAngle:null,diag:14 },
+  { n:8,  name:'Octagon',      sum:1080, regAngle:135,  extAngle:45,  diag:20 },
+  { n:9,  name:'Nonagon',      sum:1260, regAngle:140,  extAngle:40,  diag:27 },
+  { n:10, name:'Decagon',      sum:1440, regAngle:144,  extAngle:36,  diag:35 },
+  { n:11, name:'Hendecagon',   sum:1620, regAngle:null, extAngle:null,diag:44 },
+  { n:12, name:'Dodecagon',    sum:1800, regAngle:150,  extAngle:30,  diag:54 },
+];
+// Clean-integer angle polygons for calculation rungs
+const CLEAN = POLYS.filter(p => p.regAngle !== null);
+const ALL_NAMES = POLYS.map(p => p.name);
+
+/* ══════════════════════════════════════
+   QUESTION GENERATORS
+══════════════════════════════════════ */
+const GEN = {
+
+  /* RUNG 1 — Name from sides (n → name) */
+  1() {
+    const p = pick(POLYS);
+    const distractors = shuffle(ALL_NAMES.filter(nm => nm !== p.name)).slice(0,3);
+    return {
+      html: `<div class="q-text">A polygon has <strong>${p.n} sides</strong>. What is its name?</div>`,
+      explanation: `A polygon with ${p.n} sides is called a <code>${p.name}</code>.`,
+      opts: shuffle([{ label: p.name, correct: true }, ...distractors.map(nm => ({ label: nm, correct: false }))])
+    };
+  },
+
+  /* RUNG 2 — Sides from name (name → n) */
+  2() {
+    const p = pick(POLYS);
+    const wrongNums = shuffle([3,4,5,6,7,8,9,10,11,12].filter(x => x !== p.n)).slice(0,3);
+    return {
+      html: `<div class="q-text">How many sides does a <strong>${p.name}</strong> have?</div>`,
+      explanation: `A ${p.name} has <code>${p.n} sides</code>.`,
+      opts: shuffle([{ label: String(p.n), correct: true }, ...wrongNums.map(x => ({ label: String(x), correct: false }))])
+    };
+  },
+
+  /* RUNG 3 — Interior angle SUM from sides */
+  3() {
+    const p = pick(POLYS);
+    const ans = p.sum;
+    const wrongs = shuffle([ans + 180, ans - 180, ans + 360].filter(x => x > 0 && x !== ans)).slice(0,3);
+    return {
+      html: `<div class="q-text">Find the sum of the interior angles of a <strong>${p.name}</strong> (${p.n} sides).</div>`,
+      explanation: `Interior angle sum = (n − 2) × 180° = (${p.n} − 2) × 180° = ${p.n-2} × 180° = <code>${ans}°</code>.`,
+      opts: shuffle([{ label: `${ans}°`, correct: true }, ...wrongs.map(x => ({ label: `${x}°`, correct: false }))])
+    };
+  },
+
+  /* RUNG 4 — Each interior angle of a REGULAR polygon */
+  4() {
+    const p = pick(CLEAN);
+    const ans = p.regAngle;
+    const wrongs = shuffle([ans + 15, ans - 15, ans + 30].filter(x => x > 0 && x !== ans && x < 180)).slice(0,3);
+    return {
+      html: `<div class="q-text">Find the measure of <em>each interior angle</em> of a <strong>regular ${p.name}</strong> (${p.n} sides).</div>`,
+      explanation: `Each interior angle of a regular ${p.n}-gon = (n − 2) × 180° ÷ n = ${p.sum}° ÷ ${p.n} = <code>${ans}°</code>.`,
+      opts: shuffle([{ label: `${ans}°`, correct: true }, ...wrongs.map(x => ({ label: `${x}°`, correct: false }))])
+    };
+  },
+
+  /* RUNG 5 — Exterior angles */
+  5() {
+    const items = shuffle([
+      // Sum of exterior angles
+      { q: `What is the sum of the <em>exterior angles</em> of any convex polygon?`,
+        ans: '360°', wrongs: ['180°','540°','720°'],
+        exp: `The exterior angles of any convex polygon always sum to <code>360°</code>, regardless of the number of sides.` },
+      // Each exterior angle of a regular polygon
+      ...CLEAN.filter(p => p.extAngle && p.n >= 4).map(p => ({
+        q: `Find the measure of each <em>exterior angle</em> of a <strong>regular ${p.name}</strong> (${p.n} sides).`,
+        ans: `${p.extAngle}°`,
+        wrongs: shuffle([`${p.extAngle+10}°`,`${p.extAngle-10}°`,`${p.regAngle}°`].filter(v => v !== `${p.extAngle}°`)).slice(0,3),
+        exp: `Each exterior angle of a regular ${p.n}-gon = 360° ÷ n = 360° ÷ ${p.n} = <code>${p.extAngle}°</code>.`
+      }))
+    ]);
+    const item = items[0];
+    return {
+      html: `<div class="q-text">${item.q}</div>`,
+      explanation: item.exp,
+      opts: shuffle([{ label: item.ans, correct: true }, ...item.wrongs.slice(0,3).map(v => ({ label: v, correct: false }))])
+    };
+  },
+
+  /* RUNG 6 — Regular vs irregular, convex vs concave */
+  6() {
+    const scenarios = shuffle([
+      { q: 'A quadrilateral has sides of lengths 3 cm, 5 cm, 3 cm, and 5 cm, and all four angles equal 90°. Is it <em>regular</em> or <em>irregular</em>?',
+        ans: 'Irregular', wrongs: ['Regular','Convex only','Concave'],
+        exp: 'A <strong>regular</strong> polygon requires ALL sides equal AND ALL angles equal. The sides are not all equal (3 ≠ 5), so it is <code>irregular</code> (even though all angles are 90°).' },
+      { q: 'Every side and every interior angle of a hexagon are equal. How is this hexagon classified?',
+        ans: 'Regular', wrongs: ['Irregular','Concave','Equilateral only'],
+        exp: 'A polygon is <strong>regular</strong> when all sides are equal AND all interior angles are equal. Both conditions hold, so it is <code>regular</code>.' },
+      { q: 'A polygon has one interior angle greater than 180°. How is it classified?',
+        ans: 'Concave', wrongs: ['Convex','Regular','Irregular only'],
+        exp: 'A polygon is <strong>concave</strong> (non-convex) if at least one interior angle exceeds 180°. It appears to "cave in" at that vertex.' },
+      { q: 'All interior angles of a polygon are less than 180°. How is it classified regarding convexity?',
+        ans: 'Convex', wrongs: ['Concave','Regular','Non-convex'],
+        exp: 'A polygon is <strong>convex</strong> when every interior angle is less than 180°. No part of the polygon "caves inward."' },
+      { q: 'A triangle has sides 3, 4, and 5 and angles 37°, 53°, and 90°. Is it regular or irregular?',
+        ans: 'Irregular', wrongs: ['Regular','Convex only','Concave'],
+        exp: 'Not all sides are equal and not all angles are equal, so the triangle is <code>irregular</code>. (It is, however, convex.)' },
+    ]);
+    const s = scenarios[0];
+    return {
+      html: `<div class="q-text">${s.q}</div>`,
+      explanation: s.exp,
+      opts: shuffle([{ label: s.ans, correct: true }, ...s.wrongs.slice(0,3).map(v => ({ label: v, correct: false }))]),
+      onecol: true
+    };
+  },
+
+  /* RUNG 7 — Diagonal count */
+  7() {
+    const p = pick(POLYS.filter(p => p.n >= 4));
+    const ans = p.diag;
+    const wrongs = shuffle([ans + 2, ans - 2, ans + 5, ans * 2].filter(x => x >= 0 && x !== ans)).slice(0,3);
+    return {
+      html: `<div class="q-text">How many diagonals does a <strong>${p.name}</strong> (${p.n} sides) have?</div>`,
+      explanation: `Number of diagonals = n(n − 3) ÷ 2 = ${p.n}(${p.n} − 3) ÷ 2 = ${p.n} × ${p.n-3} ÷ 2 = <code>${ans}</code>.`,
+      opts: shuffle([{ label: String(ans), correct: true }, ...wrongs.map(x => ({ label: String(x), correct: false }))])
+    };
+  },
+
+  /* RUNG 8 — Algebraic: find n from angle sum */
+  8() {
+    const p = pick(POLYS.filter(p => p.n >= 4));
+    const wrongNs = shuffle(POLYS.map(q => q.n).filter(x => x !== p.n)).slice(0,3);
+    return {
+      html: `<div class="q-text">The sum of the interior angles of a polygon is <strong>${p.sum}°</strong>. How many sides does the polygon have?</div>`,
+      explanation: `Use (n − 2) × 180° = ${p.sum}°. Divide both sides by 180°: n − 2 = ${p.sum/180}. Add 2: n = ${p.sum/180} + 2 = <code>${p.n}</code>.`,
+      opts: shuffle([{ label: String(p.n), correct: true }, ...wrongNs.map(x => ({ label: String(x), correct: false }))])
+    };
+  },
+
+  /* RUNG 9 — Algebraic: find n from each interior angle of a regular polygon */
+  9() {
+    const p = pick(CLEAN.filter(p => p.n >= 4));
+    const wrongNs = shuffle(CLEAN.map(q => q.n).filter(x => x !== p.n)).slice(0,3);
+    return {
+      html: `<div class="q-text">Each interior angle of a <em>regular polygon</em> measures <strong>${p.regAngle}°</strong>. How many sides does the polygon have?</div>`,
+      explanation: `Each interior angle = (n − 2) × 180° ÷ n = ${p.regAngle}°.<br>
+Multiply both sides by n: (n − 2) × 180° = ${p.regAngle}n.<br>
+Expand: 180n − 360 = ${p.regAngle}n.<br>
+Subtract ${p.regAngle}n: ${180 - p.regAngle}n = 360.<br>
+Divide: n = 360 ÷ ${180 - p.regAngle} = <code>${p.n}</code>.`,
+      opts: shuffle([{ label: String(p.n), correct: true }, ...wrongNs.map(x => ({ label: String(x), correct: false }))])
+    };
+  },
+
+  /* RUNG 10 — Boss: mixed multi-concept */
+  10() { return GEN[rand(1,9)](); }
+};
+
+/* ══════════════════════════════════════
+   RUNGS CONFIG
+══════════════════════════════════════ */
+const RUNGS = [
+  { id:'r1',  title:'Name from Sides',             short:'sides → name',        type:'name-rung'  },
+  { id:'r2',  title:'Sides from Name',             short:'name → sides',        type:'name-rung'  },
+  { id:'r3',  title:'Interior Angle Sum',          short:'(n−2)×180°',          type:'find-rung'  },
+  { id:'r4',  title:'Each Angle (Regular)',        short:'sum ÷ n',             type:'find-rung'  },
+  { id:'r5',  title:'Exterior Angles',             short:'360° ÷ n',            type:'find-rung'  },
+  { id:'r6',  title:'Regular vs Irregular / Convex vs Concave', short:'classify', type:'id-rung' },
+  { id:'r7',  title:'Diagonal Count',              short:'n(n−3)/2',            type:'find-rung'  },
+  { id:'r8',  title:'Algebra: Find n from Sum',    short:'(n−2)×180° = S',     type:'alg-rung'   },
+  { id:'r9',  title:'Algebra: Find n from Angle',  short:'each angle → n',      type:'alg-rung'   },
+  { id:'r10', title:'Boss Challenge',              short:'mixed',               type:'boss-rung'  },
+];
+
+/* ══════════════════════════════════════
+   STORE / STATE
+══════════════════════════════════════ */
+const STORE = 'polygonsLadderBadges_v1';
+function loadBadges() {
+  try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch(e) { return {}; }
+}
+function saveBadges(b) {
+  try { localStorage.setItem(STORE, JSON.stringify(b)); } catch(e) {}
+}
+
+const state = {
+  badges:    loadBadges(),
+  streaks:   {},
+  activeRung: null,
+  currentQ:  null
+};
+
+/* ══════════════════════════════════════
+   RENDER
+══════════════════════════════════════ */
+function tagHTML(type) {
+  const map = { 'name-rung':'name-tag', 'id-rung':'id-tag', 'find-rung':'find-tag', 'alg-rung':'alg-tag', 'proof-rung':'proof-tag', 'boss-rung':'boss-tag' };
+  const labels = { 'name-rung':'Name', 'id-rung':'Classify', 'find-rung':'Calculate', 'alg-rung':'Algebra', 'proof-rung':'Proof', 'boss-rung':'⭐ Boss' };
+  return `<span class="${map[type]}">${labels[type]}</span>`;
+}
+
+function renderChoices(opts, rungId, onecol) {
+  const cls = onecol ? 'choices one-col' : 'choices';
+  const btns = opts.map((o,i) =>
+    `<button class="choice-btn" data-rung="${rungId}" data-idx="${i}">${o.label}</button>`
+  ).join('');
+  return `<div class="${cls}" id="choices-${rungId}">${btns}</div>`;
+}
+
+function pipHTML(rungId) {
+  const streak = state.streaks[rungId] || 0;
+  const earned = !!state.badges[rungId];
+  return [0,1,2,3].map(i => {
+    let cls = 'pip';
+    if (earned) cls += ' done';
+    else if (i < streak) cls += ' lit';
+    return `<div class="${cls}"></div>`;
+  }).join('');
+}
+
+function buildRail() {
+  const rail = document.getElementById('rail');
+  rail.innerHTML = '';
+  RUNGS.forEach((rung, idx) => {
+    const genIdx = idx + 1;
+    const earned = !!state.badges[rung.id];
+    const isActive = state.activeRung === rung.id;
+
+    const row = document.createElement('div');
+    row.className = 'rung-row';
+    row.id = `row-${rung.id}`;
+
+    const badgeHTML = `
+      <div class="rung-badge">
+        <div class="badge-circle${earned ? ' earned' : ''}" id="badge-${rung.id}">${earned ? '✓' : genIdx}</div>
+        <div class="connector"></div>
+      </div>`;
+
+    const statusLabel = earned
+      ? `<span class="rung-status done">✓ Earned</span>`
+      : `<span class="rung-status" id="status-${rung.id}">${(state.streaks[rung.id]||0)}/4</span>`;
+
+    const cardClass = `rung-card ${rung.type}${isActive ? ' active' : ''}`;
+
+    row.innerHTML = badgeHTML + `
+      <div class="${cardClass}" id="card-${rung.id}">
+        <div class="rung-head" data-rung="${rung.id}">
+          <div class="rung-head-left">
+            <span class="rung-num-label">#${genIdx}</span>
+            ${tagHTML(rung.type)}
+            <span class="rung-title-label">${rung.title}</span>
+            <span class="rung-short">— ${rung.short}</span>
+          </div>
+          ${statusLabel}
+        </div>
+        <div class="pip-strip" id="pips-${rung.id}">${pipHTML(rung.id)}</div>
+        <div class="rung-body" id="body-${rung.id}">
+          <div id="qarea-${rung.id}"></div>
+        </div>
+      </div>`;
+    rail.appendChild(row);
+  });
+
+  // Attach header click listeners
+  document.querySelectorAll('.rung-head').forEach(el => {
+    el.addEventListener('click', () => toggleRung(el.dataset.rung));
+  });
+
+  // Check full ladder
+  checkLadder();
+}
+
+function toggleRung(rungId) {
+  const wasActive = state.activeRung === rungId;
+
+  // Close previous
+  if (state.activeRung) {
+    const prevCard = document.getElementById(`card-${state.activeRung}`);
+    if (prevCard) prevCard.classList.remove('active');
+  }
+
+  if (wasActive) {
+    state.activeRung = null;
+    return;
+  }
+
+  state.activeRung = rungId;
+  const card = document.getElementById(`card-${rungId}`);
+  card.classList.add('active');
+
+  // Load a question if area is empty
+  const qarea = document.getElementById(`qarea-${rungId}`);
+  if (!qarea.innerHTML.trim()) loadQuestion(rungId);
+}
+
+function loadQuestion(rungId) {
+  const idx = RUNGS.findIndex(r => r.id === rungId) + 1;
+  const q = GEN[idx]();
+  state.currentQ = { ...q, rungId };
+
+  const qarea = document.getElementById(`qarea-${rungId}`);
+  qarea.innerHTML = `
+    ${q.html}
+    ${renderChoices(q.opts, rungId, q.onecol)}
+    <div class="feedback" id="fb-${rungId}"></div>
+    <button class="btn-next" id="next-${rungId}" data-rung="${rungId}">Next question →</button>
+  `;
+
+  qarea.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleChoice(btn, rungId, q));
+  });
+  document.getElementById(`next-${rungId}`).addEventListener('click', () => {
+    loadQuestion(rungId);
+  });
+}
+
+function handleChoice(btn, rungId, q) {
+  // Disable all choices
+  const choiceDiv = document.getElementById(`choices-${rungId}`);
+  choiceDiv.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+
+  const idx = parseInt(btn.dataset.idx);
+  const opt = q.opts[idx];
+  const fb  = document.getElementById(`fb-${rungId}`);
+  const nextBtn = document.getElementById(`next-${rungId}`);
+
+  if (opt.correct) {
+    btn.classList.add('correct');
+    state.streaks[rungId] = (state.streaks[rungId] || 0) + 1;
+    fb.className = 'feedback ok show';
+    fb.innerHTML = `✓ Correct! ${q.explanation}`;
+
+    if (state.streaks[rungId] >= 4 && !state.badges[rungId]) {
+      state.badges[rungId] = true;
+      saveBadges(state.badges);
+      awardBadge(rungId);
+    }
+  } else {
+    btn.classList.add('wrong');
+    // Highlight correct
+    choiceDiv.querySelectorAll('.choice-btn').forEach((b,i) => {
+      if (q.opts[i].correct) b.classList.add('correct');
+    });
+    state.streaks[rungId] = 0;
+    fb.className = 'feedback err show';
+    fb.innerHTML = `<span class="hint-label">Not quite.</span> ${q.explanation}`;
+  }
+
+  updatePips(rungId);
+  updateStatus(rungId);
+  nextBtn.classList.add('show');
+}
+
+function awardBadge(rungId) {
+  const circle = document.getElementById(`badge-${rungId}`);
+  if (circle) { circle.textContent = '✓'; circle.classList.add('earned'); }
+  updateStatus(rungId);
+  checkLadder();
+}
+
+function updatePips(rungId) {
+  const strip = document.getElementById(`pips-${rungId}`);
+  if (strip) strip.innerHTML = pipHTML(rungId);
+}
+
+function updateStatus(rungId) {
+  const el = document.getElementById(`status-${rungId}`);
+  if (!el) return;
+  if (state.badges[rungId]) {
+    el.textContent = '✓ Earned';
+    el.classList.add('done');
+  } else {
+    el.textContent = `${state.streaks[rungId]||0}/4`;
+  }
+}
+
+function checkLadder() {
+  const allDone = RUNGS.every(r => state.badges[r.id]);
+  document.getElementById('congrats-banner').classList.toggle('show', allDone);
+}
+
+/* ══════════════════════════════════════
+   RESET
+══════════════════════════════════════ */
+document.getElementById('btn-reset').addEventListener('click', () => {
+  if (!confirm('Reset all badges? Your progress will be lost.')) return;
+  state.badges  = {};
+  state.streaks = {};
+  state.activeRung = null;
+  saveBadges({});
+  buildRail();
+});
+
+/* ══════════════════════════════════════
+   BOOT
+══════════════════════════════════════ */
+buildRail();
+</script>
+</body>
+</html>
