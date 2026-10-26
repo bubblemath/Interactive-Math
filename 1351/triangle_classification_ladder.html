@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triangle Classification · Math 1351</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ── Design tokens ── */
+:root {
+  --ground:  #10333A;
+  --ground2: #0D2A30;
+  --ground3: #1A4A54;
+  --paper:   #F6F2E8;
+  --ink:     #1A1A1A;
+  --teal:    #2A9D8F;
+  --teal2:   #1F7A6E;
+  --amber:   #E9C46A;
+  --amber2:  #D4A843;
+  --green:   #52B788;
+  --green2:  #3D9A6A;
+  --clay:    #E76F51;
+  --clay2:   #C9583C;
+  --purple:  #9B72CF;
+  --purple2: #7D54B0;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--ground); color: var(--paper); min-height: 100vh; }
+
+/* ── Top nav ── */
+.topbar { background: var(--ground2); border-bottom: 1px solid rgba(255,255,255,.08); padding: .75rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
+.topbar-brand { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: .9rem; color: var(--teal); letter-spacing: .04em; text-transform: uppercase; }
+.topbar-sep   { color: rgba(255,255,255,.2); }
+.topbar-title { font-size: .9rem; color: rgba(255,255,255,.7); }
+
+/* ── Hero ── */
+.hero { background: linear-gradient(135deg, var(--ground2) 0%, var(--ground3) 100%); border-bottom: 1px solid rgba(255,255,255,.08); padding: 3rem 1.5rem 2.5rem; text-align: center; }
+.hero-eyebrow { font-family: 'Space Mono', monospace; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--teal); margin-bottom: .75rem; }
+.hero-glyph { display: inline-flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem; border-radius: 50%; background: var(--teal2); color: #fff; font-size: 1.6rem; margin-bottom: 1rem; }
+.hero h1 { font-family: 'Space Grotesk', sans-serif; font-size: clamp(1.4rem,4vw,2.1rem); font-weight: 700; line-height: 1.2; margin-bottom: .9rem; max-width: 640px; margin-left: auto; margin-right: auto; }
+.hero-sub { font-size: .95rem; color: rgba(255,255,255,.65); max-width: 600px; margin: 0 auto 2rem; line-height: 1.6; }
+
+/* ── Reference table ── */
+.ref-wrap { max-width: 900px; margin: 0 auto 1rem; padding: 0 1.5rem; }
+.ref-table-box { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; overflow: hidden; margin-bottom: 1rem; }
+.ref-table-label { font-family: 'Space Mono', monospace; font-size: .68rem; text-transform: uppercase; letter-spacing: .12em; color: rgba(255,255,255,.35); padding: .6rem 1rem .3rem; }
+table.ref { width: 100%; border-collapse: collapse; }
+table.ref th { font-family: 'Space Grotesk', sans-serif; font-size: .78rem; font-weight: 600; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .05em; padding: .5rem 1rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,.08); }
+table.ref td { font-size: .86rem; padding: .65rem 1rem; border-bottom: 1px solid rgba(255,255,255,.05); color: rgba(255,255,255,.82); vertical-align: middle; line-height: 1.5; }
+table.ref tr:last-child td { border-bottom: none; }
+table.ref td:first-child { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--amber); width: 10rem; }
+table.ref td:nth-child(2) { font-family: 'Space Mono', monospace; font-size: .78rem; color: var(--teal); width: 8rem; }
+table.ref tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+
+/* ── Callouts ── */
+.callout-row { max-width: 900px; margin: 1rem auto 2rem; padding: 0 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+.callout { flex: 1; min-width: 200px; border-radius: 10px; padding: .85rem 1.1rem; display: flex; align-items: flex-start; gap: .65rem; }
+.callout.tip  { background: rgba(42,157,143,.12);  border: 1px solid rgba(42,157,143,.3); }
+.callout.warn { background: rgba(231,111,81,.12);  border: 1px solid rgba(231,111,81,.3); }
+.callout.note { background: rgba(155,114,207,.12); border: 1px solid rgba(155,114,207,.3); }
+.callout-icon { font-size: 1rem; flex-shrink: 0; margin-top: .05rem; }
+.callout-text { font-size: .84rem; color: rgba(255,255,255,.8); line-height: 1.5; }
+.callout-text strong { color: var(--teal); }
+.callout.warn .callout-text strong { color: var(--clay); }
+.callout.note .callout-text strong { color: var(--purple); }
+
+/* ════ LADDER ════ */
+.ladder-section { max-width: 780px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+.ladder-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
+.ladder-header h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.2rem; }
+.btn-reset { font-family:'Space Mono',monospace; font-size:.75rem; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15); color:rgba(255,255,255,.6); border-radius:6px; padding:.4rem .9rem; cursor:pointer; transition:all .2s; }
+.btn-reset:hover { background:rgba(255,255,255,.12); color:rgba(255,255,255,.9); }
+
+.rail { display: flex; flex-direction: column; gap: .75rem; }
+.rung-row { display: flex; align-items: stretch; gap: .75rem; }
+
+.rung-badge { flex-shrink:0; width:2.6rem; display:flex; flex-direction:column; align-items:center; gap:.25rem; padding-top:.1rem; }
+.badge-circle { width:2.2rem; height:2.2rem; border-radius:50%; border:2px solid rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-family:'Space Mono',monospace; font-size:.8rem; color:rgba(255,255,255,.45); transition:all .4s; background:rgba(255,255,255,.04); }
+.badge-circle.earned { background:var(--green); border-color:var(--green); color:#fff; }
+.connector { width:2px; flex:1; min-height:12px; background:rgba(255,255,255,.1); border-radius:1px; }
+.rung-row:last-child .connector { display:none; }
+
+/* Rung card */
+.rung-card { flex:1; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); border-radius:12px; overflow:hidden; transition:border-color .25s; }
+.rung-card.name-rung   { border-left:3px solid rgba(42,157,143,.4); }
+.rung-card.id-rung     { border-left:3px solid rgba(155,114,207,.4); }
+.rung-card.find-rung   { border-left:3px solid rgba(233,196,106,.4); }
+.rung-card.alg-rung    { border-left:3px solid rgba(231,111,81,.4); }
+.rung-card.proof-rung  { border-left:3px solid rgba(82,183,136,.4); }
+.rung-card.boss-rung   { border-left:3px solid rgba(233,196,106,.6); }
+
+.rung-card.name-rung.active   { border-color:var(--teal);   background:rgba(42,157,143,.05);  }
+.rung-card.id-rung.active     { border-color:var(--purple); background:rgba(155,114,207,.05); }
+.rung-card.find-rung.active   { border-color:var(--amber);  background:rgba(233,196,106,.05); }
+.rung-card.alg-rung.active    { border-color:var(--clay);   background:rgba(231,111,81,.05);  }
+.rung-card.proof-rung.active  { border-color:var(--green);  background:rgba(82,183,136,.05);  }
+.rung-card.boss-rung.active   { border-color:var(--amber);  background:rgba(233,196,106,.06); }
+
+.rung-head { padding:.75rem 1rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; gap:.75rem; }
+.rung-head:hover { background:rgba(255,255,255,.03); }
+.rung-head-left  { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+.rung-num-label   { font-family:'Space Mono',monospace; font-size:.72rem; color:var(--teal); white-space:nowrap; }
+.rung-title-label { font-family:'Space Grotesk',sans-serif; font-size:.9rem; font-weight:500; }
+.rung-short       { font-size:.78rem; color:rgba(255,255,255,.4); font-style:italic; margin-left:.25rem; }
+.rung-status      { font-size:.78rem; color:rgba(255,255,255,.35); white-space:nowrap; font-family:'Space Mono',monospace; }
+.rung-status.done { color:var(--green); }
+
+/* Zone chips */
+.name-tag  { font-family:'Space Mono',monospace; font-size:.64rem; background:rgba(42,157,143,.2);  color:var(--teal);   border:1px solid rgba(42,157,143,.4);  border-radius:4px; padding:.12rem .4rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.id-tag    { font-family:'Space Mono',monospace; font-size:.64rem; background:rgba(155,114,207,.2); color:var(--purple); border:1px solid rgba(155,114,207,.4); border-radius:4px; padding:.12rem .4rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.find-tag  { font-family:'Space Mono',monospace; font-size:.64rem; background:rgba(233,196,106,.2); color:var(--amber);  border:1px solid rgba(233,196,106,.4); border-radius:4px; padding:.12rem .4rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.alg-tag   { font-family:'Space Mono',monospace; font-size:.64rem; background:rgba(231,111,81,.2);  color:var(--clay);   border:1px solid rgba(231,111,81,.4);  border-radius:4px; padding:.12rem .4rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.proof-tag { font-family:'Space Mono',monospace; font-size:.64rem; background:rgba(82,183,136,.2);  color:var(--green);  border:1px solid rgba(82,183,136,.4);  border-radius:4px; padding:.12rem .4rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+.boss-tag  { font-family:'Space Mono',monospace; font-size:.64rem; background:var(--amber); color:var(--ink); border-radius:4px; padding:.12rem .38rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+
+/* Pips */
+.pip-strip { display:flex; gap:.35rem; padding:0 1rem .75rem; }
+.pip { width:.5rem; height:.5rem; border-radius:50%; background:rgba(255,255,255,.15); transition:background .3s; }
+.pip.lit  { background:var(--teal); }
+.pip.done { background:var(--green); }
+
+/* Rung body */
+.rung-body { display:none; padding:1rem 1.2rem 1.2rem; border-top:1px solid rgba(255,255,255,.07); }
+.rung-card.active .rung-body { display:block; }
+
+/* Question */
+.q-text { font-size:.97rem; line-height:1.65; margin-bottom:.85rem; color:rgba(255,255,255,.9); }
+.q-text strong { color:var(--amber); }
+.q-text em { color:rgba(255,255,255,.7); }
+
+/* Choices */
+.choices { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-bottom:1rem; }
+.choices.one-col { grid-template-columns:1fr; }
+.choice-btn { font-family:'IBM Plex Sans',sans-serif; font-size:.87rem; padding:.65rem 1rem; background:rgba(255,255,255,.06); border:1.5px solid rgba(255,255,255,.12); border-radius:8px; color:var(--paper); cursor:pointer; transition:all .2s; text-align:left; line-height:1.4; }
+.choice-btn:hover   { background:rgba(255,255,255,.11); border-color:var(--teal); }
+.choice-btn.correct { background:rgba(82,183,136,.2);  border-color:var(--green); color:var(--green); }
+.choice-btn.wrong   { background:rgba(231,111,81,.15); border-color:var(--clay);  color:var(--clay);  }
+
+/* Feedback */
+.feedback { display:none; font-size:.87rem; line-height:1.65; padding:.75rem 1rem; border-radius:8px; margin-bottom:.9rem; }
+.feedback.show { display:block; }
+.feedback.ok  { background:rgba(82,183,136,.12);  border:1px solid rgba(82,183,136,.3);  color:var(--green); }
+.feedback.err { background:rgba(231,111,81,.1);   border:1px solid rgba(231,111,81,.25); color:rgba(255,255,255,.85); }
+.feedback .hint-label { color:var(--clay); font-weight:600; }
+.feedback code { font-family:'Space Mono',monospace; font-size:.84rem; background:rgba(255,255,255,.08); padding:.1rem .3rem; border-radius:3px; color:var(--amber); }
+
+/* Next button */
+.btn-next { font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:.9rem; padding:.6rem 1.4rem; background:var(--teal); border:none; border-radius:8px; color:#fff; cursor:pointer; display:none; transition:background .2s; }
+.btn-next:hover { background:var(--teal2); }
+.btn-next.show  { display:inline-block; }
+
+/* Congrats */
+.congrats-banner { display:none; background:linear-gradient(135deg,rgba(82,183,136,.15),rgba(42,157,143,.1)); border:1px solid var(--green); border-radius:14px; padding:1.5rem; text-align:center; margin-bottom:1.5rem; }
+.congrats-banner.show { display:block; }
+.congrats-banner h3 { font-family:'Space Grotesk',sans-serif; font-size:1.2rem; font-weight:700; color:var(--green); margin-bottom:.4rem; }
+.congrats-banner p  { font-size:.9rem; color:rgba(255,255,255,.7); }
+
+footer { border-top:1px solid rgba(255,255,255,.07); padding:1.5rem; text-align:center; font-size:.78rem; color:rgba(255,255,255,.3); }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <span class="topbar-brand">Math 1351</span>
+  <span class="topbar-sep">›</span>
+  <span class="topbar-title">Lesson 7 · Skill Ladders</span>
+</nav>
+
+<header class="hero">
+  <div class="hero-eyebrow">Math 1351 · Lesson 7 · Triangles</div>
+  <div class="hero-glyph">△</div>
+  <h1>Triangle Classification</h1>
+  <p class="hero-sub">
+    Classify triangles by their angles and sides, test the triangle inequality,
+    find missing angles using the 180° sum, and combine both classification systems.
+  </p>
+</header>
+
+<!-- ── Reference tables ── -->
+<div class="ref-wrap">
+  <div class="ref-table-box">
+    <div class="ref-table-label">Classify by Angles</div>
+    <table class="ref">
+      <thead><tr><th>Name</th><th>Angle condition</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Acute</td><td>all &lt; 90°</td><td>Every interior angle is less than 90°</td></tr>
+        <tr><td>Right</td><td>one = 90°</td><td>Exactly one interior angle equals 90°</td></tr>
+        <tr><td>Obtuse</td><td>one &gt; 90°</td><td>Exactly one interior angle is greater than 90°</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="ref-table-box">
+    <div class="ref-table-label">Classify by Sides</div>
+    <table class="ref">
+      <thead><tr><th>Name</th><th>Side condition</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>Scalene</td><td>no equal sides</td><td>All three sides have different lengths</td></tr>
+        <tr><td>Isosceles</td><td>≥ 2 equal sides</td><td>At least two sides are congruent; base angles are equal</td></tr>
+        <tr><td>Equilateral</td><td>3 equal sides</td><td>All sides equal; also equiangular (all angles = 60°)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="ref-table-box">
+    <div class="ref-table-label">Key Rules</div>
+    <table class="ref">
+      <thead><tr><th>Rule</th><th>Formula / Condition</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td>Angle Sum</td><td>A + B + C = 180°</td><td>Find a missing angle</td></tr>
+        <tr><td>Triangle Inequality</td><td>a + b &gt; c (for each pair)</td><td>Test if three lengths form a triangle</td></tr>
+        <tr><td>Equilateral ⇒ Equiangular</td><td>each angle = 60°</td><td>All sides equal means all angles equal</td></tr>
+        <tr><td>Isosceles base angles</td><td>base angles equal</td><td>The two angles opposite the equal sides are congruent</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="callout-row">
+  <div class="callout tip">
+    <span class="callout-icon">💡</span>
+    <div class="callout-text">
+      <strong>Angle sum shortcut:</strong> Missing angle = 180° − (sum of the other two). A triangle can have at most one right or obtuse angle — the other two must always be acute.
+    </div>
+  </div>
+  <div class="callout warn">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-text">
+      <strong>Triangle Inequality:</strong> Every pair of sides must sum to more than the third. If even one pair fails (a + b ≤ c), no triangle can be formed.
+    </div>
+  </div>
+  <div class="callout note">
+    <span class="callout-icon">📐</span>
+    <div class="callout-text">
+      <strong>Two systems, one triangle:</strong> Every triangle gets two labels — one by angles (acute/right/obtuse) and one by sides (scalene/isosceles/equilateral). For example: right isosceles, or acute scalene.
+    </div>
+  </div>
+</div>
+
+<!-- ════ LADDER ════ -->
+<section class="ladder-section">
+  <div class="ladder-header">
+    <h2>Ladder 5 — Triangle Classification</h2>
+    <button class="btn-reset" id="btn-reset">Reset all badges</button>
+  </div>
+  <div class="congrats-banner" id="congrats-banner">
+    <h3>🎉 Ladder Complete!</h3>
+    <p>All 10 badges earned! You can classify triangles by angles and sides, apply the angle sum, test the triangle inequality, and combine both systems.</p>
+  </div>
+  <div class="rail" id="rail"></div>
+</section>
+
+<footer>Math 1351 · Lesson 7 · Triangle Classification · Skill Ladder</footer>
+
+<script>
+/* ══════════════════════════════════════
+   HELPERS
+══════════════════════════════════════ */
+function shuffle(a) {
+  const b = a.slice();
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [b[i], b[j]] = [b[j], b[i]];
+  }
+  return b;
+}
+function rand(lo, hi) { return lo + Math.floor(Math.random() * (hi - lo + 1)); }
+function pick(a)      { return a[Math.floor(Math.random() * a.length)]; }
+
+/* ══════════════════════════════════════
+   TRIANGLE DATA POOLS
+══════════════════════════════════════ */
+
+// Generate a random valid triangle with known angle classification
+function randAngleTriangle(angleType) {
+  if (angleType === 'right') {
+    // One angle = 90, other two sum to 90 and are both acute
+    const a = rand(10, 79);
+    const b = 90 - a;
+    return shuffle([90, a, b]);
+  }
+  if (angleType === 'obtuse') {
+    // One angle > 90
+    const c = rand(91, 159);
+    const remaining = 180 - c;
+    const a = rand(1, remaining - 1);
+    const b = remaining - a;
+    return shuffle([c, a, b]);
+  }
+  // acute: all < 90
+  // Build by constraining: pick two angles each < 90, check third < 90
+  let tries = 0;
+  while (tries < 200) {
+    const a = rand(10, 89);
+    const b = rand(10, 89);
+    const c = 180 - a - b;
+    if (c > 0 && c < 90) return shuffle([a, b, c]);
+    tries++;
+  }
+  return [60, 60, 60]; // fallback equilateral
+}
+
+// Scalene side sets: all different, satisfy triangle inequality
+const SCALENE_SIDES = [
+  [3,4,5],[5,7,9],[6,8,11],[4,6,7],[5,8,10],[7,10,12],[3,5,6],[8,9,14]
+];
+// Isosceles side sets (two equal, not equilateral)
+const ISOSCELES_SIDES = [
+  [5,5,6],[7,7,4],[10,10,12],[4,4,7],[6,6,9],[8,8,5],[3,3,4],[9,9,14]
+];
+// Equilateral
+function equilSides() { const s = rand(3,12); return [s,s,s]; }
+
+/* ══════════════════════════════════════
+   QUESTION GENERATORS
+══════════════════════════════════════ */
+const GEN = {
+
+  /* RUNG 1 — Classify by angles: given three angle measures */
+  1() {
+    const type = pick(['acute','right','obtuse']);
+    const angles = randAngleTriangle(type);
+    const label = type.charAt(0).toUpperCase() + type.slice(1);
+    const exp = {
+      acute:  `All three angles (${angles[0]}°, ${angles[1]}°, ${angles[2]}°) are less than 90°, so the triangle is <code>acute</code>.`,
+      right:  `One angle equals 90° (${angles.find(a=>a===90)}°), so the triangle is a <code>right</code> triangle.`,
+      obtuse: `One angle (${angles.find(a=>a>90)}°) is greater than 90°, so the triangle is <code>obtuse</code>.`
+    }[type];
+    return {
+      html: `<div class="q-text">A triangle has angles <strong>${angles[0]}°</strong>, <strong>${angles[1]}°</strong>, and <strong>${angles[2]}°</strong>. Classify it by its angles.</div>`,
+      explanation: exp,
+      opts: shuffle([
+        { label: 'Acute',   correct: type === 'acute'   },
+        { label: 'Right',   correct: type === 'right'   },
+        { label: 'Obtuse',  correct: type === 'obtuse'  },
+        { label: 'Equiangular', correct: false }
+      ])
+    };
+  },
+
+  /* RUNG 2 — Classify by sides: given three side lengths */
+  2() {
+    const type = pick(['scalene','isosceles','equilateral']);
+    let sides;
+    if (type === 'scalene')     sides = pick(SCALENE_SIDES);
+    if (type === 'isosceles')   sides = pick(ISOSCELES_SIDES);
+    if (type === 'equilateral') sides = equilSides();
+    const [a, b, c] = sides;
+    const exp = {
+      scalene:     `All three sides (${a}, ${b}, ${c}) are different lengths — no two are equal — so the triangle is <code>scalene</code>.`,
+      isosceles:   `Two sides are equal (${sides.filter((v,i,arr)=>arr.indexOf(v)<i || arr.lastIndexOf(v)>i).join(' and ') || `${sides[0]} and ${sides[1]}`}), so the triangle is <code>isosceles</code>.`,
+      equilateral: `All three sides equal ${a}, so the triangle is <code>equilateral</code>.`
+    }[type];
+    // Better isosceles explanation
+    const isoExp = (() => {
+      if (type !== 'isosceles') return '';
+      if (a === b) return `Two sides are equal (${a} and ${b}), so the triangle is <code>isosceles</code>.`;
+      if (b === c) return `Two sides are equal (${b} and ${c}), so the triangle is <code>isosceles</code>.`;
+      return `Two sides are equal (${a} and ${c}), so the triangle is <code>isosceles</code>.`;
+    })();
+    return {
+      html: `<div class="q-text">A triangle has sides of length <strong>${a}</strong>, <strong>${b}</strong>, and <strong>${c}</strong>. Classify it by its sides.</div>`,
+      explanation: type === 'isosceles' ? isoExp : exp,
+      opts: shuffle([
+        { label: 'Scalene',     correct: type === 'scalene'     },
+        { label: 'Isosceles',   correct: type === 'isosceles'   },
+        { label: 'Equilateral', correct: type === 'equilateral' },
+        { label: 'Right',       correct: false }
+      ])
+    };
+  },
+
+  /* RUNG 3 — Triangle Inequality: will these lengths form a triangle? */
+  3() {
+    // Mix of valid and invalid sets
+    const sets = shuffle([
+      // Valid
+      { sides:[3,4,5],  valid:true  },
+      { sides:[5,7,9],  valid:true  },
+      { sides:[6,6,6],  valid:true  },
+      { sides:[2,5,6],  valid:true  },
+      { sides:[8,10,15],valid:true  },
+      { sides:[4,4,7],  valid:true  },
+      { sides:[1,1,1],  valid:true  },
+      // Invalid
+      { sides:[1,2,5],  valid:false },
+      { sides:[2,3,8],  valid:false },
+      { sides:[1,4,6],  valid:false },
+      { sides:[3,5,9],  valid:false },
+      { sides:[2,2,5],  valid:false },
+    ]);
+    const item = sets[0];
+    const [a,b,c] = item.sides;
+    // Find the critical pair for the explanation
+    const pairs = [[a,b,c],[a,c,b],[b,c,a]];
+    const failPair = pairs.find(([x,y,z]) => x+y <= z);
+    let exp;
+    if (item.valid) {
+      exp = `Check all pairs: ${a}+${b}=${a+b} > ${c} ✓, ${a}+${c}=${a+c} > ${b} ✓, ${b}+${c}=${b+c} > ${a} ✓. All three conditions hold, so <code>yes</code>, a triangle can be formed.`;
+    } else {
+      const [x,y,z] = failPair;
+      exp = `Check the pair ${x} and ${y}: ${x} + ${y} = ${x+y}, which is <em>not</em> greater than ${z}. The triangle inequality fails, so <code>no</code>, these lengths cannot form a triangle.`;
+    }
+    return {
+      html: `<div class="q-text">Can the lengths <strong>${a}</strong>, <strong>${b}</strong>, and <strong>${c}</strong> form a triangle?</div>`,
+      explanation: exp,
+      opts: shuffle([
+        { label: 'Yes — a triangle can be formed',    correct:  item.valid },
+        { label: 'No — the triangle inequality fails',correct: !item.valid },
+        { label: 'Only if the angles are acute',      correct: false       },
+        { label: 'Only if two sides are equal',       correct: false       }
+      ]),
+      onecol: true
+    };
+  },
+
+  /* RUNG 4 — Angle sum: find the missing angle */
+  4() {
+    const type = pick(['acute','right','obtuse']);
+    const angles = randAngleTriangle(type);
+    // Hide one angle
+    const hideIdx = rand(0, 2);
+    const known = angles.filter((_,i) => i !== hideIdx);
+    const missing = angles[hideIdx];
+    const sum2 = known[0] + known[1];
+    const wrongs = shuffle([
+      sum2,            // forgetting to subtract from 180
+      180 - sum2 + rand(5,15),
+      Math.max(1, 180 - sum2 - rand(5,15))
+    ].filter(x => x !== missing && x > 0 && x < 180)).slice(0,3);
+    return {
+      html: `<div class="q-text">A triangle has two angles measuring <strong>${known[0]}°</strong> and <strong>${known[1]}°</strong>. Find the measure of the third angle.</div>`,
+      explanation: `Angle sum of a triangle = 180°. Third angle = 180° − ${known[0]}° − ${known[1]}° = 180° − ${sum2}° = <code>${missing}°</code>.`,
+      opts: shuffle([
+        { label: `${missing}°`, correct: true  },
+        ...wrongs.map(w => ({ label: `${w}°`, correct: false }))
+      ])
+    };
+  },
+
+  /* RUNG 5 — Isosceles base angles: find a missing angle */
+  5() {
+    const items = shuffle([
+      // Given the vertex angle, find each base angle
+      ...([30,40,50,60,80,100,110,120].map(vertex => ({
+        q: `An isosceles triangle has a <em>vertex angle</em> (the angle between the two equal sides) of <strong>${vertex}°</strong>. Find the measure of each base angle.`,
+        ans: (180 - vertex) / 2,
+        exp: `The two base angles of an isosceles triangle are equal. Base angle = (180° − ${vertex}°) ÷ 2 = ${180-vertex}° ÷ 2 = <code>${(180-vertex)/2}°</code>.`
+      }))),
+      // Given one base angle, find the vertex angle
+      ...([25,30,35,40,45,50,55,65,70].map(base => ({
+        q: `An isosceles triangle has <em>base angles</em> each measuring <strong>${base}°</strong>. Find the vertex angle.`,
+        ans: 180 - 2 * base,
+        exp: `Vertex angle = 180° − 2 × ${base}° = 180° − ${2*base}° = <code>${180-2*base}°</code>.`
+      })))
+    ]);
+    const item = items[0];
+    const ans = item.ans;
+    const wrongs = shuffle([ans+10, ans-10, ans+20, 2*ans, 180-ans].filter(x=>x>0&&x<180&&x!==ans)).slice(0,3);
+    return {
+      html: `<div class="q-text">${item.q}</div>`,
+      explanation: item.exp,
+      opts: shuffle([
+        { label: `${ans}°`, correct: true },
+        ...wrongs.map(w => ({ label: `${w}°`, correct: false }))
+      ])
+    };
+  },
+
+  /* RUNG 6 — Definition / concept questions */
+  6() {
+    const items = shuffle([
+      { q: 'Which type of triangle has <em>all three sides</em> of different lengths?',
+        ans: 'Scalene', wrongs: ['Isosceles','Equilateral','Right'],
+        exp: 'A <code>scalene</code> triangle has no two sides of equal length.' },
+      { q: 'Which type of triangle has <em>exactly one angle equal to 90°</em>?',
+        ans: 'Right', wrongs: ['Obtuse','Acute','Isosceles'],
+        exp: 'A <code>right</code> triangle contains exactly one 90° angle.' },
+      { q: 'An equilateral triangle is also called equiangular. What is the measure of each of its angles?',
+        ans: '60°', wrongs: ['45°','90°','72°'],
+        exp: 'An equilateral triangle has three equal angles. 180° ÷ 3 = <code>60°</code> each.' },
+      { q: 'A triangle has one angle measuring 105°. How is it classified by its angles?',
+        ans: 'Obtuse', wrongs: ['Acute','Right','Equiangular'],
+        exp: '105° > 90°, so the triangle has one obtuse angle — it is <code>obtuse</code>.' },
+      { q: 'Can a triangle be both right and obtuse at the same time?',
+        ans: 'No — a triangle can have at most one angle ≥ 90°',
+        wrongs: ['Yes, if the other two angles are acute','Yes, if one side is very long','Yes, always'],
+        exp: 'The angle sum is 180°. If one angle is 90°, the remaining two must sum to 90° (both acute). There is no room for a second angle ≥ 90°. So <code>no</code>.' },
+      { q: 'Which condition guarantees a triangle is <em>isosceles</em>?',
+        ans: 'At least two sides are equal in length',
+        wrongs: ['All three angles are equal','Exactly one angle is 90°','The longest side is twice a shorter side'],
+        exp: 'An <code>isosceles</code> triangle is defined by having at least two congruent sides. The base angles (opposite those sides) are then also equal.' },
+      { q: 'A triangle has angles 45°, 45°, and 90°. Which TWO classifications apply?',
+        ans: 'Right and Isosceles',
+        wrongs: ['Acute and Scalene','Obtuse and Isosceles','Right and Scalene'],
+        exp: 'One 90° angle → <strong>right</strong>. The two 45° angles are equal, meaning the two legs are equal → <strong>isosceles</strong>. So: <code>right isosceles</code>.' },
+    ]);
+    const item = items[0];
+    return {
+      html: `<div class="q-text">${item.q}</div>`,
+      explanation: item.exp,
+      opts: shuffle([
+        { label: item.ans, correct: true },
+        ...item.wrongs.slice(0,3).map(w => ({ label: w, correct: false }))
+      ]),
+      onecol: true
+    };
+  },
+
+  /* RUNG 7 — Classify by BOTH angles and sides */
+  7() {
+    // Each entry: angles[], sides[], angleType, sideType
+    const combos = shuffle([
+      { angles:[60,60,60],    sides:[5,5,5],    aType:'Acute',  sType:'Equilateral',
+        exp:'All angles = 60° (acute). All sides equal (equilateral). → <code>Acute equilateral</code>.' },
+      { angles:[45,45,90],    sides:[5,5,7],    aType:'Right',  sType:'Isosceles',
+        exp:'One angle = 90° (right). Two sides equal (isosceles). → <code>Right isosceles</code>.' },
+      { angles:[30,60,90],    sides:[3,4,5],    aType:'Right',  sType:'Scalene',
+        exp:'One angle = 90° (right). All sides different (scalene). → <code>Right scalene</code>.' },
+      { angles:[55,65,60],    sides:[7,8,9],    aType:'Acute',  sType:'Scalene',
+        exp:'All angles < 90° (acute). All sides different (scalene). → <code>Acute scalene</code>.' },
+      { angles:[40,40,100],   sides:[6,6,9],    aType:'Obtuse', sType:'Isosceles',
+        exp:'One angle = 100° > 90° (obtuse). Two sides equal (isosceles). → <code>Obtuse isosceles</code>.' },
+      { angles:[25,35,120],   sides:[4,6,8],    aType:'Obtuse', sType:'Scalene',
+        exp:'One angle = 120° > 90° (obtuse). All sides different (scalene). → <code>Obtuse scalene</code>.' },
+      { angles:[70,55,55],    sides:[8,6,6],    aType:'Acute',  sType:'Isosceles',
+        exp:'All angles < 90° (acute). Two sides equal (isosceles). → <code>Acute isosceles</code>.' },
+    ]);
+    const c = combos[0];
+    const ans = `${c.aType} and ${c.sType}`;
+    // Build four answer options
+    const allA = ['Acute','Right','Obtuse'];
+    const allS = ['Scalene','Isosceles','Equilateral'];
+    const wrongCombos = new Set();
+    while (wrongCombos.size < 3) {
+      const wa = pick(allA);
+      const ws = pick(allS);
+      const opt = `${wa} and ${ws}`;
+      if (opt !== ans) wrongCombos.add(opt);
+    }
+    return {
+      html: `<div class="q-text">A triangle has angles <strong>${c.angles[0]}°</strong>, <strong>${c.angles[1]}°</strong>, <strong>${c.angles[2]}°</strong> and sides <strong>${c.sides[0]}</strong>, <strong>${c.sides[1]}</strong>, <strong>${c.sides[2]}</strong>. Choose the complete classification.</div>`,
+      explanation: c.exp,
+      opts: shuffle([
+        { label: ans, correct: true },
+        ...[...wrongCombos].map(w => ({ label: w, correct: false }))
+      ]),
+      onecol: true
+    };
+  },
+
+  /* RUNG 8 — Angle sum with algebra (variable angle) */
+  8() {
+    const items = shuffle([
+      // One angle expressed as expression of x
+      (() => {
+        const a = rand(20,70), b = rand(20,60);
+        const x = 180 - a - b; // x is the unknown angle value
+        const mult = pick([1,2]);
+        const add  = mult === 1 ? 0 : pick([-10,-5,5,10]);
+        // angle = mult*x + add  →  but we want angle to be x itself for simplicity
+        // Simple: angle C = x, find x
+        return {
+          q: `A triangle has angles <strong>${a}°</strong>, <strong>${b}°</strong>, and <strong><em>x</em></strong>. Find the value of <em>x</em>.`,
+          ans: x,
+          exp: `Angle sum = 180°: ${a}° + ${b}° + x = 180°. So x = 180° − ${a}° − ${b}° = <code>${x}°</code>.`
+        };
+      })(),
+      // Two equal angles, find each
+      (() => {
+        const known = rand(20,100);
+        const base = (180 - known) / 2;
+        if (!Number.isInteger(base)) return null;
+        return {
+          q: `An isosceles triangle has a vertex angle of <strong>${known}°</strong>. The two base angles are each equal to <strong><em>x</em></strong>. Find <em>x</em>.`,
+          ans: base,
+          exp: `All angles sum to 180°: ${known}° + x + x = 180°. So 2x = ${180-known}°, x = <code>${base}°</code>.`
+        };
+      })(),
+      // Three expressions summing to 180
+      (() => {
+        // Angles: x, 2x, 3x  →  6x = 180  → x = 30
+        const factor = pick([
+          { exprs:['x','2x','3x'],  sol:30, label:'6x' },
+          { exprs:['x','x','x'],    sol:60, label:'3x' },
+          { exprs:['x','2x','x'],   sol:45, label:'4x' },
+        ]);
+        return {
+          q: `The angles of a triangle are <strong>${factor.exprs[0]}</strong>, <strong>${factor.exprs[1]}</strong>, and <strong>${factor.exprs[2]}</strong>. Solve for <em>x</em>.`,
+          ans: factor.sol,
+          exp: `Sum = 180°: ${factor.exprs.join(' + ')} = ${factor.label} = 180°. So x = 180° ÷ ${180/factor.sol} = <code>${factor.sol}°</code>.`
+        };
+      })(),
+    ].filter(Boolean));
+
+    const item = items[0];
+    const ans = item.ans;
+    const wrongs = shuffle([ans+10, ans-10, ans+20, 180-ans].filter(x=>x>0&&x<180&&x!==ans)).slice(0,3);
+    return {
+      html: `<div class="q-text">${item.q}</div>`,
+      explanation: item.exp,
+      opts: shuffle([
+        { label: `${ans}°`, correct: true },
+        ...wrongs.map(w => ({ label: `${w}°`, correct: false }))
+      ])
+    };
+  },
+
+  /* RUNG 9 — Triangle inequality: find a range for a missing side */
+  9() {
+    const items = shuffle([
+      // Given two sides, what values CAN the third side take?
+      (() => {
+        const a = rand(3,10), b = rand(3,10);
+        const lo = Math.abs(a - b) + 1;
+        const hi = a + b - 1;
+        const valid = rand(lo, hi);
+        const tooSmall = Math.max(1, lo - 1);
+        const tooLarge = hi + 1;
+        const ans = `Any length between ${lo} and ${hi} (exclusive endpoints)`;
+        return {
+          q: `Two sides of a triangle measure <strong>${a}</strong> and <strong>${b}</strong>. Which value could be the length of the third side?`,
+          ans: String(valid),
+          wrongs: [String(tooSmall), String(tooLarge), String(a + b)],
+          exp: `The third side must satisfy |${a} − ${b}| < c < ${a} + ${b}, so ${lo} < c < ${a+b}. The value <code>${valid}</code> satisfies this; ${tooSmall} and ${tooLarge} do not.`
+        };
+      })(),
+      // Does this set satisfy the inequality?
+      { q: `Two sides of a triangle are <strong>7</strong> and <strong>3</strong>. A student claims the third side is <strong>10</strong>. Is this possible?`,
+        ans: 'No — 7 + 3 = 10 is not greater than 10',
+        wrongs: ['Yes, because 7 + 3 = 10','Yes, because the sides are whole numbers','No — 7 − 3 = 4, which is too small'],
+        exp: 'The triangle inequality requires a + b <strong>strictly greater than</strong> c. Since 7 + 3 = 10 (not greater), a third side of 10 is <code>impossible</code>.' },
+      { q: `A triangle has sides <strong>5</strong> and <strong>12</strong>. Which is a valid length for the third side?`,
+        ans: '13', wrongs: ['17','1','18'],
+        exp: `|12 − 5| = 7 < c < 12 + 5 = 17. So c must be between 7 and 17. Among the choices, <code>13</code> is the only one in that range.` },
+    ]);
+    const item = items[0];
+    return {
+      html: `<div class="q-text">${item.q}</div>`,
+      explanation: item.exp,
+      opts: shuffle([
+        { label: item.ans, correct: true },
+        ...item.wrongs.slice(0,3).map(w => ({ label: w, correct: false }))
+      ]),
+      onecol: true
+    };
+  },
+
+  /* RUNG 10 — Boss: mixed */
+  10() { return GEN[rand(1,9)](); }
+};
+
+/* ══════════════════════════════════════
+   RUNGS CONFIG
+══════════════════════════════════════ */
+const RUNGS = [
+  { id:'r1',  title:'Classify by Angles',           short:'acute / right / obtuse',    type:'id-rung'   },
+  { id:'r2',  title:'Classify by Sides',            short:'scalene / isosceles / equil.',type:'id-rung'  },
+  { id:'r3',  title:'Triangle Inequality',          short:'a + b > c?',                type:'id-rung'   },
+  { id:'r4',  title:'Missing Angle (Angle Sum)',    short:'180° − a − b',              type:'find-rung' },
+  { id:'r5',  title:'Isosceles Base Angles',        short:'base angles equal',         type:'find-rung' },
+  { id:'r6',  title:'Concepts & Definitions',       short:'true / false / which?',     type:'name-rung' },
+  { id:'r7',  title:'Full Classification',          short:'angle + side type',         type:'id-rung'   },
+  { id:'r8',  title:'Angle Sum with Algebra',       short:'solve for x',               type:'alg-rung'  },
+  { id:'r9',  title:'Third Side Range',             short:'inequality bounds',         type:'alg-rung'  },
+  { id:'r10', title:'Boss Challenge',               short:'mixed',                     type:'boss-rung' },
+];
+
+/* ══════════════════════════════════════
+   STORE / STATE
+══════════════════════════════════════ */
+const STORE = 'triangleClassificationLadderBadges_v1';
+function loadBadges() {
+  try { return JSON.parse(localStorage.getItem(STORE)) || {}; } catch(e) { return {}; }
+}
+function saveBadges(b) {
+  try { localStorage.setItem(STORE, JSON.stringify(b)); } catch(e) {}
+}
+
+const state = {
+  badges:     loadBadges(),
+  streaks:    {},
+  activeRung: null,
+  currentQ:   null
+};
+
+/* ══════════════════════════════════════
+   RENDER
+══════════════════════════════════════ */
+function tagHTML(type) {
+  const map = {
+    'name-rung':'name-tag','id-rung':'id-tag','find-rung':'find-tag',
+    'alg-rung':'alg-tag','proof-rung':'proof-tag','boss-rung':'boss-tag'
+  };
+  const labels = {
+    'name-rung':'Name','id-rung':'Classify','find-rung':'Calculate',
+    'alg-rung':'Algebra','proof-rung':'Proof','boss-rung':'⭐ Boss'
+  };
+  return `<span class="${map[type]}">${labels[type]}</span>`;
+}
+
+function renderChoices(opts, rungId, onecol) {
+  const cls = onecol ? 'choices one-col' : 'choices';
+  return `<div class="${cls}" id="choices-${rungId}">` +
+    opts.map((o,i) =>
+      `<button class="choice-btn" data-rung="${rungId}" data-idx="${i}">${o.label}</button>`
+    ).join('') +
+  `</div>`;
+}
+
+function pipHTML(rungId) {
+  const streak = state.streaks[rungId] || 0;
+  const earned = !!state.badges[rungId];
+  return [0,1,2,3].map(i => {
+    let cls = 'pip';
+    if (earned)      cls += ' done';
+    else if (i < streak) cls += ' lit';
+    return `<div class="${cls}"></div>`;
+  }).join('');
+}
+
+function buildRail() {
+  const rail = document.getElementById('rail');
+  rail.innerHTML = '';
+  RUNGS.forEach((rung, idx) => {
+    const genIdx = idx + 1;
+    const earned = !!state.badges[rung.id];
+    const isActive = state.activeRung === rung.id;
+    const row = document.createElement('div');
+    row.className = 'rung-row';
+    row.id = `row-${rung.id}`;
+
+    const badgeHTML = `
+      <div class="rung-badge">
+        <div class="badge-circle${earned ? ' earned' : ''}" id="badge-${rung.id}">${earned ? '✓' : genIdx}</div>
+        <div class="connector"></div>
+      </div>`;
+
+    const statusLabel = earned
+      ? `<span class="rung-status done">✓ Earned</span>`
+      : `<span class="rung-status" id="status-${rung.id}">${state.streaks[rung.id]||0}/4</span>`;
+
+    row.innerHTML = badgeHTML + `
+      <div class="rung-card ${rung.type}${isActive ? ' active' : ''}" id="card-${rung.id}">
+        <div class="rung-head" data-rung="${rung.id}">
+          <div class="rung-head-left">
+            <span class="rung-num-label">#${genIdx}</span>
+            ${tagHTML(rung.type)}
+            <span class="rung-title-label">${rung.title}</span>
+            <span class="rung-short">— ${rung.short}</span>
+          </div>
+          ${statusLabel}
+        </div>
+        <div class="pip-strip" id="pips-${rung.id}">${pipHTML(rung.id)}</div>
+        <div class="rung-body" id="body-${rung.id}">
+          <div id="qarea-${rung.id}"></div>
+        </div>
+      </div>`;
+    rail.appendChild(row);
+  });
+
+  document.querySelectorAll('.rung-head').forEach(el => {
+    el.addEventListener('click', () => toggleRung(el.dataset.rung));
+  });
+  checkLadder();
+}
+
+function toggleRung(rungId) {
+  const wasActive = state.activeRung === rungId;
+  if (state.activeRung) {
+    document.getElementById(`card-${state.activeRung}`)?.classList.remove('active');
+  }
+  if (wasActive) { state.activeRung = null; return; }
+  state.activeRung = rungId;
+  document.getElementById(`card-${rungId}`).classList.add('active');
+  const qarea = document.getElementById(`qarea-${rungId}`);
+  if (!qarea.innerHTML.trim()) loadQuestion(rungId);
+}
+
+function loadQuestion(rungId) {
+  const idx = RUNGS.findIndex(r => r.id === rungId) + 1;
+  const q = GEN[idx]();
+  state.currentQ = { ...q, rungId };
+
+  const qarea = document.getElementById(`qarea-${rungId}`);
+  qarea.innerHTML = `
+    ${q.html}
+    ${renderChoices(q.opts, rungId, q.onecol)}
+    <div class="feedback" id="fb-${rungId}"></div>
+    <button class="btn-next" id="next-${rungId}" data-rung="${rungId}">Next question →</button>
+  `;
+
+  qarea.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleChoice(btn, rungId, q));
+  });
+  document.getElementById(`next-${rungId}`).addEventListener('click', () => loadQuestion(rungId));
+}
+
+function handleChoice(btn, rungId, q) {
+  document.getElementById(`choices-${rungId}`)
+    .querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+
+  const opt = q.opts[parseInt(btn.dataset.idx)];
+  const fb  = document.getElementById(`fb-${rungId}`);
+  const nextBtn = document.getElementById(`next-${rungId}`);
+
+  if (opt.correct) {
+    btn.classList.add('correct');
+    state.streaks[rungId] = (state.streaks[rungId] || 0) + 1;
+    fb.className = 'feedback ok show';
+    fb.innerHTML = `✓ Correct! ${q.explanation}`;
+    if (state.streaks[rungId] >= 4 && !state.badges[rungId]) {
+      state.badges[rungId] = true;
+      saveBadges(state.badges);
+      awardBadge(rungId);
+    }
+  } else {
+    btn.classList.add('wrong');
+    document.getElementById(`choices-${rungId}`)
+      .querySelectorAll('.choice-btn').forEach((b,i) => {
+        if (q.opts[i].correct) b.classList.add('correct');
+      });
+    state.streaks[rungId] = 0;
+    fb.className = 'feedback err show';
+    fb.innerHTML = `<span class="hint-label">Not quite.</span> ${q.explanation}`;
+  }
+
+  updatePips(rungId);
+  updateStatus(rungId);
+  nextBtn.classList.add('show');
+}
+
+function awardBadge(rungId) {
+  const circle = document.getElementById(`badge-${rungId}`);
+  if (circle) { circle.textContent = '✓'; circle.classList.add('earned'); }
+  updateStatus(rungId);
+  checkLadder();
+}
+
+function updatePips(rungId) {
+  const strip = document.getElementById(`pips-${rungId}`);
+  if (strip) strip.innerHTML = pipHTML(rungId);
+}
+
+function updateStatus(rungId) {
+  const el = document.getElementById(`status-${rungId}`);
+  if (!el) return;
+  if (state.badges[rungId]) { el.textContent = '✓ Earned'; el.classList.add('done'); }
+  else el.textContent = `${state.streaks[rungId]||0}/4`;
+}
+
+function checkLadder() {
+  const allDone = RUNGS.every(r => state.badges[r.id]);
+  document.getElementById('congrats-banner').classList.toggle('show', allDone);
+}
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  if (!confirm('Reset all badges? Your progress will be lost.')) return;
+  state.badges = {}; state.streaks = {}; state.activeRung = null;
+  saveBadges({});
+  buildRail();
+});
+
+buildRail();
+</script>
+</body>
+</html>
