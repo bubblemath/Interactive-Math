@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -379,13 +378,29 @@ function copyPrompt(){
 }
 function loadPaste(){
   var el=document.getElementById("jp");if(!el||!el.value.trim()){alert("Please paste the JSON first.");return;}
+  var raw=el.value.trim().replace(/```json|```/g,"").trim();
+  var opener="",quickhit="";
   try{
-    var raw=el.value.trim().replace(/```json|```/g,"").trim();
-    var parsed=JSON.parse(raw);
-    if(!parsed.opener){alert("No opener found in the JSON. Please copy Claude's full response and try again.");return;}
-    S.opener=parsed.opener||"";S.quickhit=parsed.quickhit||"";
-    S.waiting=false;go(5);
-  }catch(e){alert("Could not read the JSON. Make sure you copied the full response from { to }.");}
+    var normalized=raw
+      .replace(/[‘’]/g,"'")
+      .replace(/[“”]/g,'"')
+      .replace(/[–—]/g,"-")
+      .replace(/…/g,"...")
+      .replace(/°/g," degrees")
+      .replace(/ /g," ");
+    var parsed=JSON.parse(normalized);
+    opener=parsed.opener||"";
+    quickhit=parsed.quickhit||"";
+  }catch(e){
+    // Fallback: extract with regex so special chars never block parsing
+    var opM=raw.match(/"opener"\s*:\s*"([\s\S]*?)(?<!\\)"\s*[,}]/);
+    var qhM=raw.match(/"quickhit"\s*:\s*"([\s\S]*?)(?<!\\)"\s*[}]/);
+    if(opM){opener=opM[1].replace(/\\n/g,"\n").replace(/\\"/g,'"').replace(/\\\\/g,"\\");}
+    if(qhM){quickhit=qhM[1].replace(/\\n/g,"\n").replace(/\\"/g,'"').replace(/\\\\/g,"\\");}
+  }
+  if(!opener){alert("Could not find the opener text.\n\nMake sure you copied Claude's full response (from { to }).");return;}
+  S.opener=opener;S.quickhit=quickhit;
+  S.waiting=false;go(5);
 }
 
 /* ── Step 5: Review ── */
