@@ -1,0 +1,472 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Weekly Announcement Builder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: two-pane workbench — controls on the left, live plain-text post on the right (stacks on phones) */
+:root{
+  --bg:#f3f5f2; --panel:#ffffff; --ink:#1d2622; --muted:#5d6a63; --line:#d9e0db;
+  --accent:#1f6b52; --accent-ink:#ffffff; --accent-soft:#e2efe9; --hi:#f2c14e; --hi-soft:#fdf3d6;
+  --danger:#a2382b;
+  --display:"Zilla Slab", Georgia, "Times New Roman", serif;
+  --body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a17; --panel:#1c2420; --ink:#e6ece8; --muted:#9aa8a0; --line:#2f3a34;
+  --accent:#5cc49c; --accent-ink:#0f1a15; --accent-soft:#1f3329; --hi:#f2c14e; --hi-soft:#3a3220; --danger:#ff8f80; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a17; --panel:#1c2420; --ink:#e6ece8; --muted:#9aa8a0; --line:#2f3a34;
+  --accent:#5cc49c; --accent-ink:#0f1a15; --accent-soft:#1f3329; --hi:#f2c14e; --hi-soft:#3a3220; --danger:#ff8f80; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header h1{font-family:var(--display);font-weight:700;font-size:clamp(1.6rem,3.2vw,2.2rem);margin:0;line-height:1.1;text-wrap:balance}
+header p{margin:4px 0 0;color:var(--muted);max-width:62ch}
+.grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+h2{font-family:var(--display);font-weight:700;font-size:1.15rem;margin:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+h2 .step{font-family:var(--body);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.hint{color:var(--muted);font-size:.85rem;margin:0}
+label{font-weight:600;font-size:.85rem}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,.chip:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.field{display:flex;flex-direction:column;gap:4px}
+/* week picker */
+.weeks{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+@media (max-width:460px){.weeks{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.weeks button{font:inherit;font-weight:700;font-variant-numeric:tabular-nums;padding:8px 0;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);cursor:pointer}
+.weeks button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+/* lesson chips */
+.course-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.course-head h3{margin:0;font-size:.95rem}
+.course-head .tag{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.unit-label{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px}
+.chip{display:flex;gap:8px;align-items:flex-start;padding:7px 9px;border:1px solid var(--line);border-radius:6px;cursor:pointer;font-weight:500;font-size:.86rem;line-height:1.3;background:var(--bg)}
+.chip input{margin-top:2px;accent-color:var(--accent)}
+.chip:has(input:checked){background:var(--hi-soft);border-color:var(--hi)}
+.chip .code{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.linkbtn{font:inherit;font-size:.8rem;background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font-weight:600}
+/* deadlines */
+.dl-list{display:flex;flex-direction:column;gap:8px}
+.dl{display:grid;grid-template-columns:90px minmax(0,1.4fr) minmax(0,1fr) 140px 108px 30px;gap:6px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.dl input,.dl select{background:var(--panel);width:100%}
+.dl .custom{grid-column:2 / 4}
+@media (max-width:700px){.dl{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} .dl .custom{grid-column:1 / -1} .dl .x{justify-self:end}}
+.x{font:inherit;border:0;background:none;color:var(--danger);font-size:1.2rem;cursor:pointer;line-height:1}
+.empty{color:var(--muted);font-size:.88rem;padding:10px;border:1px dashed var(--line);border-radius:8px;margin:0}
+button.btn{font:inherit;font-weight:600;padding:8px 13px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.toggles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px 14px}
+.toggles label{display:flex;gap:8px;align-items:center;font-weight:500}
+.toggles input{accent-color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:.85rem;font-weight:600;padding:7px 11px;border:0;background:var(--bg);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+/* output */
+.out-col{position:sticky;top:max(12px,env(safe-area-inset-top,0px))}
+@media (max-width:860px){.out-col{position:static}}
+.post{display:flex;flex-direction:column;gap:8px}
+.post-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.post-head strong{font-family:var(--display);font-size:1.05rem}
+.post textarea{width:100%;min-height:340px;resize:vertical;background:var(--panel);border:1px solid var(--line);font-size:.92rem;line-height:1.55;white-space:pre-wrap}
+.meta{font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.toast{font-size:.82rem;font-weight:600;color:var(--accent);min-height:1.2em}
+.example{font-size:.78rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--hi-soft);color:var(--ink);border:1px solid var(--hi);border-radius:4px;padding:1px 6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Weekly Announcement Builder</h1>
+    <p>Pick the week, check this week's lessons, add due dates, then copy the plain-text post straight into a Blackboard Ultra announcement. <span class="example" id="exampleFlag">Example week loaded</span></p>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="card">
+        <h2><span class="step">Step 1</span>Week</h2>
+        <div class="weeks" id="weeks" role="group" aria-label="Week number"></div>
+      </section>
+
+      <section class="card">
+        <h2><span class="step">Step 2</span>This week's lessons</h2>
+        <div class="course-head"><h3>Math 0332</h3><span><button class="linkbtn" data-clear="0332" type="button">Clear</button></span></div>
+        <div id="lessons0332"></div>
+        <div class="course-head" style="margin-top:6px"><h3>Math 1332</h3><span><button class="linkbtn" data-clear="1332" type="button">Clear</button></span></div>
+        <div class="chips" id="lessons1332"></div>
+      </section>
+
+      <section class="card">
+        <h2><span class="step">Step 3</span>Deadlines</h2>
+        <p class="hint">Lessons and exams with a date and time. They are listed in date order in the post.</p>
+        <div class="dl-list" id="dlList"></div>
+        <div class="row">
+          <button class="btn" id="addDl" type="button">Add deadline</button>
+          <button class="btn" id="addFromLessons" type="button">Add one for each checked lesson</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><span class="step">Step 4</span>What goes in the post</h2>
+        <div class="row">
+          <span class="seg" role="group" aria-label="Post layout">
+            <button type="button" data-mode="separate" aria-pressed="true">One post per course</button>
+            <button type="button" data-mode="combined" aria-pressed="false">One combined post</button>
+          </span>
+        </div>
+        <div class="toggles">
+          <label><input type="checkbox" id="tWhy" checked> Why it matters</label>
+          <label><input type="checkbox" id="tTip" checked> Study tip</label>
+          <label><input type="checkbox" id="tFun" checked> Just for fun (joke)</label>
+          <label><input type="checkbox" id="tDl" checked> Deadlines</label>
+          <label><input type="checkbox" id="tEmoji"> Emoji on headings</label>
+        </div>
+        <div class="field">
+          <label for="note">Extra note (optional)</label>
+          <textarea id="note" rows="2" placeholder="e.g. Office hours move to Thursday 2–3 PM this week."></textarea>
+        </div>
+        <div class="row">
+          <div class="field" style="flex:1 1 200px"><label for="sig">Sign-off name</label><input id="sig" value="Professor Sallay"></div>
+          <div class="field" style="flex:1 1 200px"><label for="closing">Closing line</label><input id="closing" value="Have a great week,"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="col out-col">
+      <section class="card">
+        <div class="post-head">
+          <h2><span class="step">Step 5</span>Copy &amp; post</h2>
+          <button class="btn" id="vary" type="button">New wording</button>
+        </div>
+        <div id="posts"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Course content (from the 0332 Unit A/B and 1332 lesson notes) ---------- */
+const C0332 = [
+ {id:"A1",unit:"A",t:"Number Systems and Integers",
+  why:"Integers are how we track bank balances, temperatures below zero, and yards gained or lost on a football field.",
+  tip:"Say the sign rule out loud as you work: \"same signs add, different signs subtract and keep the bigger sign.\"",
+  fun:"I was going to tell a joke about negative numbers, but I decided to stay positive."},
+ {id:"A2",unit:"A",t:"Fractions",
+  why:"Fractions show up in recipes, medication doses, and every tape measure on a job site.",
+  tip:"Reduce before you multiply. Smaller numbers mean fewer arithmetic mistakes.",
+  fun:"What did the numerator say to the denominator? \"Quit looking down on me.\""},
+ {id:"A3",unit:"A",t:"Integer Exponents & Order of Operations",
+  why:"Calculators and spreadsheets follow the exact same order of operations, so knowing it tells you whether a computer's answer makes sense.",
+  tip:"Write one step per line. Skipping steps is where order-of-operations errors hide.",
+  fun:"Aunt Sally would like everyone to stop asking her to excuse them."},
+ {id:"A4",unit:"A",t:"Properties & Simplifying Expressions",
+  why:"Simplifying an expression is the math version of cleaning up a messy to-do list: same content, much easier to use.",
+  tip:"Mark like terms with the same color or shape before combining them.",
+  fun:"Like terms are a very exclusive club. Same variable, same exponent, or you're not getting in."},
+ {id:"A5",unit:"A",t:"Radicals",
+  why:"Square roots are behind distance formulas, screen sizes, and the Pythagorean theorem builders use to square a corner.",
+  tip:"Make flashcards for perfect squares through 25² and perfect cubes through 5³. Recognizing them on sight makes simplifying fast.",
+  fun:"Radicals are the only place where finding a partner gets you kicked out."},
+ {id:"B1",unit:"B",t:"Solving Linear Equations",
+  why:"Solving for x is how you figure out the hours you need to work, or the score you need on the final.",
+  tip:"Check your answer by plugging it back into the original equation. It takes thirty seconds and catches most errors.",
+  fun:"Dear Algebra, please stop asking us to find your x. She's not coming back."},
+ {id:"B2",unit:"B",t:"Linear Inequalities",
+  why:"Inequalities describe limits like \"spend at most $50\" or \"need at least 70 to pass.\"",
+  tip:"Put a sticky note on your page: multiply or divide by a negative, flip the sign.",
+  fun:"Inequalities are a lot like moods: one negative and everything flips."},
+ {id:"B3",unit:"B",t:"Linear Equations Lesson 1",
+  why:"The coordinate plane is the grid behind maps, GPS, and every trend line you see in the news.",
+  tip:"Label your axes and plot points with a ruler. Neat graphs are easier to read and easier to check.",
+  fun:"Slope is like motivation: positive, negative, zero, or undefined during finals week."},
+ {id:"B4",unit:"B",t:"Linear Equations Lesson 2",
+  why:"y = mx + b models phone plans, ride-share fares, and hourly pay with a flat fee.",
+  tip:"Before graphing, write down m and b on their own line. Start at b, then use m to rise and run.",
+  fun:"Why did the line break up with the parabola? It wanted a more straightforward relationship."},
+ {id:"B5",unit:"B",t:"Ratios, Rates, Proportions & Percentages",
+  why:"Unit prices at the grocery store, medication conversions, and sale discounts all come down to ratios and percents.",
+  tip:"Keep units on every number in a proportion. If the units don't line up across the equals sign, the setup is wrong.",
+  fun:"My math teacher called me average. That was mean."}
+];
+const EX0332 = ["Exam A","Exam B","Final Exam"];
+
+const C1332 = [
+ ["Estimation & Interpreting Graphs","Estimating lets you check a restaurant bill or a budget in your head before you trust the total.","Round first, compute second. Then compare your estimate to the exact answer as a sanity check.","Estimation: because \"about a bazillion\" is not a real answer."],
+ ["Sets & Subsets","Sets are how databases, playlists, and search filters group things.","Know the difference between ∈ (an element in a set) and ⊆ (a set inside a set). Make a two-column cheat sheet.","Why was the empty set so calm? Nothing bothered it."],
+ ["Venn Diagrams & Set Operations","Venn diagrams sort overlapping groups, like customers who bought product A, product B, or both.","Shade the regions on a sketch for every union, intersection, and complement before writing the answer.","Union and intersection walk into a bar. Union says, \"I'll have everything.\" Intersection says, \"Just what we have in common.\""],
+ ["Set Operations with Three Sets","Three-set diagrams are how marketing teams and researchers find exactly who fits all the criteria.","Number the eight regions the same way every time so you never lose track.","Three circles walk into a Venn diagram. It got complicated."],
+ ["Surveys","Survey analysis is how pollsters, health departments, and businesses turn responses into decisions.","Always fill in the center region first and work outward.","A survey found that 4 out of 3 people struggle with fractions."],
+ ["Logic Statements","Logic helps you spot when an ad, a headline, or an argument says more than it actually proves.","Practice negating \"all\" and \"some\" statements until it feels automatic. These are the most common exam traps.","All logic jokes are funny. Some logic jokes are not funny. At least one of those statements is false."],
+ ["Compound Statements","Compound statements are the if-then rules behind contracts, policies, and computer code.","Underline the connective words (and, or, if…then) before you translate to symbols.","If you study, then you pass. Contrapositive: if you didn't pass… well, you know."],
+ ["Truth Tables","Truth tables are how computer engineers design the circuits inside every device you own.","Set up the T/F columns in the standard order every time so your tables match the key.","Truth tables never lie. It's literally their whole job."],
+ ["Equivalent Statements, Variations & De Morgan's Laws","Knowing which statements really mean the same thing keeps you from being misled by reworded claims.","Remember: the conditional and the contrapositive are twins. The converse and the inverse are twins.","De Morgan walks into a bar. The bartender asks, \"Not food and drink?\" He says, \"Not food or not drink.\""],
+ ["Arguments","Recognizing valid and invalid arguments is a life skill for debates, jury duty, and social media.","Memorize the four valid forms. If an argument matches one, you can skip the truth table.","I tried to win an argument with a truth table. Now nobody will argue with me."],
+ ["Percent, Sales Tax & Discounts","Percents decide what you actually pay at checkout, from sales tax to \"30% off\" sale tags.","For percent change, always divide by the original amount, not the new one.","Never trust a shopper who says they saved 110%."],
+ ["Income Tax","Understanding taxable income, deductions, and credits can put real money back in your pocket each spring.","Write the three-step process (AGI, taxable income, tax) at the top of every problem.","The hardest thing in the world to understand is the income tax. (Einstein reportedly said that, so you're in good company.)"],
+ ["Simple Interest","Simple interest shows up in short-term loans, CDs, and paying back a friend.","Convert months to years (divide by 12) before plugging into I = Prt.","Interest: the only thing that grows while you're not paying attention."],
+ ["Compound Interest","Compound interest is why starting to save early beats saving more later, and why credit card balances grow so fast.","Write n next to the word in the problem: annually 1, quarterly 4, monthly 12.","Compound interest is the eighth wonder of the world. Credit card companies agree."],
+ ["Annuities, Saving & Investment","Annuities are how retirement accounts and college funds grow from small regular deposits.","Use parentheses generously on your calculator. One missing parenthesis changes the whole answer.","I put $1 a month in an annuity. In 40 years I'll be able to afford a coffee."],
+ ["Cars & Home Ownership","Car loans and mortgages are the biggest purchases most people make, and the math decides how much interest you pay.","Compare total interest, not just the monthly payment. A lower payment can cost far more overall.","My car loan and I have a lot in common. We're both stuck together for 72 months."],
+ ["Fundamental Counting Principle & Permutations","Counting tells you how many passwords, license plates, or outfit combinations are possible.","Ask \"does order matter?\" first. If yes, it's a permutation.","I counted all the ways to arrange my socks. Then I just wore mismatched ones."],
+ ["Combinations","Combinations count committees, lottery tickets, and pizza toppings where order doesn't matter.","Order matters: permutation. Order doesn't: combination. Write that at the top of your notes.","A combination lock should really be called a permutation lock. Order matters."],
+ ["Fundamentals of Probability","Probability is behind weather forecasts, insurance rates, and medical test results.","Always find n(S) first. Every probability starts with knowing the total number of outcomes.","I'm 50% sure probability is easy. The other 50% is still thinking."],
+ ["Probability with Not, Or, And & Conditional Probability","Conditional probability is how doctors interpret test results and how streaming services make recommendations.","For \"at least one\" problems, use 1 − P(none). It's almost always faster.","What's the probability of a statistics joke being funny, given that it's a statistics joke?"],
+ ["Sampling, Frequency Distributions & Graphs","Knowing how data is sampled and graphed helps you spot misleading charts in ads and news.","Run every graph through the six checks: title, vertical axis, design, horizontal axis, bar sizes, source.","A statistician drowned crossing a river that was 3 feet deep on average."],
+ ["Measures of Central Tendency & Dispersion","Mean, median, and standard deviation describe everything from salaries to test scores to game stats.","Sort the data before finding the median. Unsorted data is the most common median mistake.","Why did the standard deviation break up with the mean? Too much distance."]
+].map((a,i)=>({id:String(i+1),t:a[0],why:a[1],tip:a[2],fun:a[3]}));
+const EX1332 = ["Exam 1","Exam 2","Exam 3","Exam 4","Final Exam"];
+
+const COURSES = {
+  "0332":{name:"Math 0332",lessons:C0332,exams:EX0332,label:l=>"Lesson "+l.id},
+  "1332":{name:"Math 1332",lessons:C1332,exams:EX1332,label:l=>"Lesson "+l.id}
+};
+
+/* Rotating wording so posts don't read the same every week */
+const OPENERS = [
+  w=>`Welcome to Week ${w}! Here is what we are working on this week.`,
+  w=>`Happy Week ${w}, everyone. Here's the plan for the next few days.`,
+  w=>`We made it to Week ${w}. Here's what's on deck.`,
+  w=>`Week ${w} is here. Let's take a quick look at what's coming up.`
+];
+
+/* ---------- State ---------- */
+const today = new Date();
+const iso = d => d.toISOString().slice(0,10);
+const plus = n => { const d = new Date(today); d.setDate(d.getDate()+n); return iso(d); };
+let uid = 0;
+const state = {
+  week: 10, mode: "separate", variant: 0,
+  sel: {"0332": new Set(["B3","B4"]), "1332": new Set(["15","16"])},
+  deadlines: [
+    {id:++uid, course:"1332", item:"L:15", custom:"", what:"Homework", date:plus(4), time:"23:59"},
+    {id:++uid, course:"0332", item:"L:B3", custom:"", what:"Homework", date:plus(4), time:"23:59"},
+    {id:++uid, course:"0332", item:"E:Exam B", custom:"", what:"Exam closes", date:plus(12), time:"23:59"}
+  ],
+  example: true
+};
+
+/* Remember sign-off details between visits (this browser only) */
+try {
+  const s = JSON.parse(localStorage.getItem("annb-prefs") || "{}");
+  if (s.sig) document.getElementById("sig").value = s.sig;
+  if (s.closing) document.getElementById("closing").value = s.closing;
+} catch(e) {}
+function savePrefs(){ try { localStorage.setItem("annb-prefs", JSON.stringify({sig:sig.value, closing:closing.value})); } catch(e) {} }
+
+/* ---------- Helpers ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function fmtDate(d, t){
+  if (!d) return "";
+  const [y,m,dd] = d.split("-").map(Number);
+  const dt = new Date(y, m-1, dd);
+  let s = dt.toLocaleDateString("en-US",{weekday:"short", month:"short", day:"numeric"});
+  if (t){
+    let [h,mi] = t.split(":").map(Number);
+    const ap = h >= 12 ? "PM" : "AM"; h = h % 12 || 12;
+    s += ` at ${h}:${String(mi).padStart(2,"0")} ${ap}`;
+  }
+  return s;
+}
+function itemName(dl){
+  const c = COURSES[dl.course];
+  if (dl.item === "custom") return dl.custom.trim() || "Assignment";
+  const [k,v] = dl.item.split(":");
+  if (k === "E") return v;
+  const l = c.lessons.find(x => x.id === v);
+  return l ? `${c.label(l)}: ${l.t}` : v;
+}
+function markEdited(){ if (state.example){ state.example = false; $("exampleFlag").hidden = true; } }
+
+/* ---------- Build controls ---------- */
+function buildWeeks(){
+  const w = $("weeks"); w.innerHTML = "";
+  for (let i=1;i<=16;i++){
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = i; b.setAttribute("aria-pressed", i===state.week);
+    b.onclick = () => { state.week = i; markEdited(); buildWeeks(); render(); };
+    w.appendChild(b);
+  }
+}
+function chip(course, l){
+  const c = COURSES[course];
+  const id = `chk-${course}-${l.id}`;
+  return `<label class="chip" for="${id}"><input type="checkbox" id="${id}" data-course="${course}" data-lesson="${l.id}" ${state.sel[course].has(l.id)?"checked":""}>
+    <span><span class="code">${course==="0332"?l.id:"L"+l.id}</span> ${esc(l.t)}</span></label>`;
+}
+function buildLessons(){
+  $("lessons0332").innerHTML = ["A","B"].map(u =>
+    `<div class="unit-label">Unit ${u}</div><div class="chips">${C0332.filter(l=>l.unit===u).map(l=>chip("0332",l)).join("")}</div>`).join("");
+  $("lessons1332").innerHTML = C1332.map(l=>chip("1332",l)).join("");
+  document.querySelectorAll("[data-lesson]").forEach(cb => cb.onchange = () => {
+    const s = state.sel[cb.dataset.course];
+    cb.checked ? s.add(cb.dataset.lesson) : s.delete(cb.dataset.lesson);
+    markEdited(); render();
+  });
+}
+function itemOptions(course, cur){
+  const c = COURSES[course];
+  return `<optgroup label="Lessons">${c.lessons.map(l=>`<option value="L:${l.id}" ${cur==="L:"+l.id?"selected":""}>${c.label(l)}: ${esc(l.t)}</option>`).join("")}</optgroup>
+    <optgroup label="Exams">${c.exams.map(e=>`<option value="E:${e}" ${cur==="E:"+e?"selected":""}>${e}</option>`).join("")}</optgroup>
+    <option value="custom" ${cur==="custom"?"selected":""}>Other (type it in)…</option>`;
+}
+function buildDeadlines(){
+  const list = $("dlList");
+  if (!state.deadlines.length){ list.innerHTML = `<p class="empty">No deadlines yet. Use “Add deadline” to list a lesson or exam due date.</p>`; return; }
+  list.innerHTML = state.deadlines.map(d => `
+    <div class="dl" data-id="${d.id}">
+      <select id="dc-${d.id}" data-f="course" aria-label="Course">
+        <option value="0332" ${d.course==="0332"?"selected":""}>0332</option>
+        <option value="1332" ${d.course==="1332"?"selected":""}>1332</option>
+      </select>
+      <select id="di-${d.id}" data-f="item" aria-label="Lesson or exam">${itemOptions(d.course, d.item)}</select>
+      <input id="dw-${d.id}" data-f="what" value="${esc(d.what)}" aria-label="What is due" placeholder="Homework, Quiz…" list="whatList">
+      <input id="dd-${d.id}" data-f="date" type="date" value="${d.date}" aria-label="Due date">
+      <input id="dt-${d.id}" data-f="time" type="time" value="${d.time}" aria-label="Due time">
+      <button class="x" type="button" data-del="${d.id}" aria-label="Remove deadline">×</button>
+      ${d.item==="custom" ? `<input class="custom" id="dx-${d.id}" data-f="custom" value="${esc(d.custom)}" placeholder="Name of the item, e.g. Unit A Review" aria-label="Custom item name">` : ""}
+    </div>`).join("") + `<datalist id="whatList"><option value="Homework"><option value="Quiz"><option value="Homework & Quiz"><option value="Exam opens"><option value="Exam closes"><option value="Review due"></datalist>`;
+  list.querySelectorAll(".dl").forEach(row => {
+    const d = state.deadlines.find(x => x.id == row.dataset.id);
+    row.querySelectorAll("[data-f]").forEach(el => {
+      el.oninput = el.onchange = () => {
+        const f = el.dataset.f; d[f] = el.value; markEdited();
+        if (f === "course"){ d.item = "L:" + COURSES[d.course].lessons[0].id; buildDeadlines(); }
+        if (f === "item"){
+          if (d.item.startsWith("E:") && /homework/i.test(d.what)) d.what = "Exam closes";
+          if (d.item.startsWith("L:") && /exam/i.test(d.what)) d.what = "Homework";
+          buildDeadlines();
+        }
+        render();
+      };
+    });
+  });
+  list.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    state.deadlines = state.deadlines.filter(x => x.id != b.dataset.del); markEdited(); buildDeadlines(); render();
+  });
+}
+
+/* ---------- Generate the plain-text post ---------- */
+function heading(txt, emoji){ return ($("tEmoji").checked ? emoji + " " : "") + txt.toUpperCase(); }
+function lessonsFor(course){ return COURSES[course].lessons.filter(l => state.sel[course].has(l.id)); }
+function deadlinesFor(courses){
+  return state.deadlines.filter(d => courses.includes(d.course))
+    .slice().sort((a,b) => (a.date||"9999").localeCompare(b.date||"9999") || (a.time||"").localeCompare(b.time||""));
+}
+function dlLine(d, showCourse){
+  const when = fmtDate(d.date, d.time);
+  const what = d.what.trim() ? ` ${d.what.trim()}` : "";
+  return `• ${showCourse ? COURSES[d.course].name + " " : ""}${itemName(d)}${what ? " –" + what : ""}${when ? ": " + when : ""}`;
+}
+function pick(arr, k){ return arr.length ? arr[(state.variant + k) % arr.length] : null; }
+
+function buildPost(courses){
+  const v = state.variant, w = state.week;
+  const combined = courses.length > 1;
+  const title = combined ? `Week ${w} Announcement – Math 0332 & Math 1332` : `Week ${w} Announcement – ${COURSES[courses[0]].name}`;
+  const lines = [title, "", "Hello everyone,", "", OPENERS[v % OPENERS.length](w), ""];
+  const allLessons = [];
+
+  lines.push(heading("This week's lessons","📘"));
+  courses.forEach(c => {
+    const ls = lessonsFor(c);
+    if (combined) lines.push(COURSES[c].name);
+    if (!ls.length) lines.push("• No new lessons this week. Use the time to review and catch up.");
+    ls.forEach(l => { lines.push(`• ${COURSES[c].label(l)}: ${l.t}`); allLessons.push(l); });
+    if (combined) lines.push("");
+  });
+  if (!combined) lines.push("");
+
+  if ($("tWhy").checked && allLessons.length){
+    lines.push(heading("Why it matters","🌎"));
+    allLessons.forEach(l => lines.push(l.why));
+    lines.push("");
+  }
+  if ($("tDl").checked){
+    const ds = deadlinesFor(courses);
+    if (ds.length){
+      lines.push(heading("Upcoming deadlines","📅"));
+      ds.forEach(d => lines.push(dlLine(d, combined)));
+      lines.push("");
+    }
+  }
+  if ($("tTip").checked && allLessons.length){
+    lines.push(heading("Study tip","💡"));
+    lines.push(pick(allLessons, 0).tip);
+    lines.push("");
+  }
+  const note = $("note").value.trim();
+  if (note){ lines.push(heading("Please note","📌")); lines.push(note); lines.push(""); }
+  if ($("tFun").checked && allLessons.length){
+    lines.push(heading("Just for fun","😄"));
+    lines.push(pick(allLessons, 1).fun);
+    lines.push("");
+  }
+  lines.push($("closing").value.trim() || "Have a great week,");
+  lines.push($("sig").value.trim());
+  return {title, text: lines.join("\n").replace(/\n{3,}/g, "\n\n").trim()};
+}
+
+function render(){
+  const active = ["0332","1332"].filter(c => state.sel[c].size || state.deadlines.some(d => d.course === c));
+  const host = $("posts");
+  if (!active.length){
+    host.innerHTML = `<p class="empty">Check at least one lesson or add a deadline, and the announcement appears here.</p>`;
+    return;
+  }
+  const groups = state.mode === "combined" ? [active] : active.map(c => [c]);
+  host.innerHTML = groups.map((g,i) => {
+    const p = buildPost(g);
+    return `<div class="post" style="${i?'margin-top:14px':''}">
+      <div class="post-head"><strong>${g.length>1?"Combined post":COURSES[g[0]].name}</strong>
+        <span class="row"><span class="toast" id="toast-${i}" aria-live="polite"></span><button class="btn primary" type="button" data-copy="${i}">Copy text</button></span></div>
+      <textarea id="out-${i}" readonly aria-label="Announcement text for ${esc(p.title)}">${esc(p.text)}</textarea>
+      <div class="meta">${p.text.split("\n").length} lines · ${p.text.length} characters · plain text, no HTML</div>
+    </div>`;
+  }).join("");
+  host.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copyOut(b.dataset.copy));
+}
+
+function copyOut(i){
+  const ta = $("out-"+i), t = $("toast-"+i);
+  const done = msg => { t.textContent = msg; setTimeout(() => t.textContent = "", 2500); };
+  const fallback = () => { ta.focus(); ta.select(); done("Selected. Press Ctrl+C (⌘C on Mac)."); };
+  try {
+    navigator.clipboard.writeText(ta.value).then(() => done("Copied"), fallback);
+  } catch(e) { fallback(); }
+}
+
+/* ---------- Wire up ---------- */
+document.querySelectorAll("[data-clear]").forEach(b => b.onclick = () => { state.sel[b.dataset.clear].clear(); markEdited(); buildLessons(); render(); });
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
+  state.mode = b.dataset.mode;
+  document.querySelectorAll("[data-mode]").forEach(x => x.setAttribute("aria-pressed", x === b));
+  render();
+});
+$("addDl").onclick = () => {
+  const course = state.sel["1332"].size && !state.sel["0332"].size ? "1332" : "0332";
+  state.deadlines.push({id:++uid, course, item:"L:"+COURSES[course].lessons[0].id, custom:"", what:"Homework", date:"", time:"23:59"});
+  markEdited(); buildDeadlines(); render();
+};
+$("addFromLessons").onclick = () => {
+  ["0332","1332"].forEach(c => lessonsFor(c).forEach(l => {
+    if (!state.deadlines.some(d => d.course === c && d.item === "L:"+l.id))
+      state.deadlines.push({id:++uid, course:c, item:"L:"+l.id, custom:"", what:"Homework", date:"", time:"23:59"});
+  }));
+  markEdited(); buildDeadlines(); render();
+};
+$("vary").onclick = () => { state.variant++; render(); };
+["tWhy","tTip","tFun","tDl","tEmoji","note"].forEach(id => $(id).addEventListener("input", render));
+["sig","closing"].forEach(id => $(id).addEventListener("input", () => { savePrefs(); render(); }));
+
+buildWeeks(); buildLessons(); buildDeadlines(); render();
+</script>
+
+</body></html>
