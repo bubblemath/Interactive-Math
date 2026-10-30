@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill 5.2 Shifting Graphs</title>
+<style>
+/* ===== Color tokens: light by default, dark when the device asks for it ===== */
+:root {
+  --bg: #f7f8fa; --panel: #ffffff; --ink: #1b1f24; --muted: #555d68; --line: #d5dae1;
+  --accent: #1f4e79; --accent-ink: #ffffff; --accent-soft: #e6eef7;
+  --curve: #1f4e79; --curve2: #b4461f; --grid: #e3e6ea; --axis: #222;
+  --dom: rgba(31, 78, 121, .18); --rng: rgba(180, 70, 31, .18); --asym: #8a1c1c;
+  --ok: #1d6b35; --ok-soft: #e4f3e8; --bad: #9b1c1c; --bad-soft: #fbe9e9; --hint-soft: #fff6dd;
+  --focus: #f0b400;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171b; --panel: #1d2127; --ink: #e9ecf0; --muted: #a7b0bb; --line: #343a43;
+    --accent: #7db3e8; --accent-ink: #0d1a26; --accent-soft: #1f2e3d;
+    --curve: #7db3e8; --curve2: #f0a07c; --grid: #2a3038; --axis: #cfd5dc;
+    --dom: rgba(125, 179, 232, .22); --rng: rgba(240, 160, 124, .22); --asym: #ff8f8f;
+    --ok: #7fd49a; --ok-soft: #1c3324; --bad: #ff9a9a; --bad-soft: #3a1f1f; --hint-soft: #3a3320;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171b; --panel: #1d2127; --ink: #e9ecf0; --muted: #a7b0bb; --line: #343a43;
+  --accent: #7db3e8; --accent-ink: #0d1a26; --accent-soft: #1f2e3d;
+  --curve: #7db3e8; --curve2: #f0a07c; --grid: #2a3038; --axis: #cfd5dc;
+  --dom: rgba(125, 179, 232, .22); --rng: rgba(240, 160, 124, .22); --asym: #ff8f8f;
+  --ok: #7fd49a; --ok-soft: #1c3324; --bad: #ff9a9a; --bad-soft: #3a1f1f; --hint-soft: #3a3320;
+}
+
+/* ===== Page layout ===== */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+a { color: var(--accent); }
+.skip { position: absolute; left: -9999px; }
+.skip:focus { left: 16px; top: 8px; background: var(--panel); padding: 8px 12px; z-index: 10; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+header.top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+header.top .crumb { font-size: 15px; color: var(--muted); }
+h1 { font-size: 28px; margin: 4px 0 4px; line-height: 1.2; }
+h2 { font-size: 21px; margin: 0 0 10px; }
+h3 { font-size: 18px; margin: 18px 0 8px; }
+.objective { background: var(--accent-soft); border-left: 5px solid var(--accent); padding: 10px 14px; border-radius: 6px; margin: 10px 0 16px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.muted { color: var(--muted); }
+button, select { font: inherit; }
+.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+.btn.secondary { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* ===== Tabs ===== */
+[role="tablist"] { display: flex; gap: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; overflow-x: auto; }
+[role="tab"] { background: none; border: 0; border-bottom: 4px solid transparent; padding: 10px 16px; font-weight: 600;
+  color: var(--muted); cursor: pointer; margin-bottom: -2px; white-space: nowrap; }
+[role="tab"][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* ===== Explore ===== */
+.explore { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 820px) { .explore { grid-template-columns: 1fr; } }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.gallery button { background: var(--panel); border: 2px solid var(--line); border-radius: 8px; padding: 4px 4px 6px; cursor: pointer;
+  color: var(--ink); font-size: 13px; line-height: 1.25; }
+.gallery button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.gallery svg { width: 100%; height: auto; display: block; }
+.graph { width: 100%; height: auto; display: block; background: var(--panel); border-radius: 8px; }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0; }
+.toggles label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.toggles input { width: 18px; height: 18px; accent-color: var(--accent); }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; }
+.facts dt { font-weight: 600; color: var(--muted); }
+.facts dd { margin: 0; }
+.eq { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; color: var(--muted); margin-top: 4px; }
+.swatch { display: inline-block; width: 26px; height: 0; border-top: 3px solid var(--curve); vertical-align: middle; margin-right: 6px; }
+.swatch.second { border-top: 3px dashed var(--curve2); }
+.swatch.band { height: 12px; border: 0; }
+details { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 8px 0; background: var(--panel); }
+summary { cursor: pointer; font-weight: 600; }
+.desc { font-size: 15px; color: var(--muted); margin-top: 8px; }
+
+/* ===== Examples & practice ===== */
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.two.solo { grid-template-columns: minmax(0, 640px); }
+@media (max-width: 820px) { .two { grid-template-columns: 1fr; } }
+ol.steps { padding-left: 22px; }
+ol.steps li { margin: 8px 0; padding: 8px 10px; background: var(--accent-soft); border-radius: 6px; }
+.prompt { font-size: 19px; font-weight: 600; }
+fieldset { border: 0; padding: 0; margin: 10px 0; }
+legend { font-weight: 600; margin-bottom: 6px; }
+.choice { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px; margin: 6px 0; cursor: pointer; }
+.choice input { width: 18px; height: 18px; accent-color: var(--accent); }
+.choice.correct { border-color: var(--ok); background: var(--ok-soft); }
+.choice.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.feedback { margin-top: 10px; padding: 10px 12px; border-radius: 8px; }
+.feedback.ok { background: var(--ok-soft); color: var(--ink); border-left: 5px solid var(--ok); }
+.feedback.hint { background: var(--hint-soft); border-left: 5px solid var(--focus); }
+.feedback.bad { background: var(--bad-soft); border-left: 5px solid var(--bad); }
+.progress { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px; }
+.progress span { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700;
+  border: 2px solid var(--line); color: var(--muted); }
+.progress span.cur { border-color: var(--accent); color: var(--ink); }
+.progress span.ok { background: var(--ok); border-color: var(--ok); color: var(--panel); }
+.progress span.miss { background: var(--bad); border-color: var(--bad); color: var(--panel); }
+footer { margin-top: 24px; font-size: 14px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .choice, .gallery button { transition: border-color .15s, background .15s; } }
+/* ===== Added for Skill 5.2 ===== */
+.sliders { display: grid; gap: 10px; margin: 10px 0; }
+.slider { display: grid; grid-template-columns: 7.5em 1fr 3.2em; gap: 10px; align-items: center; }
+.slider input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
+.slider output { font-weight: 700; font-size: 18px; text-align: right; }
+.bigeq { font-size: 24px; font-weight: 700; margin: 6px 0; }
+.rule { background: var(--accent-soft); border-radius: 8px; padding: 8px 12px; font-weight: 600; }
+table.pts { border-collapse: collapse; margin: 8px 0; min-width: 260px; }
+table.pts th, table.pts td { border: 1px solid var(--line); padding: 5px 12px; text-align: left; }
+table.pts th { background: var(--accent-soft); }
+.choices-graph { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.choices-graph .choice { flex-direction: column; align-items: stretch; }
+.choices-graph svg { width: 100%; height: auto; }
+.numrow { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin: 10px 0; font-size: 19px; }
+.numrow input { width: 5.5em; font: inherit; padding: 6px 8px; border: 2px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.challenge { border: 2px dashed var(--accent); border-radius: 10px; padding: 12px; margin-top: 14px; }
+.dirs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+nav.skills { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="crumb"><a href="lesson05-hub.html">Lesson 5: Transformations &amp; Symmetry</a> · Math 2412 Precalculus</div>
+      <h1>Skill 5.2: Shifting Graphs</h1>
+    </div>
+  </header>
+  <p class="objective"><strong>Goal:</strong> graph y = f(x − h) + k by shifting a parent graph, and write the equation of a shifted graph.</p>
+
+  <main id="main">
+    <div role="tablist" aria-label="Skill 5.2 sections">
+      <button role="tab" id="tab-explore" aria-controls="panel-explore" aria-selected="true">Explore</button>
+      <button role="tab" id="tab-examples" aria-controls="panel-examples" aria-selected="false" tabindex="-1">Examples</button>
+      <button role="tab" id="tab-practice" aria-controls="panel-practice" aria-selected="false" tabindex="-1">Practice</button>
+    </div>
+
+    <!-- ================= EXPLORE ================= -->
+    <section role="tabpanel" id="panel-explore" aria-labelledby="tab-explore">
+      <h2>Shift explorer</h2>
+      <p class="muted">Move the sliders and watch every key point travel. The dashed graph is the parent; the solid graph is the shifted function.</p>
+      <div class="explore">
+        <div class="panel">
+          <svg class="graph" id="exploreGraph" viewBox="0 0 440 440" role="img" aria-labelledby="exploreTitle exploreDesc">
+            <title id="exploreTitle">Graph</title><desc id="exploreDesc"></desc>
+          </svg>
+          <div class="toggles" role="group" aria-label="Graph options">
+            <label><input type="checkbox" id="tGhost" checked> Parent graph</label>
+            <label><input type="checkbox" id="tArrows" checked> Point paths</label>
+            <label><input type="checkbox" id="tLabels" checked> Point labels</label>
+          </div>
+          <p class="desc" id="exploreLive" aria-live="polite"></p>
+        </div>
+        <div class="panel">
+          <div class="row"><label for="parentSel"><strong>Parent:</strong></label><select id="parentSel"></select></div>
+          <div class="sliders">
+            <div class="slider"><label for="hS">h (left/right)</label><input type="range" id="hS" min="-5" max="5" step="1" value="0"><output id="hOut" for="hS">0</output></div>
+            <div class="slider"><label for="kS">k (up/down)</label><input type="range" id="kS" min="-5" max="5" step="1" value="0"><output id="kOut" for="kS">0</output></div>
+          </div>
+          <div class="row"><button class="btn secondary" id="reset">Reset to parent</button></div>
+          <p class="bigeq" id="eqLive" aria-live="polite"></p>
+          <p class="rule" id="ruleLive"></p>
+          <table class="pts" id="ptTable"><caption class="muted" style="text-align:left">Key points</caption>
+            <thead><tr><th scope="col">Parent point</th><th scope="col">New point</th></tr></thead><tbody></tbody></table>
+
+          <div class="challenge">
+            <h3 style="margin-top:0">Prediction challenge</h3>
+            <p id="chQ" class="muted">Predict which way a graph moves before you see it.</p>
+            <div class="dirs" id="chDirs" hidden></div>
+            <p id="chFb" aria-live="polite"></p>
+            <button class="btn" id="chNew">Give me a challenge</button>
+          </div>
+        </div>
+      </div>
+      <h3>Questions to explore</h3>
+      <details><summary>Why does f(x − 2) move the graph right, not left?</summary>
+        <p>The new function needs an input 2 larger to produce the same output. For y = (x − 2)², the output 0 now happens at x = 2 instead of x = 0. Every point slides 2 units right to keep its output.</p></details>
+      <details><summary>Move only k. What changes: the domain, the range, or both?</summary>
+        <p>Only the range. Try √x: with k = 3 the range becomes [3, ∞) but the domain stays [0, ∞). Moving only h changes the domain and leaves the range alone.</p></details>
+      <details><summary>Pick 1/x and move both sliders. What happens to the asymptotes?</summary>
+        <p>They move with the graph. The vertical asymptote becomes x = h and the horizontal asymptote becomes y = k, so the "center" of the graph is (h, k).</p></details>
+      <details><summary>Does the order matter? Shift right 3 then up 2, or up 2 then right 3?</summary>
+        <p>No. A horizontal shift changes only x-coordinates and a vertical shift changes only y-coordinates, so either order lands every point in the same place.</p></details>
+      <details><summary>Pick the greatest integer function. Compare h = 1 with k = −1. What do you notice?</summary>
+        <p>They give the same graph: ⟦x − 1⟧ = ⟦x⟧ − 1. Moving a staircase one step right looks exactly like moving it one step down. It is a good reminder to always check with a key point.</p></details>
+    </section>
+
+    <!-- ================= EXAMPLES ================= -->
+    <section role="tabpanel" id="panel-examples" aria-labelledby="tab-examples" hidden>
+      <h2>Worked examples</h2>
+      <p class="muted">Try each step yourself, then reveal it. Press <em>New example</em> as often as you like.</p>
+      <div class="row" role="group" aria-label="Example type" id="exTypes">
+        <button class="btn" data-type="graph" aria-pressed="true">Graph from an equation</button>
+        <button class="btn secondary" data-type="equation" aria-pressed="false">Equation from a graph</button>
+      </div>
+      <div class="two" style="margin-top:14px">
+        <div class="panel" id="exLeft"></div>
+        <div class="panel">
+          <h3 style="margin-top:0">Solution</h3>
+          <ol class="steps" id="exSteps" aria-live="polite"></ol>
+          <div class="row">
+            <button class="btn" id="exNext">Show next step</button>
+            <button class="btn secondary" id="exAll">Show all steps</button>
+            <button class="btn secondary" id="exNew">New example</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PRACTICE ================= -->
+    <section role="tabpanel" id="panel-practice" aria-labelledby="tab-practice" hidden>
+      <h2>Practice</h2>
+      <p class="muted">Eight questions. A wrong answer gives you a hint; a second wrong answer shows the solution.</p>
+      <div class="progress" id="progress" aria-label="Question progress"></div>
+      <div class="two" id="qWrap">
+        <div class="panel" id="qPanel"></div>
+        <div class="panel" id="qVisual"></div>
+      </div>
+    </section>
+  </main>
+  <nav class="skills" aria-label="Other skills in Lesson 5">
+    <a href="lesson05-skill5-1.html">← Skill 5.1: Parent Functions</a>
+    <a href="lesson05-skill5-3.html">Skill 5.3: Stretching, Compressing &amp; Reflecting →</a>
+  </nav>
+  <footer>Math 2412 Precalculus · Lesson 5 Enhancement · Skill 5.2. Works offline. Need more help? Go back to the Skill 5.2 notes or the Lesson 5 Ladder.</footer>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   1. PARENT FUNCTION DATA
+   Every fact the page shows comes from this one table, so adding a
+   parent (or reusing this file for another lesson) means editing data,
+   not drawing code.
+   ===================================================================== */
+const INF = Infinity;
+const PARENTS = {
+  lin:    { name: "Linear", eq: "f(x) = x", f: x => x,
+            kp: [[-1, -1], [0, 0], [1, 1]], win: 6,
+            domain: "(−∞, ∞)", range: "(−∞, ∞)", domIv: [[-INF, INF]], rngIv: [[-INF, INF]],
+            sym: "Odd (symmetric about the origin)", feature: "a straight line through the origin with slope 1",
+            clue: "It is a straight line with no curve, no corner, and no breaks.",
+            opWord: "x is used as it is, with no power or root", core: i => i },
+  sq:     { name: "Quadratic", eq: "f(x) = x²", f: x => x * x,
+            kp: [[-2, 4], [-1, 1], [0, 0], [1, 1], [2, 4]], win: 6,
+            domain: "(−∞, ∞)", range: "[0, ∞)", domIv: [[-INF, INF]], rngIv: [[0, INF, "closed"]],
+            sym: "Even (symmetric about the y-axis)", feature: "a U-shaped parabola with its lowest point at the origin",
+            clue: "It is a U shape that is symmetric about a vertical line, with one lowest (or highest) point.",
+            opWord: "the x-part is squared", core: i => i === "x" ? "x²" : `(${i})²` },
+  sqrt:   { name: "Square root", eq: "f(x) = √x", f: x => x >= 0 ? Math.sqrt(x) : NaN,
+            kp: [[0, 0], [1, 1], [4, 2]], win: 6, pieces: [[0, 6]],
+            domain: "[0, ∞)", range: "[0, ∞)", domIv: [[0, INF, "closed"]], rngIv: [[0, INF, "closed"]],
+            sym: "Neither", feature: "a curve that starts at the origin and rises slowly to the right",
+            clue: "It has a starting point (an endpoint) and goes in only one direction, bending as it goes.",
+            opWord: "the x-part is under a square root", core: i => i === "x" ? "√x" : `√(${i})` },
+  abs:    { name: "Absolute value", eq: "f(x) = |x|", f: x => Math.abs(x),
+            kp: [[-1, 1], [0, 0], [1, 1]], win: 6,
+            domain: "(−∞, ∞)", range: "[0, ∞)", domIv: [[-INF, INF]], rngIv: [[0, INF, "closed"]],
+            sym: "Even (symmetric about the y-axis)", feature: "a V shape with its corner at the origin",
+            clue: "It is a V made of two straight pieces that meet at a sharp corner.",
+            opWord: "the x-part is inside absolute value bars", core: i => `|${i}|` },
+  cube:   { name: "Cubic", eq: "f(x) = x³", f: x => x * x * x,
+            kp: [[-1, -1], [0, 0], [1, 1]], win: 6,
+            domain: "(−∞, ∞)", range: "(−∞, ∞)", domIv: [[-INF, INF]], rngIv: [[-INF, INF]],
+            sym: "Odd (symmetric about the origin)", feature: "an S-shaped curve, flat at the origin, falling on the left and rising on the right",
+            clue: "It is an S shape that flattens out in the middle and gets very steep at both ends.",
+            opWord: "the x-part is cubed", core: i => i === "x" ? "x³" : `(${i})³` },
+  cbrt:   { name: "Cube root", eq: "f(x) = ∛x", f: x => Math.cbrt(x),
+            kp: [[-8, -2], [-1, -1], [0, 0], [1, 1], [8, 2]], win: 9,
+            domain: "(−∞, ∞)", range: "(−∞, ∞)", domIv: [[-INF, INF]], rngIv: [[-INF, INF]],
+            sym: "Odd (symmetric about the origin)", feature: "a sideways S, steep at the origin and flattening out on both sides",
+            clue: "It is a sideways S that is steepest in the middle and flattens out at both ends, and it goes in both directions.",
+            opWord: "the x-part is under a cube root", core: i => i === "x" ? "∛x" : `∛(${i})` },
+  step:   { name: "Greatest integer", eq: "f(x) = ⟦x⟧", f: x => Math.floor(x), isStep: true,
+            kp: [[-1, -1], [0, 0], [1, 1], [2, 2]], win: 6,
+            domain: "(−∞, ∞)", range: "all integers", domIv: [[-INF, INF]], rngIv: "integers",
+            sym: "Neither", feature: "a staircase of flat steps one unit long, closed on the left end and open on the right end",
+            clue: "It is made of flat steps with jumps between them, and each step has a closed dot and an open dot.",
+            opWord: "the x-part is inside greatest integer brackets", core: i => `⟦${i}⟧` },
+  recip:  { name: "Reciprocal", eq: "f(x) = 1/x", f: x => 1 / x,
+            kp: [[-2, -0.5], [-1, -1], [-0.5, -2], [0.5, 2], [1, 1], [2, 0.5]], win: 6, pieces: [[-6, -0.01], [0.01, 6]],
+            domain: "(−∞, 0) ∪ (0, ∞)", range: "(−∞, 0) ∪ (0, ∞)", domIv: [[-INF, 0], [0, INF]], rngIv: [[-INF, 0], [0, INF]],
+            asym: { x: 0, y: 0 },
+            sym: "Odd (symmetric about the origin)", feature: "two separate curves, in quadrants I and III, that approach the axes without touching them",
+            clue: "It has two separate pieces in opposite corners (quadrants I and III) that hug two asymptotes.",
+            opWord: "x is in the denominator, to the first power", core: i => i === "x" ? "1/x" : `1/(${i})` },
+  recip2: { name: "Reciprocal squared", eq: "f(x) = 1/x²", f: x => 1 / (x * x),
+            kp: [[-2, 0.25], [-1, 1], [-0.5, 4], [0.5, 4], [1, 1], [2, 0.25]], win: 6, pieces: [[-6, -0.01], [0.01, 6]],
+            domain: "(−∞, 0) ∪ (0, ∞)", range: "(0, ∞)", domIv: [[-INF, 0], [0, INF]], rngIv: [[0, INF]],
+            asym: { x: 0, y: 0 },
+            sym: "Even (symmetric about the y-axis)", feature: "two separate curves, both above the x-axis, rising steeply near the y-axis",
+            clue: "It has two separate pieces, both above the x-axis (quadrants I and II), that hug two asymptotes.",
+            opWord: "x² is in the denominator", core: i => i === "x" ? "1/x²" : `1/(${i})²` },
+};
+const KEYS = Object.keys(PARENTS);
+
+/* =====================================================================
+   2. SMALL HELPERS
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+// Create an SVG element with attributes in one call.
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+// Show numbers the way they appear in the notes: true minus sign, fractions for halves and quarters.
+function num(v) {
+  const fr = { 0.5: "½", 0.25: "¼", "-0.5": "−½", "-0.25": "−¼" };
+  if (fr[v] !== undefined) return fr[v];
+  return String(v).replace("-", "−");
+}
+const pt = ([x, y]) => `(${num(x)}, ${num(y)})`;
+const rand = n => Math.floor(Math.random() * n);
+const pick = arr => arr[rand(arr.length)];
+// Fisher–Yates shuffle (returns a new array).
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+/* =====================================================================
+   3. SHIFTED-GRAPH DRAWING
+   drawShift(svg, key, o) draws the grid, the parent as a dashed "ghost",
+   and the shifted graph y = f(x − h) + k. Optional arrows show each key
+   point travelling from its parent position to its new position.
+   ===================================================================== */
+const WIN = { cbrt: 10 };                                  // most parents fit in −8..8; cube root needs room for (8, 2)
+function drawShift(svg, key, o = {}) {
+  const P = PARENTS[key], h = o.h || 0, k = o.k || 0;
+  const lim = o.win || WIN[key] || 8, W = 440, pad = 28;
+  const S = (W - 2 * pad) / (2 * lim);
+  const X = x => pad + (x + lim) * S, Y = y => W - pad - (y + lim) * S;
+  [...svg.childNodes].forEach(n => { if (!["title", "desc"].includes(n.nodeName)) svg.removeChild(n); });
+  const css = getComputedStyle(document.documentElement), c = v => css.getPropertyValue(v).trim();
+  const g = el("g", {}, svg);
+
+  // grid, axes, tick labels every 2 units
+  for (let i = -lim; i <= lim; i++) {
+    el("line", { x1: X(i), y1: Y(-lim), x2: X(i), y2: Y(lim), stroke: c("--grid") }, g);
+    el("line", { x1: X(-lim), y1: Y(i), x2: X(lim), y2: Y(i), stroke: c("--grid") }, g);
+  }
+  el("line", { x1: X(-lim), y1: Y(0), x2: X(lim), y2: Y(0), stroke: c("--axis"), "stroke-width": 1.6 }, g);
+  el("line", { x1: X(0), y1: Y(-lim), x2: X(0), y2: Y(lim), stroke: c("--axis"), "stroke-width": 1.6 }, g);
+  for (let i = -lim + (lim % 2); i <= lim; i += 2) {
+    if (!i) continue;
+    el("text", { x: X(i), y: Y(0) + 16, "text-anchor": "middle", "font-size": 12, fill: c("--muted") }, g).textContent = num(i);
+    el("text", { x: X(0) - 6, y: Y(i) + 4, "text-anchor": "end", "font-size": 12, fill: c("--muted") }, g).textContent = num(i);
+  }
+
+  // everything below is clipped to the grid square
+  const id = "c" + Math.random().toString(36).slice(2);
+  el("rect", { x: X(-lim), y: Y(lim), width: 2 * lim * S, height: 2 * lim * S }, el("clipPath", { id }, el("defs", {}, svg)));
+  const cg = el("g", { "clip-path": `url(#${id})` }, svg);
+
+  // one curve: the parent moved by (dh, dk); dashed when it is the ghost
+  const curve = (dh, dk, color, dashed, width) => {
+    const dash = dashed ? { "stroke-dasharray": "8 6" } : {};
+    if (P.isStep) {                                       // staircase: segment from x = n + dh to n + 1 + dh at height n + dk
+      for (let n = -lim - Math.abs(dh) - 2; n <= lim + Math.abs(dh) + 1; n++) {
+        el("line", { x1: X(n + dh), y1: Y(n + dk), x2: X(n + 1 + dh), y2: Y(n + dk), stroke: color, "stroke-width": width, ...dash }, cg);
+        if (!dashed) {
+          el("circle", { cx: X(n + dh), cy: Y(n + dk), r: 4.5, fill: color }, cg);
+          el("circle", { cx: X(n + 1 + dh), cy: Y(n + dk), r: 4.5, fill: c("--panel"), stroke: color, "stroke-width": 2 }, cg);
+        }
+      }
+      return;
+    }
+    // shift each domain piece by dh (e.g. √(x − 3) starts at x = 3)
+    const pieces = (P.pieces || [[-lim - 12, lim + 12]]).map(([a, b]) =>
+      [Math.max(a === -6 ? -lim - 12 : a, -lim - 12) + dh, Math.min(b === 6 ? lim + 12 : b, lim + 12) + dh]);
+    pieces.forEach(([a, b]) => {
+      a = Math.max(a, -lim); b = Math.min(b, lim);
+      if (a >= b) return;
+      let d = "", pen = false;
+      for (let i = 0; i <= 700; i++) {
+        const x = a + (b - a) * i / 700, y = P.f(x - dh) + dk;
+        if (!isFinite(y) || Math.abs(y) > lim * 2) { pen = false; continue; }
+        d += (pen ? "L" : "M") + X(x).toFixed(1) + " " + Y(y).toFixed(1) + " "; pen = true;
+      }
+      el("path", { d, fill: "none", stroke: color, "stroke-width": width, "stroke-linejoin": "round", ...dash }, cg);
+    });
+  };
+  if (o.ghost !== false) curve(0, 0, c("--muted"), true, 2.4);
+  if (P.asym && o.showNew !== false) {                    // asymptotes move with the graph: x = h, y = k
+    el("line", { x1: X(h), y1: Y(-lim), x2: X(h), y2: Y(lim), stroke: c("--asym"), "stroke-width": 2, "stroke-dasharray": "5 5" }, cg);
+    el("line", { x1: X(-lim), y1: Y(k), x2: X(lim), y2: Y(k), stroke: c("--asym"), "stroke-width": 2, "stroke-dasharray": "5 5" }, cg);
+  }
+  if (o.showNew !== false) curve(h, k, c("--curve"), false, 3.4);
+
+  // point paths: an arrow from each parent key point to its new position
+  if (o.arrows && (h || k) && o.showNew !== false) {
+    const mid = "m" + id;
+    const mk = el("marker", { id: mid, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, svg.querySelector("defs"));
+    el("path", { d: "M0 0 L10 5 L0 10 z", fill: c("--curve2") }, mk);
+    P.kp.forEach(([x, y]) => {
+      el("line", { x1: X(x), y1: Y(y), x2: X(x + h), y2: Y(y + k), stroke: c("--curve2"), "stroke-width": 1.8, "marker-end": `url(#${mid})` }, cg);
+    });
+  }
+  // key points (new positions) with labels; parent key points as small hollow dots
+  const pg = el("g", {}, svg);
+  if (o.ghost !== false) P.kp.forEach(([x, y]) => { if (Math.abs(x) <= lim && Math.abs(y) <= lim)
+    el("circle", { cx: X(x), cy: Y(y), r: 3.5, fill: c("--panel"), stroke: c("--muted"), "stroke-width": 1.5 }, pg); });
+  const pts = o.points || (o.showNew === false ? [] : P.kp.map(([x, y]) => [x + h, y + k]));
+  pts.forEach(([x, y]) => {
+    if (Math.abs(x) > lim || Math.abs(y) > lim) return;
+    el("circle", { cx: X(x), cy: Y(y), r: 6, fill: c("--curve"), stroke: c("--panel"), "stroke-width": 2 }, pg);
+    if (o.labels !== false) {
+      const left = x < h || (x === h && y === k);          // the anchor (h, k) gets its label below-left, clear of the curve
+      const below = y < k || (x === h && y === k);
+      const t = el("text", { x: X(x) + (left ? -9 : 9), y: Y(y) + (below ? 18 : -9), "text-anchor": left ? "end" : "start",
+        "font-size": 13, "font-weight": 600, fill: c("--ink"), stroke: c("--panel"), "stroke-width": 4, "paint-order": "stroke" }, pg);
+      t.textContent = pt([x, y]);
+    }
+  });
+}
+
+/* =====================================================================
+   SHIFT LANGUAGE HELPERS
+   ===================================================================== */
+const units = n => `${Math.abs(n)} unit${Math.abs(n) === 1 ? "" : "s"}`;
+const hWords = h => h > 0 ? `${units(h)} right` : h < 0 ? `${units(h)} left` : "";
+const kWords = k => k > 0 ? `${units(k)} up` : k < 0 ? `${units(k)} down` : "";
+function shiftWords(h, k) { const w = [hWords(h), kWords(k)].filter(Boolean); return w.length ? w.join(" and ") : "no shift"; }
+// The equation g(x) = f(x − h) + k written with the parent's own symbols, e.g. √(x + 3) − 1
+function eqText(key, h, k, name = "g") {
+  const inner = h === 0 ? "x" : h > 0 ? `x − ${h}` : `x + ${-h}`;
+  let core = PARENTS[key].core(inner);
+  if (key === "lin") core = h === 0 ? "x" : `(${inner})`;
+  const tail = k === 0 ? "" : k > 0 ? ` + ${k}` : ` − ${-k}`;
+  return `${name}(x) = ${core}${tail}`;
+}
+const insideText = h => h === 0 ? "x" : h > 0 ? `x − ${h}` : `x + ${-h}`;
+// The point students should track: vertex, starting point, corner, center...
+const ANCHOR = { sq: "vertex", sqrt: "starting point", abs: "corner", cube: "center point", cbrt: "center point",
+  recip: "center (where the asymptotes cross)", recip2: "center (where the asymptotes cross)", lin: "point (0, 0)", step: "closed dot at (0, 0)" };
+const anchorOf = (key, h, k) => [h, k];
+
+/* =====================================================================
+   4. TABS (keyboard: Left/Right arrows, Home, End)
+   ===================================================================== */
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+function selectTab(t) {
+  tabs.forEach(b => {
+    const on = b === t;
+    b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1;
+    $(b.getAttribute("aria-controls")).hidden = !on;
+  });
+  t.focus();
+}
+tabs.forEach((t, i) => {
+  t.addEventListener("click", () => selectTab(t));
+  t.addEventListener("keydown", e => {
+    const k = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+    if (k !== undefined) { e.preventDefault(); selectTab(tabs[(k + tabs.length) % tabs.length]); }
+  });
+});
+
+/* =====================================================================
+   5. EXPLORE TAB
+   ===================================================================== */
+const SEL = ["sq", "sqrt", "abs", "cube", "cbrt", "recip", "recip2", "step", "lin"];
+SEL.forEach(k => { const o = document.createElement("option"); o.value = k; o.textContent = `${PARENTS[k].name}: ${PARENTS[k].eq}`; $("parentSel").appendChild(o); });
+["parentSel", "hS", "kS", "tGhost", "tArrows", "tLabels"].forEach(id => $(id).addEventListener("input", renderExplore));
+$("reset").addEventListener("click", () => { $("hS").value = 0; $("kS").value = 0; renderExplore(); });
+
+function renderExplore() {
+  const key = $("parentSel").value, h = +$("hS").value, k = +$("kS").value, P = PARENTS[key];
+  $("hOut").textContent = num(h); $("kOut").textContent = num(k);
+  $("hS").setAttribute("aria-valuetext", h === 0 ? "h = 0, no horizontal shift" : `h = ${num(h)}, ${hWords(h)}`);
+  $("kS").setAttribute("aria-valuetext", k === 0 ? "k = 0, no vertical shift" : `k = ${num(k)}, ${kWords(k)}`);
+  drawShift($("exploreGraph"), key, { h, k, ghost: $("tGhost").checked, arrows: $("tArrows").checked, labels: $("tLabels").checked });
+  const eq = eqText(key, h, k);
+  $("eqLive").textContent = eq;
+  $("ruleLive").textContent = `Rule: (x, y) → (x ${h < 0 ? "−" : "+"} ${Math.abs(h)}, y ${k < 0 ? "−" : "+"} ${Math.abs(k)})   ·   ${shiftWords(h, k)}`;
+  $("ptTable").tBodies[0].innerHTML = P.kp.map(([x, y]) => `<tr><td>${pt([x, y])}</td><td>${pt([x + h, y + k])}</td></tr>`).join("");
+  const d = `${eq}. The ${P.name.toLowerCase()} parent is shifted ${shiftWords(h, k)}. ` +
+    `Its ${ANCHOR[key]} moves from (0, 0) to ${pt([h, k])}.` +
+    (P.asym ? ` Asymptotes: x = ${num(h)} and y = ${num(k)}.` : "") +
+    ` New key points: ${P.kp.map(([x, y]) => pt([x + h, y + k])).join(", ")}.`;
+  $("exploreTitle").textContent = `Graph of ${eq}`; $("exploreDesc").textContent = d; $("exploreLive").textContent = d;
+}
+
+// Prediction challenge: show a change, ask which way, then move the sliders to prove it.
+let ch = null;
+$("chNew").addEventListener("click", () => {
+  const key = $("parentSel").value, n = pick([1, 2, 3, 4]), horiz = Math.random() < 0.6, sign = pick([1, -1]);
+  ch = horiz ? { h: sign * n, k: 0, right: sign > 0 ? "Right" : "Left", n } : { h: 0, k: sign * n, right: sign > 0 ? "Up" : "Down", n };
+  $("chQ").innerHTML = `The equation changes from <strong>${eqText(key, 0, 0, "f")}</strong> to <strong>${eqText(key, ch.h, ch.k)}</strong>. Which way does the graph move?`;
+  $("chQ").classList.remove("muted");
+  $("chDirs").hidden = false; $("chFb").textContent = ""; $("chFb").className = "";
+  $("chDirs").innerHTML = ["Left", "Right", "Up", "Down"].map(d => `<button class="btn secondary" data-d="${d}">${d} ${n}</button>`).join("");
+  $("chDirs").querySelectorAll("button").forEach(b => b.addEventListener("click", () => answerChallenge(b.dataset.d)));
+  $("hS").value = 0; $("kS").value = 0; renderExplore();
+  $("chDirs").querySelector("button").focus();
+});
+function answerChallenge(d) {
+  const ok = d === ch.right, fb = $("chFb");
+  const why = ch.h ? (ch.h > 0 ? `The inside is x − ${ch.h}, so h = ${ch.h}. Inside changes move the opposite way of the sign you see: right ${ch.n}.`
+                               : `The inside is x + ${-ch.h} = x − (${ch.h}), so h = ${ch.h}. Inside changes move the opposite way of the sign you see: left ${ch.n}.`)
+                   : `The ${ch.k > 0 ? "+" : "−"} ${ch.n} is outside the function, so the graph moves the way the sign says: ${ch.k > 0 ? "up" : "down"} ${ch.n}.`;
+  fb.className = "feedback " + (ok ? "ok" : "bad");
+  fb.innerHTML = `<strong>${ok ? "Correct!" : `Not quite. It moves ${ch.right.toLowerCase()} ${ch.n}.`}</strong> ${why} Watch the graph.`;
+  $("chDirs").querySelectorAll("button").forEach(b => b.disabled = true);
+  $("hS").value = ch.h; $("kS").value = ch.k; renderExplore();
+  $("chNew").textContent = "Another challenge"; $("chNew").focus();
+}
+
+/* =====================================================================
+   6. EXAMPLES TAB
+   "Graph from an equation" follows the 5 steps in the notes.
+   "Equation from a graph" works backward from where the anchor point moved.
+   ===================================================================== */
+const EX_PARENTS = ["sq", "sqrt", "abs", "cube", "cbrt", "recip", "recip2"];   // parents whose shifts are unambiguous
+let exType = "graph", exSteps = [], exShown = 0, ex = null;
+document.querySelectorAll("#exTypes button").forEach(b => b.addEventListener("click", () => {
+  exType = b.dataset.type;
+  document.querySelectorAll("#exTypes button").forEach(x => { const on = x === b; x.setAttribute("aria-pressed", on); x.classList.toggle("secondary", !on); });
+  newExample();
+}));
+function randShift(needBoth) {
+  let h, k;
+  do { h = pick([-4, -3, -2, -1, 0, 1, 2, 3, 4]); k = pick([-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]); }
+  while ((h === 0 && k === 0) || (needBoth && (h === 0 || k === 0)));
+  return { h, k };
+}
+function newExample() {
+  let key; do { key = pick(EX_PARENTS); } while (ex && key === ex.key);
+  const { h, k } = randShift(exType === "equation"), P = PARENTS[key];
+  ex = { key, h, k };
+  const kpRows = P.kp.map(([x, y]) => `<tr><td>${pt([x, y])}</td><td>${pt([x + h, y + k])}</td></tr>`).join("");
+  if (exType === "graph") {
+    exSteps = [
+      `<strong>Identify the parent and its key points.</strong> Parent: ${P.eq}. Key points: ${P.kp.map(pt).join(", ")}.`,
+      `<strong>Find k (outside).</strong> ${k === 0 ? "Nothing is added outside, so k = 0: no vertical shift." : `${k > 0 ? "+ " + k : "− " + (-k)} is outside, so k = ${num(k)}: ${kWords(k)}.`}`,
+      `<strong>Find h (inside).</strong> ${h === 0 ? "The inside is just x, so h = 0: no horizontal shift." : h > 0 ? `The inside is x − ${h}, so h = ${num(h)}: ${hWords(h)}.` : `The inside is x + ${-h} = x − (${num(h)}), so h = ${num(h)}: ${hWords(h)}.`}`,
+      `<strong>Apply (x, y) → (x ${h < 0 ? "−" : "+"} ${Math.abs(h)}, y ${k < 0 ? "−" : "+"} ${Math.abs(k)}).</strong>
+        <table class="pts"><thead><tr><th scope="col">Parent point</th><th scope="col">New point</th></tr></thead><tbody>${kpRows}</tbody></table>`,
+      `<strong>Plot and connect.</strong> The ${ANCHOR[key]} moves from (0, 0) to ${pt([h, k])}${P.asym ? `, and the asymptotes become x = ${num(h)} and y = ${num(k)}` : ""}. The shape does not change.`,
+    ];
+  } else {
+    const [x1, y1] = P.kp.find(([x, y]) => x === 1 && y === 1);
+    exSteps = [
+      `<strong>Find where the ${ANCHOR[key]} moved.</strong> In the parent it is at (0, 0). Here it is at ${pt([h, k])}.`,
+      `<strong>Horizontal shift → h.</strong> It moved ${h > 0 ? "right" : "left"} ${Math.abs(h)}, so h = ${num(h)}. Inside, write x − (${num(h)}) = <strong>${insideText(h)}</strong>.`,
+      `<strong>Vertical shift → k.</strong> It moved ${k > 0 ? "up" : "down"} ${Math.abs(k)}, so k = ${num(k)}. Outside, write <strong>${k > 0 ? "+ " + k : "− " + (-k)}</strong>.`,
+      `<strong>Write the equation.</strong> <strong>${eqText(key, h, k)}</strong>.`,
+      `<strong>Check with a second point.</strong> The parent point (1, 1) should move to ${pt([1 + h, 1 + k])}. Substitute x = ${num(1 + h)}: the inside becomes 1, the parent gives 1, then ${k > 0 ? "+" : "−"} ${Math.abs(k)} gives ${num(1 + k)}. ✓`,
+    ];
+  }
+  exShown = 0; renderExample();
+}
+function renderExample() {
+  const { key, h, k } = ex, P = PARENTS[key], left = $("exLeft");
+  const done = exShown >= exSteps.length;
+  if (exType === "graph") {
+    left.innerHTML = `<p class="prompt">Graph</p><p class="bigeq">${eqText(key, h, k)}</p>
+      <p class="muted">${done ? "Finished graph: the dashed parent and the solid shifted graph." : "The dashed graph is the parent. The shifted graph appears after the last step."}</p>`;
+  } else {
+    left.innerHTML = `<p class="prompt">Write an equation for the solid graph.</p><p class="muted">Its parent is ${P.eq}.</p>`;
+  }
+  const svg = el("svg", { viewBox: "0 0 440 440", class: "graph", role: "img" });
+  left.appendChild(svg);
+  if (exType === "graph") {
+    drawShift(svg, key, { h, k, showNew: done, arrows: done });
+    svg.setAttribute("aria-label", done ? `Graph of ${eqText(key, h, k)}: the parent shifted ${shiftWords(h, k)}, ${ANCHOR[key]} at ${pt([h, k])}.`
+                                        : `Dashed graph of the parent ${P.eq} with key points ${P.kp.map(pt).join(", ")}.`);
+  } else {
+    drawShift(svg, key, { h, k, ghost: false, points: [[h, k], [1 + h, 1 + k]] });
+    svg.setAttribute("aria-label", `Graph of a shifted ${P.name.toLowerCase()} function. Its ${ANCHOR[key]} is at ${pt([h, k])}, and it passes through ${pt([1 + h, 1 + k])}.`);
+  }
+  $("exSteps").innerHTML = exSteps.slice(0, exShown).map(s => `<li>${s}</li>`).join("") ||
+    `<li style="background:none;padding-left:0;list-style:none" class="muted">Try it yourself first, then press <em>Show next step</em>.</li>`;
+  $("exNext").disabled = $("exAll").disabled = done;
+}
+$("exNext").addEventListener("click", () => { exShown++; renderExample(); });
+$("exAll").addEventListener("click", () => { exShown = exSteps.length; renderExample(); });
+$("exNew").addEventListener("click", newExample);
+
+/* =====================================================================
+   7. PRACTICE TAB
+   Question kinds: "mc" (text choices), "graphs" (pick a graph), "num"
+   (type a point). Each question has a skill tag for the ladder.
+   ===================================================================== */
+function uniqueChoices(right, wrongs, fmt) {               // keep the right answer plus up to 3 distinct wrong ones
+  const seen = new Set([fmt(right)]), out = [{ v: right, ok: true }];
+  for (const w of wrongs) { if (out.length === 4) break; if (!seen.has(fmt(w))) { seen.add(fmt(w)); out.push({ v: w, ok: false }); } }
+  return shuffle(out);
+}
+const QTYPES = {
+  describe: () => {
+    const key = pick(EX_PARENTS), { h, k } = randShift(true);
+    const opts = uniqueChoices([h, k], [[-h, k], [h, -k], [-h, -k]], ([a, b]) => shiftWords(a, b));
+    return { kind: "mc", tag: "5.2-describe", prompt: `How does the graph of ${eqText(key, h, k)} compare with the graph of ${PARENTS[key].eq}?`,
+      choices: opts.map(o => ({ label: `Shifted ${shiftWords(...o.v)}`, ok: o.ok })),
+      hint: "Outside numbers move the graph the way the sign says. Inside numbers move it the opposite way: rewrite the inside as x − h.",
+      solve: `Inside is ${insideText(h)}, so h = ${num(h)} (${hWords(h)}). Outside is ${k > 0 ? "+ " + k : "− " + (-k)}, so k = ${num(k)} (${kWords(k)}).` };
+  },
+  point: () => {
+    const key = pick(EX_PARENTS), { h, k } = randShift(false), [x, y] = pick(PARENTS[key].kp);
+    const opts = uniqueChoices([x + h, y + k], [[x - h, y + k], [x + h, y - k], [x - h, y - k], [x + k, y + h]], pt);
+    return { kind: "mc", tag: "5.2-points", prompt: `The point ${pt([x, y])} is on the graph of ${PARENTS[key].eq}. Which point is on the graph of ${eqText(key, h, k)}?`,
+      choices: opts.map(o => ({ label: pt(o.v), ok: o.ok })),
+      hint: "Find h and k, then use (x, y) → (x + h, y + k). Remember h is the number that makes the inside x − h.",
+      solve: `h = ${num(h)} and k = ${num(k)}, so ${pt([x, y])} → (${num(x)} + ${h < 0 ? "(" + num(h) + ")" : h}, ${num(y)} + ${k < 0 ? "(" + num(k) + ")" : k}) = ${pt([x + h, y + k])}.` };
+  },
+  enter: () => {
+    const key = pick(EX_PARENTS), { h, k } = randShift(false), [x, y] = pick(PARENTS[key].kp.filter(p => Number.isInteger(p[0]) && Number.isInteger(p[1])));
+    return { kind: "num", tag: "5.2-points", prompt: `${pt([x, y])} is a key point of ${PARENTS[key].eq}. Find where it lands on ${eqText(key, h, k)}.`,
+      answer: [x + h, y + k],
+      hint: "Use (x, y) → (x + h, y + k). Write the inside as x − h to find h, and read k from the number added outside.",
+      solve: `h = ${num(h)} and k = ${num(k)}, so the point moves ${shiftWords(h, k)}: ${pt([x, y])} → ${pt([x + h, y + k])}.` };
+  },
+  eqFromGraph: () => {
+    const key = pick(EX_PARENTS), { h, k } = randShift(true);
+    const opts = uniqueChoices([h, k], [[-h, k], [h, -k], [-h, -k], [k, h]], ([a, b]) => eqText(key, a, b));
+    return { kind: "mc", tag: "5.2-equation", prompt: `Which equation matches the graph? Its parent is ${PARENTS[key].eq}.`,
+      visual: { key, h, k, points: [[h, k], [1 + h, 1 + k]], ghost: false,
+                label: `Graph of a shifted ${PARENTS[key].name.toLowerCase()} function with its ${ANCHOR[key]} at ${pt([h, k])}, passing through ${pt([1 + h, 1 + k])}.` },
+      choices: opts.map(o => ({ label: eqText(key, ...o.v), ok: o.ok })),
+      hint: `Find the ${ANCHOR[key]}. Its x-coordinate is h and its y-coordinate is k. Then write the inside as x − h.`,
+      solve: `The ${ANCHOR[key]} is at ${pt([h, k])}, so h = ${num(h)} and k = ${num(k)}: ${eqText(key, h, k)}.` };
+  },
+  graphChoice: () => {
+    const key = pick(EX_PARENTS), { h, k } = randShift(true);
+    const opts = uniqueChoices([h, k], [[-h, k], [h, -k], [-h, -k]], ([a, b]) => a + "," + b);
+    return { kind: "graphs", tag: "5.2-graph", prompt: `Which graph shows ${eqText(key, h, k)}?`, key,
+      choices: opts.map(o => ({ h: o.v[0], k: o.v[1], ok: o.ok,
+        label: `${PARENTS[key].name} graph with its ${ANCHOR[key]} at ${pt(o.v)}` })),
+      hint: `Find h and k first. The correct graph has its ${ANCHOR[key]} at (h, k).`,
+      solve: `Inside is ${insideText(h)}, so h = ${num(h)}; outside gives k = ${num(k)}. The ${ANCHOR[key]} is at ${pt([h, k])}.` };
+  },
+};
+
+let set = [], qi = 0;
+function newSet() {
+  set = shuffle(["describe", "describe", "point", "enter", "enter", "eqFromGraph", "graphChoice", "graphChoice"])
+    .map(t => ({ ...QTYPES[t](), tries: 0, done: false, right: false }));
+  qi = 0; renderQ();
+}
+function renderProgress() {
+  $("progress").innerHTML = set.map((q, i) => {
+    const cls = q.done ? (q.right ? "ok" : "miss") : i === qi ? "cur" : "";
+    const label = `Question ${i + 1}: ${q.done ? (q.right ? "correct" : "answer shown") : i === qi ? "current" : "not started"}`;
+    return `<span class="${cls}" role="img" aria-label="${label}">${i + 1}</span>`;
+  }).join("");
+}
+// small graph for a graph-choice option
+function miniGraph(key, h, k, label) {
+  const svg = el("svg", { viewBox: "0 0 440 440", role: "img", "aria-label": label });
+  drawShift(svg, key, { h, k, ghost: false, labels: false, points: [] });
+  return svg.outerHTML;
+}
+function renderQ() {
+  renderProgress();
+  const q = set[qi], panel = $("qPanel"), vis = $("qVisual");
+  if (!q) {
+    const score = set.filter(x => x.right).length;
+    panel.innerHTML = `<p class="prompt">You got ${score} of ${set.length} on the first or second try.</p>
+      <p>${score >= 7 ? "Nice work. You are ready for Skill 5.3: Stretching, Compressing & Reflecting." : "Try another set, or use the Examples tab for the types you missed."}</p>
+      <button class="btn" id="again">New set of questions</button>`;
+    vis.hidden = true; $("qWrap").classList.add("solo");
+    $("again").addEventListener("click", newSet); $("again").focus();
+    return;
+  }
+  let body = "";
+  if (q.kind === "mc") body = q.choices.map((c, i) => `<label class="choice"><input type="radio" name="ans" value="${i}"> <span>${c.label}</span></label>`).join("");
+  if (q.kind === "graphs") body = `<div class="choices-graph">${q.choices.map((c, i) =>
+      `<label class="choice"><span><input type="radio" name="ans" value="${i}"> Graph ${"ABCD"[i]}</span>${miniGraph(q.key, c.h, c.k, c.label)}</label>`).join("")}</div>`;
+  if (q.kind === "num") body = `<div class="numrow">New point: (<label class="skip" for="ax">x-coordinate</label><input id="ax" inputmode="decimal" autocomplete="off" aria-label="x-coordinate">,
+      <label class="skip" for="ay">y-coordinate</label><input id="ay" inputmode="decimal" autocomplete="off" aria-label="y-coordinate">)</div>
+      <p class="muted" style="font-size:15px">Type numbers like 3, −2, or 0.5.</p>`;
+  panel.innerHTML = `<p class="muted">Question ${qi + 1} of ${set.length}</p>
+    <fieldset><legend class="prompt">${q.prompt}</legend>${body}</fieldset>
+    <div class="row"><button class="btn" id="check">Check answer</button><button class="btn secondary" id="next" hidden>Next question</button></div>
+    <div id="fb" aria-live="polite"></div>`;
+  vis.innerHTML = "";
+  vis.hidden = !q.visual; $("qWrap").classList.toggle("solo", !q.visual);
+  if (q.visual) {
+    const svg = el("svg", { viewBox: "0 0 440 440", class: "graph", role: "img", "aria-label": q.visual.label });
+    vis.appendChild(svg); drawShift(svg, q.visual.key, q.visual);
+  }
+  $("check").addEventListener("click", checkQ);
+  $("next").addEventListener("click", () => { qi++; renderQ(); });
+  panel.querySelectorAll("#ax, #ay").forEach(i => i.addEventListener("keydown", e => { if (e.key === "Enter") checkQ(); }));
+}
+// read typed numbers: accepts −2 (true minus), -2, 0.5, 1/2
+function readNum(s) {
+  s = s.trim().replace(/−/g, "-");
+  if (/^-?\d+\s*\/\s*\d+$/.test(s)) { const [a, b] = s.split("/").map(Number); return a / b; }
+  return s === "" || isNaN(+s) ? NaN : +s;
+}
+function checkQ() {
+  const q = set[qi], fb = $("fb");
+  let ok, mark = () => {};
+  if (q.kind === "num") {
+    const x = readNum($("ax").value), y = readNum($("ay").value);
+    if (isNaN(x) || isNaN(y)) { fb.className = "feedback hint"; fb.textContent = "Type a number in both boxes."; return; }
+    ok = Math.abs(x - q.answer[0]) < 1e-9 && Math.abs(y - q.answer[1]) < 1e-9;
+    mark = () => {};
+  } else {
+    const sel = document.querySelector('input[name="ans"]:checked');
+    if (!sel) { fb.className = "feedback hint"; fb.textContent = "Choose an answer first."; return; }
+    const labels = [...document.querySelectorAll(".choice")];
+    ok = q.choices[+sel.value].ok;
+    mark = final => { labels[+sel.value].classList.add(ok ? "correct" : "wrong");
+      if (final && !ok) labels[q.choices.findIndex(c => c.ok)].classList.add("correct"); };
+  }
+  q.tries++;
+  if (ok) { q.done = q.right = true; mark(true); fb.className = "feedback ok"; fb.innerHTML = `<strong>Correct.</strong> ${q.solve}`; }
+  else if (q.tries === 1) { mark(false); fb.className = "feedback hint"; fb.innerHTML = `<strong>Not yet. Hint:</strong> ${q.hint} Try again.`; return; }
+  else { q.done = true; mark(true); fb.className = "feedback bad"; fb.innerHTML = `<strong>Here is the answer.</strong> ${q.solve}`; }
+  document.querySelectorAll('#qPanel input').forEach(i => i.disabled = true);
+  $("check").hidden = true; $("next").hidden = false; $("next").focus();
+  if (qi === set.length - 1) $("next").textContent = "See my results";
+  renderProgress();
+}
+
+/* =====================================================================
+   8. START UP; redraw if the device switches light/dark mode
+   ===================================================================== */
+renderExplore(); newExample(); newSet();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { renderExplore(); renderExample(); renderQ(); });
+</script>
+</body>
+</html>
