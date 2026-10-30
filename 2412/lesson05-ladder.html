@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 5 Ladder</title>
+<style>
+/* ===== Color tokens: light by default, dark when the device asks for it ===== */
+:root {
+  --bg: #f7f8fa; --panel: #ffffff; --ink: #1b1f24; --muted: #555d68; --line: #d5dae1;
+  --accent: #1f4e79; --accent-ink: #ffffff; --accent-soft: #e6eef7;
+  --curve: #1f4e79; --curve2: #b4461f; --grid: #e3e6ea; --axis: #222;
+  --dom: rgba(31, 78, 121, .18); --rng: rgba(180, 70, 31, .18); --asym: #8a1c1c;
+  --ok: #1d6b35; --ok-soft: #e4f3e8; --bad: #9b1c1c; --bad-soft: #fbe9e9; --hint-soft: #fff6dd;
+  --focus: #f0b400;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171b; --panel: #1d2127; --ink: #e9ecf0; --muted: #a7b0bb; --line: #343a43;
+    --accent: #7db3e8; --accent-ink: #0d1a26; --accent-soft: #1f2e3d;
+    --curve: #7db3e8; --curve2: #f0a07c; --grid: #2a3038; --axis: #cfd5dc;
+    --dom: rgba(125, 179, 232, .22); --rng: rgba(240, 160, 124, .22); --asym: #ff8f8f;
+    --ok: #7fd49a; --ok-soft: #1c3324; --bad: #ff9a9a; --bad-soft: #3a1f1f; --hint-soft: #3a3320;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171b; --panel: #1d2127; --ink: #e9ecf0; --muted: #a7b0bb; --line: #343a43;
+  --accent: #7db3e8; --accent-ink: #0d1a26; --accent-soft: #1f2e3d;
+  --curve: #7db3e8; --curve2: #f0a07c; --grid: #2a3038; --axis: #cfd5dc;
+  --dom: rgba(125, 179, 232, .22); --rng: rgba(240, 160, 124, .22); --asym: #ff8f8f;
+  --ok: #7fd49a; --ok-soft: #1c3324; --bad: #ff9a9a; --bad-soft: #3a1f1f; --hint-soft: #3a3320;
+}
+
+/* ===== Page layout ===== */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+a { color: var(--accent); }
+.skip { position: absolute; left: -9999px; }
+.skip:focus { left: 16px; top: 8px; background: var(--panel); padding: 8px 12px; z-index: 10; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+header.top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+header.top .crumb { font-size: 15px; color: var(--muted); }
+h1 { font-size: 28px; margin: 4px 0 4px; line-height: 1.2; }
+h2 { font-size: 21px; margin: 0 0 10px; }
+h3 { font-size: 18px; margin: 18px 0 8px; }
+.objective { background: var(--accent-soft); border-left: 5px solid var(--accent); padding: 10px 14px; border-radius: 6px; margin: 10px 0 16px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.muted { color: var(--muted); }
+button, select { font: inherit; }
+.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+.btn.secondary { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* ===== Tabs ===== */
+[role="tablist"] { display: flex; gap: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; overflow-x: auto; }
+[role="tab"] { background: none; border: 0; border-bottom: 4px solid transparent; padding: 10px 16px; font-weight: 600;
+  color: var(--muted); cursor: pointer; margin-bottom: -2px; white-space: nowrap; }
+[role="tab"][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* ===== Explore ===== */
+.explore { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 820px) { .explore { grid-template-columns: 1fr; } }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.gallery button { background: var(--panel); border: 2px solid var(--line); border-radius: 8px; padding: 4px 4px 6px; cursor: pointer;
+  color: var(--ink); font-size: 13px; line-height: 1.25; }
+.gallery button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.gallery svg { width: 100%; height: auto; display: block; }
+.graph { width: 100%; height: auto; display: block; background: var(--panel); border-radius: 8px; }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0; }
+.toggles label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.toggles input { width: 18px; height: 18px; accent-color: var(--accent); }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; }
+.facts dt { font-weight: 600; color: var(--muted); }
+.facts dd { margin: 0; }
+.eq { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; color: var(--muted); margin-top: 4px; }
+.swatch { display: inline-block; width: 26px; height: 0; border-top: 3px solid var(--curve); vertical-align: middle; margin-right: 6px; }
+.swatch.second { border-top: 3px dashed var(--curve2); }
+.swatch.band { height: 12px; border: 0; }
+details { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 8px 0; background: var(--panel); }
+summary { cursor: pointer; font-weight: 600; }
+.desc { font-size: 15px; color: var(--muted); margin-top: 8px; }
+
+/* ===== Examples & practice ===== */
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.two.solo { grid-template-columns: minmax(0, 640px); }
+@media (max-width: 820px) { .two { grid-template-columns: 1fr; } }
+ol.steps { padding-left: 22px; }
+ol.steps li { margin: 8px 0; padding: 8px 10px; background: var(--accent-soft); border-radius: 6px; }
+.prompt { font-size: 19px; font-weight: 600; }
+fieldset { border: 0; padding: 0; margin: 10px 0; }
+legend { font-weight: 600; margin-bottom: 6px; }
+.choice { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px; margin: 6px 0; cursor: pointer; }
+.choice input { width: 18px; height: 18px; accent-color: var(--accent); }
+.choice.correct { border-color: var(--ok); background: var(--ok-soft); }
+.choice.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.feedback { margin-top: 10px; padding: 10px 12px; border-radius: 8px; }
+.feedback.ok { background: var(--ok-soft); color: var(--ink); border-left: 5px solid var(--ok); }
+.feedback.hint { background: var(--hint-soft); border-left: 5px solid var(--focus); }
+.feedback.bad { background: var(--bad-soft); border-left: 5px solid var(--bad); }
+.progress { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px; }
+.progress span { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700;
+  border: 2px solid var(--line); color: var(--muted); }
+.progress span.cur { border-color: var(--accent); color: var(--ink); }
+.progress span.ok { background: var(--ok); border-color: var(--ok); color: var(--panel); }
+.progress span.miss { background: var(--bad); border-color: var(--bad); color: var(--panel); }
+footer { margin-top: 24px; font-size: 14px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .choice, .gallery button { transition: border-color .15s, background .15s; } }
+/* ===== Shared by Skills 5.2–5.4 ===== */
+.sliders { display: grid; gap: 10px; margin: 10px 0; }
+.slider { display: grid; grid-template-columns: 9.5em 1fr 3.2em; gap: 10px; align-items: center; }
+.slider input[type=range] { width: 100%; accent-color: var(--accent); height: 28px; }
+.slider output { font-weight: 700; font-size: 18px; text-align: right; }
+.bigeq { font-size: 24px; font-weight: 700; margin: 6px 0; }
+.rule { background: var(--accent-soft); border-radius: 8px; padding: 8px 12px; font-weight: 600; }
+table.pts { border-collapse: collapse; margin: 8px 0; min-width: 260px; }
+table.pts th, table.pts td { border: 1px solid var(--line); padding: 5px 12px; text-align: left; }
+table.pts th { background: var(--accent-soft); }
+.choices-graph { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.choices-graph .choice { flex-direction: column; align-items: stretch; }
+.choices-graph svg { width: 100%; height: auto; }
+.numrow { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin: 10px 0; font-size: 19px; }
+.numrow input { width: 5.5em; font: inherit; padding: 6px 8px; border: 2px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.challenge { border: 2px dashed var(--accent); border-radius: 10px; padding: 12px; margin-top: 14px; }
+.dirs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+nav.skills { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.words { margin: 6px 0; }
+/* ===== Ladder ===== */
+.layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+.ladder { position: relative; padding: 10px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.ladder::before, .ladder::after { content: ""; position: absolute; top: 10px; bottom: 10px; width: 6px; border-radius: 3px; background: var(--line); }
+.ladder::before { left: 10px; } .ladder::after { right: 10px; }
+/* rung 1 is first in reading order but drawn at the bottom */
+.ladder ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column-reverse; gap: 6px; position: relative; z-index: 1; }
+.ladder li { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: center; padding: 7px 10px; border-radius: 8px;
+  background: var(--bg); border: 2px solid var(--line); font-size: 15px; line-height: 1.3; }
+.ladder li .n { font-weight: 700; color: var(--muted); text-align: center; }
+.ladder li .st { font-size: 13px; font-weight: 700; white-space: nowrap; }
+.ladder li.cur { border-color: var(--accent); background: var(--accent-soft); }
+.ladder li.pass { border-color: var(--ok); } .ladder li.pass .st { color: var(--ok); }
+.ladder li.shaky { border-color: var(--focus); border-style: dashed; } .ladder li.shaky .st { color: var(--ink); }
+.ladder li.work { border-color: var(--bad); border-style: dashed; } .ladder li.work .st { color: var(--bad); }
+.ladder .top { text-align: center; font-weight: 700; margin-bottom: 8px; position: relative; z-index: 1; }
+.skilltag { display: inline-block; font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: .04em; text-transform: uppercase; }
+.review { border-left: 5px solid var(--focus); background: var(--hint-soft); border-radius: 8px; padding: 10px 14px; margin: 12px 0; }
+.review a { font-weight: 600; }
+table.report { width: 100%; border-collapse: collapse; margin: 10px 0; }
+table.report th, table.report td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: top; }
+.qgraph { max-width: 340px; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="crumb"><a href="lesson05-hub.html">Lesson 5: Transformations &amp; Symmetry</a> · Math 2412 Precalculus</div>
+      <h1>Lesson 5 Ladder</h1>
+    </div>
+  </header>
+  <p class="objective"><strong>Climb the ladder</strong> to find out which parts of Lesson 5 you have and which need more work. Each rung is one small skill with two quick questions. When a rung gives you trouble, the ladder sends you to the exact page that helps.</p>
+
+  <main id="main" class="layout">
+    <nav class="ladder" aria-label="Ladder rungs">
+      <div class="top">Lesson 5 complete</div>
+      <ol id="rungs"></ol>
+    </nav>
+    <section class="panel" id="stage" aria-live="polite"></section>
+  </main>
+  <footer>Math 2412 Precalculus · Lesson 5 Ladder. Your progress is saved only in this browser. Use "Copy my results" to send them to your instructor.</footer>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   1. PARENT FUNCTION DATA
+   Every fact the page shows comes from this one table, so adding a
+   parent (or reusing this file for another lesson) means editing data,
+   not drawing code.
+   ===================================================================== */
+const INF = Infinity;
+const PARENTS = {
+  lin:    { name: "Linear", eq: "f(x) = x", f: x => x,
+            kp: [[-1, -1], [0, 0], [1, 1]], win: 6,
+            domain: "(−∞, ∞)", range: "(−∞, ∞)", domIv: [[-INF, INF]], rngIv: [[-INF, INF]],
+            sym: "Odd (symmetric about the origin)", feature: "a straight line through the origin with slope 1",
+            clue: "It is a straight line with no curve, no corner, and no breaks.",
+            opWord: "x is used as it is, with no power or root", core: i => i },
+  sq:     { name: "Quadratic", eq: "f(x) = x²", f: x => x * x,
+            kp: [[-2, 4], [-1, 1], [0, 0], [1, 1], [2, 4]], win: 6,
+            domain: "(−∞, ∞)", range: "[0, ∞)", domIv: [[-INF, INF]], rngIv: [[0, INF, "closed"]],
+            sym: "Even (symmetric about the y-axis)", feature: "a U-shaped parabola with its lowest point at the origin",
+            clue: "It is a U shape that is symmetric about a vertical line, with one lowest (or highest) point.",
+            opWord: "the x-part is squared", core: i => i === "x" ? "x²" : `(${i})²` },
+  sqrt:   { name: "Square root", eq: "f(x) = √x", f: x => x >= 0 ? Math.sqrt(x) : NaN,
+            kp: [[0, 0], [1, 1], [4, 2]], win: 6, pieces: [[0, 6]],
+            domain: "[0, ∞)", range: "[0, ∞)", domIv: [[0, INF, "closed"]], rngIv: [[0, INF, "closed"]],
+            sym: "Neither", feature: "a curve that starts at the origin and rises slowly to the right",
+            clue: "It has a starting point (an endpoint) and goes in only one direction, bending as it goes.",
+            opWord: "the x-part is under a square root", core: i => i === "x" ? "√x" : `√(${i})` },
+  abs:    { name: "Absolute value", eq: "f(x) = |x|", f: x => Math.abs(x),
+            kp: [[-1, 1], [0, 0], [1, 1]], win: 6,
+            domain: "(−∞, ∞)", range: "[0, ∞)", domIv: [[-INF, INF]], rngIv: [[0, INF, "closed"]],
+            sym: "Even (symmetric about the y-axis)", feature: "a V shape with its corner at the origin",
+            clue: "It is a V made of two straight pieces that meet at a sharp corner.",
+            opWord: "the x-part is inside absolute value bars", core: i => `|${i}|` },
+  cube:   { name: "Cubic", eq: "f(x) = x³", f: x => x * x * x,
+            kp: [[-1, -1], [0, 0], [1, 1]], win: 6,
+            domain: "(−∞, ∞)", range: "(−∞, ∞)", domIv: [[-INF, INF]], rngIv: [[-INF, INF]],
+            sym: "Odd (symmetric about the origin)", feature: "an S-shaped curve, flat at the origin, falling on the left and rising on the right",
+            clue: "It is an S shape that flattens out in the middle and gets very steep at both ends.",
+            opWord: "the x-part is cubed", core: i => i === "x" ? "x³" : `(${i})³` },
+  cbrt:   { name: "Cube root", eq: "f(x) = ∛x", f: x => Math.cbrt(x),
+            kp: [[-8, -2], [-1, -1], [0, 0], [1, 1], [8, 2]], win: 9,
+            domain: "(−∞, ∞)", range: "(−∞, ∞)", domIv: [[-INF, INF]], rngIv: [[-INF, INF]],
+            sym: "Odd (symmetric about the origin)", feature: "a sideways S, steep at the origin and flattening out on both sides",
+            clue: "It is a sideways S that is steepest in the middle and flattens out at both ends, and it goes in both directions.",
+            opWord: "the x-part is under a cube root", core: i => i === "x" ? "∛x" : `∛(${i})` },
+  step:   { name: "Greatest integer", eq: "f(x) = ⟦x⟧", f: x => Math.floor(x), isStep: true,
+            kp: [[-1, -1], [0, 0], [1, 1], [2, 2]], win: 6,
+            domain: "(−∞, ∞)", range: "all integers", domIv: [[-INF, INF]], rngIv: "integers",
+            sym: "Neither", feature: "a staircase of flat steps one unit long, closed on the left end and open on the right end",
+            clue: "It is made of flat steps with jumps between them, and each step has a closed dot and an open dot.",
+            opWord: "the x-part is inside greatest integer brackets", core: i => `⟦${i}⟧` },
+  recip:  { name: "Reciprocal", eq: "f(x) = 1/x", f: x => 1 / x,
+            kp: [[-2, -0.5], [-1, -1], [-0.5, -2], [0.5, 2], [1, 1], [2, 0.5]], win: 6, pieces: [[-6, -0.01], [0.01, 6]],
+            domain: "(−∞, 0) ∪ (0, ∞)", range: "(−∞, 0) ∪ (0, ∞)", domIv: [[-INF, 0], [0, INF]], rngIv: [[-INF, 0], [0, INF]],
+            asym: { x: 0, y: 0 },
+            sym: "Odd (symmetric about the origin)", feature: "two separate curves, in quadrants I and III, that approach the axes without touching them",
+            clue: "It has two separate pieces in opposite corners (quadrants I and III) that hug two asymptotes.",
+            opWord: "x is in the denominator, to the first power", core: i => i === "x" ? "1/x" : `1/(${i})` },
+  recip2: { name: "Reciprocal squared", eq: "f(x) = 1/x²", f: x => 1 / (x * x),
+            kp: [[-2, 0.25], [-1, 1], [-0.5, 4], [0.5, 4], [1, 1], [2, 0.25]], win: 6, pieces: [[-6, -0.01], [0.01, 6]],
+            domain: "(−∞, 0) ∪ (0, ∞)", range: "(0, ∞)", domIv: [[-INF, 0], [0, INF]], rngIv: [[0, INF]],
+            asym: { x: 0, y: 0 },
+            sym: "Even (symmetric about the y-axis)", feature: "two separate curves, both above the x-axis, rising steeply near the y-axis",
+            clue: "It has two separate pieces, both above the x-axis (quadrants I and II), that hug two asymptotes.",
+            opWord: "x² is in the denominator", core: i => i === "x" ? "1/x²" : `1/(${i})²` },
+};
+const KEYS = Object.keys(PARENTS);
+
+/* =====================================================================
+   2. SMALL HELPERS
+   ===================================================================== */
+const $ = id => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+// Create an SVG element with attributes in one call.
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+// Show numbers the way they appear in the notes: true minus sign, fractions for halves and quarters.
+function num(v) {
+  const fr = { 0.5: "½", 0.25: "¼", "-0.5": "−½", "-0.25": "−¼" };
+  if (fr[v] !== undefined) return fr[v];
+  return String(v).replace("-", "−");
+}
+const pt = ([x, y]) => `(${num(x)}, ${num(y)})`;
+const rand = n => Math.floor(Math.random() * n);
+const pick = arr => arr[rand(arr.length)];
+// Fisher–Yates shuffle (returns a new array).
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+/* =====================================================================
+   3. TRANSFORMED-GRAPH DRAWING  (reused by Skill 5.4)
+   Draws y = a·f(b(x − h)) + k. A parent point (x, y) lands at
+   (x ÷ b + h, a·y + k). Options: ghost parent, point-path arrows,
+   labels, a "twin" comparison curve, and custom labelled points.
+   ===================================================================== */
+// Fractions read better than decimals: 0.3333 -> ⅓, 0.125 -> ⅛, 1.5 -> 1.5
+const UFRAC = { "1/2": "½", "1/3": "⅓", "2/3": "⅔", "1/4": "¼", "3/4": "¾", "1/8": "⅛", "3/8": "⅜", "5/8": "⅝", "7/8": "⅞", "1/6": "⅙", "5/6": "⅚" };
+function fnum(v) {
+  if (Math.abs(v - Math.round(v)) < 1e-9) return String(Math.round(v)).replace("-", "−");
+  for (const d of [2, 3, 4, 6, 8, 12, 16]) {
+    const n = Math.round(v * d);
+    if (Math.abs(v * d - n) < 1e-9) {
+      const s = n < 0 ? "−" : "", a = Math.abs(n), w = Math.floor(a / d), r = a % d;
+      if (d === 2 && w > 0) return s + (a / d);                 // 1.5 reads better than 1½ for students
+      const g = (p, q) => q ? g(q, p % q) : p, gg = g(r, d), key = `${r / gg}/${d / gg}`;
+      const frac = UFRAC[key] || key;
+      return s + (w ? `${w} ${frac}` : frac);
+    }
+  }
+  return String(+v.toFixed(3)).replace("-", "−");
+}
+const fpt = ([x, y]) => `(${fnum(x)}, ${fnum(y)})`;
+const mapPt = ([x, y], T) => [x / T.b + T.h, T.a * y + T.k];
+const WIN = { cbrt: 10 };
+
+function drawT(svg, key, o = {}) {
+  const P = PARENTS[key];
+  const T = { a: o.a ?? 1, b: o.b ?? 1, h: o.h || 0, k: o.k || 0 };
+  const lim = o.win || WIN[key] || 8, W = 440, pad = 28;
+  const S = (W - 2 * pad) / (2 * lim);
+  const X = x => pad + (x + lim) * S, Y = y => W - pad - (y + lim) * S;
+  [...svg.childNodes].forEach(n => { if (!["title", "desc"].includes(n.nodeName)) svg.removeChild(n); });
+  const css = getComputedStyle(document.documentElement), c = v => css.getPropertyValue(v).trim();
+  const g = el("g", {}, svg);
+  for (let i = -lim; i <= lim; i++) {
+    el("line", { x1: X(i), y1: Y(-lim), x2: X(i), y2: Y(lim), stroke: c("--grid") }, g);
+    el("line", { x1: X(-lim), y1: Y(i), x2: X(lim), y2: Y(i), stroke: c("--grid") }, g);
+  }
+  el("line", { x1: X(-lim), y1: Y(0), x2: X(lim), y2: Y(0), stroke: c("--axis"), "stroke-width": 1.6 }, g);
+  el("line", { x1: X(0), y1: Y(-lim), x2: X(0), y2: Y(lim), stroke: c("--axis"), "stroke-width": 1.6 }, g);
+  if (o.ticks !== false) for (let i = -lim + (lim % 2); i <= lim; i += 2) {
+    if (!i) continue;
+    el("text", { x: X(i), y: Y(0) + 16, "text-anchor": "middle", "font-size": 12, fill: c("--muted") }, g).textContent = fnum(i);
+    el("text", { x: X(0) - 6, y: Y(i) + 4, "text-anchor": "end", "font-size": 12, fill: c("--muted") }, g).textContent = fnum(i);
+  }
+  const id = "c" + Math.random().toString(36).slice(2);
+  const defs = el("defs", {}, svg);
+  el("rect", { x: X(-lim), y: Y(lim), width: 2 * lim * S, height: 2 * lim * S }, el("clipPath", { id }, defs));
+  const cg = el("g", { "clip-path": `url(#${id})` }, svg);
+
+  // one transformed curve
+  const curve = (t, color, dashed, width) => {
+    const dash = dashed ? { "stroke-dasharray": "8 6" } : {};
+    if (t.a === 0) {                                      // a = 0 flattens everything onto y = k
+      el("line", { x1: X(-lim), y1: Y(t.k), x2: X(lim), y2: Y(t.k), stroke: color, "stroke-width": width, ...dash }, cg); return;
+    }
+    if (P.isStep) {                                       // each step [n, n+1) of the parent input
+      for (let n = -60; n <= 60; n++) {
+        const x1 = n / t.b + t.h, x2 = (n + 1) / t.b + t.h, y = t.a * n + t.k;
+        if (Math.max(x1, x2) < -lim || Math.min(x1, x2) > lim || Math.abs(y) > lim + 1) continue;
+        el("line", { x1: X(x1), y1: Y(y), x2: X(x2), y2: Y(y), stroke: color, "stroke-width": width, ...dash }, cg);
+        if (!dashed) {
+          el("circle", { cx: X(x1), cy: Y(y), r: 4.5, fill: color }, cg);
+          el("circle", { cx: X(x2), cy: Y(y), r: 4.5, fill: c("--panel"), stroke: color, "stroke-width": 2 }, cg);
+        }
+      }
+      return;
+    }
+    // parent input pieces (the data uses ±6 as "forever"), mapped to x = u ÷ b + h
+    const BIG = 1e4;
+    const pieces = (P.pieces || [[-6, 6]]).map(([p, q]) => {
+      p = p === -6 ? -BIG : p; q = q === 6 ? BIG : q;
+      const ends = [p / t.b + t.h, q / t.b + t.h].sort((m, n) => m - n);
+      return [Math.max(ends[0], -lim), Math.min(ends[1], lim)];
+    });
+    pieces.forEach(([lo, hi]) => {
+      if (lo >= hi) return;
+      let d = "", pen = false;
+      for (let i = 0; i <= 800; i++) {
+        const x = lo + (hi - lo) * i / 800, y = t.a * P.f(t.b * (x - t.h)) + t.k;
+        if (!isFinite(y) || Math.abs(y) > lim * 2) { pen = false; continue; }
+        d += (pen ? "L" : "M") + X(x).toFixed(1) + " " + Y(y).toFixed(1) + " "; pen = true;
+      }
+      el("path", { d, fill: "none", stroke: color, "stroke-width": width, "stroke-linejoin": "round", ...dash }, cg);
+    });
+  };
+  if (o.ghost !== false) curve({ a: 1, b: 1, h: 0, k: 0 }, c("--muted"), true, 2.4);
+  if (o.twin) curve({ a: o.twin.a, b: o.twin.b ?? 1, h: o.twin.h || 0, k: o.twin.k || 0 }, c("--curve2"), true, 4);
+  if (P.asym && o.showNew !== false && T.a !== 0) {       // asymptotes land at x = h, y = k
+    el("line", { x1: X(T.h), y1: Y(-lim), x2: X(T.h), y2: Y(lim), stroke: c("--asym"), "stroke-width": 2, "stroke-dasharray": "5 5" }, cg);
+    el("line", { x1: X(-lim), y1: Y(T.k), x2: X(lim), y2: Y(T.k), stroke: c("--asym"), "stroke-width": 2, "stroke-dasharray": "5 5" }, cg);
+  }
+  if (o.showNew !== false) curve(T, c("--curve"), false, 3.4);
+
+  const moved = T.a !== 1 || T.b !== 1 || T.h || T.k;
+  if (o.arrows && moved && o.showNew !== false) {
+    const mid = "m" + id;
+    const mk = el("marker", { id: mid, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, defs);
+    el("path", { d: "M0 0 L10 5 L0 10 z", fill: c("--curve2") }, mk);
+    P.kp.forEach(p => { const [nx, ny] = mapPt(p, T);
+      if (Math.hypot(nx - p[0], ny - p[1]) > 0.05)
+        el("line", { x1: X(p[0]), y1: Y(p[1]), x2: X(nx), y2: Y(ny), stroke: c("--curve2"), "stroke-width": 1.8, "marker-end": `url(#${mid})` }, cg); });
+  }
+  const pg = el("g", {}, svg);
+  if (o.ghost !== false) P.kp.forEach(([x, y]) => { if (Math.abs(x) <= lim && Math.abs(y) <= lim)
+    el("circle", { cx: X(x), cy: Y(y), r: 3.5, fill: c("--panel"), stroke: c("--muted"), "stroke-width": 1.5 }, pg); });
+  const pts = o.points || (o.showNew === false ? [] : P.kp.map(p => mapPt(p, T)));
+  pts.forEach(([x, y]) => {
+    if (Math.abs(x) > lim || Math.abs(y) > lim) return;
+    el("circle", { cx: X(x), cy: Y(y), r: 6, fill: c("--curve"), stroke: c("--panel"), "stroke-width": 2 }, pg);
+    if (o.labels !== false) {
+      const isAnchor = Math.abs(x - T.h) < 1e-9 && Math.abs(y - T.k) < 1e-9;
+      const left = x < T.h || isAnchor, below = y < T.k || isAnchor;
+      const t = el("text", { x: X(x) + (left ? -9 : 9), y: Y(y) + (below ? 18 : -9), "text-anchor": left ? "end" : "start",
+        "font-size": 13, "font-weight": 600, fill: c("--ink"), stroke: c("--panel"), "stroke-width": 4, "paint-order": "stroke" }, pg);
+      t.textContent = fpt([x, y]);
+    }
+  });
+}
+
+/* =====================================================================
+   EQUATIONS AND WORDS for y = a·f(b(x − h)) + k  (reused by Skill 5.4)
+   ===================================================================== */
+function bxText(b, h) {                                   // the inside: 2x, −x, ½x, 2(x − 3), x + 1 ...
+  const lead = b === 1 ? "" : b === -1 ? "−" : fnum(b);
+  if (!h) return lead + "x";
+  const inner = h > 0 ? `x − ${fnum(h)}` : `x + ${fnum(-h)}`;
+  return b === 1 ? inner : `${lead}(${inner})`;
+}
+function eqT(key, T, name = "g") {
+  const P = PARENTS[key], a = T.a ?? 1, b = T.b ?? 1, h = T.h || 0, k = T.k || 0;
+  const inside = T.inside || bxText(b, h);               // T.inside lets 5.4 show an unfactored inside such as 2x − 6
+  let core = P.core(inside);
+  if (key === "sq" || key === "cube") {                  // (2x)² instead of 2x² so the 2 stays visibly inside
+    const pw = key === "sq" ? "²" : "³";
+    core = inside === "x" ? "x" + pw : `(${inside})${pw}`;
+  }
+  let lead = a === 1 ? "" : a === -1 ? "−" : fnum(a);
+  if ((key === "recip" || key === "recip2") && a !== 1) {  // 3/(2x) reads better than 3·1/(2x)
+    const den = core.replace(/^1\//, "");
+    if (Number.isInteger(a)) { lead = ""; core = `${fnum(a)}/${den}`; }
+    else { lead = fnum(a) + "·"; }
+  }
+  const tail = !k ? "" : k > 0 ? ` + ${fnum(k)}` : ` − ${fnum(-k)}`;
+  return `${name}(x) = ${lead}${core}${tail}`;
+}
+function aWords(a) {
+  if (a === 1) return [];
+  if (a === 0) return ["flattened onto the x-axis (every y-value becomes 0)"];
+  const w = [], m = Math.abs(a);
+  if (m > 1) w.push(`vertical stretch by a factor of ${fnum(m)}`);
+  if (m < 1) w.push(`vertical compression by a factor of ${fnum(m)}`);
+  if (a < 0) w.push("reflection across the x-axis");
+  return w;
+}
+function bWords(b) {
+  if (b === 1) return [];
+  const w = [], m = Math.abs(b);
+  if (m > 1) w.push(`horizontal compression by a factor of ${fnum(1 / m)}`);
+  if (m < 1) w.push(`horizontal stretch by a factor of ${fnum(1 / m)}`);
+  if (b < 0) w.push("reflection across the y-axis");
+  return w;
+}
+function tWords(T) {
+  const w = [...aWords(T.a ?? 1), ...bWords(T.b ?? 1)];
+  if (!w.length) return "no stretch, compression, or reflection";
+  return w.length === 1 ? w[0] : w.slice(0, -1).join(", ") + " and " + w[w.length - 1];
+}
+const cap = s => s[0].toUpperCase() + s.slice(1);
+function ruleText(T) {                                    // (x, y) → (x ÷ 2, 3y)
+  const b = T.b ?? 1, a = T.a ?? 1;
+  const xs = b === 1 ? "x" : b === -1 ? "−x" : `x ÷ ${b < 0 ? "(" + fnum(b) + ")" : fnum(b)}`;
+  const ys = a === 1 ? "y" : a === -1 ? "−y" : `${fnum(a)}y`;
+  return `(x, y) → (${xs}, ${ys})`;
+}
+// a "fingerprint" of a graph, used to make sure two answer choices never look identical
+function sig(key, T) {
+  return [-3.7, -2.2, -1.3, -0.6, 0.35, 0.8, 1.6, 2.9, 4.4].map(x => {
+    const y = (T.a ?? 1) * PARENTS[key].f((T.b ?? 1) * (x - (T.h || 0))) + (T.k || 0);
+    return isFinite(y) ? y.toFixed(4) : "n";
+  }).join("|");
+}
+
+/* =====================================================================
+   LADDER HELPERS: polynomials (for the even/odd rungs) and choice building
+   ===================================================================== */
+const SUP = "⁰¹²³⁴⁵";
+const termText = (c, n, first) => { const m = Math.abs(c), sign = c < 0 ? (first ? "−" : " − ") : (first ? "" : " + ");
+  return sign + (n === 0 ? fnum(m) : (m === 1 ? "" : fnum(m)) + "x" + (n > 1 ? SUP[n] : "")); };
+const polyText = c => { let s = "", f = true; for (let n = c.length - 1; n >= 0; n--) if (c[n]) { s += termText(c[n], n, f); f = false; } return s || "0"; };
+const negX = c => c.map((v, n) => n % 2 ? -v : v);
+function parity(c) { const p = c.map((v, n) => v ? n % 2 : -1).filter(v => v >= 0);
+  return p.every(v => v === 0) ? "even" : p.every(v => v === 1) ? "odd" : "neither"; }
+function randPoly(t) { let c; do { c = [0, 0, 0, 0, 0, 0];
+  const pool = t === "even" ? [0, 2, 4] : t === "odd" ? [1, 3, 5] : [0, 1, 2, 3, 4, 5];
+  shuffle(pool).slice(0, pick([2, 3])).forEach(n => c[n] = pick([-4, -3, -2, -1, 1, 2, 3, 5])); } while (parity(c) !== t); return c; }
+// right answer + up to 3 different wrong ones
+function choices(right, wrongs, keyFn = x => x) {
+  const seen = new Set([keyFn(right)]), out = [{ v: right, ok: true }];
+  for (const w of wrongs) { if (out.length === 4) break; const k = keyFn(w); if (!seen.has(k)) { seen.add(k); out.push({ v: w, ok: false }); } }
+  return shuffle(out);
+}
+const BIG = ["sq", "sqrt", "abs", "cube", "cbrt", "recip"];
+const ON_CURVE = ["sq", "sqrt", "abs", "cube", "cbrt"];
+const ANCHOR = { sq: "vertex", sqrt: "starting point", abs: "corner", cube: "center point", cbrt: "center point" };
+
+/* =====================================================================
+   1. THE RUNGS (bottom to top)
+   Each rung is one decision from the Lesson 5 skill map. make() returns a
+   fresh question: prompt, choices (label/ok), optional graph, and why.
+   review = where to go if the rung is shaky (page + tab).
+   ===================================================================== */
+const RUNGS = [
+  { name: "Recognize a parent graph", skill: "5.1", review: ["lesson05-skill5-1.html#explore", "Parent function gallery"],
+    make: () => { const k = pick(["sq", "sqrt", "abs", "cube", "cbrt", "step", "recip", "recip2"]);
+      const opts = choices(k, shuffle(KEYS.filter(x => x !== k)), x => x);
+      return { prompt: "Which parent function is graphed?", graph: { key: k, T: {}, label: `Mystery graph: ${PARENTS[k].feature}.` },
+        choices: opts.map(o => ({ label: `${PARENTS[o.v].name}: ${PARENTS[o.v].eq}`, ok: o.ok })), why: `${PARENTS[k].clue} That is ${PARENTS[k].eq}.` }; } },
+  { name: "Domain and range of a parent", skill: "5.1", review: ["lesson05-skill5-1.html#examples", "Domain & range examples"],
+    make: () => { const k = pick(["sq", "sqrt", "abs", "cube", "step", "recip", "recip2"]), dom = Math.random() < 0.5;
+      const right = dom ? PARENTS[k].domain : PARENTS[k].range;
+      const pool = ["(−∞, ∞)", "[0, ∞)", "(0, ∞)", "(−∞, 0) ∪ (0, ∞)", "all integers"];
+      const opts = choices(right, shuffle(pool));
+      return { prompt: `What is the ${dom ? "domain" : "range"} of ${PARENTS[k].eq}?`, choices: opts.map(o => ({ label: o.v, ok: o.ok })),
+        why: `The ${dom ? "domain" : "range"} of ${PARENTS[k].eq} is ${right}.` }; } },
+  { name: "Vertical shifts: f(x) + k", skill: "5.2", review: ["lesson05-skill5-2.html#explore", "Shift explorer (k slider)"],
+    make: () => { const k = pick(BIG), n = pick([1, 2, 3, 4, 5]) * pick([1, -1]);
+      const right = n > 0 ? `Up ${n}` : `Down ${-n}`, m = Math.abs(n);
+      const opts = choices(right, [n > 0 ? `Down ${m}` : `Up ${m}`, `Left ${m}`, `Right ${m}`]);
+      return { prompt: `Compared with ${PARENTS[k].eq}, which way does ${eqT(k, { k: n })} move?`, choices: opts.map(o => ({ label: o.v, ok: o.ok })),
+        why: `The ${n > 0 ? "+ " + n : "− " + m} is outside the function, so the graph moves the way the sign says: ${right.toLowerCase()}.` }; } },
+  { name: "Horizontal shifts: f(x − h)", skill: "5.2", review: ["lesson05-skill5-2.html#examples", "Shifting examples and the prediction challenge"],
+    make: () => { const k = pick(BIG), h = pick([1, 2, 3, 4, 5]) * pick([1, -1]), m = Math.abs(h);
+      const right = h > 0 ? `Right ${m}` : `Left ${m}`;
+      const opts = choices(right, [h > 0 ? `Left ${m}` : `Right ${m}`, `Up ${m}`, `Down ${m}`]);
+      return { prompt: `Compared with ${PARENTS[k].eq}, which way does ${eqT(k, { h })} move?`, choices: opts.map(o => ({ label: o.v, ok: o.ok })),
+        why: `The inside is ${h > 0 ? "x − " + m : "x + " + m}, so h = ${fnum(h)}. Inside changes move the opposite way of the sign you see: ${right.toLowerCase()}.` }; } },
+  { name: "Outside multiplier: a·f(x)", skill: "5.3", review: ["lesson05-skill5-3.html#explore", "Stretch explorer (a slider)"],
+    make: () => { const k = pick(["sqrt", "abs", "sq", "cube", "cbrt"]), a = pick([2, 3, 0.5, 0.25, -1, -2, -0.5]);
+      const right = tWords({ a });
+      const opts = choices(right, [tWords({ a: 1 / a }), tWords({ b: a }), tWords({ a: -a }), tWords({ b: 1 / a })].filter(w => w !== right));
+      return { prompt: `What does the ${fnum(a)} do in ${eqT(k, { a })}?`, choices: opts.map(o => ({ label: cap(o.v), ok: o.ok })),
+        why: `It multiplies the whole function (outside), so it changes y-values: ${right}.` }; } },
+  { name: "Inside multiplier: f(b·x)", skill: "5.3", review: ["lesson05-skill5-3.html#examples", "Stretch & reflect examples"],
+    make: () => { const k = pick(["sqrt", "cube", "cbrt"]), b = pick([2, 3, 4, 0.5, -1, -2]);
+      const right = tWords({ b });
+      const opts = choices(right, [tWords({ a: b }), tWords({ b: 1 / b }), tWords({ b: -b }), tWords({ a: 1 / b })].filter(w => w !== right));
+      return { prompt: `What does the ${fnum(b)} do in ${eqT(k, { b })}?`, choices: opts.map(o => ({ label: cap(o.v), ok: o.ok })),
+        why: `It multiplies x (inside), so it changes x-values and works backward: every x is divided by ${fnum(b)}. That is a ${right}.` }; } },
+  { name: "Factor out b to find h", skill: "5.4", review: ["lesson05-skill5-4.html#explore", "Factor-out-b trainer (Explore tab)"],
+    make: () => { const k = pick(["sqrt", "abs", "cbrt"]), b = pick([2, 3, -1, -2]); let h; do { h = pick([-3, -2, -1, 1, 2, 3]); } while (b * h === h);
+      const m = -b * h, inside = `${b === -1 ? "−" : fnum(b)}x${m > 0 ? " + " + fnum(m) : " − " + fnum(-m)}`;
+      const opts = choices(h, [-m, m, -h, 5, -5]);
+      return { prompt: `In g(x) = ${PARENTS[k].core(inside)}, what is h?`, choices: opts.map(o => ({ label: `h = ${fnum(o.v)}`, ok: o.ok })),
+        why: `Factor ${fnum(b)} out: ${inside} = ${bxText(b, h)}. So h = ${fnum(h)}. Check: the inside is 0 when x = ${fnum(h)}.` }; } },
+  { name: "Apply the mapping rule", skill: "5.4", review: ["lesson05-skill5-4.html#examples", "Six-step examples and the point table"],
+    make: () => { const k = pick(["sqrt", "abs", "sq", "cube"]), T = { a: pick([2, -1, 3, -2]), b: pick([1, 2, 1]), h: pick([-3, -1, 2, 3]), k: pick([-4, -2, 1, 3]) };
+      const p = pick(PARENTS[k].kp.filter(([x, y]) => x !== 0 && Number.isInteger(x) && Number.isInteger(y)));
+      const r = mapPt(p, T);
+      const wrongs = [[(p[0] + T.h) / T.b, r[1]], [p[0] * T.b + T.h, r[1]], [r[0], T.a * (p[1] + T.k)], [p[0] / T.b - T.h, r[1]], [r[0], T.a * p[1] - T.k]];
+      const opts = choices(r, wrongs, fpt);
+      return { prompt: `${fpt(p)} is on ${PARENTS[k].eq}. Where does it land on ${eqT(k, T)}?`, choices: opts.map(o => ({ label: fpt(o.v), ok: o.ok })),
+        why: `Use (x, y) → (x ÷ b + h, a·y + k) with a = ${fnum(T.a)}, b = ${fnum(T.b)}, h = ${fnum(T.h)}, k = ${fnum(T.k)}: divide before adding, multiply before adding. ${fpt(p)} → ${fpt(r)}.` }; } },
+  { name: "Write the equation from a graph", skill: "5.4", review: ["lesson05-skill5-4.html#examples", "Equation-from-a-graph examples"],
+    make: () => { const k = pick(ON_CURVE), T = { a: pick([2, -1, -2, 3, 0.5]), b: 1, h: pick([-3, -2, -1, 1, 2, 3]), k: pick([-3, -2, -1, 1, 2, 3]) };
+      const q = mapPt([1, 1], T);
+      const opts = choices(T, [{ ...T, h: -T.h }, { ...T, k: -T.k }, { ...T, a: -T.a }, { ...T, a: 1 / T.a }, { ...T, h: -T.h, k: -T.k }], t => sig(k, t));
+      return { prompt: `Which equation matches the graph? Its parent is ${PARENTS[k].eq}.`,
+        graph: { key: k, T, points: [[T.h, T.k], q], label: `Transformed ${PARENTS[k].name.toLowerCase()} graph with its ${ANCHOR[k]} at ${fpt([T.h, T.k])}, passing through ${fpt(q)}.` },
+        choices: opts.map(o => ({ label: eqT(k, o.v), ok: o.ok })),
+        why: `The ${ANCHOR[k]} is at ${fpt([T.h, T.k])}, so h = ${fnum(T.h)} and k = ${fnum(T.k)}. From there the graph goes over 1, ${T.a > 0 ? "up" : "down"} ${fnum(Math.abs(T.a))}, so a = ${fnum(T.a)}.` }; } },
+  { name: "Find f(−x)", skill: "5.5", review: ["lesson05-skill5-5.html#examples", "Algebra examples (replace x with −x)"],
+    make: () => { const c = randPoly(pick(["odd", "neither"])), right = polyText(negX(c));
+      const idx = c.map((v, n) => v ? n : -1).filter(n => n >= 0), flips = [];
+      for (let m = 1; m < 1 << idx.length; m++) flips.push(polyText(c.map((v, n) => idx.includes(n) && (m >> idx.indexOf(n)) & 1 ? -v : v)));
+      const opts = choices(right, [polyText(c), polyText(c.map(v => -v)), ...shuffle(flips)]);
+      return { prompt: `If f(x) = ${polyText(c)}, what is f(−x)?`, choices: opts.map(o => ({ label: o.v, ok: o.ok })),
+        why: `Put (−x) in for every x. Odd powers change sign and even powers do not: f(−x) = ${right}.` }; } },
+  { name: "Even, odd, or neither", skill: "5.5", review: ["lesson05-skill5-5.html#explore", "Symmetry tester (mirror and rotate)"],
+    make: () => { const t = pick(["even", "odd", "neither"]), c = randPoly(t);
+      const opts = ["Even", "Odd", "Neither"].map(l => ({ label: l, ok: l.toLowerCase() === t }));
+      const useGraph = Math.random() < 0.5;
+      return { prompt: useGraph ? "Use symmetry. Is the graphed function even, odd, or neither?" : `Is f(x) = ${polyText(c)} even, odd, or neither?`,
+        poly: useGraph ? c : null, choices: opts,
+        why: `f(−x) = ${polyText(negX(c))}. ${t === "even" ? "That equals f(x): even (symmetric about the y-axis)." : t === "odd" ? "That equals −f(x): odd (symmetric about the origin)." : "That is neither f(x) nor −f(x): neither."}` }; } },
+];
+
+/* =====================================================================
+   2. PROGRESS (saved in this browser only; the page works without it)
+   state.res[i] = "pass" | "shaky" | "work"
+   ===================================================================== */
+const KEY = "math2412-lesson05-ladder";
+let state = (() => { try { return JSON.parse(localStorage.getItem(KEY)) || { res: {}, at: 0 }; } catch { return { res: {}, at: 0 }; } })();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { } };
+const STATUS = { pass: "✓ Cleared", shaky: "! Shaky", work: "✗ Needs work" };
+
+function drawRungs() {
+  $("rungs").innerHTML = RUNGS.map((r, i) => {
+    const s = state.res[i], cur = run && run.i === i;
+    return `<li class="${s || ""} ${cur ? "cur" : ""}"${cur ? ' aria-current="step"' : ""}><span class="n">${i + 1}</span><span>${r.name}</span><span class="st">${cur ? "Climbing" : s ? STATUS[s] : ""}</span></li>`;
+  }).join("");
+}
+
+/* =====================================================================
+   3. CLIMBING
+   run = the rung being climbed: its two questions and how they went.
+   ===================================================================== */
+let run = null;
+function startRung(i) {
+  if (i >= RUNGS.length) return report();
+  state.at = i; save();
+  const qs = [RUNGS[i].make(), RUNGS[i].make()];
+  if (qs[0].prompt === qs[1].prompt) qs[1] = RUNGS[i].make();           // avoid the exact same question twice
+  run = { i, qs, q: 0, right: 0 };
+  drawRungs(); showQ();
+}
+function showQ() {
+  const r = RUNGS[run.i], q = run.qs[run.q], st = $("stage");
+  st.innerHTML = `<span class="skilltag">Rung ${run.i + 1} of ${RUNGS.length} · Skill ${r.skill}</span>
+    <h2 style="margin-top:4px">${r.name}</h2>
+    <p class="muted">Question ${run.q + 1} of 2</p>
+    <fieldset><legend class="prompt">${q.prompt}</legend>
+    ${q.choices.map((c, j) => `<label class="choice"><input type="radio" name="ans" value="${j}"> <span>${c.label}</span></label>`).join("")}</fieldset>
+    <div id="qg"></div>
+    <div class="row"><button class="btn" id="check">Check</button><button class="btn secondary" id="next" hidden>Next</button></div>
+    <div id="fb"></div>`;
+  if (q.graph || q.poly) {                                // graphs: a transformed parent, or a polynomial for the symmetry rung
+    const svg = el("svg", { viewBox: "0 0 440 440", class: "graph qgraph", role: "img" });
+    $("qg").appendChild(svg);
+    if (q.graph) { drawT(svg, q.graph.key, { ...q.graph.T, ghost: false, points: q.graph.points || [], labels: !!q.graph.points }); svg.setAttribute("aria-label", q.graph.label); }
+    else { drawPoly(svg, q.poly); svg.setAttribute("aria-label", `Graph of f(x) = ${polyText(q.poly)}.`); }
+  }
+  $("check").addEventListener("click", check);
+  $("next").addEventListener("click", () => { run.q++; run.q < 2 ? showQ() : finishRung(); });
+  st.querySelector("legend").setAttribute("tabindex", "-1"); st.querySelector("legend").focus();
+}
+// polynomial graph for the even/odd rung (reuses the drawT grid by drawing on a blank parent, then adding the curve)
+function drawPoly(svg, c) {
+  drawT(svg, "lin", { a: 0, ghost: false, showNew: false, win: 6 });
+  const css = getComputedStyle(document.documentElement), col = css.getPropertyValue("--curve").trim();
+  const W = 440, pad = 28, lim = 6, S = (W - 2 * pad) / (2 * lim), X = x => pad + (x + lim) * S, Y = y => W - pad - (y + lim) * S;
+  const f = x => c.reduce((s, v, n) => s + v * x ** n, 0);
+  let d = "", pen = false;
+  for (let i = 0; i <= 900; i++) { const x = -lim + 2 * lim * i / 900, y = f(x);
+    if (Math.abs(y) > lim) { pen = false; continue; } d += (pen ? "L" : "M") + X(x).toFixed(1) + " " + Y(y).toFixed(1); pen = true; }
+  el("path", { d, fill: "none", stroke: col, "stroke-width": 3.4 }, svg);
+}
+function check() {
+  const q = run.qs[run.q], sel = document.querySelector('input[name="ans"]:checked'), fb = $("fb");
+  if (!sel) { fb.className = "feedback hint"; fb.textContent = "Choose an answer first."; return; }
+  const labels = [...document.querySelectorAll(".choice")], ok = q.choices[+sel.value].ok;
+  labels[+sel.value].classList.add(ok ? "correct" : "wrong");
+  if (!ok) labels[q.choices.findIndex(c => c.ok)].classList.add("correct");
+  if (ok) run.right++;
+  fb.className = "feedback " + (ok ? "ok" : "bad");
+  fb.innerHTML = `<strong>${ok ? "Correct." : "Not this time."}</strong> ${q.why}`;
+  document.querySelectorAll('input[name="ans"]').forEach(x => x.disabled = true);
+  $("check").hidden = true; $("next").hidden = false; $("next").textContent = run.q === 0 ? "Next question" : "See how this rung went"; $("next").focus();
+}
+function finishRung() {
+  const i = run.i, r = RUNGS[i], res = run.right === 2 ? "pass" : run.right === 1 ? "shaky" : "work";
+  state.res[i] = res; state.at = i + 1; save(); run = null; drawRungs();   // a reload resumes at the next rung
+  const st = $("stage"), last = i === RUNGS.length - 1;
+  if (res === "pass") {
+    st.innerHTML = `<h2>Rung ${i + 1} cleared ✓</h2><p>You got both questions on <strong>${r.name.toLowerCase()}</strong>.</p>
+      <div class="row"><button class="btn" id="go">${last ? "See my results" : "Climb to rung " + (i + 2)}</button></div>`;
+  } else {
+    st.innerHTML = `<h2>Rung ${i + 1}: ${res === "shaky" ? "a little shaky" : "needs work"}</h2>
+      <p>You got ${res === "shaky" ? "one of the two" : "neither"} question${res === "shaky" ? "" : "s"} on <strong>${r.name.toLowerCase()}</strong>. This is the spot to strengthen.</p>
+      <div class="review"><strong>Review:</strong> <a href="${r.review[0]}">${r.review[1]}</a> (Skill ${r.skill}). Try a few examples there, then come back and retry this rung.</div>
+      <div class="row"><button class="btn" id="retry">Retry rung ${i + 1}</button><button class="btn secondary" id="go">${last ? "See my results" : "Keep climbing to check the rest"}</button></div>`;
+    $("retry").addEventListener("click", () => startRung(i));
+  }
+  $("go").addEventListener("click", () => startRung(i + 1));
+  st.querySelector("h2").setAttribute("tabindex", "-1"); st.querySelector("h2").focus();
+}
+
+/* =====================================================================
+   4. REPORT, with a copy button so students can paste results into the course site
+   ===================================================================== */
+function summaryText() {
+  const lines = RUNGS.map((r, i) => `Rung ${i + 1} (${r.skill}) ${r.name}: ${state.res[i] ? STATUS[state.res[i]].slice(2) : "not tried"}`);
+  return `Math 2412 Lesson 5 Ladder results\n${lines.join("\n")}`;
+}
+function report() {
+  run = null; state.at = RUNGS.length; save(); drawRungs();
+  const weak = RUNGS.map((r, i) => ({ r, i, s: state.res[i] })).filter(x => x.s && x.s !== "pass");
+  const cleared = RUNGS.filter((r, i) => state.res[i] === "pass").length;
+  const st = $("stage");
+  st.innerHTML = `<h2>Your ladder results</h2>
+    <p class="prompt">${cleared} of ${RUNGS.length} rungs cleared.</p>
+    ${weak.length ? `<h3>Your next steps</h3><ol>${weak.map(x => `<li><strong>${x.r.name}</strong> (${STATUS[x.s].slice(2).toLowerCase()}): <a href="${x.r.review[0]}">${x.r.review[1]}</a></li>`).join("")}</ol>
+      <p class="muted">Work on the lowest rung first. Higher rungs often depend on lower ones.</p>`
+      : `<p>Every rung cleared. You are ready for the Lesson 5 quiz and Lesson 6.</p>`}
+    <table class="report"><caption class="muted" style="text-align:left">All rungs</caption>
+      <thead><tr><th scope="col">Rung</th><th scope="col">Skill</th><th scope="col">Result</th></tr></thead>
+      <tbody>${RUNGS.map((r, i) => `<tr><td>${i + 1}. ${r.name}</td><td>${r.skill}</td><td>${state.res[i] ? STATUS[state.res[i]] : "Not tried"}</td></tr>`).join("")}</tbody></table>
+    <div class="row"><button class="btn" id="copy">Copy my results</button><button class="btn secondary" id="restart">Climb again from the bottom</button></div>
+    <p id="copyMsg" aria-live="polite" class="muted"></p>`;
+  $("copy").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(summaryText()); $("copyMsg").textContent = "Copied. Paste it into your course discussion or assignment."; }
+    catch { $("copyMsg").textContent = "Copying is blocked here. Select the table above and copy it instead."; }
+  });
+  $("restart").addEventListener("click", () => { state = { res: {}, at: 0 }; save(); intro(); });
+  st.querySelector("h2").setAttribute("tabindex", "-1"); st.querySelector("h2").focus();
+}
+
+/* =====================================================================
+   5. START SCREEN (offers to resume an unfinished climb)
+   ===================================================================== */
+function intro() {
+  run = null; drawRungs();
+  const started = Object.keys(state.res).length > 0, resumeAt = Math.min(state.at || 0, RUNGS.length);
+  $("stage").innerHTML = `<h2>How it works</h2>
+    <ol><li>Start at the bottom rung. Each rung has two quick questions.</li>
+      <li>Get both right and you climb. Miss one and the ladder marks the rung and shows you exactly where to review.</li>
+      <li>You can keep climbing to check everything, then use your results as a study list.</li></ol>
+    <p class="muted">About 15 minutes for all ${RUNGS.length} rungs.</p>
+    <div class="row">
+      ${started && resumeAt < RUNGS.length ? `<button class="btn" id="resume">Resume at rung ${resumeAt + 1}</button><button class="btn secondary" id="start">Start over from the bottom</button>`
+        : started ? `<button class="btn" id="results">See my last results</button><button class="btn secondary" id="start">Start over from the bottom</button>`
+        : `<button class="btn" id="start">Start climbing</button>`}
+    </div>
+    <p style="margin-top:14px"><label for="jump">Or start at a specific rung: </label>
+      <select id="jump">${RUNGS.map((r, i) => `<option value="${i}">${i + 1}. ${r.name}</option>`).join("")}</select>
+      <button class="btn secondary" id="jumpGo">Go</button></p>`;
+  $("start").addEventListener("click", () => { state = { res: {}, at: 0 }; save(); startRung(0); });
+  if ($("resume")) $("resume").addEventListener("click", () => startRung(resumeAt));
+  if ($("results")) $("results").addEventListener("click", report);
+  $("jumpGo").addEventListener("click", () => startRung(+$("jump").value));
+}
+intro();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (run) showQ(); });
+</script>
+</body>
+</html>
