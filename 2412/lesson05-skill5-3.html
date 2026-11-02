@@ -4,6 +4,21 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Skill 5.3 Stretches and Reflections</title>
+<!-- MathJax draws the equations. Pinned version; if it cannot load (offline), the page uses its own simpler typesetting. -->
+<script>
+window.MathJax = {
+  startup: { typeset: false, ready() {
+    MathJax.startup.defaultReady();
+    MathJax.startup.promise.then(() => {
+      document.head.appendChild(MathJax.svgStylesheet());          // styles for the drawn equations
+      window.mjReady = true; window.dispatchEvent(new Event("mathjax-ready"));
+    });
+  } },
+  svg: { fontCache: "none" },                                      // each equation is self-contained
+  options: { enableMenu: false, renderActions: { assistiveMml: [] } } // screen readers use our plain-text label instead
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" async></script>
 <style>
 /* ===== Color tokens: light by default, dark when the device asks for it ===== */
 :root {
@@ -109,6 +124,18 @@ legend { font-weight: 600; margin-bottom: 6px; }
 .progress span.miss { background: var(--bad); border-color: var(--bad); color: var(--panel); }
 footer { margin-top: 24px; font-size: 14px; color: var(--muted); }
 @media (prefers-reduced-motion: no-preference) { .choice, .gallery button { transition: border-color .15s, background .15s; } }
+/* ===== Math typesetting (see section 0 of the script) ===== */
+.m { font-family: "STIX Two Text", "Cambria Math", Cambria, "Latin Modern Roman", "Times New Roman", serif; font-size: 1.12em; font-weight: 400; letter-spacing: .01em; }
+.bigeq .m, .eq .m, .formula .m { font-weight: 500; }
+.m i { font-style: italic; padding-right: .03em; }
+.m .rad { display: inline-flex; align-items: stretch; white-space: nowrap; vertical-align: baseline; }
+.m .rs { position: relative; padding-right: .02em; }
+.m .ri { position: absolute; font-size: .55em; left: -.05em; top: -.25em; }
+.m .rc { border-top: .075em solid currentColor; padding: .02em .12em 0 .08em; margin-top: .14em; }
+.m .frac { display: inline-flex; flex-direction: column; vertical-align: -.55em; text-align: center; font-size: .86em; line-height: 1.15; margin: 0 .1em; }
+.m .fn { border-bottom: .08em solid currentColor; padding: 0 .2em .05em; }
+.m .fd { padding: .05em .2em 0; }
+.m .op { font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; font-size: .9em; padding: 0 .05em; }
 /* ===== Shared by Skills 5.2–5.4 ===== */
 .sliders { display: grid; gap: 10px; margin: 10px 0; }
 .slider { display: grid; grid-template-columns: 9.5em 1fr 3.2em; gap: 10px; align-items: center; }
@@ -245,6 +272,152 @@ nav.skills { display: flex; justify-content: space-between; flex-wrap: wrap; gap
 <script>
 "use strict";
 /* =====================================================================
+   0. MATH TYPESETTING
+   Equations are marked with M("...") where they are created, or written
+   in HTML as <span class="m">...</span>. typeset() converts each one to
+   TeX (e.g. √(x − 1) → \sqrt{x-1}, 3/(x − 2) → \frac{3}{x-2}) and draws it
+   with MathJax. If MathJax cannot load (a downloaded file opened offline),
+   a simpler built-in typesetter is used instead. Screen readers always
+   hear the plain equation, e.g. "g(x) = 3/(x − 2)".
+   ===================================================================== */
+const MS = "", ME = "";                       // invisible start/end markers
+const M = s => MS + String(s).replace(/[]/g, "") + ME;   // nested marks are flattened
+const plainMath = s => String(s).replace(/[]/g, "");
+const escHTML = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const SUPS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const isL = c => /[A-Za-z]/.test(c || ""), isD = c => /[0-9.]/.test(c || ""), isSup = c => !!c && SUPS.includes(c);
+// index of the ")" that closes the "(" at position i
+function closeParen(s, i) { let d = 0; for (let j = i; j < s.length; j++) { if (s[j] === "(") d++; else if (s[j] === ")" && --d === 0) return j; } return -1; }
+
+/* ---- plain text -> TeX (for MathJax) ---- */
+const TEX_CHAR = { "−": "-", "·": "\\cdot ", "÷": "\\div ", "→": "\\to ", "∞": "\\infty ", "∪": "\\cup ", "≥": "\\ge ", "≤": "\\le ",
+  "≠": "\\ne ", "±": "\\pm ", "°": "^{\\circ}", "⟦": "[\\![", "⟧": "]\\!]", "{": "\\{", "}": "\\}", "%": "\\%", "#": "\\#", "&": "\\&", "_": "\\_", "$": "\\$" };
+const TEX_FRAC = { "½": "\\tfrac{1}{2}", "⅓": "\\tfrac{1}{3}", "⅔": "\\tfrac{2}{3}", "¼": "\\tfrac{1}{4}", "¾": "\\tfrac{3}{4}", "⅛": "\\tfrac{1}{8}",
+  "⅜": "\\tfrac{3}{8}", "⅝": "\\tfrac{5}{8}", "⅞": "\\tfrac{7}{8}", "⅙": "\\tfrac{1}{6}", "⅚": "\\tfrac{5}{6}" };
+const TEX_WORDS = { log: "\\log ", ln: "\\ln ", sin: "\\sin ", cos: "\\cos ", tan: "\\tan ", const: "\\text{const}" };
+function supRun(s, j) { let t = ""; while (isSup(s[j])) t += SUPS.indexOf(s[j++]); return [t, j]; }
+function toTeX(s) {
+  let out = "", i = 0, absOpen = false;
+  const denom = j => {                                   // what follows "/": ( ... ) or a letter, plus any power
+    if (s[j] === "(") {
+      const e = closeParen(s, j); if (e < 0) return null;
+      const [p, k] = supRun(s, e + 1), inner = toTeX(s.slice(j + 1, e));
+      return { tex: p ? `\\left(${inner}\\right)^{${p}}` : inner, end: k };
+    }
+    if (isL(s[j])) { const [p, k] = supRun(s, j + 1); return { tex: s[j] + (p ? `^{${p}}` : ""), end: k }; }
+    return null;
+  };
+  while (i < s.length) {
+    const c = s[i];
+    if (c === "√" || c === "∛") {                         // \sqrt{...} or \sqrt[3]{...}
+      let inner, end;
+      if (s[i + 1] === "(") { const e = closeParen(s, i + 1); inner = toTeX(s.slice(i + 2, e)); end = e + 1; }
+      else { let k = i + 1; while (isL(s[k]) || isD(s[k])) k++; inner = toTeX(s.slice(i + 1, k)); end = k; }
+      out += c === "∛" ? `\\sqrt[3]{${inner}}` : `\\sqrt{${inner}}`; i = end; continue;
+    }
+    if (isD(c) || isL(c)) {
+      let k = i; const num = isD(c); while (num ? isD(s[k]) : isL(s[k])) k++;
+      let tok = s.slice(i, k);
+      if (num && isL(s[k]) && s[k + 1] === "/") tok += s[k++];   // 4x/(x² + 1): the 4x goes on top
+      if (s[k] === "/" && (num || tok.length === 1)) {
+        const d = denom(k + 1);
+        if (d) { out += `\\dfrac{${tok}}{${d.tex}}`; i = d.end; continue; }   // full-size fraction
+      }
+      out += num ? tok : (TEX_WORDS[tok] || tok); i = k; continue;
+    }
+    if (isSup(c)) { const [p, k] = supRun(s, i); out += `^{${p}}`; i = k; continue; }
+    if (c === "|") { out += absOpen ? "\\right|" : "\\left|"; absOpen = !absOpen; i++; continue; }
+    out += TEX_FRAC[c] || TEX_CHAR[c] || c; i++;
+  }
+  return absOpen ? out.replace(/\\left\|/g, "|").replace(/\\right\|/g, "|") : out;   // unmatched bars: plain |
+}
+
+/* ---- offline backup: simple HTML typesetting ---- */
+function mathHTML(s) {
+  let out = "", i = 0;
+  const denom = j => {
+    if (s[j] === "(") {
+      const e = closeParen(s, j); if (e < 0) return null;
+      let k = e + 1, sup = ""; while (isSup(s[k])) sup += s[k++];
+      const inner = mathHTML(s.slice(j + 1, e));
+      return { html: sup ? `(${inner})${sup}` : inner, end: k };
+    }
+    if (isL(s[j])) { let k = j + 1, sup = ""; while (isSup(s[k])) sup += s[k++]; return { html: `<i>${s[j]}</i>${sup}`, end: k }; }
+    return null;
+  };
+  while (i < s.length) {
+    const c = s[i];
+    if (c === "√" || c === "∛") {
+      let inner, end;
+      if (s[i + 1] === "(") { const e = closeParen(s, i + 1); if (e < 0) { out += c; i++; continue; } inner = mathHTML(s.slice(i + 2, e)); end = e + 1; }
+      else { let k = i + 1; while (isL(s[k]) || isD(s[k])) k++; inner = mathHTML(s.slice(i + 1, k)); end = k; }
+      out += `<span class="rad"><span class="rs">${c === "∛" ? '<span class="ri">3</span>√' : "√"}</span><span class="rc">${inner}</span></span>`;
+      i = end; continue;
+    }
+    if (isD(c) || isL(c)) {
+      let k = i; const num = isD(c); while (num ? isD(s[k]) : isL(s[k])) k++;
+      const tok = s.slice(i, k);
+      if (s[k] === "/" && (num || tok.length === 1)) {
+        const d = denom(k + 1);
+        if (d) { out += `<span class="frac"><span class="fn">${num ? tok : `<i>${tok}</i>`}</span><span class="fd">${d.html}</span></span>`; i = d.end; continue; }
+      }
+      out += num ? tok : TEX_WORDS[tok] ? tok : tok.split("").map(ch => `<i>${ch}</i>`).join("");
+      i = k; continue;
+    }
+    out += c === "→" ? `<span class="op">→</span>` : escHTML(c); i++;
+  }
+  return out;
+}
+
+/* ---- drawing one equation ---- */
+const mjOK = () => !!(window.mjReady && window.MathJax && MathJax.tex2svg);
+function drawMath(span) {
+  if (mjOK()) {
+    try {
+      const node = MathJax.tex2svg(span.dataset.tex, { display: false });
+      node.setAttribute("aria-hidden", "true");          // the wrapper's label is what screen readers read
+      span.replaceChildren(node); span.dataset.mj = "1"; return;
+    } catch (e) { /* fall through to the backup */ }
+  }
+  span.innerHTML = mathHTML(span.getAttribute("aria-label"));
+}
+function mathSpan(plain) {
+  const span = document.createElement("span");
+  span.className = "m"; span.setAttribute("role", "math"); span.setAttribute("aria-label", plain);
+  span.dataset.m = "1"; span.dataset.tex = toTeX(plain); drawMath(span);
+  return span;
+}
+// Find marked text anywhere under root and typeset it.
+function typeset(root = document.body) {
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => /[]/.test(n.data) ? 1 : 3 });
+  const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+  nodes.forEach(n => {
+    const host = n.parentElement;
+    // SVG text, dropdown options, and titles cannot hold math: just remove the markers
+    if (!host || host.closest("svg, option, select, textarea, title")) { n.data = plainMath(n.data); return; }
+    const frag = document.createDocumentFragment();
+    n.data.split(/([^]*)/).forEach(part => {
+      if (!part) return;
+      if (part[0] === MS) frag.appendChild(mathSpan(part.slice(1, -1)));
+      else frag.appendChild(document.createTextNode(plainMath(part)));
+    });
+    host.replaceChild(frag, n);
+  });
+  root.querySelectorAll("[aria-label], [title]").forEach(e => {         // labels are read aloud: plain text only
+    for (const a of ["aria-label", "title"]) { const v = e.getAttribute(a); if (v && /[]/.test(v)) e.setAttribute(a, plainMath(v)); }
+  });
+  root.querySelectorAll("span.m:not([data-m])").forEach(e => {           // hand-written <span class="m">
+    const plain = e.textContent; e.dataset.m = "1"; e.setAttribute("role", "math"); e.setAttribute("aria-label", plain);
+    e.dataset.tex = toTeX(plain); drawMath(e);
+  });
+  if (mjOK()) root.querySelectorAll("span.m[data-tex]:not([data-mj])").forEach(drawMath);   // upgrade backups once MathJax is ready
+}
+// Re-run whenever the page changes (sliders, new questions, revealed steps...), and once MathJax finishes loading.
+new MutationObserver(() => typeset()).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["aria-label", "title"] });
+window.addEventListener("mathjax-ready", () => typeset());
+typeset();
+
+/* =====================================================================
    1. PARENT FUNCTION DATA
    Every fact the page shows comes from this one table, so adding a
    parent (or reusing this file for another lesson) means editing data,
@@ -252,56 +425,56 @@ nav.skills { display: flex; justify-content: space-between; flex-wrap: wrap; gap
    ===================================================================== */
 const INF = Infinity;
 const PARENTS = {
-  lin:    { name: "Linear", eq: "f(x) = x", f: x => x,
+  lin:    { name: "Linear", eq: M("f(x) = x"), f: x => x,
             kp: [[-1, -1], [0, 0], [1, 1]], win: 6,
             domain: "(−∞, ∞)", range: "(−∞, ∞)", domIv: [[-INF, INF]], rngIv: [[-INF, INF]],
             sym: "Odd (symmetric about the origin)", feature: "a straight line through the origin with slope 1",
             clue: "It is a straight line with no curve, no corner, and no breaks.",
             opWord: "x is used as it is, with no power or root", core: i => i },
-  sq:     { name: "Quadratic", eq: "f(x) = x²", f: x => x * x,
+  sq:     { name: "Quadratic", eq: M("f(x) = x²"), f: x => x * x,
             kp: [[-2, 4], [-1, 1], [0, 0], [1, 1], [2, 4]], win: 6,
             domain: "(−∞, ∞)", range: "[0, ∞)", domIv: [[-INF, INF]], rngIv: [[0, INF, "closed"]],
             sym: "Even (symmetric about the y-axis)", feature: "a U-shaped parabola with its lowest point at the origin",
             clue: "It is a U shape that is symmetric about a vertical line, with one lowest (or highest) point.",
             opWord: "the x-part is squared", core: i => i === "x" ? "x²" : `(${i})²` },
-  sqrt:   { name: "Square root", eq: "f(x) = √x", f: x => x >= 0 ? Math.sqrt(x) : NaN,
+  sqrt:   { name: "Square root", eq: M("f(x) = √x"), f: x => x >= 0 ? Math.sqrt(x) : NaN,
             kp: [[0, 0], [1, 1], [4, 2]], win: 6, pieces: [[0, 6]],
             domain: "[0, ∞)", range: "[0, ∞)", domIv: [[0, INF, "closed"]], rngIv: [[0, INF, "closed"]],
             sym: "Neither", feature: "a curve that starts at the origin and rises slowly to the right",
             clue: "It has a starting point (an endpoint) and goes in only one direction, bending as it goes.",
             opWord: "the x-part is under a square root", core: i => i === "x" ? "√x" : `√(${i})` },
-  abs:    { name: "Absolute value", eq: "f(x) = |x|", f: x => Math.abs(x),
+  abs:    { name: "Absolute value", eq: M("f(x) = |x|"), f: x => Math.abs(x),
             kp: [[-1, 1], [0, 0], [1, 1]], win: 6,
             domain: "(−∞, ∞)", range: "[0, ∞)", domIv: [[-INF, INF]], rngIv: [[0, INF, "closed"]],
             sym: "Even (symmetric about the y-axis)", feature: "a V shape with its corner at the origin",
             clue: "It is a V made of two straight pieces that meet at a sharp corner.",
             opWord: "the x-part is inside absolute value bars", core: i => `|${i}|` },
-  cube:   { name: "Cubic", eq: "f(x) = x³", f: x => x * x * x,
+  cube:   { name: "Cubic", eq: M("f(x) = x³"), f: x => x * x * x,
             kp: [[-1, -1], [0, 0], [1, 1]], win: 6,
             domain: "(−∞, ∞)", range: "(−∞, ∞)", domIv: [[-INF, INF]], rngIv: [[-INF, INF]],
             sym: "Odd (symmetric about the origin)", feature: "an S-shaped curve, flat at the origin, falling on the left and rising on the right",
             clue: "It is an S shape that flattens out in the middle and gets very steep at both ends.",
             opWord: "the x-part is cubed", core: i => i === "x" ? "x³" : `(${i})³` },
-  cbrt:   { name: "Cube root", eq: "f(x) = ∛x", f: x => Math.cbrt(x),
+  cbrt:   { name: "Cube root", eq: M("f(x) = ∛x"), f: x => Math.cbrt(x),
             kp: [[-8, -2], [-1, -1], [0, 0], [1, 1], [8, 2]], win: 9,
             domain: "(−∞, ∞)", range: "(−∞, ∞)", domIv: [[-INF, INF]], rngIv: [[-INF, INF]],
             sym: "Odd (symmetric about the origin)", feature: "a sideways S, steep at the origin and flattening out on both sides",
             clue: "It is a sideways S that is steepest in the middle and flattens out at both ends, and it goes in both directions.",
             opWord: "the x-part is under a cube root", core: i => i === "x" ? "∛x" : `∛(${i})` },
-  step:   { name: "Greatest integer", eq: "f(x) = ⟦x⟧", f: x => Math.floor(x), isStep: true,
+  step:   { name: "Greatest integer", eq: M("f(x) = ⟦x⟧"), f: x => Math.floor(x), isStep: true,
             kp: [[-1, -1], [0, 0], [1, 1], [2, 2]], win: 6,
             domain: "(−∞, ∞)", range: "all integers", domIv: [[-INF, INF]], rngIv: "integers",
             sym: "Neither", feature: "a staircase of flat steps one unit long, closed on the left end and open on the right end",
             clue: "It is made of flat steps with jumps between them, and each step has a closed dot and an open dot.",
             opWord: "the x-part is inside greatest integer brackets", core: i => `⟦${i}⟧` },
-  recip:  { name: "Reciprocal", eq: "f(x) = 1/x", f: x => 1 / x,
+  recip:  { name: "Reciprocal", eq: M("f(x) = 1/x"), f: x => 1 / x,
             kp: [[-2, -0.5], [-1, -1], [-0.5, -2], [0.5, 2], [1, 1], [2, 0.5]], win: 6, pieces: [[-6, -0.01], [0.01, 6]],
             domain: "(−∞, 0) ∪ (0, ∞)", range: "(−∞, 0) ∪ (0, ∞)", domIv: [[-INF, 0], [0, INF]], rngIv: [[-INF, 0], [0, INF]],
             asym: { x: 0, y: 0 },
             sym: "Odd (symmetric about the origin)", feature: "two separate curves, in quadrants I and III, that approach the axes without touching them",
             clue: "It has two separate pieces in opposite corners (quadrants I and III) that hug two asymptotes.",
             opWord: "x is in the denominator, to the first power", core: i => i === "x" ? "1/x" : `1/(${i})` },
-  recip2: { name: "Reciprocal squared", eq: "f(x) = 1/x²", f: x => 1 / (x * x),
+  recip2: { name: "Reciprocal squared", eq: M("f(x) = 1/x²"), f: x => 1 / (x * x),
             kp: [[-2, 0.25], [-1, 1], [-0.5, 4], [0.5, 4], [1, 1], [2, 0.25]], win: 6, pieces: [[-6, -0.01], [0.01, 6]],
             domain: "(−∞, 0) ∪ (0, ∞)", range: "(0, ∞)", domIv: [[-INF, 0], [0, INF]], rngIv: [[0, INF]],
             asym: { x: 0, y: 0 },
@@ -461,26 +634,27 @@ function drawT(svg, key, o = {}) {
    ===================================================================== */
 function bxText(b, h) {                                   // the inside: 2x, −x, ½x, 2(x − 3), x + 1 ...
   const lead = b === 1 ? "" : b === -1 ? "−" : fnum(b);
-  if (!h) return lead + "x";
+  if (!h) return M(lead + "x");
   const inner = h > 0 ? `x − ${fnum(h)}` : `x + ${fnum(-h)}`;
-  return b === 1 ? inner : `${lead}(${inner})`;
+  return M(b === 1 ? inner : `${lead}(${inner})`);
 }
 function eqT(key, T, name = "g") {
   const P = PARENTS[key], a = T.a ?? 1, b = T.b ?? 1, h = T.h || 0, k = T.k || 0;
-  const inside = bxText(b, h);
+  const inside = plainMath(T.inside || bxText(b, h));               // T.inside lets 5.4 show an unfactored inside such as 2x − 6
   let core = P.core(inside);
   if (key === "sq" || key === "cube") {                  // (2x)² instead of 2x² so the 2 stays visibly inside
     const pw = key === "sq" ? "²" : "³";
     core = inside === "x" ? "x" + pw : `(${inside})${pw}`;
   }
   let lead = a === 1 ? "" : a === -1 ? "−" : fnum(a);
-  if ((key === "recip" || key === "recip2") && a !== 1) {  // 3/(2x) reads better than 3·1/(2x)
-    const den = core.replace(/^1\//, "");
-    if (Number.isInteger(a)) { lead = ""; core = `${fnum(a)}/${den}`; }
-    else { lead = fnum(a) + "·"; }
+  if ((key === "recip" || key === "recip2") && a !== 1) {  // one fraction: 3/(2x), −1.5/(x − 2), 1/(2x) for a = ½
+    const den = core.replace(/^1\//, ""), m = Math.abs(a), sg = a < 0 ? "−" : "";
+    lead = "";
+    if (!Number.isInteger(m) && Number.isInteger(1 / m)) core = `${sg}1/(${fnum(1 / m)}${den})`;
+    else core = `${sg}${fnum(m)}/${den}`;
   }
   const tail = !k ? "" : k > 0 ? ` + ${fnum(k)}` : ` − ${fnum(-k)}`;
-  return `${name}(x) = ${lead}${core}${tail}`;
+  return M(`${name}(x) = ${lead}${core}${tail}`);
 }
 function aWords(a) {
   if (a === 1) return [];
@@ -509,7 +683,7 @@ function ruleText(T) {                                    // (x, y) → (x ÷ 2,
   const b = T.b ?? 1, a = T.a ?? 1;
   const xs = b === 1 ? "x" : b === -1 ? "−x" : `x ÷ ${b < 0 ? "(" + fnum(b) + ")" : fnum(b)}`;
   const ys = a === 1 ? "y" : a === -1 ? "−y" : `${fnum(a)}y`;
-  return `(x, y) → (${xs}, ${ys})`;
+  return M(`(x, y) → (${xs}, ${ys})`);
 }
 // a "fingerprint" of a graph, used to make sure two answer choices never look identical
 function sig(key, T) {
@@ -538,6 +712,9 @@ tabs.forEach((t, i) => {
     if (k !== undefined) { e.preventDefault(); selectTab(tabs[(k + tabs.length) % tabs.length]); }
   });
 });
+// Open a tab straight from the link, e.g. lesson05-skill5-4.html#examples (the Lesson 5 Ladder uses this).
+const linked = tabs.find(t => "#" + t.id.replace("tab-", "") === location.hash);
+if (linked) selectTab(linked);
 
 /* =====================================================================
    5. EXPLORE TAB
