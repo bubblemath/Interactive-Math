@@ -326,10 +326,14 @@ const M = s => MS + String(s).replace(/[]/g, "") + ME;  // nested marks ar
 const plainMath = s => String(s).replace(/[]/g, "");
 const escHTML = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const SUPS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
-const isL = c => /[A-Za-z]/.test(c || ""), isD = c => /[0-9.]/.test(c || ""), isSup = c => !!c && SUPS.includes(c);
+const SUPL = { "ˣ": "x", "ʸ": "y", "ᵗ": "t", "ⁿ": "n", "ᵏ": "k" };           // letter exponents: 2ˣ, eᵏᵗ
+const SUBS = "₀₁₂₃₄₅₆₇₈₉";                                                       // subscripts: log₂, P₀
+const supVal = c => c in SUPL ? SUPL[c] : String(SUPS.indexOf(c));
+const isL = c => /[A-Za-z]/.test(c || ""), isD = c => /[0-9.]/.test(c || ""), isSup = c => !!c && (SUPS.includes(c) || c in SUPL);
+const isSub = c => !!c && SUBS.includes(c);
 function closeParen(s, i) { let d = 0; for (let j = i; j < s.length; j++) { if (s[j] === "(") d++; else if (s[j] === ")" && --d === 0) return j; } return -1; }
 const TEX_CHAR = { "−": "-", "·": "\\cdot ", "÷": "\\div ", "→": "\\to ", "∞": "\\infty ", "∪": "\\cup ", "∩": "\\cap ", "≥": "\\ge ", "≤": "\\le ",
-  "≠": "\\ne ", "±": "\\pm ", "∘": "\\circ ", "⁻": "^{-}", "✓": "\\checkmark ", "{": "\\{", "}": "\\}", "%": "\\%", "#": "\\#", "&": "\\&", "$": "\\$" };
+  "≠": "\\ne ", "±": "\\pm ", "∘": "\\circ ", "⁻": "^{-}", "⁺": "^{+}", "✓": "\\checkmark ", "{": "\\{", "}": "\\}", "%": "\\%", "#": "\\#", "&": "\\&", "$": "\\$" };
 const TEX_WORDS = { log: "\\log ", ln: "\\ln ", sin: "\\sin ", cos: "\\cos ", tan: "\\tan " };
 
 // Split plain math into atoms (things a fraction bar can sit on) and other symbols.
@@ -337,12 +341,21 @@ function mathTokens(s, small) {
   const toks = [];
   let i = 0;
   const power = j => {                                              // a power right after an atom: ², ^(1/2), ^3, ^−1
-    if (isSup(s[j])) { let t = ""; while (isSup(s[j])) t += SUPS.indexOf(s[j++]); return { tex: t, html: t, end: j }; }
-    if (s[j] === "⁻" && isSup(s[j + 1])) { let t = "-"; j++; while (isSup(s[j])) t += SUPS.indexOf(s[j++]); return { tex: t, html: "−" + t.slice(1), end: j }; }
+    if (isSup(s[j])) { let t = ""; while (isSup(s[j])) t += supVal(s[j++]); return { tex: t, html: t, end: j }; }
+    if (s[j] === "⁻" && isSup(s[j + 1])) { let t = "-"; j++; while (isSup(s[j])) t += supVal(s[j++]); return { tex: t, html: "−" + t.slice(1), end: j }; }
     if (s[j] === "^") {
       if (s[j + 1] === "(") { const e = closeParen(s, j + 1); if (e > 0) { const inner = s.slice(j + 2, e); return { tex: mathRender(inner, "tex", true), html: mathRender(inner, "html", true), end: e + 1 }; } }
       let k = j + 1; if (s[k] === "-" || s[k] === "−") k++; while (isD(s[k]) || isL(s[k])) k++;
       const inner = s.slice(j + 1, k); return { tex: mathRender(inner, "tex", true), html: mathRender(inner, "html", true), end: k };
+    }
+    return null;
+  };
+  // a subscript right after a word or letter: log₂, log_b, log_(1/2), P₀
+  const sub = j => {
+    if (isSub(s[j])) { let t = ""; while (isSub(s[j])) t += SUBS.indexOf(s[j++]); return { tex: t, html: t, end: j }; }
+    if (s[j] === "_") {
+      if (s[j + 1] === "(") { const e = closeParen(s, j + 1); if (e > 0) { const inner = s.slice(j + 2, e); return { tex: mathRender(inner, "tex", true), html: mathRender(inner, "html", true), end: e + 1 }; } }
+      if (isL(s[j + 1]) || isD(s[j + 1])) return { tex: s[j + 1], html: s[j + 1], end: j + 2 };
     }
     return null;
   };
@@ -385,7 +398,10 @@ function mathTokens(s, small) {
     if (isL(c)) {                                                   // a letter or a word (log, ln)
       let k = i; while (isL(s[k])) k++;
       const word = s.slice(i, k);
-      if (TEX_WORDS[word]) { toks.push({ atom: false, tex: TEX_WORDS[word], html: word }); i = k; continue; }
+      if (TEX_WORDS[word]) { const b = sub(k);                       // log₂ x → \log_{2} x
+        toks.push(b ? { atom: false, tex: `${TEX_WORDS[word].trim()}_{${b.tex}} `, html: `${word}<sub>${b.html}</sub>` } : { atom: false, tex: TEX_WORDS[word], html: word }); i = b ? b.end : k; continue; }
+      const b1 = sub(i + 1);                                         // P₀: a letter with a subscript
+      if (b1) { const a = withPow({ atom: true, tex: `${s[i]}_{${b1.tex}}`, html: `<i>${s[i]}</i><sub>${b1.html}</sub>` }, b1.end); toks.push(a); i = a.end; continue; }
       const a = withPow({ atom: true, tex: s[i], html: `<i>${s[i]}</i>` }, i + 1);   // one letter at a time: xy → x, y
       toks.push(a); i = a.end; continue;
     }
@@ -510,6 +526,7 @@ function normInput(s) {                                              // tidy typ
   return String(s).replace(/[−–—]/g, "-").replace(/[·×∙*]/g, "*").replace(/÷/g, "/")
     .replace(/√/g, "sqrt").replace(/∛/g, "cbrt")
     .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, m => "^" + m.split("").map(c => SUPS.indexOf(c)).join(""))
+    .replace(/[₀₁₂₃₄₅₆₇₈₉]+/g, m => "_(" + m.split("").map(c => SUBS.indexOf(c)).join("") + ")")   // log₂ 8 → log_(2)8, so the base stays separate
     .replace(/\s+/g, "");
 }
 function parseExpr(raw) {
@@ -533,6 +550,10 @@ function parseExpr(raw) {
     if (eat("|")) { absDepth++; const n = sum(); absDepth--; if (!eat("|")) fail(); return { op: "abs", a: n }; }   // |x − 1|
     let m = /^\d*\.?\d+/.exec(s.slice(i)); if (m) { i += m[0].length; return { num: +m[0] }; }
     m = /^(sqrt|cbrt)/.exec(s.slice(i)); if (m) { i += m[0].length; const arg = peek() === "(" ? atom() : power(); return { op: m[0], a: arg }; }
+    m = /^log_\((\d+(?:\.\d+)?|e)\)/.exec(s.slice(i)) || /^log_(\d+(?:\.\d+)?|e)(?=\()/.exec(s.slice(i)) || /^log(\d+)(?=\()/.exec(s.slice(i));   // log_(2)8, log_2(8), log2(8)
+    if (m) { i += m[0].length; const arg = peek() === "(" ? atom() : power(); return { op: "logb", base: m[1] === "e" ? Math.E : +m[1], a: arg }; }
+    m = /^(ln|log|exp)/.exec(s.slice(i)); if (m) { i += m[0].length; const arg = peek() === "(" ? atom() : power(); return { op: m[0], a: arg }; }   // ln(15), log(100), exp(2)
+    if (peek() === "e" && !/[a-z]/i.test(s[i + 1] || "")) { i++; return { num: Math.E }; }   // the number e
     if (/[a-z]/i.test(peek() || "")) return { v: s[i++] };           // single-letter variables
     fail();
   }
@@ -545,6 +566,7 @@ function evalExpr(n, env) {
   switch (n.op) {
     case "+": return a + b; case "-": return a - b; case "*": return a * b; case "/": return a / b;
     case "^": return a ** b; case "neg": return -a; case "sqrt": return Math.sqrt(a); case "cbrt": return Math.cbrt(a); case "abs": return Math.abs(a);
+    case "ln": return Math.log(a); case "log": return Math.log10(a); case "exp": return Math.exp(a); case "logb": return Math.log(a) / Math.log(n.base);
   }
 }
 // Do two expressions agree at several random points? (Works for any equivalent form.)
