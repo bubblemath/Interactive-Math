@@ -185,6 +185,37 @@ body.klass .clue{font-size:19px;padding:17px 21px}
   .panel{display:block !important}
   .sheet{border-color:#999}
 }
+/* ---- live polling ---- */
+.livebox{margin:14px 0 0}
+.livebox label{display:flex;gap:10px;align-items:center;font-weight:600;cursor:pointer}
+.livebox input{width:20px;height:20px}
+.livebox p{margin:6px 0 0;font-size:14.5px}
+.livebar{display:flex;gap:18px;align-items:center;flex-wrap:wrap;border:1px solid var(--rule);background:var(--blue-soft);
+  padding:8px 12px;border-radius:3px;margin-bottom:12px;font-size:15px}
+.livebar b{font-family:var(--mono)}
+.lvsmall{font-size:13px;padding:4px 10px;margin-left:auto}
+.livejoin{display:flex;gap:26px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--rule);
+  border-left:4px solid var(--blue);padding:18px 22px;margin-bottom:14px}
+.lvqr{width:220px;height:220px;flex:0 0 auto;background:#fff}
+.lvqr img,.lvqr canvas{display:block;width:220px;height:220px}
+.lvlabel{margin:0;font-family:var(--serif);font-size:22px}
+.lvcode{margin:4px 0;font-family:var(--mono);font-size:64px;font-weight:700;letter-spacing:.12em;line-height:1.1}
+.lvurl{margin:0;font-family:var(--mono);font-size:14px;color:var(--ink-soft);word-break:break-all}
+.lvwrap{display:flex;align-items:center;gap:10px;margin-top:8px;width:100%}
+.opt{flex-wrap:wrap}
+.lvtrack{flex:1;height:12px;background:var(--rule-2);border-radius:6px;overflow:hidden}
+.lvfill{display:block;height:100%;background:var(--blue)}
+.opt.right .lvfill{background:var(--turf)}
+.opt.dim .lvfill{background:var(--ink-soft)}
+.lvnum{font-family:var(--mono);font-size:14px;min-width:82px;text-align:right}
+.opts.lvon .opt.dim{opacity:.72}
+.lvtable{overflow-x:auto}
+.lvtable table{border-collapse:collapse;width:100%;font-size:14.5px;background:#fff}
+.lvtable th,.lvtable td{border:1px solid var(--rule);padding:6px 9px;text-align:left;vertical-align:top}
+.lvtable thead th{background:var(--blue-soft)}
+.lvtable tbody th{font-weight:400;max-width:420px}
+.lvmsg{font-size:14px;color:var(--ink-soft)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media(prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
 </head>
@@ -219,11 +250,18 @@ body.klass .clue{font-size:19px;padding:17px 21px}
 
     <div class="note gold" id="setupnote"></div>
 
+    <div class="note livebox hidden" id="liveSetup">
+      <label for="liveToggle"><input type="checkbox" id="liveToggle"> Students answer on their phones (live poll)</label>
+      <p id="liveSetupMsg" aria-live="polite"></p>
+    </div>
+
     <div class="btnrow">
       <button class="btn big" id="startBtn">Start</button>
       <button class="btn quiet" id="resetProgress">Reset my progress</button>
     </div>
   </div>
+
+  <div class="sheet hidden" id="liveResults"></div>
 
   <div class="sheet" id="progressSheet">
     <h2>Where you stand</h2>
@@ -237,6 +275,8 @@ body.klass .clue{font-size:19px;padding:17px 21px}
 <!-- ============ PLAY ============ -->
 <section class="panel" id="p-play">
   <div class="sheet">
+    <div class="livebar hidden" id="liveBar"></div>
+    <div class="livejoin hidden" id="liveJoin"></div>
     <div class="statusbar" id="status"></div>
     <div class="question" id="question"></div>
     <div class="opts" id="opts"></div>
@@ -1146,6 +1186,7 @@ function drawSetup(){
     ? 'Only my weak lessons (' + weak.length + ')'
     : 'Only my weak lessons';
   drawProgress();
+  drawLiveSetup();
 }
 function drawProgress(){
   var tot = {r:0, w:0};
@@ -1277,16 +1318,27 @@ function drawPlay(){
     pb.appendChild(nb);
   } else if(S.mode === 'class'){
     var rv = el('button','btn big','Reveal the answer');
-    rv.onclick = function(){ S.revealed = true; drawPlay(); save(); };
+    rv.onclick = function(){
+      var go = function(){ S.revealed = true; drawPlay(); save(); };
+      if(liveActive()){ rv.disabled = true; LV().close().then(go, go); } else go();
+    };
     pb.appendChild(rv);
   }
 
   var stop = el('button','btn quiet', S.mode === 'class' ? 'End the round' : 'Stop the round');
   stop.onclick = function(){
-    if(S.mode === 'class'){ drawSetup(); showPanel(0); }
+    if(S.mode === 'class'){ if(liveActive()) LV().end(); drawSetup(); showPanel(0); }
     else { drawSummary(); showPanel(2); }
   };
   pb.appendChild(stop);
+
+  if(liveActive()){
+    var lv = LV();
+    if(!S.revealed) lv.question({key: S.roundId + '-' + S.roundN + '-' + S.current, text: plainText(it.q),
+      opts: opts.map(plainText), correct: right, label: tp.lesson + ' · ' + tp.label});
+    else lv.decorate(oh);
+    lv.showBar(true);
+  } else if(LV()) LV().showBar(false);
 }
 function tag(k, v){
   var s = el('span');
@@ -1372,7 +1424,42 @@ function drawSummary(){
 }
 
 /* ---------------- wiring ---------------- */
+/* ---------------- live polling (Class mode) ----------------
+   window.LIVE comes from live-teacher.js. Everything here works without it. */
+var liveOn = false;
+function LV(){ return (window.LIVE && window.LIVE.ready) ? window.LIVE : null; }
+function liveActive(){ return S.mode === 'class' && liveOn && !!LV() && LV().isActive(); }
+function drawLiveSetup(){
+  var box = $('liveSetup'); if(!box) return;
+  box.classList.toggle('hidden', S.mode !== 'class');
+  var tog = $('liveToggle'), msg = $('liveSetupMsg'), lv = LV();
+  tog.checked = liveOn;
+  if(!lv){
+    tog.disabled = true;
+    msg.textContent = (window.LIVE && window.LIVE.error) ? window.LIVE.error : 'Connecting to Firebase…';
+    return;
+  }
+  tog.disabled = false;
+  if(lv.error){ msg.textContent = lv.error; return; }
+  if(!liveOn) msg.textContent = 'Off: the class calls out answers as usual.';
+  else if(lv.user) msg.textContent = 'On. Signed in as ' + (lv.user.email || 'the teacher') + '. A QR code appears when the round starts.';
+  else msg.textContent = 'On. You will sign in with Google when the round starts, then a QR code appears.';
+}
+window.addEventListener('live-change', drawLiveSetup);
+
 function startRound(){
+  if(S.mode === 'class' && liveOn && LV()){
+    $('startBtn').disabled = true;
+    LV().start().then(function(ok){
+      $('startBtn').disabled = false;
+      if(ok) startRoundNow(); else drawLiveSetup();
+    });
+    return;
+  }
+  startRoundNow();
+}
+function startRoundNow(){
+  S.roundId = Date.now();
   S.roundN = 0; S.roundRight = 0; S.roundLog = []; S.streak = 0;
   S.current = null; S.order = null;
   nextQuestion();
@@ -1386,6 +1473,7 @@ function boot(){
   showPanel(S.panel);
 
   $('startBtn').onclick = startRound;
+  $('liveToggle').onchange = function(){ liveOn = this.checked; drawLiveSetup(); };
   $('againBtn').onclick = startRound;
   $('backBtn').onclick = function(){ drawSetup(); showPanel(0); };
   $('printit').onclick = function(){ window.print(); };
@@ -1435,5 +1523,7 @@ function boot(){
 boot();
 })();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module" src="live-teacher.js"></script>
 </body>
 </html>
