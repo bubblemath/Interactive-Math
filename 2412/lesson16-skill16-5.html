@@ -835,7 +835,7 @@ function drawGraph(svg, o) {
   });
   (o.points || []).forEach(p => { if (p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) return;
     el("circle", { cx: X(p.x), cy: Y(p.y), r: 6, fill: p.open ? col("--panel") : col(p.color || "--curve2"), stroke: col(p.color || "--curve2"), "stroke-width": 2.5 }, svg);
-    if (p.label) { const t = el("text", { x: X(p.x) + 9, y: Y(p.y) - 9, "font-size": 14, "font-weight": 700, fill: col("--ink") }, svg); t.textContent = p.label; } });
+    if (p.label) { const t = el("text", { x: X(p.x) + 9, y: Y(p.y) - 9, "font-size": (o.fs || 12) + 2, "font-weight": 700, fill: col("--ink") }, svg); t.textContent = p.label; } });
 }
 
 /* ---------- K9. Exact answers: fractions, radicals, quadratic solutions ---------- */
@@ -1041,12 +1041,12 @@ function keyPts(A, B, C, D, f) {
 }
 // x tick labels as multiples of π (denominator up to 12), else plain numbers
 function piLab(v) {
-  const r = v / PI; for (let d = 1; d <= 12; d++) { const n = Math.round(r * d); if (Math.abs(r * d - n) < 1e-9) return qT(Q(n, d, 1)); }
+  const r = v / PI; for (let d = 1; d <= 24; d++) { const n = Math.round(r * d); if (Math.abs(r * d - n) < 1e-9) return qT(Q(n, d, 1)); }
   return fnum(+v.toFixed(3));
 }
 const fval = (A, B, C, D, f) => x => qv(A) * ({ sin: Math.sin, cos: Math.cos, tan: Math.tan, cot: t => 1 / Math.tan(t), sec: t => 1 / Math.cos(t), csc: t => 1 / Math.sin(t) })[f](qv(B) * x - qv(C)) + qv(D);
 // Grid step that lands on every key point: the largest step dividing both the shift C/B and P/4
-function tickOf(B, C) { const q = qdiv(periodOf(B), Q(4)), h = shiftOf(B, C); if (h.n === 0) return q; return Q(gcdS(Math.abs(h.n * q.d), Math.abs(q.n * h.d)), h.d * q.d, q.pi); }
+function tickOf(B, C, f = "sin") { const q = qdiv(periodOf(B, f), Q(4)), h = shiftOf(B, C); if (h.n === 0) return q; return Q(gcdS(Math.abs(h.n * q.d), Math.abs(q.n * h.d)), h.d * q.d, q.pi); }
 // Label every k-th tick so that at most about `most` labels show
 const everyOf = (win, step, most = 8) => Math.max(1, Math.ceil((win[1] - win[0]) / step / most));
 // A graph picture (SVG string) of a sinusoid with its key points, window chosen from the period
@@ -1084,6 +1084,66 @@ function randSinus(opt = {}) {
   return { A, B, h, C: qmul(B, h), D, f: pick(["sin", "cos"]) };
 }
 
+/* ---------- Lesson 17: tangent, cotangent, secant, cosecant ---------- */
+// h + k·(P/4) as an exact number (h = C/B, P = the function's own period)
+const quarterAt = (B, C, f) => { const q = qdiv(periodOf(B, f), Q(4)), h = shiftOf(B, C); return k => h.n === 0 ? qmul(q, Q(k)) : qadd(h, qmul(q, Q(k))); };
+// Tangent: center at h, asymptotes h ± P/2, points h ± P/4 at heights D ∓ A. Cotangent: asymptotes h and h + P, center h + P/2.
+function tanParts(A, B, C, D, f) {
+  const at = quarterAt(B, C, f), a = qv(A), d = qv(D);
+  if (f === "tan") return { P: periodOf(B, f), asym: [at(-2), at(2)], pts: [{ x: at(-1), y: d - a }, { x: at(0), y: d }, { x: at(1), y: d + a }] };
+  return { P: periodOf(B, f), asym: [at(0), at(4)], pts: [{ x: at(1), y: d + a }, { x: at(2), y: d }, { x: at(3), y: d - a }] };
+}
+// Secant/cosecant from the guide (cos/sin with the same A, B, C, D): asymptotes where the guide crosses its midline,
+// turning points at the guide's maximums and minimums (one cycle starting at the phase shift)
+function recParts(A, B, C, D, f) {
+  const g = f === "sec" ? "cos" : "sin", kp = keyPts(A, B, C, D, g), d = qv(D);
+  return { P: periodOf(B), guide: g, asym: kp.filter(p => Math.abs(p.y - d) < 1e-9).map(p => p.x), turn: kp.filter(p => Math.abs(p.y - d) > 1e-9) };
+}
+// Every asymptote between x0 and x1 (numbers): a first one plus a fixed spacing
+function asymIn(A, B, C, D, f, x0, x1) {
+  const P = qv(periodOf(B, f)), h = qv(shiftOf(B, C));
+  const [first, gap] = ({ tan: [h + P / 2, P], cot: [h, P], sec: [h + P / 4, P / 2], csc: [h, P / 2] })[f], out = [];
+  for (let k = Math.ceil((x0 - first) / gap - 1e-9); first + k * gap <= x1 + 1e-9; k++) out.push(first + k * gap);
+  return out;
+}
+// Window for one picture: a branch of tangent/cotangent with neighbors, or one cycle of secant/cosecant
+function trigWin(A, B, C, D, f) {
+  const P = qv(periodOf(B, f)), h = qv(shiftOf(B, C)), a = Math.abs(qv(A)), d = qv(D);
+  const [x0, x1] = f === "tan" ? [h - P, h + P] : f === "cot" ? [h - P / 2, h + 1.5 * P] : [Math.min(0, h) - P / 4, Math.max(0, h) + 1.25 * P];
+  const r = (f === "tan" || f === "cot" ? 3 : 2.6) * a + 1;
+  return [x0, x1, Math.min(d - r, -1), Math.max(d + r, 1)];
+}
+// The x-values worth labeling: the asymptotes and points of the main branch or cycle
+function trigXs(A, B, C, D, f) {
+  if (f === "tan" || f === "cot") { const t = tanParts(A, B, C, D, f); return [...t.asym, ...t.pts.map(p => p.x)].map(qv); }
+  return keyPts(A, B, C, D, f === "sec" ? "cos" : "sin").map(p => qv(p.x));
+}
+// drawGraph options for any of the four functions (opt.guide: dashed sine/cosine guide; opt.pts: mark the key points)
+function trigDraw(A, B, C, D, f, opt = {}) {
+  const win = opt.win || trigWin(A, B, C, D, f), tk = opt.xstep || qv(tickOf(B, C, f)), pts = [];
+  if (opt.pts) { if (f === "tan" || f === "cot") pts.push(...tanParts(A, B, C, D, f).pts); else pts.push(...recParts(A, B, C, D, f).turn); }
+  return { win, xstep: tk, xat: opt.xat === false ? null : trigXs(A, B, C, D, f), xevery: everyOf(win, tk, opt.most || 8), ystep: opt.ystep || Math.max(1, Math.ceil((win[3] - win[2]) / (opt.most || 8))),   // opt.most: fewer labels on small pictures
+    xfmt: B.pi ? (v => fnum(+v.toFixed(3))) : piLab, fs: opt.fs, vlines: asymIn(A, B, C, D, f, win[0], win[1]),
+    fns: [...(opt.guide && (f === "sec" || f === "csc") ? [{ f: fval(A, B, C, D, f === "sec" ? "cos" : "sin"), color: "--line", width: 2, dash: "4 5" }] : []), { f: fval(A, B, C, D, f) }],
+    points: pts.map(p => ({ x: qv(p.x), y: p.y, label: opt.lab ? ptT(p) : "" })) };   // opt.lab: write each point's coordinates beside it
+}
+// Picture (SVG string) for questions and examples
+function trigPic(A, B, C, D, f, label, opt = {}) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"), w = opt.maxw || 300;
+  svg.setAttribute("role", "img"); svg.setAttribute("aria-label", label); svg.setAttribute("style", `width:100%;max-width:${w}px;display:block;margin:6px auto`);
+  drawGraph(svg, trigDraw(A, B, C, D, f, { most: w < 250 ? 4 : 7, ...opt, fs: Math.round(Math.max(12, 5600 / w)) }));
+  return svg.outerHTML;
+}
+// "kπ/2", "2k", "k": the term k·step for writing every asymptote at once
+function kTerm(q) { const n = Math.abs(q.n), top = (n === 1 ? "" : n) + "k" + (q.pi ? "π" : ""); return q.d === 1 ? top : `(${top})/${q.d}`; }   // (kπ)/2 keeps kπ over the 2
+// All asymptotes as one formula, x = a + k·gap, with a the first one at or right of 0
+function asymText(A, B, C, D, f) {
+  const P = periodOf(B, f), gap = f === "tan" || f === "cot" ? P : qdiv(P, Q(2)), at = quarterAt(B, C, f);
+  let a = ({ tan: at(2), cot: at(0), sec: at(1), csc: at(0) })[f];
+  const m = Math.floor(qv(a) / qv(gap) + 1e-9); if (m) a = qadd(a, qmul(gap, Q(-m)));          // slide a into [0, gap)
+  return a.n === 0 ? `x = ${kTerm(gap)}` : `x = ${qT(a)} + ${kTerm(gap)}`;
+}
+
 
 /* ---------- graphs with no phase shift ---------- */
 const par = v => v < 0 ? `(${fnum(v)})` : fnum(v);                      // wrap negatives: 5 − (−3)
@@ -1111,7 +1171,7 @@ function renderM() {
   $("mG").setAttribute("aria-label", `Mystery graph with key points ${keyPts(tgt.A, tgt.B, tgt.C, tgt.D, tgt.f).map(ptT).join(", ")}, and your curve ${mine.A.n ? eqG(mine) : "y = " + qT(mine.D)} dashed.`);
   $("mEq").innerHTML = mine.A.n ? `your curve: ${M(eqG(mine))}` : `${M("A = 0")} gives a flat line. Pick another A.`;
   const same = mine.A.n && [...Array(40)].every((_, i) => Math.abs(ft(win[0] + i * 0.37) - fm(win[0] + i * 0.37)) < 1e-6);   // equal at 40 sample x-values
-  $("mMsg").className = same ? "ok" : ""; $("mMsg").textContent = same ? `Match! The mystery graph is ${eqG(tgt)}.` : "Not matched yet.";
+  $("mMsg").className = same ? "ok" : ""; $("mMsg").innerHTML = same ? `Match! The mystery graph is ${M(eqG(tgt))}.` : "Not matched yet.";
 }
 ["mA", "mB", "mD"].forEach(id => $(id).addEventListener("input", renderM));
 $("fS").addEventListener("click", () => { fE = "sin"; renderM(); });
