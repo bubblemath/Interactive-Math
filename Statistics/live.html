@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Live Review Answers</title>
+<style>
+:root{
+  --paper:#F3F1E7; --sheet:#FBFAF4; --card:#FFFFFF; --rule:#D8D3C2; --ink:#14213D; --ink-soft:#4F586C;
+  --blue:#1F4E9C; --blue-soft:#E4EBF7; --on-blue:#FFFFFF; --ok:#22603C; --ok-soft:#E2EFE7; --no:#A31F1C; --no-soft:#F7E4E3; --gold:#B58B15;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif; --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --paper:#151A22; --sheet:#1B212B; --card:#212834; --rule:#38414F; --ink:#E8EBF1; --ink-soft:#A7B0BF;
+  --blue:#8FB0EC; --blue-soft:#24324A; --on-blue:#0F1724; --ok:#7BD3A0; --ok-soft:#1E3529; --no:#F29A92; --no-soft:#3A2224; --gold:#E0BC5A; color-scheme:dark;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:18px;line-height:1.5}
+.wrap{max-width:560px;margin:0 auto;padding:max(16px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom))}
+header{border-bottom:3px double var(--ink);padding:8px 0 10px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+h1{font-family:var(--serif);font-size:26px;margin:0;line-height:1.1}
+.room{font-family:var(--mono);font-size:15px;color:var(--ink-soft)}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:18px}
+.label{font-family:var(--mono);font-size:13px;color:var(--ink-soft);margin:0 0 6px}
+.qtext{font-family:var(--serif);font-size:20px;line-height:1.45;margin:0 0 16px}
+.choices{display:grid;gap:10px}
+.choice{font:inherit;text-align:left;display:flex;gap:14px;align-items:flex-start;width:100%;padding:14px 16px;min-height:60px;
+  border:2px solid var(--rule);border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer}
+.choice .ltr{font-family:var(--mono);font-weight:700;font-size:22px;line-height:1.2;flex:0 0 26px}
+.choice .txt{font-size:16.5px;line-height:1.4;padding-top:2px}
+.choice.on{border-color:var(--blue);background:var(--blue-soft)}
+.choice:disabled{cursor:default;opacity:.65}
+.choice.on:disabled{opacity:1}
+.status{margin:14px 0 0;padding:10px 14px;border-radius:0 4px 4px 0;border-left:4px solid var(--blue);background:var(--blue-soft);font-size:16px}
+.status.ok{border-left-color:var(--ok);background:var(--ok-soft)}
+.status.no{border-left-color:var(--no);background:var(--no-soft)}
+.status:empty{display:none}
+.wait{font-family:var(--serif);font-size:21px;text-align:center;padding:30px 8px;margin:0}
+.join label{display:block;font-weight:600;margin-bottom:6px}
+.join input{font:inherit;font-family:var(--mono);font-size:30px;letter-spacing:.2em;text-transform:uppercase;width:100%;padding:10px 12px;
+  border:2px solid var(--rule);border-radius:6px;background:var(--card);color:var(--ink)}
+.btn{font:inherit;font-weight:600;padding:12px 20px;border-radius:6px;border:1px solid var(--blue);background:var(--blue);color:var(--on-blue);margin-top:12px;width:100%;cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.foot{margin-top:18px;font-size:13.5px;color:var(--ink-soft);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Live Review</h1><span class="room" id="room"></span></header>
+  <main class="card" id="main" aria-live="polite"><p class="wait">Connecting…</p></main>
+  <p class="foot">Your answers are anonymous. Your teacher sees only how many students picked each letter.</p>
+</div>
+<script type="module">
+import { firebaseConfig, FIREBASE_VERSION } from './live-config.js';
+const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+const main = document.getElementById('main'), roomEl = document.getElementById('room');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let F, auth, db, uid = null, code = null, session = null, seen = false, mine = {}, statusMsg = null;
+
+function codeFromUrl() {
+  const c = new URLSearchParams(location.search).get('room') || '';
+  return /^[A-Za-z]{4}$/.test(c) ? c.toUpperCase() : null;
+}
+function showJoin(err) {
+  main.innerHTML = '<form class="join" id="joinForm"><label for="code">Room code from the screen</label>' +
+    '<input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">' +
+    '<button class="btn" type="submit">Join</button>' + (err ? '<p class="status no">' + esc(err) + '</p>' : '') + '</form>';
+  const input = document.getElementById('code');
+  input.focus();
+  document.getElementById('joinForm').onsubmit = e => {
+    e.preventDefault();
+    const c = input.value.trim().toUpperCase();
+    if (!/^[A-Z]{4}$/.test(c)) { showJoin('Type the 4 letters shown on the screen.'); return; }
+    history.replaceState(null, '', '?room=' + c);
+    join(c);
+  };
+}
+
+function render() {
+  if (!session) { main.innerHTML = seen ? '<p class="wait">This round has ended. Thanks for playing!</p>' : '<p class="wait">Room ' + esc(code) + ' was not found. Check the code on the screen.</p>'; return; }
+  if (session.ended) { main.innerHTML = '<p class="wait">This round has ended. Thanks for playing!</p>'; return; }
+  if (session.q < 0 || !session.opts || !session.opts.length) { main.innerHTML = '<p class="wait">You’re in. Wait for your teacher to show the first question.</p>'; return; }
+  const q = session.q, picked = mine[q], open = !!session.open;
+  let h = (session.label ? '<p class="label">Question ' + (q + 1) + ' · ' + esc(session.label) + '</p>' : '') +
+    '<p class="qtext">' + esc(session.qtext) + '</p><div class="choices" role="group" aria-label="Answer choices">';
+  session.opts.forEach((t, i) => {
+    const L = LETTERS[i], on = picked === L;
+    h += '<button type="button" class="choice' + (on ? ' on' : '') + '" data-l="' + L + '" aria-pressed="' + on + '"' + (open ? '' : ' disabled') +
+      ' aria-label="' + L + '. ' + esc(t) + '"><span class="ltr">' + L + '</span><span class="txt">' + esc(t) + '</span></button>';
+  });
+  h += '</div>';
+  let st = '', cls = '';
+  if (statusMsg && statusMsg.q === q) { st = statusMsg.text; cls = statusMsg.cls; }
+  else if (!open) { st = picked ? 'Answers are closed. You picked ' + picked + '. Look up at the screen.' : 'Answers are closed. Look up at the screen.'; }
+  else if (picked) { st = 'Answer ' + picked + ' sent. You can change it until your teacher closes the question.'; cls = 'ok'; }
+  h += '<p class="status ' + cls + '">' + esc(st) + '</p>';
+  main.innerHTML = h;
+  main.querySelectorAll('button.choice').forEach(b => b.onclick = () => answer(b.getAttribute('data-l')));
+}
+
+async function answer(L) {
+  const q = session.q;
+  if (!session.open) return;
+  const prev = mine[q];
+  mine[q] = L; statusMsg = { q, text: 'Sending ' + L + '…', cls: '' }; render();
+  try {
+    await F.setDoc(F.doc(db, 'sessions', code, 'answers', uid + '_' + q), { uid, q, choice: L, at: F.serverTimestamp() });
+    statusMsg = null;
+  } catch (e) {
+    mine[q] = prev;
+    statusMsg = { q, text: e && e.code === 'permission-denied' ? 'That question just closed, so your answer was not counted.' : 'Your answer did not send. Check your connection and tap again.', cls: 'no' };
+  }
+  try { sessionStorage.setItem('live-' + code, JSON.stringify(mine)); } catch (e) {}
+  render();
+}
+
+async function join(c) {
+  code = c; roomEl.textContent = 'Room ' + c;
+  try { mine = JSON.parse(sessionStorage.getItem('live-' + c) || '{}') || {}; } catch (e) { mine = {}; }
+  main.innerHTML = '<p class="wait">Joining room ' + esc(c) + '…</p>';
+  try {
+    const ref = F.doc(db, 'sessions', c);
+    const first = await F.getDoc(ref);
+    if (!first.exists()) { showJoin('Room ' + c + ' was not found. Check the code on the screen.'); roomEl.textContent = ''; return; }
+    F.setDoc(F.doc(db, 'sessions', c, 'members', uid), { at: F.serverTimestamp() }).catch(() => {});
+    F.onSnapshot(ref, s => { session = s.exists() ? s.data() : null; if (session) seen = true; if (statusMsg && session && statusMsg.q !== session.q) statusMsg = null; render(); },
+      () => { main.innerHTML = '<p class="wait">Lost the connection to the room. Reload the page to rejoin.</p>'; });
+  } catch (e) {
+    main.innerHTML = '<p class="wait">Could not reach the room. Check your Wi-Fi and reload the page.</p>';
+  }
+}
+
+(async () => {
+  try {
+    const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/`;
+    const [app, au, fs] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-firestore.js')]);
+    F = { ...au, ...fs };
+    const a = app.initializeApp(firebaseConfig);
+    auth = au.getAuth(a); db = fs.getFirestore(a);
+    // Wait for a saved sign-in on this phone before making a new anonymous one.
+    const saved = await new Promise(res => { const off = au.onAuthStateChanged(auth, u => { off(); res(u); }); });
+    uid = saved ? saved.uid : (await au.signInAnonymously(auth)).user.uid;
+  } catch (e) {
+    main.innerHTML = '<p class="wait">This phone could not connect. If you are on school Wi-Fi, tell your teacher; the network may be blocking it.</p>';
+    return;
+  }
+  const c = codeFromUrl();
+  if (c) join(c); else showJoin();
+})();
+</script>
+</body>
+</html>
