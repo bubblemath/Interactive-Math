@@ -177,6 +177,15 @@ select { max-width: 100%; }
 .panel { min-width: 0; }
 ol.steps li, .feedback, .coachstep, .choice > span, legend, .bigeq { overflow-x: auto; overflow-wrap: anywhere; }
 .thumbm { overflow-x: auto; font-size: clamp(16px, 5vw, 22px); }
+.keypad { gap: 6px; margin: 8px 0; } .keypad .btn { padding: 4px 10px; font-size: 16px; min-width: 40px; }
+.nline { width: 100%; max-width: 440px; height: auto; display: block; }
+/* Multiple-choice answers that are graphs: a 2 × 2 grid on wider screens */
+#qPanel fieldset:has(.choice svg) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 600px) { #qPanel fieldset:has(.choice svg) { grid-template-columns: minmax(0, 1fr); } }
+#qPanel fieldset:has(.choice svg) .choice { margin: 0; }
+.choice svg { width: 100%; max-width: 240px; height: auto; }
+fieldset { min-width: 0; } legend { max-width: 100%; }   /* fieldsets otherwise refuse to shrink below their content */
+.pw { max-width: 100%; overflow-x: auto; }
 
 /* ===== Ladder ===== */
 .layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
@@ -207,6 +216,7 @@ table.report th, table.report td { border-bottom: 1px solid var(--line); padding
 .dots { display: flex; gap: 6px; margin: 4px 0 8px; }
 .dots span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); }
 .dots span.ok { background: var(--ok); border-color: var(--ok); } .dots span.miss { background: var(--bad); border-color: var(--bad); } .dots span.cur { border-color: var(--accent); }
+
 </style>
 </head>
 <body>
@@ -285,23 +295,36 @@ const M = s => MS + String(s).replace(/[]/g, "") + ME;  // nested marks ar
 const plainMath = s => String(s).replace(/[]/g, "");
 const escHTML = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const SUPS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
-const isL = c => /[A-Za-z]/.test(c || ""), isD = c => /[0-9.]/.test(c || ""), isSup = c => !!c && SUPS.includes(c);
+const SUPL = { "ˣ": "x", "ʸ": "y", "ᵗ": "t", "ⁿ": "n", "ᵏ": "k" };           // letter exponents: 2ˣ, eᵏᵗ
+const SUBS = "₀₁₂₃₄₅₆₇₈₉";                                                       // subscripts: log₂, P₀
+const supVal = c => c in SUPL ? SUPL[c] : String(SUPS.indexOf(c));
+const isL = c => /[A-Za-zα-ωΑ-Ω]/.test(c || "")      /* Greek letters count: 5π, rθ, ω */, isD = c => /[0-9.]/.test(c || ""), isSup = c => !!c && (SUPS.includes(c) || c in SUPL);
+const isSub = c => !!c && SUBS.includes(c);
 function closeParen(s, i) { let d = 0; for (let j = i; j < s.length; j++) { if (s[j] === "(") d++; else if (s[j] === ")" && --d === 0) return j; } return -1; }
-const TEX_CHAR = { "−": "-", "·": "\\cdot ", "÷": "\\div ", "→": "\\to ", "∞": "\\infty ", "∪": "\\cup ", "∩": "\\cap ", "≥": "\\ge ", "≤": "\\le ",
-  "≠": "\\ne ", "±": "\\pm ", "∘": "\\circ ", "⁻": "^{-}", "✓": "\\checkmark ", "{": "\\{", "}": "\\}", "%": "\\%", "#": "\\#", "&": "\\&", "$": "\\$" };
-const TEX_WORDS = { log: "\\log ", ln: "\\ln ", sin: "\\sin ", cos: "\\cos ", tan: "\\tan " };
+const TEX_CHAR = { "°": "^{\\circ}", "−": "-", "·": "\\cdot ", "÷": "\\div ", "→": "\\to ", "∞": "\\infty ", "∪": "\\cup ", "∩": "\\cap ", "≥": "\\ge ", "≤": "\\le ",
+  "≠": "\\ne ", "±": "\\pm ", "∘": "\\circ ", "⁻": "^{-}", "⁺": "^{+}", "✓": "\\checkmark ", "{": "\\{", "}": "\\}", "%": "\\%", "#": "\\#", "&": "\\&", "$": "\\$" };
+const TEX_WORDS = { log: "\\log ", ln: "\\ln ", sin: "\\sin ", cos: "\\cos ", tan: "\\tan ", sec: "\\sec ", csc: "\\csc ", cot: "\\cot " };
 
 // Split plain math into atoms (things a fraction bar can sit on) and other symbols.
 function mathTokens(s, small) {
   const toks = [];
   let i = 0;
   const power = j => {                                              // a power right after an atom: ², ^(1/2), ^3, ^−1
-    if (isSup(s[j])) { let t = ""; while (isSup(s[j])) t += SUPS.indexOf(s[j++]); return { tex: t, html: t, end: j }; }
-    if (s[j] === "⁻" && isSup(s[j + 1])) { let t = "-"; j++; while (isSup(s[j])) t += SUPS.indexOf(s[j++]); return { tex: t, html: "−" + t.slice(1), end: j }; }
+    if (isSup(s[j])) { let t = ""; while (isSup(s[j])) t += supVal(s[j++]); return { tex: t, html: t, end: j }; }
+    if (s[j] === "⁻" && isSup(s[j + 1])) { let t = "-"; j++; while (isSup(s[j])) t += supVal(s[j++]); return { tex: t, html: "−" + t.slice(1), end: j }; }
     if (s[j] === "^") {
       if (s[j + 1] === "(") { const e = closeParen(s, j + 1); if (e > 0) { const inner = s.slice(j + 2, e); return { tex: mathRender(inner, "tex", true), html: mathRender(inner, "html", true), end: e + 1 }; } }
       let k = j + 1; if (s[k] === "-" || s[k] === "−") k++; while (isD(s[k]) || isL(s[k])) k++;
       const inner = s.slice(j + 1, k); return { tex: mathRender(inner, "tex", true), html: mathRender(inner, "html", true), end: k };
+    }
+    return null;
+  };
+  // a subscript right after a word or letter: log₂, log_b, log_(1/2), P₀
+  const sub = j => {
+    if (isSub(s[j])) { let t = ""; while (isSub(s[j])) t += SUBS.indexOf(s[j++]); return { tex: t, html: t, end: j }; }
+    if (s[j] === "_") {
+      if (s[j + 1] === "(") { const e = closeParen(s, j + 1); if (e > 0) { const inner = s.slice(j + 2, e); return { tex: mathRender(inner, "tex", true), html: mathRender(inner, "html", true), end: e + 1 }; } }
+      if (isL(s[j + 1]) || isD(s[j + 1])) return { tex: s[j + 1], html: s[j + 1], end: j + 2 };
     }
     return null;
   };
@@ -328,6 +351,8 @@ function mathTokens(s, small) {
       const it = mathRender(inner, "tex", small), ih = mathRender(inner, "html", small);
       const a = withPow({ atom: true, tex: c === "∛" ? `\\sqrt[3]{${it}}` : `\\sqrt{${it}}`,
         html: `<span class="rad"><span class="rs">${c === "∛" ? '<span class="ri">3</span>√' : "√"}</span><span class="rc">${ih}</span></span>` }, end);
+      const prev = toks[toks.length - 1];
+      if (prev && prev.glue) { prev.tex += a.tex; prev.html += a.html; prev.glue = false; i = a.end; continue; }   // 2√3 is one piece, so 2√3/3 puts 2√3 on top
       toks.push(a); i = a.end; continue;
     }
     if (isD(c)) {                                                   // a number, with any letters right after it (4x, 12xy)
@@ -335,16 +360,19 @@ function mathTokens(s, small) {
       let tex = s.slice(i, k), html = tex;
       let a = withPow({ atom: true, tex, html }, k);                // 2³
       k = a.end;
-      while (isL(s[k])) {                                           // 4x²y: each letter may carry its own power
+      while (isL(s[k]) && !/^(log|ln|sin|cos|tan|sec|csc|cot)/.test(s.slice(k))) {   // 4x²y: each letter may carry its own power (stop at a word: 2log₂ x)
         const L = withPow({ atom: true, tex: s[k], html: `<i>${s[k]}</i>` }, k + 1);
         a.tex += L.tex; a.html += L.html; k = L.end;
       }
-      a.end = k; toks.push(a); i = k; continue;
+      a.end = k; a.glue = s[k] === "√" || s[k] === "∛"; toks.push(a); i = k; continue;
     }
     if (isL(c)) {                                                   // a letter or a word (log, ln)
       let k = i; while (isL(s[k])) k++;
       const word = s.slice(i, k);
-      if (TEX_WORDS[word]) { toks.push({ atom: false, tex: TEX_WORDS[word], html: word }); i = k; continue; }
+      if (TEX_WORDS[word]) { const b = sub(k);                       // log₂ x → \log_{2} x
+        toks.push(b ? { atom: false, tex: `${TEX_WORDS[word].trim()}_{${b.tex}} `, html: `${word}<sub>${b.html}</sub>` } : { atom: false, tex: TEX_WORDS[word], html: word }); i = b ? b.end : k; continue; }
+      const b1 = sub(i + 1);                                         // P₀: a letter with a subscript
+      if (b1) { const a = withPow({ atom: true, tex: `${s[i]}_{${b1.tex}}`, html: `<i>${s[i]}</i><sub>${b1.html}</sub>` }, b1.end); toks.push(a); i = a.end; continue; }
       const a = withPow({ atom: true, tex: s[i], html: `<i>${s[i]}</i>` }, i + 1);   // one letter at a time: xy → x, y
       toks.push(a); i = a.end; continue;
     }
@@ -466,13 +494,15 @@ function factoredText(k, fs, v = "x") {
    parseExpr builds a tree; evalExpr finds its value; sameValue compares two
    expressions at several random x-values (so any correct form is accepted). */
 function normInput(s) {                                              // tidy typed text before reading it
-  return String(s).replace(/[−–—]/g, "-").replace(/[·×∙*]/g, "*").replace(/÷/g, "/")
+  return String(s).replace(/π/g, "pi").replace(/[−–—]/g, "-").replace(/[·×∙*]/g, "*").replace(/÷/g, "/")
     .replace(/√/g, "sqrt").replace(/∛/g, "cbrt")
     .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, m => "^" + m.split("").map(c => SUPS.indexOf(c)).join(""))
+    .replace(/[ˣʸᵗⁿᵏ]/g, c => "^" + { "ˣ": "x", "ʸ": "y", "ᵗ": "t", "ⁿ": "n", "ᵏ": "k" }[c])   // 4ˣ → 4^x
+    .replace(/[₀₁₂₃₄₅₆₇₈₉]+/g, m => "_(" + m.split("").map(c => SUBS.indexOf(c)).join("") + ")")   // log₂ 8 → log_(2)8, so the base stays separate
     .replace(/\s+/g, "");
 }
 function parseExpr(raw) {
-  const s = normInput(raw); let i = 0;
+  const s = normInput(raw); let i = 0, absDepth = 0;                // absDepth: how many |…| we are inside
   const peek = () => s[i], eat = c => s[i] === c ? (i++, true) : false;
   const fail = () => { throw new Error("parse"); };
   // grammar: sum := term (± term)* ; term := factor (( * | / | implied ) factor)* ; factor := unary (^ factor)?
@@ -481,7 +511,7 @@ function parseExpr(raw) {
     let n = unary();
     for (;;) {
       if (peek() === "*" || peek() === "/") { const op = s[i++]; n = { op, a: n, b: unary() }; continue; }
-      if (peek() && /[0-9.a-z(]/i.test(peek())) { n = { op: "*", a: n, b: power() }; continue; }   // 2x, x(x+1), (x+1)(x-1)
+      if (peek() && (/[0-9.a-z(]/i.test(peek()) || peek() === "|" && absDepth === 0)) { n = { op: "*", a: n, b: power() }; continue; }   // 2x, x(x+1), 2|x − 1|
       return n;
     }
   }
@@ -489,8 +519,15 @@ function parseExpr(raw) {
   function power() { const b = atom(); if (eat("^")) return { op: "^", a: b, b: peek() === "-" ? unary() : power() }; return b; }
   function atom() {
     if (eat("(")) { const n = sum(); if (!eat(")")) fail(); return n; }
+    if (eat("|")) { absDepth++; const n = sum(); absDepth--; if (!eat("|")) fail(); return { op: "abs", a: n }; }   // |x − 1|
     let m = /^\d*\.?\d+/.exec(s.slice(i)); if (m) { i += m[0].length; return { num: +m[0] }; }
     m = /^(sqrt|cbrt)/.exec(s.slice(i)); if (m) { i += m[0].length; const arg = peek() === "(" ? atom() : power(); return { op: m[0], a: arg }; }
+    m = /^log_\((\d+(?:\.\d+)?|e)\)/.exec(s.slice(i)) || /^log_(\d+(?:\.\d+)?|e)(?=\()/.exec(s.slice(i)) || /^log(\d+)(?=\()/.exec(s.slice(i));   // log_(2)8, log_2(8), log2(8)
+    if (m) { i += m[0].length; const arg = peek() === "(" ? atom() : power(); return { op: "logb", base: m[1] === "e" ? Math.E : +m[1], a: arg }; }
+    m = /^(ln|log|exp)/.exec(s.slice(i)); if (m) { i += m[0].length; const arg = peek() === "(" ? atom() : power(); return { op: m[0], a: arg }; }   // ln(15), log(100), exp(2)
+    if (/^pi/.test(s.slice(i))) { i += 2; return { num: Math.PI }; }                     // π (typed as pi or π)
+    m = /^(sin|cos|tan|sec|csc|cot)/.exec(s.slice(i)); if (m) { i += 3; const arg = peek() === "(" ? atom() : power(); return { op: m[0], a: arg }; }   // sin(x), cos 2
+    if (peek() === "e" && !/[a-z]/i.test(s[i + 1] || "")) { i++; return { num: Math.E }; }   // the number e
     if (/[a-z]/i.test(peek() || "")) return { v: s[i++] };           // single-letter variables
     fail();
   }
@@ -502,7 +539,10 @@ function evalExpr(n, env) {
   const a = evalExpr(n.a, env), b = n.b ? evalExpr(n.b, env) : 0;
   switch (n.op) {
     case "+": return a + b; case "-": return a - b; case "*": return a * b; case "/": return a / b;
-    case "^": return a ** b; case "neg": return -a; case "sqrt": return Math.sqrt(a); case "cbrt": return Math.cbrt(a);
+    case "^": return a ** b; case "neg": return -a; case "sqrt": return Math.sqrt(a); case "cbrt": return Math.cbrt(a); case "abs": return Math.abs(a);
+    case "sin": return Math.sin(a); case "cos": return Math.cos(a); case "tan": return Math.tan(a);
+    case "sec": return 1 / Math.cos(a); case "csc": return 1 / Math.sin(a); case "cot": return 1 / Math.tan(a);
+    case "ln": return Math.log(a); case "log": return Math.log10(a); case "exp": return Math.exp(a); case "logb": return Math.log(a) / Math.log(n.base);
   }
 }
 // Do two expressions agree at several random points? (Works for any equivalent form.)
@@ -555,6 +595,19 @@ function treeToPoly(n) {
   return n.op === "+" ? P.add(a, b) : n.op === "-" ? P.sub(a, b) : n.op === "*" ? P.mul(a, b) : null;
 }
 const termsOf = c => c.map((v, i) => [v, i]).filter(([v]) => v).reverse();   // [[coef, power], …], highest power first
+// A typed list of solutions → numbers. "x = 3, x = −5", "(3 ± sqrt(17))/4", "no solution" → []. null if unreadable.
+function readNums(raw) {
+  const t = String(raw).trim();
+  if (/^(no\s*(real\s*)?solutions?|none|∅|\{\s*\})\.?$/i.test(t)) return [];
+  const pieces = t.replace(/\b[a-z]\s*=/gi, "").split(/[,;]|\bor\b|\band\b/i).map(x => x.trim()).filter(Boolean);
+  const out = [];
+  for (const p of pieces) {
+    const pm = p.replace(/\+\/-|\+-/g, "±");
+    const forms = pm.includes("±") ? [pm.replace("±", "+"), pm.replace("±", "-")] : [pm];
+    for (const f of forms) { let v; try { v = evalExpr(parseExpr(f), {}); } catch { return null; } if (!isFinite(v)) return null; out.push(v); }
+  }
+  return out.length ? out : null;
+}
 // Turn typed text into the plain notation used for display: x^2 → x², * → ·, sqrt → √
 function prettyInput(raw) {
   return String(raw).replace(/\*/g, "·").replace(/-/g, "−").replace(/sqrt/g, "√").replace(/cbrt/g, "∛")
@@ -640,8 +693,15 @@ function setupPractice(QTYPES, SET, doneMsg) {
       <input id="ain" class="exprin" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="${q.placeholder || "e.g. 2x^2 - 9x - 18"}">
       <p class="preview" aria-live="polite"><span class="muted">Preview:</span> <span id="aprev"></span></p>
       <p class="muted typehelp">Type ^ for powers (x^2), sqrt( ) for √. You can skip × signs: 2x(x+1). Any correct ${q.form === "expanded" ? "expanded form" : q.form === "factored" ? "factored form" : "form"} is accepted.</p>`;
-    if (q.kind === "nums") body = `<label class="exprlab" for="ain">Your answer${q.answer.length > 1 ? "s (separate with commas)" : ""}</label>
-      <input id="ain" class="exprin" inputmode="text" autocomplete="off" placeholder="${q.placeholder || (q.answer.length > 1 ? "e.g. −3, 1" : "e.g. −3")}">`;
+    if (q.kind === "nums") body = `<label class="exprlab" for="ain">Your answer</label>
+      <input id="ain" class="exprin" inputmode="text" autocomplete="off" spellcheck="false" placeholder="${q.placeholder || "e.g. −3, 1/2"}">
+      <p class="muted typehelp">Separate solutions with commas. For a pair you can type ± or +- (for example (3 +- sqrt(17))/4). Type <em>no solution</em> if there is none.${q.tol ? " Decimals rounded to " + q.tolText + " are fine." : ""}</p>`;
+    if (q.kind === "interval") body = `<label class="exprlab" for="ain">Your answer (interval notation)</label>
+      <input id="ain" class="exprin" autocomplete="off" spellcheck="false" placeholder="${q.placeholder || "e.g. (-inf, 2] U (6, inf)"}">
+      <div class="row keypad" role="group" aria-label="Insert a symbol">${[["−∞", "-inf"], ["∞", "inf"], ["∪", " U "], ["(", "("], ["[", "["], [")", ")"], ["]", "]"], ["no solution", "no solution"]]
+        .map(([l, v]) => `<button type="button" class="btn secondary" data-ins="${v}">${l}</button>`).join("")}</div>
+      <p class="preview" aria-live="polite"><span class="muted">Preview:</span> <span id="aprev"></span></p>
+      <p class="muted typehelp">Type inf for ∞ and U for ∪. Use ( ) for endpoints that are not included and [ ] for endpoints that are.</p>`;
     panel.innerHTML = `<p class="muted">Question ${qi + 1} of ${set.length}</p>
       <fieldset><legend class="prompt">${q.prompt}</legend>${body}</fieldset>
       <div class="row"><button class="btn" id="check">Check answer</button><button class="btn secondary" id="next" hidden>Next question</button></div>
@@ -651,6 +711,13 @@ function setupPractice(QTYPES, SET, doneMsg) {
     const ain = $("ain");
     if (ain) {
       ain.addEventListener("keydown", e => { if (e.key === "Enter") checkQ(); });
+      if (q.kind === "interval") {
+        const prev = () => { const r = readIntervals(ain.value); $("aprev").innerHTML = ""; if (ain.value.trim()) $("aprev").append(r ? (r.length ? M(ivText(r)) : "no solution") : "(not readable yet)"); };
+        ain.addEventListener("input", prev);
+        document.querySelectorAll("#qPanel [data-ins]").forEach(b => b.addEventListener("click", () => {
+          const v = b.dataset.ins; if (v === "no solution") ain.value = v; else { const p = ain.selectionStart ?? ain.value.length; ain.value = ain.value.slice(0, p) + v + ain.value.slice(ain.selectionEnd ?? p); ain.selectionStart = ain.selectionEnd = p + v.length; }
+          ain.focus(); prev(); }));
+      }
       if (q.kind === "expr") ain.addEventListener("input", () => {     // live typeset preview of what was typed
         const v = ain.value.trim(); let okParse = true; try { if (v) parseExpr(v); } catch { okParse = false; }
         $("aprev").innerHTML = ""; if (v) $("aprev").append(okParse ? M(prettyInput(normInput(v).replace(/\*/g, "·"))) : "(not readable yet)");
@@ -667,12 +734,24 @@ function setupPractice(QTYPES, SET, doneMsg) {
       if (ok && q.form === "simplified" && !isSimplified(t, q.maxNum, q.maxDen)) { fb.className = "feedback hint"; fb.innerHTML = "<strong>Equal, but not fully simplified.</strong> Factor the numerator and denominator and cancel every common factor."; return; }
       if (ok && q.form === "rationalized" && rootInDen(t)) { fb.className = "feedback hint"; fb.innerHTML = "<strong>Equal, but there is still a square root in a denominator.</strong> Multiply the top and bottom by the root (or the conjugate)."; return; }
       if (ok && q.form === "factored" && !isFactoredTo(t, q.maxDeg || 1)) { fb.className = "feedback hint"; fb.innerHTML = "<strong>Equal, but not factored completely.</strong> Write it as a product, and check whether any factor can be factored again."; return; }
+    } else if (q.kind === "interval") {
+      const raw = $("ain").value.trim(); if (!raw) { fb.className = "feedback hint"; fb.textContent = "Type an answer first."; return; }
+      if (/[<>≤≥]/.test(raw)) { fb.className = "feedback hint"; fb.textContent = "Write the answer in interval notation, like [2, 5) or (-inf, 1]."; return; }
+      const got = readIntervals(raw);
+      if (!got) { fb.className = "feedback hint"; fb.textContent = "I can't read that interval. Use a form like (-inf, 2] U (6, inf), and make sure the smaller number comes first."; return; }
+      const cmp = ivCompare(got, q.answer); ok = cmp === "same";
+      if (cmp === "brackets") { fb.className = "feedback hint"; fb.innerHTML = "<strong>Right numbers, but check your brackets.</strong> Use [ ] only where the endpoint is included, and always ( ) next to ∞."; return; }
     } else if (q.kind === "nums") {
       const raw = $("ain").value.trim(); if (!raw) { fb.className = "feedback hint"; fb.textContent = "Type an answer first."; return; }
-      const got = raw.split(/[,;]|\band\b/).map(x => x.trim()).filter(Boolean).map(x => { try { return evalExpr(parseExpr(x), {}); } catch { return NaN; } });
-      if (got.some(isNaN)) { fb.className = "feedback hint"; fb.textContent = "Type numbers only, like −3 or 1/2, separated by commas."; return; }
-      const want = q.answer.slice().sort((a, b) => a - b), have = [...new Set(got.map(v => +v.toFixed(9)))].sort((a, b) => a - b);
-      ok = want.length === have.length && want.every((v, i) => Math.abs(v - have[i]) < 1e-6);
+      let typed = raw.replace(/[$%°]/g, "");                              // $7821.88, 7.7%, and 150° are fine
+      if (q.answer.length === 1) typed = typed.replace(/(\d),(?=\d{3}(?!\d))/g, "$1");   // one answer expected: 33,062 means 33062
+      const got = readNums(typed);
+      if (!got) { fb.className = "feedback hint"; fb.textContent = "Type numbers only, like −3, 1/2, or 2 + sqrt(3), separated by commas."; return; }
+      const tol = q.tol || 1e-6, want = q.answer.slice().sort((a, b) => a - b);
+      const have = got.filter((v, i) => got.findIndex(w => Math.abs(w - v) < tol) === i).sort((a, b) => a - b);   // repeats count once
+      ok = want.length === have.length && want.every((v, i) => Math.abs(v - have[i]) < tol);
+      if (!ok && want.length && have.length < want.length && have.every(v => want.some(w => Math.abs(w - v) < tol))) {
+        fb.className = "feedback hint"; fb.innerHTML = `<strong>Correct so far, but there ${want.length - have.length === 1 ? "is another solution" : "are more solutions"}.</strong> Look for every value that works.`; return; }
     } else {
       const sel = document.querySelector('input[name="ans"]:checked');
       if (!sel) { fb.className = "feedback hint"; fb.textContent = "Choose an answer first."; return; }
@@ -692,7 +771,210 @@ function setupPractice(QTYPES, SET, doneMsg) {
   newSet();
 }
 
+/* ---------- K8. Graphs ----------
+   drawGraph(svg, { win: [xmin, xmax, ymin, ymax], fns: [{ f, color, dash, width }], vlines: [x], hlines: [y],
+                    points: [{ x, y, open, label, color }] })
+   Colors are CSS variable names (e.g. "--curve") so graphs follow light and dark mode. */
+function drawGraph(svg, o) {
+  const W = 440, H = 440, pad = 26, [x0, x1, y0, y1] = o.win || [-10, 10, -10, 10];
+  const X = x => pad + (x - x0) / (x1 - x0) * (W - 2 * pad), Y = y => H - pad - (y - y0) / (y1 - y0) * (H - 2 * pad);
+  const css = getComputedStyle(document.documentElement), col = v => v && v.startsWith("--") ? css.getPropertyValue(v).trim() : v;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  [...svg.childNodes].forEach(c => { if (!["title", "desc"].includes(c.nodeName)) c.remove(); });   // keep the accessible title
+  el("rect", { x: 0, y: 0, width: W, height: H, fill: col("--panel") }, svg);
+  const step = v => { const r = v / 10, p = 10 ** Math.floor(Math.log10(r)); return [1, 2, 5, 10].map(m => m * p).find(s => s >= r); };
+  const sx = o.xstep || step(x1 - x0), sy = o.ystep || step(y1 - y0);
+  for (let x = Math.ceil(x0 / sx) * sx; x <= x1 + 1e-9; x += sx) el("line", { x1: X(x), y1: Y(y0), x2: X(x), y2: Y(y1), stroke: col("--grid"), "stroke-width": 1 }, svg);
+  for (let y = Math.ceil(y0 / sy) * sy; y <= y1 + 1e-9; y += sy) el("line", { x1: X(x0), y1: Y(y), x2: X(x1), y2: Y(y), stroke: col("--grid"), "stroke-width": 1 }, svg);
+  if (y0 <= 0 && y1 >= 0) el("line", { x1: X(x0), y1: Y(0), x2: X(x1), y2: Y(0), stroke: col("--axis"), "stroke-width": 1.6 }, svg);
+  if (x0 <= 0 && x1 >= 0) el("line", { x1: X(0), y1: Y(y0), x2: X(0), y2: Y(y1), stroke: col("--axis"), "stroke-width": 1.6 }, svg);
+  const lab = (x, y, t, a = "middle") => { const e = el("text", { x, y, "font-size": 12, fill: col("--muted"), "text-anchor": a }, svg); e.textContent = t; };
+  for (let x = Math.ceil(x0 / sx) * sx; x <= x1 + 1e-9; x += sx) if (Math.abs(x) > 1e-9) lab(X(x), Math.min(Math.max(Y(0) + 15, 14), H - 4), fnum(+x.toFixed(6)));
+  for (let y = Math.ceil(y0 / sy) * sy; y <= y1 + 1e-9; y += sy) if (Math.abs(y) > 1e-9) lab(Math.min(Math.max(X(0) - 5, 22), W - 4), Y(y) + 4, fnum(+y.toFixed(6)), "end");
+  (o.vlines || []).forEach(v => el("line", { x1: X(v), y1: Y(y0), x2: X(v), y2: Y(y1), stroke: col("--asym"), "stroke-width": 2, "stroke-dasharray": "7 5" }, svg));
+  (o.hlines || []).forEach(v => el("line", { x1: X(x0), y1: Y(v), x2: X(x1), y2: Y(v), stroke: col("--asym"), "stroke-width": 2, "stroke-dasharray": "7 5" }, svg));
+  (o.fns || []).forEach(g => {                                      // sample the curve; lift the pen at breaks and off-screen jumps
+    let d = "", pen = false, prev = null; const N = 700, span = y1 - y0;
+    for (let i = 0; i <= N; i++) { const x = x0 + (x1 - x0) * i / N, y = g.f(x);
+      if (!isFinite(y) || Math.abs(y - (prev ?? y)) > span * 1.5 || y < y0 - span || y > y1 + span) { pen = false; prev = isFinite(y) ? y : null; continue; }
+      d += (pen ? "L" : "M") + X(x).toFixed(1) + " " + Y(Math.max(y0 - span, Math.min(y1 + span, y))).toFixed(1); pen = true; prev = y; }
+    const clip = `clip${Math.random().toString(36).slice(2, 8)}`;
+    const cp = el("clipPath", { id: clip }, svg); el("rect", { x: pad, y: pad, width: W - 2 * pad, height: H - 2 * pad }, cp);
+    el("path", { d, fill: "none", stroke: col(g.color || "--curve"), "stroke-width": g.width || 3.2, "stroke-dasharray": g.dash || "none", "stroke-linecap": "round", "clip-path": `url(#${clip})` }, svg);
+  });
+  (o.points || []).forEach(p => { if (p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) return;
+    el("circle", { cx: X(p.x), cy: Y(p.y), r: 6, fill: p.open ? col("--panel") : col(p.color || "--curve2"), stroke: col(p.color || "--curve2"), "stroke-width": 2.5 }, svg);
+    if (p.label) { const t = el("text", { x: X(p.x) + 9, y: Y(p.y) - 9, "font-size": 14, "font-weight": 700, fill: col("--ink") }, svg); t.textContent = p.label; } });
+}
 
+/* ---------- K9. Exact answers: fractions, radicals, quadratic solutions ---------- */
+function fracText(n, d = 1) {                                       // reduced fraction as text: −3/4, 5, 1/2
+  if (d < 0) { n = -n; d = -d; } const g = gcd(n, d); n /= g; d /= g;
+  return d === 1 ? fnum(n) : `${n < 0 ? "−" : ""}${Math.abs(n)}/${d}`;
+}
+function sqrtParts(n) { let s = 1, m = n; for (let k = 2; k * k <= m; k++) while (m % (k * k) === 0) { m /= k * k; s *= k; } return [s, m]; }   // √72 = 6√2 → [6, 2]
+// Solutions of ax² + bx + c = 0 (integers a ≠ 0, b, c), in simplest exact form.
+function quadSolve(a, b, c) {
+  const D = b * b - 4 * a * c, kind = D > 0 ? "two" : D === 0 ? "one" : "complex";
+  if (D === 0) { const t = fracText(-b, 2 * a); return { D, kind, vals: [-b / (2 * a)], list: [t], text: t }; }
+  const [s, m] = sqrtParts(Math.abs(D));
+  if (m === 1 && D > 0) {                                           // a perfect square: two rational answers
+    const r1 = fracText(-b + s, 2 * a), r2 = fracText(-b - s, 2 * a), v = [(-b + s) / (2 * a), (-b - s) / (2 * a)].sort((x, y) => x - y);
+    return { D, kind, vals: v, list: [r1, r2], text: `${r1}, ${r2}` };
+  }
+  let g = gcd(gcd(b, s), 2 * a), p = -b / g, q = s / g, d = 2 * a / g;
+  if (d < 0) { p = -p; d = -d; }                                    // q stays positive because of the ±
+  const root = D > 0 ? (q === 1 ? "" : fnum(q)) + (m === 1 ? "" : "√" + m) : (q === 1 && m !== 1 ? "" : fnum(q)) + (m === 1 ? "i" : "i√" + m);
+  const core = p === 0 ? `±${root}` : `${fnum(p)} ± ${root}`;
+  const text = d === 1 ? core : `(${core})/${d}`;
+  const vals = D > 0 ? [(-b - Math.sqrt(D)) / (2 * a), (-b + Math.sqrt(D)) / (2 * a)].sort((x, y) => x - y) : [];
+  return { D, kind, vals, list: [text], text };
+}
+
+/* ---------- K10. Intervals and number lines ----------
+   A solution set is a list of intervals { a, b, lo, hi }: a and b are numbers (±Infinity allowed);
+   lo / hi say whether each endpoint is included ([ ]) or not (( )). [] is the empty set. */
+const IV = (a, b, lo = false, hi = false) => ({ a, b, lo: lo && isFinite(a), hi: hi && isFinite(b) });
+function ivNorm(set) {                                              // sort and merge touching or overlapping pieces
+  const s = set.filter(I => I.a < I.b || I.a === I.b && I.lo && I.hi).map(I => ({ ...I })).sort((p, q) => p.a - q.a || (q.lo - p.lo));
+  const out = [];
+  for (const I of s) {
+    const L = out[out.length - 1];
+    if (L && (I.a < L.b || I.a === L.b && (L.hi || I.lo))) {
+      if (I.b > L.b) { L.b = I.b; L.hi = I.hi; } else if (I.b === L.b) L.hi = L.hi || I.hi;   // extend, or just widen the bracket
+    } else out.push(I);
+  }
+  return out;
+}
+const numTxt = v => v === Infinity ? "∞" : v === -Infinity ? "−∞" : exactText(v);
+function exactText(v) {                                             // 0.5 → 1/2, 1.4142… → √2 when it is one
+  for (let d = 1; d <= 60; d++) { const n = v * d; if (Math.abs(n - Math.round(n)) < 1e-9) return fracText(Math.round(n), d); }
+  for (const k of [2, 3, 5, 6, 7]) for (const c of [1, 2, 3, -1, -2, -3]) for (const off of [0, 1, -1, 2, -2, 3, -3]) if (Math.abs(v - (off + c * Math.sqrt(k))) < 1e-9)
+    return `${off ? fnum(off) + (c < 0 ? " − " : " + ") : c < 0 ? "−" : ""}${Math.abs(c) === 1 ? "" : Math.abs(c)}√${k}`;
+  return fnum(+v.toFixed(4));
+}
+function ivText(set) {                                              // "(−∞, 2] ∪ (6, ∞)"
+  const s = ivNorm(set);
+  if (!s.length) return "no solution";
+  return s.map(I => I.a === I.b ? `{${numTxt(I.a)}}` : `${I.lo ? "[" : "("}${numTxt(I.a)}, ${numTxt(I.b)}${I.hi ? "]" : ")"}`).join(" ∪ ");
+}
+// Inequality wording of a set: x ≤ 2 or x > 6
+function ivIneq(set, v = "x") {
+  const s = ivNorm(set); if (!s.length) return "no solution";
+  return s.map(I => {
+    if (I.a === -Infinity && I.b === Infinity) return "all real numbers";
+    if (I.a === -Infinity) return `${v} ${I.hi ? "≤" : "<"} ${numTxt(I.b)}`;
+    if (I.b === Infinity) return `${v} ${I.lo ? "≥" : ">"} ${numTxt(I.a)}`;
+    if (I.a === I.b) return `${v} = ${numTxt(I.a)}`;
+    return `${numTxt(I.a)} ${I.lo ? "≤" : "<"} ${v} ${I.hi ? "≤" : "<"} ${numTxt(I.b)}`;
+  }).join(" or ");
+}
+// Read typed interval notation. Returns a set, or null if unreadable.
+function readIntervals(raw) {
+  let t = String(raw).trim().toLowerCase();
+  if (/^(no\s*(real\s*)?solutions?|none|∅|\{\s*\}|empty( set)?)\.?$/.test(t)) return [];
+  if (/^(all\s*real\s*numbers?|all reals|ℝ|r)$/.test(t)) return [IV(-Infinity, Infinity)];
+  t = t.replace(/infinity|inf|∞/g, "I").replace(/[−–—]/g, "-").replace(/\s+/g, "");
+  const parts = t.split(/∪|\bu\b|u(?=[\[(])|\bor\b|or/).filter(Boolean);
+  const out = [];
+  for (const p of parts) {
+    const m = /^([\[(])(.+),(.+)([\])])$/.exec(p);
+    if (!m) { const pt = /^\{(.+)\}$/.exec(p); if (pt) { try { const v = evalExpr(parseExpr(pt[1]), {}); out.push(IV(v, v, true, true)); continue; } catch { return null; } } return null; }
+    const val = s => s === "I" || s === "+I" ? Infinity : s === "-I" ? -Infinity : (() => { try { return evalExpr(parseExpr(s), {}); } catch { return NaN; } })();
+    const a = val(m[2]), b = val(m[3]); if (isNaN(a) || isNaN(b) || a > b) return null;
+    out.push(IV(a, b, m[1] === "[", m[4] === "]"));
+  }
+  return out.length ? out : null;
+}
+// Compare two sets. Returns "same", "brackets" (right endpoints, a wrong bracket), or "different".
+function ivCompare(A, B) {
+  const a = ivNorm(A), b = ivNorm(B), eq = (x, y) => x === y || Math.abs(x - y) < 1e-6;
+  if (a.length !== b.length || !a.every((I, i) => eq(I.a, b[i].a) && eq(I.b, b[i].b))) return "different";
+  return a.every((I, i) => I.lo === b[i].lo && I.hi === b[i].hi) ? "same" : "brackets";
+}
+const ivHas = (set, x) => set.some(I => (x > I.a || x === I.a && I.lo) && (x < I.b || x === I.b && I.hi));
+// Number line: drawNumberLine(svg, { min, max, step, set, marks: [{ x, label }] })
+function drawNumberLine(svg, o) {
+  const W = 440, H = o.h || 80, pad = 26, { min, max } = o, step = o.step || 1, X = x => pad + (x - min) / (max - min) * (W - 2 * pad), y = H / 2;
+  const css = getComputedStyle(document.documentElement), col = v => css.getPropertyValue(v).trim();
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  [...svg.childNodes].forEach(c => { if (!["title", "desc"].includes(c.nodeName)) c.remove(); });
+  el("line", { x1: 6, y1: y, x2: W - 6, y2: y, stroke: col("--axis"), "stroke-width": 1.6 }, svg);
+  el("path", { d: `M${W - 6} ${y} l-9 -5 v10 z M6 ${y} l9 -5 v10 z`, fill: col("--axis") }, svg);
+  for (let x = Math.ceil(min / step) * step; x <= max + 1e-9; x += step) {
+    el("line", { x1: X(x), y1: y - 6, x2: X(x), y2: y + 6, stroke: col("--axis"), "stroke-width": 1.2 }, svg);
+    const t = el("text", { x: X(x), y: y + 22, "text-anchor": "middle", "font-size": 12, fill: col("--muted") }, svg); t.textContent = fnum(+x.toFixed(6));
+  }
+  const clamp = v => Math.max(min - (max - min) * 0.04, Math.min(max + (max - min) * 0.04, v));
+  for (const I of ivNorm(o.set || [])) {
+    const x1 = I.a === -Infinity ? 8 : X(clamp(I.a)), x2 = I.b === Infinity ? W - 8 : X(clamp(I.b));
+    el("line", { x1, y1: y, x2, y2: y, stroke: col("--curve"), "stroke-width": 6, "stroke-linecap": "butt" }, svg);
+    if (I.a === -Infinity) el("path", { d: `M6 ${y} l12 -8 v16 z`, fill: col("--curve") }, svg);
+    if (I.b === Infinity) el("path", { d: `M${W - 6} ${y} l-12 -8 v16 z`, fill: col("--curve") }, svg);
+    [[I.a, I.lo], [I.b, I.hi]].forEach(([v, closed]) => { if (isFinite(v) && v >= min - 1e-9 && v <= max + 1e-9)
+      el("circle", { cx: X(v), cy: y, r: 7, fill: closed ? col("--curve") : col("--panel"), stroke: col("--curve"), "stroke-width": 3 }, svg); });
+  }
+  (o.marks || []).forEach(m => { if (m.dot !== false) el("circle", { cx: X(m.x), cy: y, r: 6, fill: col(m.color || "--curve2") }, svg); const t = el("text", { x: X(m.x), y: y - 14, "text-anchor": "middle", "font-size": 13, "font-weight": 700, fill: col(m.color || "--curve2") }, svg); t.textContent = m.label; });
+}
+// A number line as an HTML string (for practice feedback and examples)
+function numberLineHTML(set, min, max, label) {
+  const svg = document.createElementNS(NS, "svg"); svg.setAttribute("class", "nline"); svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", label || `Number line showing ${ivText(set)}`);
+  drawNumberLine(svg, { min, max, set, step: (max - min) > 24 ? 5 : (max - min) > 12 ? 2 : 1 }); return svg.outerHTML;
+}
+// A sensible window for a set's finite endpoints
+function ivWindow(set, extra = []) {
+  const pts = [...set.flatMap(I => [I.a, I.b]), ...extra].filter(isFinite); if (!pts.length) return [-5, 5];
+  let lo = Math.floor(Math.min(...pts)) - 2, hi = Math.ceil(Math.max(...pts)) + 2; if (hi - lo < 8) { const c = (hi + lo) / 2; lo = Math.floor(c - 4); hi = Math.ceil(c + 4); }
+  return [lo, hi];
+}
+// Intersection and union of solution sets
+function ivIntersect(A, B) {
+  const out = [];
+  for (const I of ivNorm(A)) for (const J of ivNorm(B)) {
+    const a = Math.max(I.a, J.a), b = Math.min(I.b, J.b);
+    const lo = I.a === J.a ? I.lo && J.lo : a === I.a ? I.lo : J.lo, hi = I.b === J.b ? I.hi && J.hi : b === I.b ? I.hi : J.hi;
+    if (a < b || a === b && lo && hi) out.push(IV(a, b, lo, hi));
+  }
+  return ivNorm(out);
+}
+const ivUnion = (A, B) => ivNorm([...A, ...B]);
+// The solution set of g(x) op 0 for a linear g(x) = m·x + c
+function linSet(m, c, op) {
+  if (Math.abs(m) < 1e-12) return ({ "<": c < 0, "<=": c <= 0, ">": c > 0, ">=": c >= 0 }[op]) ? [IV(-Infinity, Infinity)] : [];
+  const r = -c / m, incl = op.includes("="), less = op[0] === "<";
+  return (less === (m > 0)) ? [IV(-Infinity, r, false, incl)] : [IV(r, Infinity, incl)];
+}
+
+/* ---------- K11. Numeric domain finder ----------
+   Scans x from −lim to lim and returns the set where fn(x) is a real number.
+   Boundaries are snapped to the nearest 1/12 (all course examples use nice numbers),
+   and each one is tested to choose [ or (. Points like x = 2 where fn breaks are removed. */
+function numericDomain(fn, lim = 40) {
+  const ok = x => { try { return isFinite(fn(x)); } catch { return false; } }, step = 1 / 48, snap = v => Math.round(v * 12) / 12;
+  const out = []; let start = null;
+  for (let k = -lim / step; k <= lim / step + 1; k++) {
+    const x = k * step, good = k <= lim / step && ok(x) && !(ok(x) && Math.abs(snap(x) - x) < 1e-12 && !ok(snap(x)));
+    if (good && start === null) start = x;
+    if (!good && start !== null) { out.push([start, x - step]); start = null; }
+  }
+  const sets = [];
+  for (const [a0, b0] of out) {
+    const a = a0 <= -lim + 1e-9 ? -Infinity : snap(a0 - step / 2), b = b0 >= lim - 1e-9 ? Infinity : snap(b0 + step / 2);
+    sets.push(IV(a, b, isFinite(a) && ok(a), isFinite(b) && ok(b)));
+  }
+  // points the grid stepped over: x where fn breaks exactly (e.g. 1/(x − 1/3))
+  return ivNorm(sets);
+}
+
+
+const LADDER = { lesson: 1, next: "Lesson 2" };
+/* =====================================================================
+   1. THE RUNGS (bottom to top). Each rung is one decision from the
+   Lesson 1 skill map. make() returns a fresh multiple-choice question:
+   { prompt, choices: [{ label, ok }], why }. review = where to go if the
+   rung is shaky (page and tab).
+   ===================================================================== */
 /* =====================================================================
    1. THE RUNGS (bottom to top). Each rung is one decision from the
    Lesson 1 skill map. make() returns a fresh multiple-choice question:
@@ -713,6 +995,7 @@ const fr = (n, d) => `(${n})/(${d})`;
 const RUNGS = [
   { name: "Add and subtract polynomials", skill: "1.1", review: ["lesson01-skill1-1.html#examples", "Add or subtract examples"],
     make: () => { const A = randPoly(2), B = randPoly(2), R = P.sub(A, B);
+      if (B.filter(v => v).length < 2) return RUNGS[0].make();                           // a one-term B makes the wrong answers collapse into one
       const firstOnly = P.add(A, B.map((v, i) => i === B.length - 1 ? -v : v));          // only the first term's sign changed
       return mc(`Simplify: ${M(`${PP(A)} − ${PP(B)}`)}`, PT(R), [PT(P.add(A, B)), PT(firstOnly), PT(P.add(R, [2 * B[0]]))],
         `Change the sign of every term in the second polynomial, then combine like terms: ${M(PT(R))}.`); } },
@@ -778,10 +1061,14 @@ const RUNGS = [
 ];
 
 /* =====================================================================
+   LADDER ENGINE (shared). Each ladder page defines LADDER = { lesson, next }
+   and RUNGS = [{ name, skill, review: [link, label], make() }] before this runs.
+   ===================================================================== */
+/* =====================================================================
    2. PROGRESS (saved in this browser only; the page works without it)
    state.res[i] = "pass" | "shaky" | "work"; state.n = questions per rung
    ===================================================================== */
-const KEY = "math2412-lesson01-ladder";
+const KEY = `math2412-lesson${String(LADDER.lesson).padStart(2, "0")}-ladder`;
 let state = (() => { try { return JSON.parse(localStorage.getItem(KEY)) || { res: {}, at: 0, n: 2 }; } catch { return { res: {}, at: 0, n: 2 }; } })();
 if (![2, 3, 4].includes(state.n)) state.n = 2;
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { } };
@@ -805,7 +1092,8 @@ function startRung(i) {
   if (i >= RUNGS.length) return report();
   state.at = i; save();
   const n = state.n, qs = [];
-  for (let t = 0; qs.length < n && t < 40; t++) { const q = RUNGS[i].make(); if (!qs.some(x => x.prompt === q.prompt)) qs.push(q); }   // no repeats
+  for (let t = 0; qs.length < n && t < 40; t++) { const q = RUNGS[i].make(); const sig = x => x.prompt + x.choices.map(c => c.label).sort().join("|");   // same prompt is fine if the choices differ
+    if (!qs.some(x => sig(x) === sig(q))) qs.push(q); }   // no repeats
   run = { i, qs, q: 0, marks: [] };
   drawRungs(); showQ();
 }
@@ -861,7 +1149,7 @@ function finishRung() {
    ===================================================================== */
 function summaryText() {
   const lines = RUNGS.map((r, i) => `Rung ${i + 1} (${r.skill}) ${r.name}: ${state.res[i] ? STATUS[state.res[i]].slice(2) : "not tried"}`);
-  return plainMath(`Math 2412 Lesson 1 Ladder results (${state.n} questions per rung)\n${lines.join("\n")}`);
+  return plainMath(`Math 2412 Lesson ${LADDER.lesson} Ladder results (${state.n} questions per rung)\n${lines.join("\n")}`);
 }
 function report() {
   run = null; state.at = RUNGS.length; save(); drawRungs();
@@ -871,7 +1159,7 @@ function report() {
     <p class="prompt">${cleared} of ${RUNGS.length} rungs cleared.</p>
     ${weak.length ? `<h3>Your next steps</h3><ol>${weak.map(x => `<li><strong>${x.r.name}</strong> (${STATUS[x.s].slice(2).toLowerCase()}): <a href="${x.r.review[0]}">${x.r.review[1]}</a></li>`).join("")}</ol>
       <p class="muted">Work on the lowest rung first. Higher rungs often depend on lower ones.</p>`
-      : `<p>Every rung cleared. You are ready for the Lesson 1 quiz and Lesson 2.</p>`}
+      : `<p>Every rung cleared. You are ready for the Lesson ${LADDER.lesson} quiz and ${LADDER.next}.</p>`}
     <table class="report"><caption class="muted" style="text-align:left">All rungs</caption>
       <thead><tr><th scope="col">Rung</th><th scope="col">Skill</th><th scope="col">Result</th></tr></thead>
       <tbody>${RUNGS.map((r, i) => `<tr><td>${i + 1}. ${r.name}</td><td>${r.skill}</td><td>${state.res[i] ? STATUS[state.res[i]] : "Not tried"}</td></tr>`).join("")}</tbody></table>
@@ -915,6 +1203,7 @@ function intro() {
   $("jumpGo").addEventListener("click", () => startRung(+$("jump").value));
 }
 intro();
+
 typeset();
 </script>
 </body>
