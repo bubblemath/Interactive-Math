@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Proportion Test Coach</title>
+<style>
+/* Layout: masthead, two tabs, then a step list beside one step card (stacks on phones). Matches the course's paper-and-ink sheets. */
+:root{
+  --paper:#F3F1E7; --sheet:#FBFAF4; --card:#FFFFFF; --rule:#D8D3C2; --ink:#14213D; --ink-soft:#4F586C;
+  --blue:#1F4E9C; --blue-soft:#E4EBF7; --on-blue:#FFFFFF;
+  --ok:#22603C; --ok-soft:#E2EFE7; --no:#A31F1C; --no-soft:#F7E4E3; --gold:#B58B15;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#151A22; --sheet:#1B212B; --card:#212834; --rule:#38414F; --ink:#E8EBF1; --ink-soft:#A7B0BF;
+  --blue:#8FB0EC; --blue-soft:#24324A; --on-blue:#0F1724;
+  --ok:#7BD3A0; --ok-soft:#1E3529; --no:#F29A92; --no-soft:#3A2224; --gold:#E0BC5A; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --paper:#151A22; --sheet:#1B212B; --card:#212834; --rule:#38414F; --ink:#E8EBF1; --ink-soft:#A7B0BF;
+  --blue:#8FB0EC; --blue-soft:#24324A; --on-blue:#0F1724;
+  --ok:#7BD3A0; --ok-soft:#1E3529; --no:#F29A92; --no-soft:#3A2224; --gold:#E0BC5A; color-scheme:dark;}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.55}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:8px 64px}
+.masthead{border-bottom:3px double var(--ink);padding:22px 0 12px;margin-bottom:18px}
+.masthead h1{font-family:var(--serif);font-size:clamp(28px,5vw,42px);line-height:1.05;margin:0;letter-spacing:-.01em}
+.masthead p{margin:6px 0 0;color:var(--ink-soft);max-width:62ch}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tab{font:inherit;font-weight:600;cursor:pointer;padding:9px 16px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:3px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:820px){.layout{grid-template-columns:1fr}}
+.progress{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+@media (max-width:820px){.progress{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+.pstep{width:100%;display:flex;align-items:center;gap:10px;font:inherit;font-size:15px;text-align:left;cursor:pointer;
+  padding:8px 10px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:3px}
+.pstep:disabled{cursor:not-allowed;color:var(--ink-soft);opacity:.75}
+.pstep .pn{flex:0 0 26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;border:1px solid var(--rule);background:var(--card)}
+.pstep.done .pn{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.pstep.cur{border-color:var(--blue);border-width:2px;padding:7px 9px;background:var(--blue-soft)}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:3px;padding:20px 22px;min-width:0}
+.kicker{margin:0 0 4px;font-family:var(--mono);font-size:13px;color:var(--ink-soft);letter-spacing:.03em}
+h2{font-family:var(--serif);font-size:26px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2:focus{outline:none}
+h3{font-family:var(--serif);font-size:18px;margin:20px 0 8px;line-height:1.3}
+.lede{color:var(--ink-soft);margin:0 0 12px;max-width:68ch}
+.small{font-size:14.5px;color:var(--ink-soft);margin:8px 0 0}
+a{color:var(--blue)}
+.choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.choices.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.choices.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.choices.stack{grid-template-columns:1fr}
+@media (max-width:620px){.choices,.choices.three{grid-template-columns:1fr}.choices.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.choice{font:inherit;cursor:pointer;text-align:left;padding:11px 14px;border:2px solid var(--rule);background:var(--card);color:var(--ink);border-radius:4px;display:grid;gap:2px;min-width:0}
+.choice:hover{border-color:var(--ink)}
+.choice.on{border-color:var(--blue);background:var(--blue-soft)}
+.choice .ct{font-weight:600}
+.choices.four .choice .ct{font-family:var(--serif);font-size:24px;line-height:1.1}
+.choice .cs{font-size:13.5px;color:var(--ink-soft)}
+.field{display:grid;gap:4px;margin:12px 0}
+.field label{font-weight:600;font-size:15.5px}
+.field input{font:inherit;font-variant-numeric:tabular-nums;padding:9px 11px;border:1px solid var(--rule);border-radius:3px;background:var(--card);color:var(--ink);max-width:100%;width:22em}
+.hint{font-size:14px;color:var(--ink-soft)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}
+@media (max-width:620px){.grid2{grid-template-columns:1fr}}
+.grid2 .field input{width:100%}
+fieldset.data{border:1px solid var(--rule);border-radius:4px;padding:6px 16px 12px;margin:14px 0;background:var(--card)}
+fieldset.data legend{font-family:var(--serif);font-weight:700;font-size:18px;padding:0 6px}
+.sums p{margin:6px 0;font-variant-numeric:tabular-nums}
+.fb{margin:12px 0 0;padding:10px 14px;border-radius:0 3px 3px 0;font-size:15.5px}
+.fb:empty{display:none}
+.fb.ok{border-left:4px solid var(--ok);background:var(--ok-soft)}
+.fb.no{border-left:4px solid var(--no);background:var(--no-soft)}
+.fb p,.fb ul{margin:0}
+.fb ul{padding-left:20px}
+.warn{border-left:4px solid var(--gold);padding:8px 12px;background:var(--card);margin:8px 0}
+.note{border-left:4px solid var(--blue);background:var(--blue-soft);padding:10px 14px;margin:16px 0 0;border-radius:0 3px 3px 0;font-size:15.5px}
+.note p{margin:0}
+.result{margin-top:18px;border:1px solid var(--rule);border-left:4px solid var(--ink);background:var(--card);padding:12px 16px;border-radius:0 3px 3px 0}
+.result h3{margin-top:4px}
+.copyrow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:6px 0;border-top:1px solid var(--rule)}
+.copyrow:first-of-type{border-top:0}
+.copytext{margin:0;min-width:0;overflow-wrap:anywhere}
+.summary{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--mono);font-size:14px;line-height:1.6;margin:0;background:var(--sheet);padding:10px;border-radius:3px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;background:var(--card)}
+th,td{border:1px solid var(--rule);padding:7px 10px;text-align:left}
+thead th{background:var(--blue-soft)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+ol.steps{padding-left:22px;margin:8px 0}
+ol.steps li{margin:4px 0}
+.btn{font:inherit;font-weight:600;cursor:pointer;padding:10px 20px;border-radius:3px;border:1px solid var(--blue);background:var(--blue);color:var(--on-blue)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--blue)}
+.btn.small{padding:4px 10px;font-size:14px;flex:0 0 auto}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:22px;padding-top:14px;border-top:1px solid var(--rule)}
+.navhint{color:var(--ink-soft);font-size:15px}
+.scenario{font-family:var(--serif);font-size:21px;line-height:1.5;background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--ink);padding:16px 20px;margin:4px 0 8px}
+.scenario:focus{outline:3px solid var(--gold);outline-offset:2px}
+details{margin-top:8px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.foot{margin-top:22px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;color:var(--ink-soft);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <h1>Proportion Test Coach</h1>
+    <p>Step-by-step help with the Making the Grade lab: one- and two-sample proportion tests on Texas graduates’ first-year college GPAs. The course applets calculate z and the p-value; the coach checks your setup.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Mode">
+    <button class="tab" role="tab" id="tab-guide" aria-controls="panel-guide" aria-selected="true">Guide me through my test</button>
+    <button class="tab" role="tab" id="tab-practice" aria-controls="panel-practice" aria-selected="false">Practice writing hypotheses</button>
+  </div>
+
+  <section id="panel-guide" role="tabpanel" aria-labelledby="tab-guide">
+    <div class="layout">
+      <nav aria-label="Steps"><ol class="progress" id="progress"></ol></nav>
+      <div class="sheet">
+        <div id="stepBody"></div>
+        <div class="nav">
+          <button type="button" class="btn ghost" id="backBtn">Back</button>
+          <button type="button" class="btn" id="nextBtn">Next step</button>
+          <span class="navhint" id="navHint" aria-live="polite"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-practice" role="tabpanel" aria-labelledby="tab-practice" hidden>
+    <div class="sheet" id="practiceBody"></div>
+  </section>
+
+  <div class="foot">
+    <span>Your answers save in this browser.</span>
+    <button type="button" class="btn ghost small" id="resetBtn">Start over</button>
+    <span id="resetConfirm" hidden>Clear everything you entered? <button type="button" class="btn small" id="resetYes">Yes, clear it</button> <button type="button" class="btn ghost small" id="resetNo">Keep it</button></span>
+  </div>
+</div>
+<script>
+/* ==================================================================
+   CORE LOGIC — pure functions, no DOM. Tested in Node (test.js).
+   The coach never computes z or a p-value: students get those from
+   the course applets. It only checks setup, arithmetic for p-hat,
+   conditions, which tail to read, and the decision.
+   ================================================================== */
+var ALPHA = 0.05;
+var BENCH = 0.24;                 /* statewide 2023-2024 rate: 40,403 of 167,706 */
+var BENCH_PCT = '24%';
+var SUCCESS_TEXT = 'earn a GPA below 2.0 in their first year of college';
+
+var PRED_TO_SIGN = { lower: '<', higher: '>', different: '≠' };
+var SIGN_TO_TAIL = { '<': 'left', '>': 'right', '≠': 'two' };
+var DIR_WORDS = { '<': 'less than', '>': 'greater than', '≠': 'different from' };
+
+/* Parse a number a student typed: allows commas, spaces and a leading dot. */
+function num(v){
+  if(v === null || v === undefined) return NaN;
+  var s = String(v).replace(/,/g, '').trim();
+  if(s === '' || !/^[-+]?(\d+\.?\d*|\.\d+)$/.test(s)) return NaN;
+  return parseFloat(s);
+}
+function isWhole(v){ var n = num(v); return isFinite(n) && n >= 0 && Math.floor(n) === n; }
+function round4(x){ return Math.round(x * 10000) / 10000; }
+function fmt4(x){ return round4(x).toFixed(4); }
+
+/* The benchmark typed as a decimal. Returns {ok, msg}. */
+function checkBench(v){
+  var n = num(v);
+  if(!isFinite(n)) return {ok:false, msg:'Type the benchmark as a number.'};
+  if(Math.abs(n - BENCH) < 1e-9) return {ok:true, msg:'Right: 24% is 0.24 as a decimal.'};
+  if(Math.abs(n - 24) < 1e-9) return {ok:false, msg:'That is the percent. Divide by 100 to write it as a decimal.'};
+  if(Math.abs(n - 2.4) < 1e-9) return {ok:false, msg:'Check the decimal point. 24% means 24 out of 100.'};
+  return {ok:false, msg:'Not quite. 24% means 24 out of 100.'};
+}
+
+/* Checks the three choices that make up Ha. */
+function checkHypotheses(type, pred, param, sign){
+  if(!pred) return {ok:false, msg:'Start with your prediction.'};
+  if(!param) return {ok:false, msg:'Choose the symbol that goes in the hypotheses.'};
+  if(param !== 'p') return {ok:false, msg:'Hypotheses are about the whole population, so they use p, not p̂. The sample proportion p̂ is what you calculate from the data.'};
+  if(!sign) return {ok:false, msg:'Choose the sign for Hₐ.'};
+  if(sign === '=') return {ok:false, msg:'The equals sign belongs in H₀. Hₐ is where your prediction goes.'};
+  var want = PRED_TO_SIGN[pred];
+  if(sign !== want){
+    var what = type === 'two' ? 'your school’s rate compared with the rival’s' : 'your school’s rate compared with 24%';
+    return {ok:false, msg:'You predicted ' + (pred === 'different' ? 'a difference with no direction' : pred) + ' for ' + what + ', so Hₐ should use ' + want + '.'};
+  }
+  return {ok:true, msg:'That matches your prediction.'};
+}
+function hypotheses(type, sign){
+  if(type === 'two') return {h0:'p₁ = p₂', ha:'p₁ ' + sign + ' p₂'};
+  return {h0:'p = ' + BENCH, ha:'p ' + sign + ' ' + BENCH};
+}
+function paramWords(type, s1, s2){
+  if(type === 'two') return [
+    'p₁ is the proportion of all ' + s1 + ' graduates who ' + SUCCESS_TEXT + '.',
+    'p₂ is the proportion of all ' + s2 + ' graduates who ' + SUCCESS_TEXT + '.'
+  ];
+  return ['p is the proportion of all ' + s1 + ' graduates who ' + SUCCESS_TEXT + '.'];
+}
+
+/* One school's two rows from the report -> x, n, problems. */
+function combine(d){
+  var keys = ['fourTotal','fourLow','twoTotal','twoLow'], i, problems = [];
+  for(i = 0; i < keys.length; i++){
+    if(String(d[keys[i]] === undefined ? '' : d[keys[i]]).trim() === '') return {ready:false, problems:['Fill in all four numbers.']};
+    if(!isWhole(d[keys[i]])) return {ready:false, problems:['Each number must be a whole number with no decimals.']};
+  }
+  var ft = num(d.fourTotal), fl = num(d.fourLow), tt = num(d.twoTotal), tl = num(d.twoLow);
+  if(fl > ft) problems.push('The four-year “below 2.0” count cannot be bigger than the four-year total.');
+  if(tl > tt) problems.push('The two-year “below 2.0” count cannot be bigger than the two-year total.');
+  var n = ft + tt, x = fl + tl;
+  if(n === 0) problems.push('n is 0. Check that you copied the Total Graduates column.');
+  return {ready: problems.length === 0, problems: problems, x: x, n: n, phat: n ? x / n : NaN};
+}
+/* The student's typed p-hat against x/n, allowing rounding to 3 or 4 places. */
+function checkPhat(typed, x, n){
+  var v = num(typed);
+  if(!isFinite(v)) return {ok:false, msg:'Type p̂ as a decimal, such as 0.3468.'};
+  var truth = x / n;
+  if(Math.abs(v - truth) <= 0.00005 + 1e-12) return {ok:true, msg:'Correct: ' + x + ' ÷ ' + n + ' = ' + fmt4(truth) + '.'};
+  if(Math.abs(v - truth * 100) <= 0.01) return {ok:false, msg:'That is the percent. Write p̂ as a decimal between 0 and 1.'};
+  if(Math.abs(v - n / x) <= 0.001) return {ok:false, msg:'Flip it: p̂ = x ÷ n, successes divided by the sample size.'};
+  if(Math.abs(v - truth) <= 0.0005 + 1e-12) return {ok:false, msg:'Close. Round to 4 decimal places.'};
+  return {ok:false, msg:'Not quite. p̂ = x ÷ n = ' + x + ' ÷ ' + n + '.'};
+}
+
+/* Conditions exactly as Lesson 22 states them. */
+function conditions(type, a, b){
+  var items;
+  if(type === 'two'){
+    items = [
+      {label:'x₁ (your school’s successes)', value:a.x, need:5},
+      {label:'n₁ − x₁ (your school’s failures)', value:a.n - a.x, need:5},
+      {label:'x₂ (rival’s successes)', value:b.x, need:5},
+      {label:'n₂ − x₂ (rival’s failures)', value:b.n - b.x, need:5}
+    ].map(function(it){ it.pass = it.value >= it.need; it.rule = 'at least 5'; return it; });
+  } else {
+    var np = a.n * BENCH, nq = a.n * (1 - BENCH);
+    items = [
+      {label:'n × p₀ = ' + a.n + ' × 0.24', value:Math.round(np * 100) / 100, need:10},
+      {label:'n × (1 − p₀) = ' + a.n + ' × 0.76', value:Math.round(nq * 100) / 100, need:10}
+    ].map(function(it){ it.pass = it.value > it.need; it.rule = 'greater than 10'; return it; });
+  }
+  return {items: items, pass: items.every(function(it){ return it.pass; })};
+}
+
+function tailFor(sign){ return SIGN_TO_TAIL[sign]; }
+function checkTail(sign, tail){
+  var want = tailFor(sign);
+  if(tail === want) return {ok:true, msg:'Right. Hₐ uses ' + sign + ', so read the ' + (want === 'two' ? 'two-tail' : want + '-tail') + ' p-value.'};
+  return {ok:false, msg:'Match the sign in Hₐ: < means left tail, > means right tail, ≠ means two-tail. Your Hₐ uses ' + sign + '.'};
+}
+function checkPvalue(v){
+  var p = num(v);
+  if(!isFinite(p)) return {ok:false, msg:'Type the p-value from the applet, such as 0.0231.'};
+  if(p < 0 || p > 1) return {ok:false, msg:'A p-value is a probability, so it must be between 0 and 1.'};
+  return {ok:true, value:p};
+}
+function correctDecision(p){ return p < ALPHA ? 'reject' : 'fail'; }
+function checkDecision(p, choice, shown){
+  var want = correctDecision(p); var ps = shown || String(p);
+  if(choice === want) return {ok:true, msg: want === 'reject'
+    ? 'Right. ' + ps + ' is less than 0.05, so the result is statistically significant.'
+    : 'Right. ' + ps + ' is not less than 0.05, so the data are consistent with H₀.'};
+  return {ok:false, msg:'Compare the p-value with α = 0.05. If the p-value is less than α, reject H₀. Otherwise, fail to reject H₀.'};
+}
+
+function decisionSentence(p, decision, shown){
+  var ps = shown || String(p);
+  return decision === 'reject'
+    ? 'Since the p-value (' + ps + ') is less than α = 0.05, we reject H₀.'
+    : 'Since the p-value (' + ps + ') is ' + (p === ALPHA ? 'equal to' : 'greater than') + ' α = 0.05, we fail to reject H₀.';
+}
+function claimText(type, sign, s1, s2){
+  var base = 'the proportion of ' + s1 + ' graduates who earn a first-year college GPA below 2.0 is ' + DIR_WORDS[sign];
+  return type === 'two' ? base + ' the proportion for ' + s2 + ' graduates' : base + ' ' + BENCH_PCT;
+}
+function conclusionSentence(type, sign, s1, s2, decision){
+  return 'There ' + (decision === 'reject' ? 'is' : 'is not') + ' enough evidence to support the claim that ' + claimText(type, sign, s1, s2) + '.';
+}
+function errorStatements(type, sign, s1, s2){
+  var claim = claimText(type, sign, s1, s2);
+  var truthNull = type === 'two' ? 'the two proportions are really the same' : 'the rate really is ' + BENCH_PCT;
+  return {
+    typeI:  'Concluding that ' + claim + ', when ' + truthNull + '.',
+    typeII: 'Not concluding that ' + claim + ', when it really is.'
+  };
+}
+function possibleError(decision){ return decision === 'reject' ? 'I' : 'II'; }
+
+/* ---------------- practice: writing hypotheses ---------------- */
+var SCHOOLS = ['Lakeview', 'Ridgecrest', 'Pine Hollow', 'Cedar Park North', 'Riverbend', 'Mesa Verde', 'Oak Hill', 'Westbrook'];
+/* Each template states which test, the expected sign, and the words that signal it. */
+var TEMPLATES = [
+  {type:'one', sign:'<', cue:'“lower”', t:'Statewide, {P}% of graduates earn a first-year college GPA below 2.0. A counselor thinks the rate for {A} graduates is lower.'},
+  {type:'one', sign:'>', cue:'“higher”', t:'Statewide, {P}% of graduates earn a first-year college GPA below 2.0. A teacher thinks the rate for {A} graduates is higher.'},
+  {type:'one', sign:'<', cue:'“do better” means fewer students below 2.0', t:'Statewide, {P}% of graduates earn a first-year college GPA below 2.0. The principal believes {A} graduates do better than the state.'},
+  {type:'one', sign:'>', cue:'“do worse” means more students below 2.0', t:'Statewide, {P}% of graduates earn a first-year college GPA below 2.0. A parent worries that {A} graduates do worse than the state.'},
+  {type:'one', sign:'≠', cue:'“different” with no direction', t:'A report says {P}% of Texas seniors take a dual-credit course. Is the percent at {A} different?'},
+  {type:'one', sign:'>', cue:'“more than”', t:'A district claims that more than {P}% of its graduates enroll in college. Test the claim.'},
+  {type:'one', sign:'<', cue:'“fewer than”', t:'A survey suggests that fewer than {P}% of first-year students change their major. Test the claim.'},
+  {type:'one', sign:'≠', cue:'“has changed” with no direction', t:'Last year, {P}% of {A} graduates earned below a 2.0 in college. Has the rate changed this year?'},
+  {type:'two', sign:'>', cue:'“higher” for group 1', t:'Group 1 is {A} and group 2 is {B}. A coach thinks the proportion of {A} graduates earning below a 2.0 is higher than at {B}.'},
+  {type:'two', sign:'<', cue:'“lower” for group 1', t:'Group 1 is {A} and group 2 is {B}. A teacher thinks the proportion of {A} graduates earning below a 2.0 is lower than at {B}.'},
+  {type:'two', sign:'≠', cue:'“a difference” with no direction', t:'Group 1 is {A} and group 2 is {B}. Is there a difference between the proportions of graduates earning below a 2.0?'},
+  {type:'two', sign:'≠', cue:'“differ” with no direction', t:'Group 1 is {A} and group 2 is {B}. Do the two schools differ in the share of seniors who take an AP exam?'},
+  {type:'one', sign:'≠', cue:'“not the same” with no direction', t:'Statewide, {P}% of graduates earn a first-year college GPA below 2.0. A board member thinks the rate at {A} is not the same as the state’s.'},
+  {type:'two', sign:'<', cue:'“do better” means a lower proportion below 2.0', t:'Group 1 is {A} and group 2 is {B}. A student believes {A} graduates do better in college than {B} graduates.'},
+  {type:'two', sign:'>', cue:'“do worse” means a higher proportion below 2.0', t:'Group 1 is {A} and group 2 is {B}. A reporter suspects {A} graduates do worse in college than {B} graduates.'}
+];
+function makeProblem(rng){
+  var tp = TEMPLATES[Math.floor(rng() * TEMPLATES.length)];
+  var a = SCHOOLS[Math.floor(rng() * SCHOOLS.length)], b;
+  do { b = SCHOOLS[Math.floor(rng() * SCHOOLS.length)]; } while(b === a);
+  var P = 12 + Math.floor(rng() * 50);          /* 12% to 61% */
+  return {type:tp.type, sign:tp.sign, cue:tp.cue, p0:P / 100,
+          text:tp.t.replace(/\{P\}/g, String(P)).replace(/\{A\}/g, a + ' High').replace(/\{B\}/g, b + ' High')};
+}
+/* ans = {type, param, sign, value}; value only matters for one-sample. */
+function checkProblem(pr, ans){
+  var out = [];
+  if(ans.type !== pr.type) out.push(pr.type === 'two'
+    ? 'This compares two groups, so it is a two-sample test: p₁ against p₂.'
+    : 'This compares one group with a stated percent, so it is a one-sample test.');
+  if(ans.param !== 'p') out.push('Use p, the population proportion. p̂ comes from a sample.');
+  if(ans.sign === '=') out.push('The equals sign goes in H₀, not Hₐ.');
+  else if(ans.sign !== pr.sign) out.push('Look at the wording: ' + pr.cue + ' calls for ' + pr.sign + '.');
+  if(pr.type === 'one' && ans.type === 'one'){
+    var v = num(ans.value);
+    if(!isFinite(v)) out.push('Type the value in Hₐ as a decimal.');
+    else if(Math.abs(v - pr.p0 * 100) < 1e-9) out.push('Write the percent as a decimal: ' + Math.round(pr.p0 * 100) + '% is ' + pr.p0 + '.');
+    else if(Math.abs(v - pr.p0) > 1e-9) out.push('The value in the hypotheses is the percent from the problem, written as a decimal.');
+  }
+  var h = pr.type === 'two' ? {h0:'p₁ = p₂', ha:'p₁ ' + pr.sign + ' p₂'} : {h0:'p = ' + pr.p0, ha:'p ' + pr.sign + ' ' + pr.p0};
+  return {ok: out.length === 0, msgs: out, answer: h};
+}
+/* ================= CORE LOGIC — END ================= */
+if(typeof module !== 'undefined') module.exports = {ALPHA, BENCH, num, isWhole, fmt4, checkBench, checkHypotheses, hypotheses, paramWords, combine, checkPhat, conditions, tailFor, checkTail, checkPvalue, correctDecision, checkDecision, decisionSentence, conclusionSentence, errorStatements, possibleError, makeProblem, checkProblem, TEMPLATES, PRED_TO_SIGN};
+
+</script>
+<script>
+(function(){
+if(typeof document === 'undefined') return;
+var KEY = 'propCoachV1';
+var LINKS = {
+  single: 'https://bubblemath.github.io/Interactive-Math/Statistics/Hypothesis-single.html',
+  two: 'https://bubblemath.github.io/Interactive-Math/Statistics/Hypothesis-twosample.html',
+  data: 'https://www.txhighereddata.org/high-school-graduates/high-school-graduates-gpa-in-higher-education/'
+};
+var STEPS = ['Choose the test', 'Name the groups', 'Write the hypotheses', 'Enter the data',
+             'Check the conditions', 'Run the applet', 'Decide and conclude', 'Errors and summary'];
+function blank(){ return {fourTotal:'', fourLow:'', twoTotal:'', twoLow:''}; }
+function fresh(){
+  return {mode:'guide', step:0, type:null, s1:'', s2:'', bench:'', pred:null, param:null, sign:null,
+          d1:blank(), d2:blank(), phat1:'', phat2:'', condAns:null, tail:null, pval:'', zval:'',
+          decision:null, errPick:null, errPossible:null, flip:Math.random() < 0.5};
+}
+var S = fresh();
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{ var o = JSON.parse(localStorage.getItem(KEY) || 'null'); if(o && typeof o === 'object'){ var f = fresh(); for(var k in f) if(o.hasOwnProperty(k)) S[k] = o[k]; } }catch(e){}
+  if(typeof S.step !== 'number' || S.step < 0 || S.step >= STEPS.length) S.step = 0;
+  if(!S.d1 || typeof S.d1 !== 'object') S.d1 = blank();
+  if(!S.d2 || typeof S.d2 !== 'object') S.d2 = blank();
+}
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function n1(){ return S.s1.trim() || 'your school'; }
+function n2(){ return S.s2.trim() || 'the rival school'; }
+function two(){ return S.type === 'two'; }
+
+/* ---------- what counts as finished, step by step ---------- */
+function data1(){ return combine(S.d1); }
+function data2(){ return combine(S.d2); }
+function dataOK(){
+  var a = data1();
+  if(!a.ready || !checkPhat(S.phat1, a.x, a.n).ok) return false;
+  if(!two()) return true;
+  var b = data2();
+  return b.ready && checkPhat(S.phat2, b.x, b.n).ok;
+}
+function cond(){ return conditions(S.type, data1(), two() ? data2() : null); }
+function pv(){ var r = checkPvalue(S.pval); return r.ok ? r.value : null; }
+function pvText(){ return String(S.pval).trim(); }
+function done(i){
+  switch(i){
+    case 0: return !!S.type;
+    case 1: return !!S.s1.trim() && (two() ? !!S.s2.trim() : checkBench(S.bench).ok);
+    case 2: return checkHypotheses(S.type, S.pred, S.param, S.sign).ok;
+    case 3: return dataOK();
+    case 4: return dataOK() && cond().pass && S.condAns === 'yes';
+    case 5: return checkTail(S.sign, S.tail).ok && pv() !== null;
+    case 6: return pv() !== null && checkDecision(pv(), S.decision).ok;
+    case 7: return S.errPick === 'I' && S.errPossible === possibleError(S.decision);
+  }
+  return false;
+}
+function reachable(i){ for(var k = 0; k < i; k++) if(!done(k)) return false; return true; }
+
+/* ---------- small builders ---------- */
+function choice(name, value, label, current, sub){
+  var on = current === value;
+  return '<button type="button" class="choice' + (on ? ' on' : '') + '" data-name="' + name + '" data-value="' + esc(value) + '" aria-pressed="' + on + '">' +
+    '<span class="ct">' + label + '</span>' + (sub ? '<span class="cs">' + sub + '</span>' : '') + '</button>';
+}
+function fb(id){ return '<div class="fb" id="' + id + '" role="status" aria-live="polite"></div>'; }
+function setFb(id, r, hideWhenEmpty){
+  var el = $(id); if(!el) return;
+  if(!r || !r.msg){ el.className = 'fb'; el.textContent = ''; return; }
+  el.className = 'fb ' + (r.ok ? 'ok' : 'no');
+  el.textContent = (r.ok ? '✓ ' : '! ') + r.msg;
+}
+function field(id, label, value, hint, mode){
+  return '<div class="field"><label for="' + id + '">' + label + '</label>' +
+    '<input id="' + id + '" type="text" inputmode="' + (mode || 'decimal') + '" autocomplete="off" value="' + esc(value) + '"' +
+    (hint ? ' aria-describedby="' + id + '-h"' : '') + '>' + (hint ? '<span class="hint" id="' + id + '-h">' + hint + '</span>' : '') + '</div>';
+}
+function copyBlock(id, text){
+  return '<div class="copyrow"><p class="copytext" id="' + id + '">' + esc(text) + '</p>' +
+    '<button type="button" class="btn ghost small" data-copy="' + id + '">Copy</button></div>';
+}
+
+/* ---------- steps ---------- */
+var VIEWS = [];
+
+VIEWS[0] = {
+  html: function(){
+    return '<h2>Which test are you running?</h2>' +
+      '<p class="lede">Look at what you are comparing.</p>' +
+      '<div class="choices" role="group" aria-label="Type of test">' +
+      choice('type', 'one', 'My school vs. the statewide rate', S.type, 'One-sample proportion test (Part 2)') +
+      choice('type', 'two', 'My school vs. a rival school', S.type, 'Two-sample proportion test (Part 3)') +
+      '</div>' + fb('fb0');
+  },
+  refresh: function(){
+    setFb('fb0', S.type ? {ok:true, msg: two()
+      ? 'Two schools, each with its own proportion: a two-sample test compares p₁ with p₂.'
+      : 'One school compared with a stated percent: a one-sample test compares p with 0.24.'} : null);
+  }
+};
+
+VIEWS[1] = {
+  html: function(){
+    var h = '<h2>Name the groups</h2><p class="lede">Type the school names the way they appear in the report.</p>' +
+      field('s1', two() ? 'Group 1: my school' : 'My school', S.s1, 'Example: DUNCANVILLE H S', 'text');
+    if(two()) h += field('s2', 'Group 2: the rival school', S.s2, 'Group 1 is always your school, and group 2 is always the rival.', 'text');
+    else h += field('bench', 'The statewide benchmark is 24%. Type it as a decimal.', S.bench, 'Hypotheses use decimals, not percents.');
+    return h + fb('fb1') + '<div class="note"><p><b>Success</b> in this lab means a graduate who earned a GPA below 2.0 in their first year of college. It is the outcome we count, even though it is bad news.</p></div>';
+  },
+  refresh: function(){
+    if(!two() && String(S.bench).trim() !== '') setFb('fb1', checkBench(S.bench));
+    else if(!S.s1.trim()) setFb('fb1', null);
+    else setFb('fb1', null);
+  }
+};
+
+VIEWS[2] = {
+  html: function(){
+    var vs = two() ? n2() + '’s rate' : '24%';
+    return '<h2>Write the hypotheses</h2>' +
+      '<h3 id="q-pred">1. Your prediction</h3><p class="lede">Make it before you look at the data. I think ' + esc(n1()) + '’s rate is…</p>' +
+      '<div class="choices three" role="group" aria-labelledby="q-pred">' +
+      choice('pred', 'lower', 'Lower than ' + esc(vs), S.pred) + choice('pred', 'higher', 'Higher than ' + esc(vs), S.pred) +
+      choice('pred', 'different', 'Different from ' + esc(vs), S.pred, 'No direction') + '</div>' +
+      '<h3 id="q-param">2. Which symbol goes in the hypotheses?</h3>' +
+      '<div class="choices" role="group" aria-labelledby="q-param">' +
+      choice('param', 'p', 'p', S.param, 'Population proportion') + choice('param', 'phat', 'p̂', S.param, 'Sample proportion') + '</div>' +
+      '<h3 id="q-sign">3. Which sign goes in Hₐ?</h3>' +
+      '<div class="choices four" role="group" aria-labelledby="q-sign">' +
+      choice('sign', '<', '&lt;', S.sign, 'less than') + choice('sign', '>', '&gt;', S.sign, 'greater than') +
+      choice('sign', '≠', '≠', S.sign, 'not equal') + choice('sign', '=', '=', S.sign, 'equal') + '</div>' +
+      fb('fb2') + '<div id="hypOut"></div>';
+  },
+  refresh: function(){
+    var any = S.pred || S.param || S.sign;
+    var r = checkHypotheses(S.type, S.pred, S.param, S.sign);
+    setFb('fb2', any ? r : null);
+    var out = $('hypOut'); if(!out) return;
+    if(!r.ok){ out.innerHTML = ''; return; }
+    var h = hypotheses(S.type, S.sign), words = paramWords(S.type, n1(), n2());
+    out.innerHTML = '<div class="result"><h3>Your hypotheses</h3>' +
+      copyBlock('hyp-h0', 'H₀: ' + h.h0) + copyBlock('hyp-ha', 'Hₐ: ' + h.ha) +
+      words.map(function(w, i){ return copyBlock('hyp-w' + i, w); }).join('') +
+      '<p class="small">H₀ always gets the equals sign. Hₐ holds your prediction.</p></div>';
+  }
+};
+
+function dataBlock(key, name, phatKey, phatLabel){
+  var d = S[key];
+  return '<fieldset class="data"><legend>' + esc(name) + '</legend>' +
+    '<div class="grid2">' +
+    field(key + '-fourTotal', 'Four-Year Public University: Total Graduates', d.fourTotal, null, 'numeric') +
+    field(key + '-fourLow', 'Four-Year Public University: <2.0', d.fourLow, null, 'numeric') +
+    field(key + '-twoTotal', 'Two-Year Public Colleges: Total Graduates', d.twoTotal, null, 'numeric') +
+    field(key + '-twoLow', 'Two-Year Public Colleges: <2.0', d.twoLow, null, 'numeric') +
+    '</div><div class="sums" id="' + key + '-sums" aria-live="polite"></div>' +
+    field(phatKey, phatLabel, S[phatKey], 'Divide x by n and round to 4 decimal places.') + fb('fb-' + phatKey) + '</fieldset>';
+}
+VIEWS[3] = {
+  html: function(){
+    var h = '<h2>Enter the data</h2><p class="lede">In the <a href="' + LINKS.data + '" target="_blank" rel="noopener">report</a>, find the two public college rows for each school. Use the Total Graduates and <2.0 columns.</p>';
+    h += dataBlock('d1', two() ? 'Group 1: ' + n1() : n1(), 'phat1', two() ? 'p̂₁ = x₁ ÷ n₁' : 'p̂ = x ÷ n');
+    if(two()) h += dataBlock('d2', 'Group 2: ' + n2(), 'phat2', 'p̂₂ = x₂ ÷ n₂');
+    return h;
+  },
+  refresh: function(){
+    [['d1','phat1'], ['d2','phat2']].forEach(function(pair){
+      var box = $(pair[0] + '-sums'); if(!box) return;
+      var c = combine(S[pair[0]]), sub = two() ? (pair[0] === 'd1' ? '₁' : '₂') : '';
+      if(!c.ready){ box.innerHTML = c.problems.length ? '<p class="warn">' + esc(c.problems.join(' ')) + '</p>' : ''; setFb('fb-' + pair[1], null); return; }
+      var d = S[pair[0]];
+      box.innerHTML = '<p>n' + sub + ' = ' + num(d.fourTotal) + ' + ' + num(d.twoTotal) + ' = <b>' + c.n + '</b><br>x' + sub + ' = ' + num(d.fourLow) + ' + ' + num(d.twoLow) + ' = <b>' + c.x + '</b></p>' +
+        (!two() && c.n < 42 ? '<p class="warn">n is less than 42, so this school will not pass the condition check. The lab asks you to choose a larger school.</p>' : '');
+      setFb('fb-' + pair[1], String(S[pair[1]]).trim() === '' ? null : checkPhat(S[pair[1]], c.x, c.n));
+    });
+  }
+};
+
+VIEWS[4] = {
+  html: function(){
+    if(!dataOK()) return '<h2>Check the conditions</h2><p class="warn">Finish the data step first.</p>';
+    var c = cond();
+    var rows = c.items.map(function(it){
+      return '<tr><th scope="row">' + esc(it.label) + '</th><td>' + it.value + '</td><td>' + it.rule + '</td><td>' + (it.pass ? 'Yes' : 'No') + '</td></tr>';
+    }).join('');
+    return '<h2>Check the conditions</h2>' +
+      '<p class="lede">' + (two() ? 'Each sample needs at least 5 successes and at least 5 failures.' : 'The normality condition uses p₀ = 0.24 from H₀, not p̂.') + '</p>' +
+      '<div class="tablewrap"><table><caption class="sr">Condition check</caption><thead><tr><th scope="col">Check</th><th scope="col">Value</th><th scope="col">Needs to be</th><th scope="col">Passes?</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<h3 id="q-cond">Do all the conditions pass?</h3><div class="choices" role="group" aria-labelledby="q-cond">' +
+      choice('condAns', 'yes', 'Yes', S.condAns) + choice('condAns', 'no', 'No', S.condAns) + '</div>' + fb('fb4');
+  },
+  refresh: function(){
+    if(!dataOK() || !S.condAns) return setFb('fb4', null);
+    var c = cond(), want = c.pass ? 'yes' : 'no';
+    if(S.condAns !== want) return setFb('fb4', {ok:false, msg:'Look again at the Passes? column.'});
+    setFb('fb4', c.pass ? {ok:true, msg:'All conditions pass, so the normal model is reasonable.'}
+      : {ok:true, msg:'Right, they do not pass. ' + (two() ? 'Choose a different rival with more students.' : 'Choose a larger school, such as another one in your district.') + ' You cannot continue with this school.'});
+  }
+};
+
+VIEWS[5] = {
+  html: function(){
+    var a = data1(), h;
+    if(two()){
+      var b = data2();
+      h = '<ol class="steps"><li>Open the <a href="' + LINKS.two + '" target="_blank" rel="noopener">two-sample applet</a> (opens in a new tab).</li>' +
+        '<li>Choose the <b>Two-Sample Proportions</b> tab and select <b>Count (Successes/Sample Size)</b>.</li>' +
+        '<li>Enter Successes (x₁) <b>' + a.x + '</b>, Sample Size (n₁) <b>' + a.n + '</b>, Successes (x₂) <b>' + b.x + '</b>, Sample Size (n₂) <b>' + b.n + '</b>, and Significance Level (α) <b>0.05</b>.</li>' +
+        '<li>Select <b>Calculate Two-Sample Proportion Test</b>.</li></ol>';
+    } else {
+      h = '<ol class="steps"><li>Open the <a href="' + LINKS.single + '" target="_blank" rel="noopener">single-sample applet</a> (opens in a new tab).</li>' +
+        '<li>Choose the <b>Z-Test for Proportion</b> tab.</li>' +
+        '<li>Enter Null Hypothesis (H₀: p =) <b>0.24</b>, Sample Proportion (p̂) <b>' + fmt4(a.phat) + '</b>, Sample Size (n) <b>' + a.n + '</b>, and Significance Level (α) <b>0.05</b>.</li>' +
+        '<li>Select <b>Calculate Z-Test for Proportion</b>.</li></ol>';
+    }
+    return '<h2>Run the applet</h2><p class="lede">The coach does not calculate z or the p-value. The applet does.</p>' + h +
+      '<h3 id="q-tail">The applet shows three p-values. Your Hₐ is ' + esc(hypotheses(S.type, S.sign).ha) + '. Which one do you read?</h3>' +
+      '<div class="choices three" role="group" aria-labelledby="q-tail">' +
+      choice('tail', 'left', 'p-value (Left Tail)', S.tail) + choice('tail', 'right', 'p-value (Right Tail)', S.tail) + choice('tail', 'two', 'p-value (Two-Tail)', S.tail) + '</div>' + fb('fb5t') +
+      '<div class="grid2">' + field('zval', 'Test statistic z from the applet (optional)', S.zval) + field('pval', 'The p-value you read', S.pval) + '</div>' + fb('fb5p');
+  },
+  refresh: function(){
+    setFb('fb5t', S.tail ? checkTail(S.sign, S.tail) : null);
+    var r = String(S.pval).trim() === '' ? null : checkPvalue(S.pval);
+    setFb('fb5p', r && !r.ok ? r : (r ? {ok:true, msg:'Recorded.'} : null));
+  }
+};
+
+VIEWS[6] = {
+  html: function(){
+    var p = pv();
+    if(p === null) return '<h2>Decide and conclude</h2><p class="warn">Record your p-value in the previous step first.</p>';
+    return '<h2>Decide and conclude</h2><p class="lede">Your p-value is <b>' + esc(pvText()) + '</b> and α = 0.05.</p>' +
+      '<h3 id="q-dec">What is the decision?</h3><div class="choices" role="group" aria-labelledby="q-dec">' +
+      choice('decision', 'reject', 'Reject H₀', S.decision) + choice('decision', 'fail', 'Fail to reject H₀', S.decision) + '</div>' + fb('fb6') + '<div id="concOut"></div>';
+  },
+  refresh: function(){
+    var p = pv(); if(p === null) return;
+    setFb('fb6', S.decision ? checkDecision(p, S.decision, pvText()) : null);
+    var out = $('concOut'); if(!out) return;
+    if(!checkDecision(p, S.decision).ok){ out.innerHTML = ''; return; }
+    out.innerHTML = '<div class="result"><h3>Your conclusion</h3>' +
+      copyBlock('c-dec', decisionSentence(p, S.decision, pvText())) +
+      copyBlock('c-ctx', conclusionSentence(S.type, S.sign, n1(), n2(), S.decision)) +
+      '<p class="small">' + (S.decision === 'fail' ? 'Never write “accept H₀” or “this proves.” Failing to reject is like a “not guilty” verdict.' : 'Rejecting H₀ is strong evidence, not proof.') + '</p></div>';
+  }
+};
+
+VIEWS[7] = {
+  html: function(){
+    var e = errorStatements(S.type, S.sign, n1(), n2());
+    var A = S.flip ? ['II', e.typeII] : ['I', e.typeI], B = S.flip ? ['I', e.typeI] : ['II', e.typeII];
+    return '<h2>Errors and summary</h2>' +
+      '<h3 id="q-err">Which statement describes a Type I error for your test?</h3><div class="choices stack" role="group" aria-labelledby="q-err">' +
+      choice('errPick', A[0], esc(A[1]), S.errPick) + choice('errPick', B[0], esc(B[1]), S.errPick) + '</div>' + fb('fb7a') +
+      '<h3 id="q-pos">Your decision was to ' + (S.decision === 'reject' ? 'reject H₀' : 'fail to reject H₀') + '. Which error is possible?</h3>' +
+      '<div class="choices" role="group" aria-labelledby="q-pos">' + choice('errPossible', 'I', 'Type I error', S.errPossible) + choice('errPossible', 'II', 'Type II error', S.errPossible) + '</div>' + fb('fb7b') +
+      '<div id="sumOut"></div>';
+  },
+  refresh: function(){
+    setFb('fb7a', S.errPick ? (S.errPick === 'I'
+      ? {ok:true, msg:'Right. A Type I error rejects a true H₀: you conclude something that is not really so.'}
+      : {ok:false, msg:'That one keeps H₀ when Hₐ is really true, which is a Type II error. A Type I error rejects a true H₀.'}) : null);
+    var want = possibleError(S.decision);
+    setFb('fb7b', S.errPossible ? (S.errPossible === want
+      ? {ok:true, msg: want === 'I' ? 'Right. You rejected H₀, so the only possible mistake is rejecting a true H₀.' : 'Right. You did not reject H₀, so the only possible mistake is keeping a false H₀.'}
+      : {ok:false, msg:'A Type I error can only happen when you reject H₀. A Type II error can only happen when you fail to reject H₀.'}) : null);
+    var out = $('sumOut'); if(!out) return;
+    if(!done(7)){ out.innerHTML = ''; return; }
+    var e = errorStatements(S.type, S.sign, n1(), n2());
+    out.innerHTML = '<div class="result"><h3>Errors in context</h3>' + copyBlock('e1', 'Type I error: ' + e.typeI) + copyBlock('e2', 'Type II error: ' + e.typeII) +
+      '<p class="small">Consequences are what happens because of the mistake, such as a school adding or skipping a college-readiness program. Write those yourself in Part 4.</p></div>' +
+      '<div class="result"><h3>Your full setup</h3><pre class="summary" id="sumText">' + esc(summaryText()) + '</pre>' +
+      '<div class="btnrow"><button type="button" class="btn" data-copy="sumText">Copy everything</button>' +
+      '<button type="button" class="btn ghost" id="again">Start the other test</button></div></div>';
+    var again = $('again');
+    if(again) again.onclick = function(){ var t = two() ? 'one' : 'two'; var keepS1 = S.s1, keepD1 = S.d1, keepP1 = S.phat1; S = fresh(); S.type = t; S.s1 = keepS1; S.d1 = keepD1; S.phat1 = keepP1; S.step = 1; save(); render(); };
+  }
+};
+
+function summaryText(){
+  var a = data1(), h = hypotheses(S.type, S.sign), lines = [];
+  lines.push(two() ? 'Two-sample proportion test' : 'One-sample proportion test');
+  paramWords(S.type, n1(), n2()).forEach(function(w){ lines.push(w); });
+  lines.push('H₀: ' + h.h0, 'Hₐ: ' + h.ha);
+  if(two()){ var b = data2(); lines.push('x₁ = ' + a.x + ', n₁ = ' + a.n + ', p̂₁ = ' + fmt4(a.phat), 'x₂ = ' + b.x + ', n₂ = ' + b.n + ', p̂₂ = ' + fmt4(b.phat)); }
+  else lines.push('x = ' + a.x + ', n = ' + a.n + ', p̂ = ' + fmt4(a.phat));
+  if(String(S.zval).trim()) lines.push('z = ' + String(S.zval).trim());
+  lines.push('p-value (' + (S.tail === 'two' ? 'two-tail' : S.tail + ' tail') + ') = ' + pvText());
+  lines.push(decisionSentence(pv(), S.decision, pvText()));
+  lines.push(conclusionSentence(S.type, S.sign, n1(), n2(), S.decision));
+  var e = errorStatements(S.type, S.sign, n1(), n2());
+  lines.push('Type I error: ' + e.typeI, 'Type II error: ' + e.typeII, 'Possible error for my decision: Type ' + possibleError(S.decision));
+  return lines.join('\n');
+}
+
+/* ---------- guide rendering ---------- */
+function render(){
+  $('tab-guide').setAttribute('aria-selected', S.mode === 'guide');
+  $('tab-practice').setAttribute('aria-selected', S.mode === 'practice');
+  $('panel-guide').hidden = S.mode !== 'guide';
+  $('panel-practice').hidden = S.mode !== 'practice';
+  if(S.mode === 'practice'){ renderPractice(); return; }
+  if(!reachable(S.step)){ var k = 0; while(k < STEPS.length - 1 && done(k)) k++; S.step = k; }
+  var prog = $('progress'); prog.innerHTML = '';
+  STEPS.forEach(function(name, i){
+    var li = document.createElement('li');
+    var b = document.createElement('button'); b.type = 'button';
+    b.className = 'pstep' + (i === S.step ? ' cur' : '') + (done(i) ? ' done' : '');
+    b.disabled = !reachable(i);
+    b.innerHTML = '<span class="pn">' + (done(i) ? '✓' : (i + 1)) + '</span><span class="pl">' + name + '</span>';
+    if(i === S.step) b.setAttribute('aria-current', 'step');
+    b.onclick = function(){ S.step = i; save(); render(); focusHead(); };
+    li.appendChild(b); prog.appendChild(li);
+  });
+  var view = VIEWS[S.step];
+  $('stepBody').innerHTML = '<p class="kicker">Step ' + (S.step + 1) + ' of ' + STEPS.length + '</p>' + view.html();
+  wire($('stepBody'));
+  refreshAll();
+}
+function refreshAll(){
+  VIEWS[S.step].refresh();
+  var ok = done(S.step);
+  $('backBtn').disabled = S.step === 0;
+  $('nextBtn').disabled = !ok || S.step === STEPS.length - 1;
+  $('nextBtn').hidden = S.step === STEPS.length - 1;
+  $('navHint').textContent = (S.step < STEPS.length - 1 && !ok) ? 'Finish this step to continue.' : '';
+  document.querySelectorAll('#progress .pstep').forEach(function(b, i){
+    b.classList.toggle('done', done(i)); b.disabled = !reachable(i);
+    b.querySelector('.pn').textContent = done(i) ? '✓' : String(i + 1);
+  });
+}
+function focusHead(){ var h = $('stepBody').querySelector('h2'); if(h){ h.setAttribute('tabindex', '-1'); h.focus(); } }
+var TEXT_FIELDS = {s1:1, s2:1, bench:1, phat1:1, phat2:1, pval:1, zval:1};
+function wire(root){
+  root.querySelectorAll('button.choice').forEach(function(b){
+    b.onclick = function(){
+      var name = b.getAttribute('data-name'), val = b.getAttribute('data-value');
+      S[name] = val;
+      if(name === 'type'){ var t = val; var keep = {s1:S.s1, d1:S.d1, phat1:S.phat1}; S = fresh(); S.type = t; S.s1 = keep.s1; S.d1 = keep.d1; S.phat1 = keep.phat1; }
+      if(name === 'errPick' && val !== 'I') {}  /* keep the order stable while answering */
+      save();
+      /* choices change which content appears, so redraw this step and keep focus on the button */
+      render();
+      var again = $('stepBody').querySelector('button.choice[data-name="' + name + '"][data-value="' + CSS.escape(val) + '"]');
+      if(again) again.focus();
+    };
+  });
+  root.querySelectorAll('input').forEach(function(inp){
+    inp.oninput = function(){
+      var id = inp.id, m = /^(d1|d2)-(\w+)$/.exec(id);
+      if(m) S[m[1]][m[2]] = inp.value; else if(TEXT_FIELDS[id]) S[id] = inp.value;
+      save(); refreshAll();
+    };
+  });
+  root.addEventListener('click', copyHandler);
+}
+function copyHandler(e){
+  var b = e.target.closest ? e.target.closest('[data-copy]') : null; if(!b) return;
+  var src = $(b.getAttribute('data-copy')); if(!src) return;
+  var text = src.textContent;
+  var done = function(){ var old = b.textContent; b.textContent = 'Copied'; setTimeout(function(){ b.textContent = old; }, 1400); };
+  var fallback = function(){ var r = document.createRange(); r.selectNodeContents(src); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = 'Selected: press Ctrl+C'; };
+  try{ navigator.clipboard.writeText(text).then(done, fallback); }catch(err){ fallback(); }
+}
+
+/* ---------- practice mode ---------- */
+var PR = {problem:null, ans:{type:null, param:null, sign:null, value:''}, result:null, right:0, tries:0, streak:0};
+function newProblem(){ PR.problem = makeProblem(Math.random); PR.ans = {type:null, param:null, sign:null, value:''}; PR.result = null; }
+function renderPractice(){
+  if(!PR.problem) newProblem();
+  var p = PR.problem, a = PR.ans;
+  var h = '<p class="kicker">Practice · ' + PR.right + ' right out of ' + PR.tries + ' · streak ' + PR.streak + '</p>' +
+    '<p class="scenario">' + esc(p.text) + '</p>' +
+    '<h3 id="pq1">1. Which test?</h3><div class="choices" role="group" aria-labelledby="pq1">' + choice('ptype', 'one', 'One-sample', a.type, 'one group vs. a stated percent') + choice('ptype', 'two', 'Two-sample', a.type, 'group 1 vs. group 2') + '</div>' +
+    '<h3 id="pq2">2. Which symbol?</h3><div class="choices" role="group" aria-labelledby="pq2">' + choice('pparam', 'p', 'p', a.param) + choice('pparam', 'phat', 'p̂', a.param) + '</div>' +
+    '<h3 id="pq3">3. Build Hₐ</h3><div class="choices four" role="group" aria-labelledby="pq3">' +
+    choice('psign', '<', '&lt;', a.sign) + choice('psign', '>', '&gt;', a.sign) + choice('psign', '≠', '≠', a.sign) + choice('psign', '=', '=', a.sign) + '</div>';
+  if(a.type === 'one') h += field('pvalue', 'Value in Hₐ (as a decimal)', a.value);
+  h += '<div class="btnrow"><button type="button" class="btn" id="pcheck">Check my Hₐ</button><button type="button" class="btn ghost" id="pnext">New problem</button></div>' +
+    '<div id="presult" role="status" aria-live="polite"></div>';
+  $('practiceBody').innerHTML = h;
+  $('practiceBody').querySelectorAll('button.choice').forEach(function(b){
+    b.onclick = function(){
+      var n = b.getAttribute('data-name'), v = b.getAttribute('data-value');
+      if(n === 'ptype') PR.ans.type = v; if(n === 'pparam') PR.ans.param = v; if(n === 'psign') PR.ans.sign = v;
+      PR.result = null; renderPractice();
+      var again = $('practiceBody').querySelector('button.choice[data-name="' + n + '"][data-value="' + CSS.escape(v) + '"]'); if(again) again.focus();
+    };
+  });
+  var pv = $('pvalue'); if(pv) pv.oninput = function(){ PR.ans.value = pv.value; };
+  $('pcheck').onclick = function(){
+    if(!PR.ans.type || !PR.ans.param || !PR.ans.sign){ PR.result = {ok:false, msgs:['Answer all three parts first.']}; showResult(); return; }
+    var r = checkProblem(PR.problem, PR.ans);
+    if(!PR.result || PR.result.counted !== true){ PR.tries++; if(r.ok){ PR.right++; PR.streak++; } else PR.streak = 0; r.counted = true; }
+    PR.result = r; showResult();
+    $('practiceBody').querySelector('.kicker').textContent = 'Practice · ' + PR.right + ' right out of ' + PR.tries + ' · streak ' + PR.streak;
+  };
+  $('pnext').onclick = function(){ newProblem(); renderPractice(); $('practiceBody').querySelector('.scenario').focus(); };
+  $('practiceBody').querySelector('.scenario').setAttribute('tabindex', '-1');
+  showResult();
+}
+function showResult(){
+  var box = $('presult'); if(!box) return;
+  var r = PR.result; if(!r){ box.innerHTML = ''; return; }
+  if(r.ok) box.innerHTML = '<div class="fb ok">✓ Correct. H₀: ' + esc(r.answer.h0) + ' and Hₐ: ' + esc(r.answer.ha) + '.</div>';
+  else box.innerHTML = '<div class="fb no"><p>! Not yet.</p><ul>' + r.msgs.map(function(m){ return '<li>' + esc(m) + '</li>'; }).join('') + '</ul>' +
+    (r.answer ? '<details><summary>Show the answer</summary><p>H₀: ' + esc(r.answer.h0) + '<br>Hₐ: ' + esc(r.answer.ha) + '</p></details>' : '') + '</div>';
+}
+
+/* ---------- boot ---------- */
+function boot(){
+  load();
+  $('tab-guide').onclick = function(){ S.mode = 'guide'; save(); render(); };
+  $('tab-practice').onclick = function(){ S.mode = 'practice'; save(); render(); };
+  document.querySelector('.tabs').addEventListener('keydown', function(e){
+    if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    S.mode = S.mode === 'guide' ? 'practice' : 'guide'; save(); render();
+    $(S.mode === 'guide' ? 'tab-guide' : 'tab-practice').focus();
+  });
+  $('backBtn').onclick = function(){ if(S.step > 0){ S.step--; save(); render(); focusHead(); } };
+  $('nextBtn').onclick = function(){ if(done(S.step) && S.step < STEPS.length - 1){ S.step++; save(); render(); focusHead(); } };
+  $('resetBtn').onclick = function(){
+    var c = $('resetConfirm'); c.hidden = !c.hidden;
+  };
+  $('resetYes').onclick = function(){ S = fresh(); S.flip = Math.random() < 0.5; save(); $('resetConfirm').hidden = true; render(); };
+  $('resetNo').onclick = function(){ $('resetConfirm').hidden = true; };
+  render();
+}
+boot();
+})();
+
+</script>
+</body>
+</html>
