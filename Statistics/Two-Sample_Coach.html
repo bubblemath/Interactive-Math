@@ -1,0 +1,668 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Two-Sample Coach</title>
+<style>
+/* Layout: masthead, two tabs, then a step list beside one step card (stacks on phones). Matches the course's paper-and-ink sheets. */
+:root{
+  --paper:#F3F1E7; --sheet:#FBFAF4; --card:#FFFFFF; --rule:#D8D3C2; --ink:#14213D; --ink-soft:#4F586C;
+  --blue:#1F4E9C; --blue-soft:#E4EBF7; --on-blue:#FFFFFF;
+  --ok:#22603C; --ok-soft:#E2EFE7; --no:#A31F1C; --no-soft:#F7E4E3; --gold:#B58B15;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#151A22; --sheet:#1B212B; --card:#212834; --rule:#38414F; --ink:#E8EBF1; --ink-soft:#A7B0BF;
+  --blue:#8FB0EC; --blue-soft:#24324A; --on-blue:#0F1724;
+  --ok:#7BD3A0; --ok-soft:#1E3529; --no:#F29A92; --no-soft:#3A2224; --gold:#E0BC5A; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --paper:#151A22; --sheet:#1B212B; --card:#212834; --rule:#38414F; --ink:#E8EBF1; --ink-soft:#A7B0BF;
+  --blue:#8FB0EC; --blue-soft:#24324A; --on-blue:#0F1724;
+  --ok:#7BD3A0; --ok-soft:#1E3529; --no:#F29A92; --no-soft:#3A2224; --gold:#E0BC5A; color-scheme:dark;}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.55}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:8px 64px}
+.masthead{border-bottom:3px double var(--ink);padding:22px 0 12px;margin-bottom:18px}
+.masthead h1{font-family:var(--serif);font-size:clamp(28px,5vw,42px);line-height:1.05;margin:0;letter-spacing:-.01em}
+.masthead p{margin:6px 0 0;color:var(--ink-soft);max-width:62ch}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tab{font:inherit;font-weight:600;cursor:pointer;padding:9px 16px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:3px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.layout{display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:820px){.layout{grid-template-columns:1fr}}
+.progress{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+@media (max-width:820px){.progress{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+.pstep{width:100%;display:flex;align-items:center;gap:10px;font:inherit;font-size:15px;text-align:left;cursor:pointer;
+  padding:8px 10px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:3px}
+.pstep:disabled{cursor:not-allowed;color:var(--ink-soft);opacity:.75}
+.pstep .pn{flex:0 0 26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;border:1px solid var(--rule);background:var(--card)}
+.pstep.done .pn{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.pstep.cur{border-color:var(--blue);border-width:2px;padding:7px 9px;background:var(--blue-soft)}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:3px;padding:20px 22px;min-width:0}
+.kicker{margin:0 0 4px;font-family:var(--mono);font-size:13px;color:var(--ink-soft);letter-spacing:.03em}
+h2{font-family:var(--serif);font-size:26px;line-height:1.2;margin:0 0 6px;text-wrap:balance}
+h2:focus{outline:none}
+h3{font-family:var(--serif);font-size:18px;margin:20px 0 8px;line-height:1.3}
+.lede{color:var(--ink-soft);margin:0 0 12px;max-width:68ch}
+.small{font-size:14.5px;color:var(--ink-soft);margin:8px 0 0}
+a{color:var(--blue)}
+.choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.choices.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.choices.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+.choices.stack{grid-template-columns:1fr}
+@media (max-width:620px){.choices,.choices.three{grid-template-columns:1fr}.choices.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.choice{font:inherit;cursor:pointer;text-align:left;padding:11px 14px;border:2px solid var(--rule);background:var(--card);color:var(--ink);border-radius:4px;display:grid;gap:2px;min-width:0}
+.choice:hover{border-color:var(--ink)}
+.choice.on{border-color:var(--blue);background:var(--blue-soft)}
+.choice .ct{font-weight:600}
+.choices.four .choice .ct{font-family:var(--serif);font-size:24px;line-height:1.1}
+.choice .cs{font-size:13.5px;color:var(--ink-soft)}
+.field{display:grid;gap:4px;margin:12px 0}
+.field label{font-weight:600;font-size:15.5px}
+.field input{font:inherit;font-variant-numeric:tabular-nums;padding:9px 11px;border:1px solid var(--rule);border-radius:3px;background:var(--card);color:var(--ink);max-width:100%;width:22em}
+.hint{font-size:14px;color:var(--ink-soft)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}
+@media (max-width:620px){.grid2{grid-template-columns:1fr}}
+.grid2 .field input{width:100%}
+fieldset.data{border:1px solid var(--rule);border-radius:4px;padding:6px 16px 12px;margin:14px 0;background:var(--card)}
+fieldset.data legend{font-family:var(--serif);font-weight:700;font-size:18px;padding:0 6px}
+.sums p{margin:6px 0;font-variant-numeric:tabular-nums}
+.fb{margin:12px 0 0;padding:10px 14px;border-radius:0 3px 3px 0;font-size:15.5px}
+.fb:empty{display:none}
+.fb.ok{border-left:4px solid var(--ok);background:var(--ok-soft)}
+.fb.no{border-left:4px solid var(--no);background:var(--no-soft)}
+.fb p,.fb ul{margin:0}
+.fb ul{padding-left:20px}
+.warn{border-left:4px solid var(--gold);padding:8px 12px;background:var(--card);margin:8px 0}
+.note{border-left:4px solid var(--blue);background:var(--blue-soft);padding:10px 14px;margin:16px 0 0;border-radius:0 3px 3px 0;font-size:15.5px}
+.note p{margin:0}
+.result{margin-top:18px;border:1px solid var(--rule);border-left:4px solid var(--ink);background:var(--card);padding:12px 16px;border-radius:0 3px 3px 0}
+.result h3{margin-top:4px}
+.copyrow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:6px 0;border-top:1px solid var(--rule)}
+.copyrow:first-of-type{border-top:0}
+.copytext{margin:0;min-width:0;overflow-wrap:anywhere}
+.summary{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--mono);font-size:14px;line-height:1.6;margin:0;background:var(--sheet);padding:10px;border-radius:3px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;background:var(--card)}
+th,td{border:1px solid var(--rule);padding:7px 10px;text-align:left}
+thead th{background:var(--blue-soft)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+ol.steps{padding-left:22px;margin:8px 0}
+ol.steps li{margin:4px 0}
+.btn{font:inherit;font-weight:600;cursor:pointer;padding:10px 20px;border-radius:3px;border:1px solid var(--blue);background:var(--blue);color:var(--on-blue)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--blue)}
+.btn.small{padding:4px 10px;font-size:14px;flex:0 0 auto}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:22px;padding-top:14px;border-top:1px solid var(--rule)}
+.navhint{color:var(--ink-soft);font-size:15px}
+.scenario{font-family:var(--serif);font-size:21px;line-height:1.5;background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--ink);padding:16px 20px;margin:4px 0 8px}
+.scenario:focus{outline:3px solid var(--gold);outline-offset:2px}
+details{margin-top:8px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.field textarea{font:inherit;font-family:var(--mono);font-size:15px;padding:9px 11px;border:1px solid var(--rule);border-radius:3px;background:var(--card);color:var(--ink);width:100%;resize:vertical}
+.plotwrap{overflow-x:auto;background:var(--card);border:1px solid var(--rule);border-radius:3px;margin:10px 0;padding:4px}
+svg.dot{display:block;width:100%;min-width:420px;height:auto}
+svg.dot .dl{font-size:13px;fill:var(--ink)}
+svg.dot .tick{font-size:12px;fill:var(--ink-soft);font-family:var(--mono)}
+svg.dot .axis{stroke:var(--rule);stroke-width:1.5}
+svg.dot .pt{fill:var(--blue)}
+svg.dot .pt.out{fill:#C2570C}
+.foot{margin-top:22px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;color:var(--ink-soft);font-size:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+<div class="wrap">
+  <header class="masthead">
+    <h1>Two-Sample Coach</h1>
+    <p>Step-by-step help with the Paychecks and Prices project: matched pairs and independent samples t-tests. The applet calculates t and the p-value; the coach checks your setup and formats your data.</p>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="Mode">
+    <button class="tab" role="tab" id="tab-guide" aria-controls="panel-guide" aria-selected="true">Guide me through my test</button>
+    <button class="tab" role="tab" id="tab-practice" aria-controls="panel-practice" aria-selected="false">Practice: paired or independent?</button>
+  </div>
+
+  <section id="panel-guide" role="tabpanel" aria-labelledby="tab-guide">
+    <div class="layout">
+      <nav aria-label="Steps"><ol class="progress" id="progress"></ol></nav>
+      <div class="sheet">
+        <div id="stepBody"></div>
+        <div class="nav">
+          <button type="button" class="btn ghost" id="backBtn">Back</button>
+          <button type="button" class="btn" id="nextBtn">Next step</button>
+          <span class="navhint" id="navHint" aria-live="polite"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-practice" role="tabpanel" aria-labelledby="tab-practice" hidden>
+    <div class="sheet" id="practiceBody"></div>
+  </section>
+
+  <div class="foot">
+    <span>Your answers save in this browser.</span>
+    <button type="button" class="btn ghost small" id="resetBtn">Start over</button>
+    <span id="resetConfirm" hidden>Clear everything you entered? <button type="button" class="btn small" id="resetYes">Yes, clear it</button> <button type="button" class="btn ghost small" id="resetNo">Keep it</button></span>
+  </div>
+</div>
+<script>
+/* ==================================================================
+   CORE LOGIC — pure functions, no DOM. Tested in Node (test.js).
+   It never computes t or a p-value:
+   students get those from the course applet.
+   ================================================================== */
+var ALPHA = 0.05;
+var PRED_TO_SIGN = { higher: '>', lower: '<', different: '≠' };
+var SIGN_TO_TAIL = { '<': 'left', '>': 'right', '≠': 'two' };
+var DIR_WORDS = { '<': 'less than', '>': 'greater than', '≠': 'different from' };
+
+/* The lab's parts, with the design each needs and sensible default names. */
+var PARTS = {
+  part1: { label: 'Part 1: men vs. women in the same occupation', design: 'paired', g1: "men's median weekly earnings", g2: "women's median weekly earnings", unit: 'occupation',
+    why: 'Each occupation gives one men’s value and one women’s value, so every value has a partner.' },
+  part2: { label: 'Part 2: women-majority vs. men-majority occupations', design: 'independent', g1: 'median weekly earnings in women-majority occupations', g2: 'median weekly earnings in men-majority occupations', unit: 'occupation',
+    why: 'The two groups are different occupations, so no value in one group is linked to a value in the other.' },
+  part4: { label: 'Part 4: 2025 prices vs. inflation-adjusted 2018 prices', design: 'paired', g1: 'the December 2025 price', g2: 'the inflation-adjusted December 2018 price', unit: 'item',
+    why: 'Each item has a 2025 price and an adjusted 2018 price, so every value has a partner.' },
+  own: { label: 'My own data', design: null, g1: '', g2: '', unit: 'pair', why: '' }
+};
+
+function num(v) {
+  if (v === null || v === undefined) return NaN;
+  var s = String(v).replace(/,/g, '').trim();
+  if (s === '' || !/^[-+]?(\d+\.?\d*|\.\d+)$/.test(s)) return NaN;
+  return parseFloat(s);
+}
+
+/* Read a pasted list. Accepts one value per line, or values separated by spaces,
+   semicolons, or a comma followed by a space. "2,023" (comma then three digits)
+   is read as two thousand twenty-three, and "$" is ignored. */
+function parseList(text) {
+  var values = [], bad = [];
+  var raw = String(text || '').trim();
+  if (!raw) return { values: values, bad: bad };
+  var tokens = raw.split(/[\s;]+|,\s+/);
+  tokens.forEach(function (tok) {
+    if (!tok) return;
+    var t = tok.replace(/\$/g, '');
+    var parts = /^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(t) ? [t.replace(/,/g, '')] : t.split(',');
+    parts.forEach(function (p) {
+      if (p === '') return;
+      var n = Number(p);
+      if (/^[-+]?(\d+\.?\d*|\.\d+)$/.test(p) && isFinite(n)) values.push(n); else bad.push(tok);
+    });
+  });
+  return { values: values, bad: bad };
+}
+/* What to paste into the applet: plain numbers separated by spaces, no commas. */
+function forApplet(values) { return values.map(function (v) { return String(Math.round(v * 1e6) / 1e6); }).join(' '); }
+
+function differences(a, b) { return a.map(function (x, i) { return Math.round((x - b[i]) * 1e6) / 1e6; }); }
+function quantile(sorted, q) {          /* same method as most textbooks' calculators (median of halves) */
+  var n = sorted.length; if (!n) return NaN;
+  var med = function (arr) { var m = arr.length; return m % 2 ? arr[(m - 1) / 2] : (arr[m / 2 - 1] + arr[m / 2]) / 2; };
+  if (q === 0.5) return med(sorted);
+  var lower = sorted.slice(0, Math.floor(n / 2)), upper = sorted.slice(Math.ceil(n / 2));
+  return q === 0.25 ? med(lower) : med(upper);
+}
+/* Possible outliers by the 1.5 × IQR rule. */
+function outliers(values) {
+  if (values.length < 4) return { fences: null, list: [] };
+  var s = values.slice().sort(function (a, b) { return a - b; });
+  var q1 = quantile(s, 0.25), q3 = quantile(s, 0.75), iqr = q3 - q1;
+  var lo = q1 - 1.5 * iqr, hi = q3 + 1.5 * iqr;
+  return { fences: [lo, hi], q1: q1, q3: q3, list: values.filter(function (v) { return v < lo || v > hi; }) };
+}
+
+function checkDesign(part, choice, partnerAnswer) {
+  if (!choice) return { ok: false, msg: 'Choose independent or paired.' };
+  var want = part === 'own' ? (partnerAnswer === 'yes' ? 'paired' : partnerAnswer === 'no' ? 'independent' : null) : PARTS[part].design;
+  if (!want) return { ok: false, msg: 'First answer the partner question.' };
+  if (choice === want) return { ok: true, msg: 'Right: ' + (part === 'own' ? (want === 'paired' ? 'each value has a partner, so the data are paired.' : 'the groups were collected separately, so they are independent.') : PARTS[part].why) };
+  return { ok: false, msg: want === 'paired'
+    ? 'Look again: each value in Group 1 has a natural partner in Group 2 (the same ' + PARTS[part].unit + '). That makes the data paired.'
+    : 'Look again: no value in Group 1 is linked to a particular value in Group 2. That makes the samples independent.' };
+}
+
+function checkHypotheses(design, pred, param, sign) {
+  if (!pred) return { ok: false, msg: 'Start with your prediction.' };
+  if (!param) return { ok: false, msg: 'Choose the symbol that goes in the hypotheses.' };
+  if (design === 'paired' && param !== 'mud') return { ok: false, msg: param === 'xbard'
+    ? 'Hypotheses are about the population, so use μd. The sample mean of the differences, d̄, comes from your data.'
+    : 'With paired data you test one list of differences, so the parameter is μd, the mean difference.' };
+  if (design === 'independent' && param !== 'mu12') return { ok: false, msg: param === 'xbar12'
+    ? 'Hypotheses are about populations, so use μ₁ and μ₂, not the sample means x̄₁ and x̄₂.'
+    : 'With independent samples you compare two separate population means, μ₁ and μ₂.' };
+  if (!sign) return { ok: false, msg: 'Choose the sign for Hₐ.' };
+  if (sign === '=') return { ok: false, msg: 'The equals sign belongs in H₀. Hₐ holds your prediction.' };
+  var want = PRED_TO_SIGN[pred];
+  if (sign !== want) {
+    if (design === 'paired') return { ok: false, msg: 'd = Group 1 − Group 2. You predicted Group 1 is ' + (pred === 'different' ? 'different from' : pred + ' than') + ' Group 2, so d is ' + (pred === 'higher' ? 'positive' : pred === 'lower' ? 'negative' : 'not zero') + ' on average, and Hₐ uses ' + want + '.' };
+    return { ok: false, msg: 'You predicted Group 1 is ' + (pred === 'different' ? 'different from' : pred + ' than') + ' Group 2, so Hₐ should say μ₁ ' + want + ' μ₂.' };
+  }
+  return { ok: true, msg: 'That matches your prediction and your group order.' };
+}
+function hypotheses(design, sign) {
+  if (design === 'paired') return { h0: 'μd = 0', ha: 'μd ' + sign + ' 0' };
+  return { h0: 'μ₁ = μ₂', ha: 'μ₁ ' + sign + ' μ₂' };
+}
+function paramWords(design, g1, g2, unit) {
+  if (design === 'paired') return ['μd is the mean of the differences (' + g1 + ' − ' + g2 + ') for all ' + unit + 's like these.'];
+  return ['μ₁ is the mean of ' + g1 + '.', 'μ₂ is the mean of ' + g2 + '.'];
+}
+
+/* Data checks before the applet. */
+function checkData(design, a, b) {
+  var problems = [];
+  if (a.bad.length || b.bad.length) problems.push('Some entries are not numbers: ' + a.bad.concat(b.bad).slice(0, 4).join(', ') + '.');
+  if (a.values.length < 2 || b.values.length < 2) problems.push('Each group needs at least 2 values.');
+  if (design === 'paired' && a.values.length !== b.values.length) problems.push('Paired data need the same number of values in each group. Group 1 has ' + a.values.length + ' and Group 2 has ' + b.values.length + '.');
+  return { ok: problems.length === 0, problems: problems };
+}
+
+function checkTail(sign, tail) {
+  var want = SIGN_TO_TAIL[sign];
+  if (tail === want) return { ok: true, msg: 'Right. Hₐ uses ' + sign + ', so read the ' + (want === 'two' ? 'two-tail' : want + '-tail') + ' p-value.' };
+  return { ok: false, msg: 'Match the sign in Hₐ: < means left tail, > means right tail, ≠ means two-tail. Your Hₐ uses ' + sign + '.' };
+}
+function checkPvalue(v) {
+  var p = num(v);
+  if (!isFinite(p)) return { ok: false, msg: 'Type the p-value from the applet, such as 0.0231.' };
+  if (p < 0 || p > 1) return { ok: false, msg: 'A p-value is a probability, so it must be between 0 and 1.' };
+  return { ok: true, value: p };
+}
+function correctDecision(p) { return p < ALPHA ? 'reject' : 'fail'; }
+function checkDecision(p, choice, shown) {
+  var want = correctDecision(p), ps = shown || String(p);
+  if (choice === want) return { ok: true, msg: want === 'reject' ? 'Right. ' + ps + ' is less than 0.05.' : 'Right. ' + ps + ' is not less than 0.05.' };
+  return { ok: false, msg: 'Compare the p-value with α = 0.05. If the p-value is less than α, reject H₀. Otherwise, fail to reject H₀.' };
+}
+function decisionSentence(p, decision, shown) {
+  var ps = shown || String(p);
+  return decision === 'reject' ? 'Since the p-value (' + ps + ') is less than α = 0.05, we reject H₀.'
+    : 'Since the p-value (' + ps + ') is ' + (p === ALPHA ? 'equal to' : 'greater than') + ' α = 0.05, we fail to reject H₀.';
+}
+function claimText(design, sign, g1, g2, unit) {
+  return design === 'paired'
+    ? 'the mean difference between ' + g1 + ' and ' + g2 + ' for the same ' + unit + ' is ' + DIR_WORDS[sign] + ' 0'
+    : 'the mean of ' + g1 + ' is ' + DIR_WORDS[sign] + ' the mean of ' + g2;
+}
+function conclusionSentence(design, sign, g1, g2, unit, decision) {
+  return 'There ' + (decision === 'reject' ? 'is' : 'is not') + ' enough evidence to support the claim that ' + claimText(design, sign, g1, g2, unit) + '.';
+}
+function errorStatements(design, sign, g1, g2, unit) {
+  var claim = claimText(design, sign, g1, g2, unit);
+  return {
+    typeI: 'Concluding that ' + claim + ', when there is really no difference.',
+    typeII: 'Not concluding that ' + claim + ', when it really is.'
+  };
+}
+function possibleError(decision) { return decision === 'reject' ? 'I' : 'II'; }
+
+/* ---------------- practice ---------------- */
+var SCENARIOS = [
+  { d: 'paired', s: '>', t: 'The same 14 students take a reading test before (Group 2) and after (Group 1) a summer program. Did scores go up?', cue: '“go up” for Group 1 − Group 2' },
+  { d: 'paired', s: '<', t: 'Group 1 is the online price and Group 2 is the campus-store price of the same 12 textbooks. Is the online price lower?', cue: '“lower” for Group 1' },
+  { d: 'paired', s: '≠', t: 'Group 1 is each twin’s height and Group 2 is the other twin’s height, for 20 pairs of twins. Is there a difference?', cue: '“a difference” with no direction' },
+  { d: 'paired', s: '>', t: 'Group 1 is men’s and Group 2 is women’s median pay in the same 15 occupations. Do men earn more?', cue: '“earn more” for Group 1' },
+  { d: 'paired', s: '>', t: 'Group 1 is this year’s price and Group 2 is last year’s inflation-adjusted price for the same 10 items. Did prices rise faster than inflation?', cue: '“rise faster” means Group 1 is higher' },
+  { d: 'paired', s: '<', t: 'Patients’ blood pressure after a new medicine (Group 1) and before it (Group 2). Did blood pressure drop?', cue: '“drop” means Group 1 is lower' },
+  { d: 'independent', s: '<', t: 'Group 1 is 20 randomly chosen nurses and Group 2 is 20 randomly chosen engineers. Do nurses earn less?', cue: '“earn less” for Group 1' },
+  { d: 'independent', s: '>', t: 'Group 1 is 30 students who studied with flashcards and Group 2 is 30 different students who did not. Did the flashcard group score higher?', cue: '“higher” for Group 1' },
+  { d: 'independent', s: '≠', t: 'Group 1 is commute times for 25 drivers and Group 2 is commute times for 25 bus riders. Are the mean commutes different?', cue: '“different” with no direction' },
+  { d: 'independent', s: '<', t: 'Group 1 is 10 women-majority occupations and Group 2 is 10 men-majority occupations. Do women-majority jobs pay less?', cue: '“pay less” for Group 1' },
+  { d: 'independent', s: '>', t: 'Group 1 is battery life for 18 brand-A batteries and Group 2 is 18 brand-B batteries. Does brand A last longer?', cue: '“last longer” for Group 1' },
+  { d: 'paired', s: '≠', t: 'The same 16 runners’ times on a cold day (Group 1) and a hot day (Group 2). Do the times differ?', cue: '“differ” with no direction' }
+];
+function makePractice(rng) { return SCENARIOS[Math.floor(rng() * SCENARIOS.length)]; }
+function checkPractice(sc, ans) {
+  var out = [];
+  if (ans.design !== sc.d) out.push(sc.d === 'paired'
+    ? 'Each value has a natural partner (the same person, item, or job), so the data are paired.'
+    : 'The two groups are separate sets of individuals, so the samples are independent.');
+  var wantParam = sc.d === 'paired' ? 'mud' : 'mu12';
+  if (ans.design === sc.d && ans.param !== wantParam) out.push(sc.d === 'paired' ? 'Paired data use μd, the population mean difference.' : 'Independent samples use μ₁ and μ₂, the two population means.');
+  if (ans.sign === '=') out.push('The equals sign goes in H₀, not Hₐ.');
+  else if (ans.sign !== sc.s) out.push('Look at the wording: ' + sc.cue + ' calls for ' + sc.s + '.');
+  return { ok: out.length === 0, msgs: out, answer: hypotheses(sc.d, sc.s) };
+}
+/* ================= CORE LOGIC — END ================= */
+if (typeof module !== 'undefined') module.exports = { ALPHA, PARTS, num, parseList, forApplet, differences, outliers, checkDesign, checkHypotheses, hypotheses, paramWords, checkData, checkTail, checkPvalue, correctDecision, checkDecision, decisionSentence, conclusionSentence, errorStatements, possibleError, makePractice, checkPractice, SCENARIOS, PRED_TO_SIGN };
+
+</script>
+<script>
+(function () {
+if (typeof document === 'undefined') return;
+var KEY = 'twoSampleCoachV1';
+var APPLET = 'https://bubblemath.github.io/Interactive-Math/Statistics/Hypothesis-twosample.html';
+var STEPS = ['Choose the design', 'Name the groups', 'Write the hypotheses', 'Enter the data', 'Run the applet', 'Decide and conclude', 'Errors and summary'];
+function fresh() {
+  return { mode: 'guide', step: 0, part: null, partner: null, design: null, g1: '', g2: '', unit: 'pair', pred: null, param: null, sign: null,
+    list1: '', list2: '', outAns: null, tail: null, pval: '', tval: '', decision: null, errPick: null, errPossible: null, flip: Math.random() < 0.5 };
+}
+var S = fresh();
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+function load() {
+  try { var o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && typeof o === 'object') { var f = fresh(); for (var k in f) if (o.hasOwnProperty(k)) S[k] = o[k]; } } catch (e) {}
+  if (typeof S.step !== 'number' || S.step < 0 || S.step >= STEPS.length) S.step = 0;
+}
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function g1() { return S.g1.trim() || 'Group 1'; }
+function g2() { return S.g2.trim() || 'Group 2'; }
+function paired() { return S.design === 'paired'; }
+function L1() { return parseList(S.list1); }
+function L2() { return parseList(S.list2); }
+function dataState() { var a = L1(), b = L2(); return { a: a, b: b, check: checkData(S.design, a, b) }; }
+function outlierInfo() {
+  var d = dataState(); if (!d.check.ok) return null;
+  if (paired()) { var diffs = differences(d.a.values, d.b.values); return { groups: [{ name: 'Differences, d', values: diffs, o: outliers(diffs) }] }; }
+  return { groups: [{ name: 'Group 1', values: d.a.values, o: outliers(d.a.values) }, { name: 'Group 2', values: d.b.values, o: outliers(d.b.values) }] };
+}
+function anyOutliers() { var o = outlierInfo(); return !!o && o.groups.some(function (g) { return g.o.list.length > 0; }); }
+function pv() { var r = checkPvalue(S.pval); return r.ok ? r.value : null; }
+function pvText() { return String(S.pval).trim(); }
+
+function done(i) {
+  switch (i) {
+    case 0: return !!S.part && checkDesign(S.part, S.design, S.partner).ok;
+    case 1: return !!S.g1.trim() && !!S.g2.trim() && (!paired() || !!S.unit.trim());
+    case 2: return checkHypotheses(S.design, S.pred, S.param, S.sign).ok;
+    case 3: return dataState().check.ok && S.outAns === (anyOutliers() ? 'yes' : 'no');
+    case 4: return checkTail(S.sign, S.tail).ok && pv() !== null;
+    case 5: return pv() !== null && checkDecision(pv(), S.decision).ok;
+    case 6: return S.errPick === 'I' && S.errPossible === possibleError(S.decision);
+  }
+  return false;
+}
+function reachable(i) { for (var k = 0; k < i; k++) if (!done(k)) return false; return true; }
+
+function choice(name, value, label, current, sub) {
+  var on = current === value;
+  return '<button type="button" class="choice' + (on ? ' on' : '') + '" data-name="' + name + '" data-value="' + esc(value) + '" aria-pressed="' + on + '"><span class="ct">' + label + '</span>' + (sub ? '<span class="cs">' + sub + '</span>' : '') + '</button>';
+}
+function fb(id) { return '<div class="fb" id="' + id + '" role="status" aria-live="polite"></div>'; }
+function setFb(id, r) { var el = $(id); if (!el) return; if (!r || !r.msg) { el.className = 'fb'; el.textContent = ''; return; } el.className = 'fb ' + (r.ok ? 'ok' : 'no'); el.textContent = (r.ok ? '✓ ' : '! ') + r.msg; }
+function field(id, label, value, hint, mode) {
+  return '<div class="field"><label for="' + id + '">' + label + '</label><input id="' + id + '" type="text" inputmode="' + (mode || 'text') + '" autocomplete="off" value="' + esc(value) + '"' + (hint ? ' aria-describedby="' + id + '-h"' : '') + '>' + (hint ? '<span class="hint" id="' + id + '-h">' + hint + '</span>' : '') + '</div>';
+}
+function area(id, label, value, hint) {
+  return '<div class="field"><label for="' + id + '">' + label + '</label><textarea id="' + id + '" rows="5" spellcheck="false" aria-describedby="' + id + '-h">' + esc(value) + '</textarea><span class="hint" id="' + id + '-h">' + hint + '</span></div>';
+}
+function copyBlock(id, text) { return '<div class="copyrow"><p class="copytext" id="' + id + '">' + esc(text) + '</p><button type="button" class="btn ghost small" data-copy="' + id + '">Copy</button></div>'; }
+
+/* a small dot plot drawn with SVG, possible outliers in a second colour */
+function dotplot(groups) {
+  var all = []; groups.forEach(function (g) { all = all.concat(g.values); });
+  var lo = Math.min.apply(null, all), hi = Math.max.apply(null, all); if (lo === hi) { lo -= 1; hi += 1; }
+  var W = 640, left = 130, right = 24, rowH = 46, H = 30 + rowH * groups.length + 24;
+  var X = function (v) { return left + (v - lo) / (hi - lo) * (W - left - right); };
+  var h = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Dot plot of ' + esc(groups.map(function (g) { return g.name; }).join(' and ')) + '" class="dot">';
+  groups.forEach(function (g, r) {
+    var y = 30 + r * rowH + 14, counts = {};
+    h += '<text x="8" y="' + (y + 16) + '" class="dl">' + esc(g.name) + '</text><line x1="' + left + '" x2="' + (W - right) + '" y1="' + (y + 12) + '" y2="' + (y + 12) + '" class="axis"/>';
+    g.values.forEach(function (v) {
+      var key = Math.round(X(v) / 6), k = counts[key] = (counts[key] || 0) + 1;
+      var out = g.o.list.indexOf(v) >= 0;
+      h += '<circle cx="' + X(v).toFixed(1) + '" cy="' + (y + 6 - (k - 1) * 9) + '" r="4.5" class="' + (out ? 'pt out' : 'pt') + '"><title>' + v + (out ? ' (possible outlier)' : '') + '</title></circle>';
+    });
+  });
+  var fmt = function (v) { return Math.abs(hi - lo) >= 20 ? Math.round(v) : Math.round(v * 100) / 100; };
+  h += '<text x="' + left + '" y="' + (H - 6) + '" class="tick">' + fmt(lo) + '</text><text x="' + (W - right) + '" y="' + (H - 6) + '" class="tick" text-anchor="end">' + fmt(hi) + '</text></svg>';
+  return h;
+}
+
+var V = [];
+V[0] = {
+  html: function () {
+    var h = '<h2>Which design fits your data?</h2><h3 id="q-part">Which part of the lab are you working on?</h3><div class="choices stack" role="group" aria-labelledby="q-part">';
+    ['part1', 'part2', 'part4', 'own'].forEach(function (k) { h += choice('part', k, PARTS[k].label, S.part); });
+    h += '</div>';
+    if (S.part === 'own') h += '<h3 id="q-partner">Does each value in Group 1 have a natural partner in Group 2 (the same person, item, or place)?</h3><div class="choices" role="group" aria-labelledby="q-partner">' + choice('partner', 'yes', 'Yes', S.partner) + choice('partner', 'no', 'No', S.partner) + '</div>';
+    if (S.part) h += '<h3 id="q-design">Which test?</h3><div class="choices" role="group" aria-labelledby="q-design">' +
+      choice('design', 'paired', 'Matched pairs', S.design, 'Dependent means: one list of differences') + choice('design', 'independent', 'Independent samples', S.design, 'Two separate groups') + '</div>' + fb('fb0');
+    return h;
+  },
+  refresh: function () { if (S.part && S.design) setFb('fb0', checkDesign(S.part, S.design, S.partner)); }
+};
+V[1] = {
+  html: function () {
+    var h = '<h2>Name the groups and fix the order</h2><p class="lede">Group 1 is always entered first in the applet. ' + (paired() ? 'The applet computes d = Group 1 − Group 2.' : '') + '</p>' +
+      field('g1', 'Group 1', S.g1, 'Describe what the values measure.') + field('g2', 'Group 2', S.g2);
+    if (paired()) h += field('unit', 'What makes a pair? (one word)', S.unit, 'Example: occupation, item, student');
+    return h + '<div id="orderOut"></div>';
+  },
+  refresh: function () {
+    var o = $('orderOut'); if (!o) return;
+    o.innerHTML = '<div class="note"><p>' + (paired()
+      ? '<b>d = ' + esc(g1()) + ' − ' + esc(g2()) + '.</b> A positive d means Group 1 is higher for that ' + esc(S.unit || 'pair') + '.'
+      : '<b>Group 1:</b> ' + esc(g1()) + '<br><b>Group 2:</b> ' + esc(g2())) + '</p></div>';
+  }
+};
+V[2] = {
+  html: function () {
+    var pp = paired();
+    return '<h2>Write the hypotheses</h2><h3 id="q-pred">1. Your prediction: Group 1 (' + esc(g1()) + ') is…</h3>' +
+      '<div class="choices three" role="group" aria-labelledby="q-pred">' + choice('pred', 'higher', 'Higher than Group 2', S.pred) + choice('pred', 'lower', 'Lower than Group 2', S.pred) + choice('pred', 'different', 'Different from Group 2', S.pred, 'No direction') + '</div>' +
+      '<h3 id="q-param">2. Which symbols go in the hypotheses?</h3><div class="choices" role="group" aria-labelledby="q-param">' +
+      (pp ? choice('param', 'mud', 'μd', S.param, 'population mean difference') + choice('param', 'xbard', 'd̄', S.param, 'sample mean difference') + choice('param', 'mu12', 'μ₁ and μ₂', S.param, 'two population means')
+          : choice('param', 'mu12', 'μ₁ and μ₂', S.param, 'two population means') + choice('param', 'xbar12', 'x̄₁ and x̄₂', S.param, 'two sample means') + choice('param', 'mud', 'μd', S.param, 'mean difference')) + '</div>' +
+      '<h3 id="q-sign">3. Which sign goes in Hₐ?</h3><div class="choices four" role="group" aria-labelledby="q-sign">' +
+      choice('sign', '<', '&lt;', S.sign, 'less than') + choice('sign', '>', '&gt;', S.sign, 'greater than') + choice('sign', '≠', '≠', S.sign, 'not equal') + choice('sign', '=', '=', S.sign, 'equal') + '</div>' +
+      fb('fb2') + '<div id="hypOut"></div>';
+  },
+  refresh: function () {
+    var r = checkHypotheses(S.design, S.pred, S.param, S.sign);
+    setFb('fb2', (S.pred || S.param || S.sign) ? r : null);
+    var o = $('hypOut'); if (!o) return;
+    if (!r.ok) { o.innerHTML = ''; return; }
+    var h = hypotheses(S.design, S.sign);
+    o.innerHTML = '<div class="result"><h3>Your hypotheses</h3>' + copyBlock('h0', 'H₀: ' + h.h0) + copyBlock('ha', 'Hₐ: ' + h.ha) +
+      paramWords(S.design, g1(), g2(), S.unit || 'pair').map(function (w, i) { return copyBlock('w' + i, w); }).join('') + '</div>';
+  }
+};
+V[3] = {
+  html: function () {
+    var hint = 'One value per line, or separated by spaces. Commas in numbers like 2,023 are fine here.' + (paired() ? ' Keep the same order in both lists.' : '');
+    return '<h2>Enter the data</h2><div class="grid2">' + area('list1', 'Group 1: ' + esc(g1()), S.list1, hint) + area('list2', 'Group 2: ' + esc(g2()), S.list2, hint) + '</div>' +
+      '<div id="dataOut" aria-live="polite"></div>';
+  },
+  refresh: function () {
+    var o = $('dataOut'); if (!o) return;
+    var d = dataState();
+    var h = '<p class="small">Group 1: ' + d.a.values.length + ' values · Group 2: ' + d.b.values.length + ' values</p>';
+    if (!d.check.ok) { o.innerHTML = h + (S.list1.trim() || S.list2.trim() ? '<p class="warn">' + esc(d.check.problems.join(' ')) + '</p>' : ''); return; }
+    var info = outlierInfo();
+    h += '<div class="plotwrap">' + dotplot(info.groups) + '</div>' +
+      '<p class="small">' + (paired() ? 'With ' + d.a.values.length + ' pairs' : 'With ' + d.a.values.length + ' and ' + d.b.values.length + ' values') +
+      ', fewer than 30, the t-test needs ' + (paired() ? 'the differences' : 'each group') + ' to be roughly symmetric with no strong outliers.</p>' +
+      '<h3 id="q-out">Do you see any possible outliers (points far from the rest)?</h3><div class="choices" role="group" aria-labelledby="q-out">' + choice('outAns', 'yes', 'Yes', S.outAns) + choice('outAns', 'no', 'No', S.outAns) + '</div>' + fb('fb3');
+    o.innerHTML = h;
+    wireChoices(o);
+    if (S.outAns) {
+      var any = anyOutliers(), names = info.groups.filter(function (g) { return g.o.list.length; }).map(function (g) { return g.name + ': ' + g.o.list.join(', '); });
+      setFb('fb3', S.outAns === (any ? 'yes' : 'no')
+        ? { ok: true, msg: any ? 'Yes. By the 1.5 × IQR rule, ' + names.join('; ') + ' stands out. You can still run the test, but say in your answer that the outlier makes the result less reliable.' : 'Right, nothing stands out by the 1.5 × IQR rule, so the condition looks reasonable.' }
+        : { ok: false, msg: any ? 'Look again: the orange point is far from the others.' : 'By the 1.5 × IQR rule, none of the points is far enough from the rest to count as an outlier.' });
+    }
+  }
+};
+V[4] = {
+  html: function () {
+    var d = dataState(), h = hypotheses(S.design, S.sign);
+    var steps = paired()
+      ? '<ol class="steps"><li>Open the <a href="' + APPLET + '" target="_blank" rel="noopener">two-sample applet</a> (opens in a new tab).</li><li>Choose <b>Dependent Means (Matched Pairs)</b>, then <b>Raw Paired Data</b> and <b>Separate Lists</b>.</li><li>Paste the Group 1 list into <b>Before / Group 1</b> and the Group 2 list into <b>After / Group 2</b>.</li><li>Set H₀: μd = <b>0</b> and α = <b>0.05</b>, then select <b>Calculate Matched Pairs Test</b>.</li></ol>'
+      : '<ol class="steps"><li>Open the <a href="' + APPLET + '" target="_blank" rel="noopener">two-sample applet</a> (opens in a new tab).</li><li>Choose <b>Independent Means</b>, then <b>Raw Data</b> and <b>Separate Lists</b>.</li><li>Paste the Group 1 list into <b>Sample 1 Data</b> and the Group 2 list into <b>Sample 2 Data</b>.</li><li>Set α = <b>0.05</b>, then select <b>Calculate Independent Means Test</b>.</li></ol>';
+    return '<h2>Run the applet</h2><p class="lede">These lists have no commas, so the applet reads every number correctly. The coach does not calculate t or the p-value.</p>' + steps +
+      '<div class="result">' + copyBlock('copy1', forApplet(d.a.values)) + copyBlock('copy2', forApplet(d.b.values)) + '<p class="small">First line: Group 1. Second line: Group 2.</p></div>' +
+      '<h3 id="q-tail">The applet shows three p-values. Your Hₐ is ' + esc(h.ha) + '. Which one do you read?</h3><div class="choices three" role="group" aria-labelledby="q-tail">' +
+      choice('tail', 'left', 'p-value (Left Tail)', S.tail) + choice('tail', 'right', 'p-value (Right Tail)', S.tail) + choice('tail', 'two', 'p-value (Two-Tail)', S.tail) + '</div>' + fb('fb4t') +
+      '<div class="grid2">' + field('tval', 'Test statistic t from the applet (optional)', S.tval, null, 'decimal') + field('pval', 'The p-value you read', S.pval, null, 'decimal') + '</div>' + fb('fb4p');
+  },
+  refresh: function () {
+    setFb('fb4t', S.tail ? checkTail(S.sign, S.tail) : null);
+    var r = pvText() === '' ? null : checkPvalue(S.pval);
+    setFb('fb4p', r && !r.ok ? r : (r ? { ok: true, msg: 'Recorded.' } : null));
+  }
+};
+V[5] = {
+  html: function () {
+    if (pv() === null) return '<h2>Decide and conclude</h2><p class="warn">Record your p-value in the previous step first.</p>';
+    return '<h2>Decide and conclude</h2><p class="lede">Your p-value is <b>' + esc(pvText()) + '</b> and α = 0.05.</p><h3 id="q-dec">What is the decision?</h3><div class="choices" role="group" aria-labelledby="q-dec">' +
+      choice('decision', 'reject', 'Reject H₀', S.decision) + choice('decision', 'fail', 'Fail to reject H₀', S.decision) + '</div>' + fb('fb5') + '<div id="concOut"></div>';
+  },
+  refresh: function () {
+    var p = pv(); if (p === null) return;
+    setFb('fb5', S.decision ? checkDecision(p, S.decision, pvText()) : null);
+    var o = $('concOut'); if (!o) return;
+    if (!checkDecision(p, S.decision).ok) { o.innerHTML = ''; return; }
+    o.innerHTML = '<div class="result"><h3>Your conclusion</h3>' + copyBlock('cdec', decisionSentence(p, S.decision, pvText())) +
+      copyBlock('cctx', conclusionSentence(S.design, S.sign, g1(), g2(), S.unit || 'pair', S.decision)) +
+      '<p class="small">' + (S.decision === 'fail' ? 'Never write “accept H₀” or “this proves there is no difference.”' : 'Rejecting H₀ is strong evidence, not proof, and it does not tell you why the difference exists.') + '</p></div>';
+  }
+};
+V[6] = {
+  html: function () {
+    var e = errorStatements(S.design, S.sign, g1(), g2(), S.unit || 'pair');
+    var A = S.flip ? ['II', e.typeII] : ['I', e.typeI], B = S.flip ? ['I', e.typeI] : ['II', e.typeII];
+    return '<h2>Errors and summary</h2><h3 id="q-err">Which statement describes a Type I error for your test?</h3><div class="choices stack" role="group" aria-labelledby="q-err">' +
+      choice('errPick', A[0], esc(A[1]), S.errPick) + choice('errPick', B[0], esc(B[1]), S.errPick) + '</div>' + fb('fb6a') +
+      '<h3 id="q-pos">Your decision was to ' + (S.decision === 'reject' ? 'reject H₀' : 'fail to reject H₀') + '. Which error is possible?</h3><div class="choices" role="group" aria-labelledby="q-pos">' +
+      choice('errPossible', 'I', 'Type I error', S.errPossible) + choice('errPossible', 'II', 'Type II error', S.errPossible) + '</div>' + fb('fb6b') + '<div id="sumOut"></div>';
+  },
+  refresh: function () {
+    setFb('fb6a', S.errPick ? (S.errPick === 'I' ? { ok: true, msg: 'Right. A Type I error rejects a true H₀: you conclude a difference that is not really there.' } : { ok: false, msg: 'That one misses a difference that really exists, which is a Type II error.' }) : null);
+    var want = possibleError(S.decision);
+    setFb('fb6b', S.errPossible ? (S.errPossible === want ? { ok: true, msg: want === 'I' ? 'Right. You rejected H₀, so the only possible mistake is rejecting a true H₀.' : 'Right. You did not reject H₀, so the only possible mistake is missing a real difference.' } : { ok: false, msg: 'A Type I error can only happen when you reject H₀; a Type II error only when you fail to reject it.' }) : null);
+    var o = $('sumOut'); if (!o) return;
+    if (!done(6)) { o.innerHTML = ''; return; }
+    o.innerHTML = '<div class="result"><h3>Your full setup</h3><pre class="summary" id="sumText">' + esc(summary()) + '</pre><div class="btnrow"><button type="button" class="btn" data-copy="sumText">Copy everything</button><button type="button" class="btn ghost" id="again">Start another test</button></div></div>';
+    $('again').onclick = function () { S = fresh(); save(); render(); };
+  }
+};
+function summary() {
+  var d = dataState(), h = hypotheses(S.design, S.sign), e = errorStatements(S.design, S.sign, g1(), g2(), S.unit || 'pair'), lines = [];
+  lines.push(paired() ? 'Matched pairs t-test (d = Group 1 − Group 2)' : 'Independent samples t-test');
+  lines.push('Group 1: ' + g1(), 'Group 2: ' + g2());
+  paramWords(S.design, g1(), g2(), S.unit || 'pair').forEach(function (w) { lines.push(w); });
+  lines.push('H₀: ' + h.h0, 'Hₐ: ' + h.ha, 'n = ' + d.a.values.length + (paired() ? ' pairs' : ' and ' + d.b.values.length));
+  if (String(S.tval).trim()) lines.push('t = ' + String(S.tval).trim());
+  lines.push('p-value (' + (S.tail === 'two' ? 'two-tail' : S.tail + ' tail') + ') = ' + pvText(), decisionSentence(pv(), S.decision, pvText()), conclusionSentence(S.design, S.sign, g1(), g2(), S.unit || 'pair', S.decision));
+  lines.push('Type I error: ' + e.typeI, 'Type II error: ' + e.typeII, 'Possible error for my decision: Type ' + possibleError(S.decision));
+  return lines.join('\n');
+}
+
+function render() {
+  $('tab-guide').setAttribute('aria-selected', S.mode === 'guide'); $('tab-practice').setAttribute('aria-selected', S.mode === 'practice');
+  $('panel-guide').hidden = S.mode !== 'guide'; $('panel-practice').hidden = S.mode !== 'practice';
+  if (S.mode === 'practice') { renderPractice(); return; }
+  if (!reachable(S.step)) { var k = 0; while (k < STEPS.length - 1 && done(k)) k++; S.step = k; }
+  var prog = $('progress'); prog.innerHTML = '';
+  STEPS.forEach(function (name, i) {
+    var li = document.createElement('li'), b = document.createElement('button'); b.type = 'button';
+    b.className = 'pstep' + (i === S.step ? ' cur' : '') + (done(i) ? ' done' : ''); b.disabled = !reachable(i);
+    b.innerHTML = '<span class="pn">' + (done(i) ? '✓' : (i + 1)) + '</span><span class="pl">' + name + '</span>';
+    if (i === S.step) b.setAttribute('aria-current', 'step');
+    b.onclick = function () { S.step = i; save(); render(); focusHead(); };
+    li.appendChild(b); prog.appendChild(li);
+  });
+  $('stepBody').innerHTML = '<p class="kicker">Step ' + (S.step + 1) + ' of ' + STEPS.length + '</p>' + V[S.step].html();
+  wire($('stepBody'));
+  refreshAll();
+}
+function refreshAll() {
+  V[S.step].refresh();
+  var ok = done(S.step);
+  $('backBtn').disabled = S.step === 0;
+  $('nextBtn').disabled = !ok || S.step === STEPS.length - 1; $('nextBtn').hidden = S.step === STEPS.length - 1;
+  $('navHint').textContent = (S.step < STEPS.length - 1 && !ok) ? 'Finish this step to continue.' : '';
+  document.querySelectorAll('#progress .pstep').forEach(function (b, i) { b.classList.toggle('done', done(i)); b.disabled = !reachable(i); b.querySelector('.pn').textContent = done(i) ? '✓' : String(i + 1); });
+}
+function focusHead() { var h = $('stepBody').querySelector('h2'); if (h) { h.setAttribute('tabindex', '-1'); h.focus(); } }
+var TEXT = { g1: 1, g2: 1, unit: 1, list1: 1, list2: 1, pval: 1, tval: 1 };
+function onChoice(b) {
+  var name = b.getAttribute('data-name'), val = b.getAttribute('data-value');
+  if (name === 'part' && val !== S.part) {
+    var f = fresh(); f.part = val; f.flip = S.flip;
+    if (val !== 'own') { f.g1 = PARTS[val].g1; f.g2 = PARTS[val].g2; f.unit = PARTS[val].unit; }
+    S = f;
+  } else if (name === 'design' && val !== S.design) { S.design = val; S.param = null; S.sign = null; S.outAns = null; S.tail = null; }
+  else S[name] = val;
+  save(); render();
+  var again = document.querySelector('button.choice[data-name="' + name + '"][data-value="' + CSS.escape(val) + '"]'); if (again) again.focus();
+}
+function wireChoices(root) { root.querySelectorAll('button.choice').forEach(function (b) { b.onclick = function () { onChoice(b); }; }); }
+function wire(root) {
+  wireChoices(root);
+  root.querySelectorAll('input, textarea').forEach(function (inp) {
+    inp.oninput = function () {
+      if (TEXT[inp.id]) S[inp.id] = inp.value;
+      if (inp.id === 'list1' || inp.id === 'list2') S.outAns = null;
+      save(); refreshAll();
+    };
+  });
+  root.addEventListener('click', copyHandler);
+}
+function copyHandler(e) {
+  var b = e.target.closest ? e.target.closest('[data-copy]') : null; if (!b) return;
+  var src = $(b.getAttribute('data-copy')); if (!src) return;
+  var ok = function () { var old = b.textContent; b.textContent = 'Copied'; setTimeout(function () { b.textContent = old; }, 1400); };
+  var fall = function () { var r = document.createRange(); r.selectNodeContents(src); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = 'Selected: press Ctrl+C'; };
+  try { navigator.clipboard.writeText(src.textContent).then(ok, fall); } catch (err) { fall(); }
+}
+
+/* practice */
+var PR = { sc: null, ans: {}, res: null, right: 0, tries: 0, streak: 0 };
+function newPr() { PR.sc = makePractice(Math.random); PR.ans = { design: null, param: null, sign: null }; PR.res = null; }
+function renderPractice() {
+  if (!PR.sc) newPr();
+  var a = PR.ans, pp = a.design === 'paired';
+  var h = '<p class="kicker" id="pk">Practice · ' + PR.right + ' right out of ' + PR.tries + ' · streak ' + PR.streak + '</p><p class="scenario" tabindex="-1">' + esc(PR.sc.t) + '</p>' +
+    '<h3 id="pq1">1. Which design?</h3><div class="choices" role="group" aria-labelledby="pq1">' + choice('pd', 'paired', 'Matched pairs', a.design) + choice('pd', 'independent', 'Independent samples', a.design) + '</div>';
+  if (a.design) h += '<h3 id="pq2">2. Which symbols?</h3><div class="choices" role="group" aria-labelledby="pq2">' + choice('pp', 'mud', 'μd', a.param) + choice('pp', 'mu12', 'μ₁ and μ₂', a.param) + choice('pp', pp ? 'xbard' : 'xbar12', pp ? 'd̄' : 'x̄₁ and x̄₂', a.param) + '</div>' +
+    '<h3 id="pq3">3. The sign in Hₐ</h3><div class="choices four" role="group" aria-labelledby="pq3">' + choice('ps', '<', '&lt;', a.sign) + choice('ps', '>', '&gt;', a.sign) + choice('ps', '≠', '≠', a.sign) + choice('ps', '=', '=', a.sign) + '</div>';
+  h += '<div class="btnrow"><button type="button" class="btn" id="pcheck">Check</button><button type="button" class="btn ghost" id="pnext">New scenario</button></div><div id="pres" role="status" aria-live="polite"></div>';
+  $('practiceBody').innerHTML = h;
+  $('practiceBody').querySelectorAll('button.choice').forEach(function (b) {
+    b.onclick = function () {
+      var n = b.getAttribute('data-name'), v = b.getAttribute('data-value');
+      if (n === 'pd') { PR.ans.design = v; PR.ans.param = null; } if (n === 'pp') PR.ans.param = v; if (n === 'ps') PR.ans.sign = v;
+      PR.res = null; renderPractice();
+      var again = $('practiceBody').querySelector('button.choice[data-name="' + n + '"][data-value="' + CSS.escape(v) + '"]'); if (again) again.focus();
+    };
+  });
+  $('pcheck').onclick = function () {
+    if (!PR.ans.design || !PR.ans.param || !PR.ans.sign) { PR.res = { ok: false, msgs: ['Answer all three parts first.'] }; showPr(); return; }
+    var r = checkPractice(PR.sc, PR.ans);
+    if (!(PR.res && PR.res.counted)) { PR.tries++; if (r.ok) { PR.right++; PR.streak++; } else PR.streak = 0; r.counted = true; }
+    PR.res = r; showPr(); $('pk').textContent = 'Practice · ' + PR.right + ' right out of ' + PR.tries + ' · streak ' + PR.streak;
+  };
+  $('pnext').onclick = function () { newPr(); renderPractice(); $('practiceBody').querySelector('.scenario').focus(); };
+  showPr();
+}
+function showPr() {
+  var box = $('pres'), r = PR.res; if (!box) return; if (!r) { box.innerHTML = ''; return; }
+  box.innerHTML = r.ok ? '<div class="fb ok">✓ Correct. H₀: ' + esc(r.answer.h0) + ' and Hₐ: ' + esc(r.answer.ha) + '.</div>'
+    : '<div class="fb no"><p>! Not yet.</p><ul>' + r.msgs.map(function (m) { return '<li>' + esc(m) + '</li>'; }).join('') + '</ul>' + (r.answer ? '<details><summary>Show the answer</summary><p>' + (PR.sc.d === 'paired' ? 'Matched pairs. ' : 'Independent samples. ') + 'H₀: ' + esc(r.answer.h0) + ', Hₐ: ' + esc(r.answer.ha) + '</p></details>' : '') + '</div>';
+}
+
+function boot() {
+  load();
+  $('tab-guide').onclick = function () { S.mode = 'guide'; save(); render(); };
+  $('tab-practice').onclick = function () { S.mode = 'practice'; save(); render(); };
+  document.querySelector('.tabs').addEventListener('keydown', function (e) { if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return; S.mode = S.mode === 'guide' ? 'practice' : 'guide'; save(); render(); $(S.mode === 'guide' ? 'tab-guide' : 'tab-practice').focus(); });
+  $('backBtn').onclick = function () { if (S.step > 0) { S.step--; save(); render(); focusHead(); } };
+  $('nextBtn').onclick = function () { if (done(S.step) && S.step < STEPS.length - 1) { S.step++; save(); render(); focusHead(); } };
+  $('resetBtn').onclick = function () { $('resetConfirm').hidden = !$('resetConfirm').hidden; };
+  $('resetYes').onclick = function () { S = fresh(); save(); $('resetConfirm').hidden = true; render(); };
+  $('resetNo').onclick = function () { $('resetConfirm').hidden = true; };
+  render();
+}
+boot();
+})();
+
+</script>
+
+</body></html>
