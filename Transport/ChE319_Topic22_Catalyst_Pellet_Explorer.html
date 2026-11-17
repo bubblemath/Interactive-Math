@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catalyst Pellet Explorer — ChE 319 Topic 22</title>
+<style>
+:root{
+  --paper:#F6F8FA; --panel:#FFFFFF; --ink:#101823; --ink-soft:#5A6675;
+  --rule:#CBD5E1; --rule-soft:#E4EAF1; --navy:#16305C;
+  --flux:#0F7A6E; --temp:#B3202B; --gen:#6B4EA8; --clad:#4A6FA5;
+  --gold:#C9922B; --focus:#0F7A6E;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding:28px 20px 60px}
+.wrap{max-width:1120px;margin:0 auto}
+.masthead{border-bottom:2px solid var(--navy);padding-bottom:14px}
+h1{font-family:Georgia,"Iowan Old Style","Times New Roman",serif;font-weight:600;
+   font-size:clamp(24px,4vw,34px);line-height:1.15;letter-spacing:-.01em;
+   color:var(--navy);margin:0 0 6px}
+.standfirst{max-width:78ch;color:var(--ink-soft);font-size:15px;margin:0}
+.tabs{display:flex;border-bottom:1px solid var(--rule);margin:0 0 22px;flex-wrap:wrap}
+.tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;
+  padding:13px 18px 11px;font:inherit;font-size:14.5px;color:var(--ink-soft);
+  cursor:pointer;margin-bottom:-1px}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--navy);font-weight:600;border-bottom-color:var(--navy)}
+.tab:focus-visible{outline:2px solid var(--focus);outline-offset:-3px}
+.lede{max-width:80ch;margin:0 0 20px;color:var(--ink-soft)}
+.lede strong{color:var(--ink);font-weight:600}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 332px;gap:22px;align-items:start}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:900px){.stage,.duo{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--rule)}
+.card>h2{font-family:Georgia,"Iowan Old Style",serif;font-size:15px;font-weight:600;
+  color:var(--navy);margin:0;padding:11px 16px 10px;border-bottom:1px solid var(--rule-soft)}
+.card .body{padding:16px}
+canvas{display:block;width:100%;height:auto;touch-action:none}
+canvas.grab{cursor:ew-resize}
+canvas:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.canvhost{padding:12px 0 0}
+.hint{font-size:12.5px;color:var(--ink-soft);padding:4px 16px 10px}
+.ctl{margin-bottom:13px}
+.ctl:last-child{margin-bottom:0}
+.ctl label{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  font-size:13.5px;margin-bottom:5px}
+.ctl .grouplabel{display:block;font-size:13.5px;margin-bottom:5px}
+.val{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12.5px;
+  font-variant-numeric:tabular-nums;color:var(--navy)}
+input[type=range]{width:100%;accent-color:var(--navy);margin:0}
+input[type=range]:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--rule)}
+.seg button{flex:1 1 auto;appearance:none;background:var(--panel);border:0;
+  border-right:1px solid var(--rule);padding:7px 5px;font:inherit;font-size:11.5px;
+  color:var(--ink-soft);cursor:pointer;white-space:nowrap}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--navy);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.btn{appearance:none;width:100%;background:var(--navy);color:#fff;border:0;
+  padding:9px;font:inherit;font-size:13px;cursor:pointer}
+.btn:hover{background:#1d3f75}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:7px;cursor:pointer}
+.chk input{accent-color:var(--navy);width:16px;height:16px}
+.divider{height:1px;background:var(--rule-soft);margin:15px 0}
+.eqn{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12.5px;
+  font-variant-numeric:tabular-nums;line-height:1.9}
+.eqn .row{display:flex;justify-content:space-between;gap:12px}
+.eqn .k{color:var(--ink-soft)}
+.eqn .v{color:var(--ink);font-weight:600}
+.eqn .v.flux{color:var(--flux)}
+.eqn .v.temp{color:var(--temp)}
+.eqn .v.gen{color:var(--gen)}
+.eqn .v.big{font-size:15px}
+.fracline{border-top:1px solid var(--rule);margin:6px 0}
+.flag{display:inline-block;padding:2px 8px;border-radius:2px;font-size:11.5px;
+  font-weight:600;font-family:ui-sans-serif,system-ui,sans-serif}
+.flag.ok{background:#EAF3EC;color:var(--flux)}
+.flag.warn{background:#FDF6E3;color:#8A6D1F}
+.flag.bad{background:#FBE9E7;color:var(--temp)}
+.note{margin-top:22px;padding:14px 18px;background:#EFF4F0;
+  border-left:3px solid var(--flux);max-width:84ch;font-size:14.5px}
+.note b{color:var(--navy)}
+.note.caution{background:#FDF6E3;border-left-color:#C9A227}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--ink-soft);
+  padding:0 16px 12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.swatch{width:16px;height:3px;border-radius:2px}
+.swatch.box{height:11px;border-radius:1px}
+table.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+table.tbl th{text-align:right;font-weight:600;font-size:11.5px;color:var(--ink-soft);
+  padding:5px 7px;border-bottom:1px solid var(--rule)}
+table.tbl th:first-child,table.tbl td:first-child{text-align:left}
+table.tbl td{padding:5px 7px;border-bottom:1px solid var(--rule-soft);
+  font-variant-numeric:tabular-nums;text-align:right}
+table.tbl tr.on td{background:#EFF4F0;font-weight:600}
+.foot{margin-top:34px;padding-top:12px;border-top:1px solid var(--rule);
+  font-size:12.5px;color:var(--ink-soft);max-width:84ch}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <h1>Catalyst Pellet Explorer</h1>
+    <p class="standfirst">Inside a porous catalyst two clocks are running: how fast reactant can diffuse inward, and how fast it gets consumed on the way. Whichever is slower runs the show — and the Thiele modulus is the single number that says which one that is.</p>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-a" aria-controls="p-a" aria-selected="true">One straight pore</button>
+    <button class="tab" role="tab" id="tab-b" aria-controls="p-b" aria-selected="false">The whole pellet</button>
+    <button class="tab" role="tab" id="tab-c" aria-controls="p-c" aria-selected="false">Sizing the pellet</button>
+  </div>
+
+  <!-- ================= PANEL A ================= -->
+  <section id="p-a" role="tabpanel" aria-labelledby="tab-a">
+    <p class="lede">A single cylindrical pore with reaction on its walls. The governing equation is d²C<sub>A</sub>/dz² = b²C<sub>A</sub> with a no-flux condition at the dead end — <strong>which is the cooling fin from Topic 4, letter for letter.</strong> Reactant leaking out through the fin tip is reactant surviving to the end of the pore.</p>
+
+    <div class="stage">
+      <div>
+        <div class="card">
+          <h2>Looking down the pore</h2>
+          <div class="canvhost"><canvas id="cvA" aria-label="A cylindrical pore shaded by reactant concentration, mouth at the left, dead end at the right."></canvas></div>
+          <p class="hint">Darker = more reactant · the pale region at the right is catalyst doing nothing</p>
+        </div>
+        <div class="duo" style="margin-top:18px">
+          <div class="card">
+            <h2>Concentration down the pore</h2>
+            <div id="plotA1"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--navy)"></i>C<sub>A</sub>/C<sub>A0</sub></span>
+              <span><i class="swatch" style="background:var(--ink-soft)"></i>if diffusion were instant</span>
+            </div>
+          </div>
+          <div class="card">
+            <h2>η against the Thiele modulus</h2>
+            <div id="plotA2"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--flux)"></i>η = tanh h<sub>T</sub> / h<sub>T</sub></span>
+              <span><i class="swatch" style="background:var(--ink-soft)"></i>the 1/h<sub>T</sub> asymptote</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="aL">Pore length L <span class="val" id="aLv"></span></label>
+            <input type="range" id="aL" min="0.05" max="10" step="0.01" value="1">
+          </div>
+          <div class="ctl">
+            <label for="aRp">Pore radius r<sub>p</sub> <span class="val" id="aRpv"></span></label>
+            <input type="range" id="aRp" min="-9" max="-6" step="0.02" value="-8">
+          </div>
+          <div class="ctl">
+            <label for="aK">Rate constant k₁″ <span class="val" id="aKv"></span></label>
+            <input type="range" id="aK" min="-9" max="-3" step="0.02" value="-6">
+          </div>
+          <div class="ctl">
+            <label for="aD">Diffusivity D<sub>AB</sub> <span class="val" id="aDv"></span></label>
+            <input type="range" id="aD" min="-8" max="-4" step="0.02" value="-6">
+          </div>
+
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">b = √(2k₁″/r<sub>p</sub>D<sub>AB</sub>)</span><span class="v" id="aB"></span></div>
+            <div class="row"><span class="k">h<sub>T</sub> = bL</span><span class="v big" id="aHt"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">η = tanh h<sub>T</sub>/h<sub>T</sub></span><span class="v flux big" id="aEta"></span></div>
+            <div class="row"><span class="k">C<sub>A</sub> at the dead end</span><span class="v" id="aCend"></span></div>
+            <div class="row"><span class="k">useful depth</span><span class="v" id="aDepth"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">regime</span><span id="aReg"></span></div>
+            <div class="row"><span class="k">1/h<sub>T</sub> asymptote</span><span class="v" id="aAsym"></span></div>
+          </div>
+
+          <div class="divider"></div>
+          <button class="btn" id="aReset">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteA"></p>
+  </section>
+
+  <!-- ================= PANEL B ================= -->
+  <section id="p-b" role="tabpanel" aria-labelledby="tab-b">
+    <p class="lede">A real pellet is a sphere, so the balance picks up the r² that spherical geometry demands. The substitution C<sub>A</sub> = C<sub>AR</sub>·f(r)/r turns it straight back into the fin equation, and out comes <strong>η = (3/Λ²)(Λ coth Λ − 1)</strong>. Note the sphere's asymptote is 3/Λ, not 1/Λ.</p>
+
+    <div class="stage">
+      <div>
+        <div class="card">
+          <h2>A slice through the pellet</h2>
+          <div class="canvhost"><canvas id="cvB" aria-label="Circular cross-section of a catalyst pellet shaded by reactant concentration, with an active outer shell and a dead core."></canvas></div>
+          <p class="hint">The ring marks where the concentration has fallen to 10% of the surface value</p>
+        </div>
+        <div class="duo" style="margin-top:18px">
+          <div class="card">
+            <h2>Concentration against radius</h2>
+            <div id="plotB1"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--navy)"></i>C<sub>A</sub>/C<sub>AR</sub></span>
+              <span><i class="swatch" style="background:var(--temp)"></i>10% line</span>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Sphere against pore</h2>
+            <div id="plotB2"></div>
+            <div class="legend">
+              <span><i class="swatch" style="background:var(--navy)"></i>sphere, (3/Λ²)(Λ coth Λ−1)</span>
+              <span><i class="swatch" style="background:var(--flux)"></i>pore, tanh h<sub>T</sub>/h<sub>T</sub></span>
+              <span><i class="swatch" style="background:var(--ink-soft)"></i>3/Λ</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="bR">Pellet radius R <span class="val" id="bRv"></span></label>
+            <input type="range" id="bR" min="0.1" max="12" step="0.05" value="3">
+          </div>
+          <div class="ctl">
+            <label for="bA">Internal area a <span class="val" id="bAv"></span></label>
+            <input type="range" id="bA" min="5" max="9" step="0.02" value="7">
+          </div>
+          <div class="ctl">
+            <label for="bK">Rate constant k₁″ <span class="val" id="bKv"></span></label>
+            <input type="range" id="bK" min="-9" max="-3" step="0.02" value="-6">
+          </div>
+          <div class="ctl">
+            <label for="bD">Effective diffusivity D<sub>A</sub> <span class="val" id="bDv"></span></label>
+            <input type="range" id="bD" min="-8" max="-4" step="0.02" value="-6">
+          </div>
+
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">k₁″a (per volume)</span><span class="v" id="bKa"></span></div>
+            <div class="row"><span class="k">Λ = R√(k₁″a/D<sub>A</sub>)</span><span class="v big" id="bLam"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">η sphere</span><span class="v flux big" id="bEta"></span></div>
+            <div class="row"><span class="k">η pore, same modulus</span><span class="v" id="bEtaP"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">C<sub>A</sub> at the centre</span><span class="v" id="bCc"></span></div>
+            <div class="row"><span class="k">active shell thickness</span><span class="v" id="bShell"></span></div>
+            <div class="row"><span class="k">dead core is</span><span class="v" id="bDead"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">regime</span><span id="bReg"></span></div>
+          </div>
+
+          <div class="divider"></div>
+          <button class="btn" id="bLec">Load the guide's pellet</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteB"></p>
+  </section>
+
+  <!-- ================= PANEL C ================= -->
+  <section id="p-c" role="tabpanel" aria-labelledby="tab-c">
+    <p class="lede">Shrinking the pellet raises η. But each pellet then does less work, because there is less of it. <strong>These two facts point in opposite directions and both are true</strong> — and which one you care about depends on whether you are buying catalyst or buying a reactor shell.</p>
+
+    <div class="stage">
+      <div>
+        <div class="card">
+          <h2>Two ways to measure the same change</h2>
+          <div id="plotC1"></div>
+          <div class="legend">
+            <span><i class="swatch" style="background:var(--flux)"></i>rate per unit reactor volume</span>
+            <span><i class="swatch" style="background:var(--temp)"></i>rate per individual pellet</span>
+            <span><i class="swatch" style="background:var(--ink-soft)"></i>the size you have now</span>
+          </div>
+        </div>
+        <div class="card" style="margin-top:18px">
+          <h2>Non-spherical pellets: R<sub>eq</sub> = 3V<sub>p</sub>/S<sub>p</sub></h2>
+          <div class="body"><div id="cShapes"></div></div>
+          <p class="hint">Every shape is replaced by the sphere that has the same volume-to-surface ratio</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Controls</h2>
+        <div class="body">
+          <div class="ctl">
+            <label for="cR">Pellet radius R <span class="val" id="cRv"></span></label>
+            <input type="range" id="cR" min="0.1" max="12" step="0.05" value="3">
+          </div>
+          <div class="ctl">
+            <label for="cRef">Compare against R<sub>ref</sub> <span class="val" id="cRefv"></span></label>
+            <input type="range" id="cRef" min="0.1" max="12" step="0.05" value="3">
+          </div>
+          <div class="ctl">
+            <label for="cA">Internal area a <span class="val" id="cAv"></span></label>
+            <input type="range" id="cA" min="5" max="9" step="0.02" value="7">
+          </div>
+          <div class="ctl">
+            <label for="cK">Rate constant k₁″ <span class="val" id="cKv"></span></label>
+            <input type="range" id="cK" min="-9" max="-3" step="0.02" value="-6">
+          </div>
+          <div class="ctl">
+            <label for="cD">Effective diffusivity D<sub>A</sub> <span class="val" id="cDv"></span></label>
+            <input type="range" id="cD" min="-8" max="-4" step="0.02" value="-6">
+          </div>
+
+          <div class="divider"></div>
+          <div class="eqn">
+            <div class="row"><span class="k">Λ now</span><span class="v" id="cLam"></span></div>
+            <div class="row"><span class="k">η now</span><span class="v flux" id="cEta"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">rate per pellet</span><span class="v temp big" id="cPer"></span></div>
+            <div class="row"><span class="k">rate per reactor volume</span><span class="v flux big" id="cVol"></span></div>
+            <div class="row"><span class="k">pellets per reactor</span><span class="v" id="cCount"></span></div>
+            <div class="fracline"></div>
+            <div class="row"><span class="k">pressure drop, roughly</span><span class="v" id="cDp"></span></div>
+            <div class="row"><span class="k">verdict</span><span id="cFlag"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note" id="noteC"></p>
+  </section>
+
+  <p class="foot">Companion to the ChE 319 Topic 22 study guide. First-order kinetics throughout, isothermal pellet, constant effective diffusivity. Defaults are the guide's worked pellet: R = 3 mm, a = 1×10⁷ m⁻¹, k₁″ = 1×10⁻⁶ m/s, D<sub>A</sub> = 1×10⁻⁶ m²/s, giving Λ = 9.49 and η = 0.283. Careful with the two rate constants: k₁″ in m/s is per unit catalyst <em>area</em>, while k₁″a in s⁻¹ is per unit pellet <em>volume</em> — mixing them up is the commonest way to get Λ wrong by orders of magnitude. The pressure-drop estimate is the Ergun turbulent term's ΔP ∝ 1/d<sub>p</sub> scaling, shown only to make the trade-off visible; it is not a design calculation.</p>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   Shared helpers for the ChE 319/353 explorer set.
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b) => Math.min(b, Math.max(a, v));
+const TAU = Math.PI*2;
+
+function sup(n){
+  const m={"-":"⁻","0":"⁰","1":"¹","2":"²","3":"³",
+           "4":"⁴","5":"⁵","6":"⁶","7":"⁷","8":"⁸","9":"⁹"};
+  return String(n).split("").map(c=>m[c]||c).join("");
+}
+function fmt(v,d){
+  if(!isFinite(v)) return "—";
+  if(v===0) return "0";
+  const a=Math.abs(v);
+  if(a>=1e5||a<1e-3){ const e=Math.floor(Math.log10(a));
+    return (v/Math.pow(10,e)).toFixed(d===undefined?2:d)+"×10"+sup(e); }
+  if(a>=1000) return v.toFixed(0);
+  if(a>=100)  return v.toFixed(d===undefined?0:d);
+  if(a>=10)   return v.toFixed(d===undefined?1:d);
+  return v.toFixed(d===undefined?3:d);
+}
+/* Axis labels want the shortest honest spelling, not a fixed decimal count:
+   250 should read "250", not "250.00", and 5 should read "5", not "5.000".
+   toPrecision(6) first, to wash out binary artefacts like 0.30000000000000004,
+   then Number() to drop the trailing zeros it leaves behind. */
+function fmtTick(v){
+  if(!isFinite(v)) return "—";
+  if(v===0) return "0";
+  const a=Math.abs(v);
+  if(a>=1e5||a<1e-3){
+    const e=Math.floor(Math.log10(a)), m=v/Math.pow(10,e);
+    return (Math.abs(m-Math.round(m))<1e-9?String(Math.round(m)):m.toFixed(1))+"×10"+sup(e);
+  }
+  return String(Number(v.toPrecision(6)));
+}
+function ticks(lo,hi,count){
+  if(!(hi>lo)) return [lo];
+  const raw=(hi-lo)/count, mag=Math.pow(10,Math.floor(Math.log10(raw))), n=raw/mag;
+  const step=(n<1.5?1:n<3?2:n<7?5:10)*mag, out=[];
+  for(let t=Math.ceil(lo/step)*step; t<=hi+step*1e-9; t+=step) out.push(t);
+  return out;
+}
+
+/* ---------- SVG line plot ---------- */
+const PW=470, PH=250, PM={l:64,r:16,t:16,b:38};
+function drawPlot(host,cfg){
+  const iw=PW-PM.l-PM.r, ih=PH-PM.t-PM.b, NS=cfg.samples||300;
+  const logX=!!cfg.logX, logY=!!cfg.logY, {x0,x1}=cfg;
+  const xAt=i=>logX?Math.pow(10,Math.log10(x0)+(Math.log10(x1)-Math.log10(x0))*i/NS)
+                   :x0+(x1-x0)*i/NS;
+  const data=(cfg.series||[]).map(s=>{
+    const pts=[];
+    for(let i=0;i<=NS;i++){
+      const x=xAt(i);
+      if(s.xmin!==undefined&&x<s.xmin) continue;
+      if(s.xmax!==undefined&&x>s.xmax) continue;
+      const y=s.f(x);
+      if(isFinite(y)&&(!logY||y>0)) pts.push([x,y]);
+    }
+    return Object.assign({},s,{pts:pts});
+  });
+  let ylo=Infinity,yhi=-Infinity;
+  data.forEach(s=>s.pts.forEach(p=>{ if(p[1]<ylo)ylo=p[1]; if(p[1]>yhi)yhi=p[1]; }));
+  (cfg.points||[]).forEach(p=>{ if(logY&&p.y<=0)return; if(p.y<ylo)ylo=p.y; if(p.y>yhi)yhi=p.y; });
+  (cfg.bars||[]).forEach(b=>{ if(b.y>yhi)yhi=b.y; if(b.y<ylo)ylo=Math.min(ylo,0); });
+  if(!isFinite(ylo)){ylo=0;yhi=1;}
+  if(cfg.yMin!==undefined) ylo=cfg.yMin;
+  if(cfg.yMax!==undefined) yhi=cfg.yMax;
+  else if(logY) yhi*=1.7; else yhi+=(yhi-ylo)*0.12||1;
+  if(!logY&&cfg.yMin===undefined) ylo = ylo>0 ? 0 : ylo-(yhi-ylo)*0.08;
+  if(logY) ylo=Math.max(ylo/1.7,yhi/1e9);
+  if(yhi===ylo) yhi=ylo+1;
+
+  const X=logX?v=>PM.l+(Math.log10(Math.max(v,x0))-Math.log10(x0))/(Math.log10(x1)-Math.log10(x0))*iw
+             :v=>PM.l+(v-x0)/(x1-x0)*iw;
+  const Y=logY?v=>PM.t+ih-(Math.log10(Math.max(v,ylo))-Math.log10(ylo))/(Math.log10(yhi)-Math.log10(ylo))*ih
+             :v=>PM.t+ih-(v-ylo)/(yhi-ylo)*ih;
+
+  let s='<svg viewBox="0 0 '+PW+' '+PH+'" width="100%" role="img" aria-label="'+(cfg.aria||"plot")+'" style="display:block">';
+  (cfg.regions||[]).forEach(rg=>{
+    const a=clamp(X(rg.x0),PM.l,PM.l+iw), b=clamp(X(rg.x1),PM.l,PM.l+iw);
+    if(b>a) s+='<rect x="'+a.toFixed(1)+'" y="'+PM.t+'" width="'+(b-a).toFixed(1)+'" height="'+ih+'" fill="'+rg.fill+'"/>';
+  });
+  (cfg.areas||[]).forEach(ar=>{
+    const lo=ar.x0!==undefined?ar.x0:x0, hi=ar.x1!==undefined?ar.x1:x1;
+    if(hi<=lo) return;
+    const base=Y(clamp(0,ylo,yhi));
+    let d="M "+X(lo).toFixed(1)+" "+base.toFixed(1)+" ";
+    for(let i=0;i<=160;i++){ const x=lo+(hi-lo)*i/160; d+="L "+X(x).toFixed(1)+" "+Y(ar.f(x)).toFixed(1)+" "; }
+    d+="L "+X(hi).toFixed(1)+" "+base.toFixed(1)+" Z";
+    s+='<path d="'+d+'" fill="'+ar.color+'"/>';
+  });
+  const yt=logY?(function(){const o=[];for(let e=Math.ceil(Math.log10(ylo));e<=Math.log10(yhi);e++)o.push(Math.pow(10,e));return o;})()
+               :ticks(ylo,yhi,4);
+  yt.forEach(t=>{ const y=Y(t).toFixed(1);
+    s+='<line x1="'+PM.l+'" y1="'+y+'" x2="'+(PM.l+iw)+'" y2="'+y+'" stroke="#E4EAF1"/>';
+    s+='<text x="'+(PM.l-8)+'" y="'+y+'" text-anchor="end" dominant-baseline="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">'+fmtTick(t)+'</text>';});
+  const xt=cfg.xTicks||(logX?(function(){const o=[];for(let e=Math.ceil(Math.log10(x0));e<=Math.log10(x1);e++)o.push(Math.pow(10,e));return o;})()
+               :ticks(x0,x1,5));
+  xt.forEach(t=>{ const x=X(t).toFixed(1);
+    s+='<line x1="'+x+'" y1="'+(PM.t+ih)+'" x2="'+x+'" y2="'+(PM.t+ih+4)+'" stroke="#CBD5E1"/>';
+    s+='<text x="'+x+'" y="'+(PM.t+ih+17)+'" text-anchor="middle" font-size="10.5" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">'+fmtTick(t)+'</text>';});
+  if(!logY&&ylo<0&&yhi>0){
+    const yz=Y(0).toFixed(1);
+    s+='<line x1="'+PM.l+'" y1="'+yz+'" x2="'+(PM.l+iw)+'" y2="'+yz+'" stroke="#9AA7B6" stroke-width="1.3"/>';
+  }
+  s+='<line x1="'+PM.l+'" y1="'+PM.t+'" x2="'+PM.l+'" y2="'+(PM.t+ih)+'" stroke="#CBD5E1"/>';
+  s+='<line x1="'+PM.l+'" y1="'+(PM.t+ih)+'" x2="'+(PM.l+iw)+'" y2="'+(PM.t+ih)+'" stroke="#CBD5E1"/>';
+  /* stacked or plain bars, for budget-style charts */
+  (cfg.bars||[]).forEach(b=>{
+    const w=(b.w||0.6)*iw/((cfg.barCount)||1);
+    const cx=X(b.x), y0=Y(b.y0!==undefined?b.y0:0), y1=Y(b.y);
+    s+='<rect x="'+(cx-w/2).toFixed(1)+'" y="'+Math.min(y0,y1).toFixed(1)+'" width="'+w.toFixed(1)+
+       '" height="'+Math.abs(y1-y0).toFixed(1)+'" fill="'+b.color+'"'+(b.stroke?' stroke="'+b.stroke+'"':'')+'/>';
+    if(b.label) s+='<text x="'+cx.toFixed(1)+'" y="'+(Math.min(y0,y1)-4).toFixed(1)+
+       '" text-anchor="middle" font-size="10" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">'+b.label+'</text>';
+  });
+  /* Curves that run off the top or bottom (a flux blowing up near a
+     singularity, say) must be cut at the frame, not drawn across the axis
+     labels, so every series path goes inside a clip of the plot rectangle. */
+  const cid = "clip"+Math.random().toString(36).slice(2,9);
+  s+='<defs><clipPath id="'+cid+'"><rect x="'+PM.l+'" y="'+PM.t+'" width="'+iw+'" height="'+ih+'"/></clipPath></defs>';
+  s+='<g clip-path="url(#'+cid+')">';
+  /* A function with a pole jumps from +big to -big between two samples.
+     Joining those two points draws a spurious vertical line through the
+     asymptote, so any step bigger than the whole visible range starts a
+     fresh subpath instead. */
+  const jump = (yhi-ylo)*1.5;
+  data.forEach(sr=>{
+    if(!sr.pts.length) return;
+    let d="",pen=false,prev=null;
+    sr.pts.forEach(p=>{
+      if(prev!==null && Math.abs(p[1]-prev) > jump) pen=false;
+      d+=(pen?"L":"M")+X(p[0]).toFixed(1)+" "+Y(p[1]).toFixed(1)+" ";
+      pen=true; prev=p[1];
+    });
+    s+='<path d="'+d+'" fill="none" stroke="'+sr.color+'" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"'+
+       (sr.dash?' stroke-dasharray="'+sr.dash+'"':'')+'/>';
+  });
+  s+='</g>';
+  (cfg.marks||[]).forEach(mk=>{
+    const x=X(mk.x); if(x<PM.l-1||x>PM.l+iw+1) return;
+    s+='<line x1="'+x.toFixed(1)+'" y1="'+PM.t+'" x2="'+x.toFixed(1)+'" y2="'+(PM.t+ih)+'" stroke="#9AA7B6" stroke-dasharray="2 3"/>';
+    if(mk.label){
+      const anchor = x>PM.l+iw-36 ? "end" : x<PM.l+36 ? "start" : "middle";
+      const tx = anchor==="end" ? PM.l+iw : anchor==="start" ? PM.l : x;
+      s+='<text x="'+tx.toFixed(1)+'" y="'+(PM.t-4)+'" text-anchor="'+anchor+'" font-size="10" font-family="ui-monospace,Menlo,monospace" fill="#5A6675">'+mk.label+'</text>';
+    }
+  });
+  (cfg.points||[]).forEach(p=>{
+    if(logY&&p.y<=0) return;
+    s+='<circle cx="'+X(p.x).toFixed(1)+'" cy="'+Y(p.y).toFixed(1)+'" r="4.5" fill="'+p.color+'" stroke="#fff" stroke-width="1.5"/>';
+  });
+  if(cfg.cursor!==undefined){
+    const cx=X(cfg.cursor);
+    if(cx>=PM.l-0.5&&cx<=PM.l+iw+0.5){
+      s+='<line x1="'+cx.toFixed(1)+'" y1="'+PM.t+'" x2="'+cx.toFixed(1)+'" y2="'+(PM.t+ih)+'" stroke="#16305C" stroke-width="1.4"/>';
+      data.forEach(sr=>{
+        if(sr.nocursor) return;
+        if(sr.xmin!==undefined&&cfg.cursor<sr.xmin) return;
+        if(sr.xmax!==undefined&&cfg.cursor>sr.xmax) return;
+        const v=sr.f(cfg.cursor);
+        if(isFinite(v)&&(!logY||v>0)){ const cy=Y(v);
+          if(cy>=PM.t-1&&cy<=PM.t+ih+1)
+            s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4" fill="'+sr.color+'" stroke="#fff" stroke-width="1.6"/>'; }
+      });
+    }
+  }
+  s+='<text x="'+(PM.l+iw/2)+'" y="'+(PH-5)+'" text-anchor="middle" font-size="11.5" fill="#5A6675">'+cfg.xLabel+'</text>';
+  s+='<text transform="translate(14,'+(PM.t+ih/2)+') rotate(-90)" text-anchor="middle" font-size="11.5" fill="#5A6675">'+cfg.yLabel+'</text>';
+  s+='</svg>';
+  host.innerHTML=s;
+}
+
+function fitCanvas(cv,cssH){
+  const dpr=window.devicePixelRatio||1, w=cv.parentElement.clientWidth;
+  cv.style.height=cssH+"px";
+  cv.width=Math.max(1,Math.round(w*dpr));
+  cv.height=Math.round(cssH*dpr);
+  const ctx=cv.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx:ctx,w:w,h:cssH};
+}
+/* linear ramp between colour stops, t in [0,1] */
+function ramp(t,stops){
+  t=clamp(t,0,1);
+  let a=stops[0],b=stops[stops.length-1];
+  for(let i=0;i<stops.length-1;i++){ if(t>=stops[i][0]&&t<=stops[i+1][0]){a=stops[i];b=stops[i+1];break;} }
+  const f=(t-a[0])/((b[0]-a[0])||1);
+  const c=a[1].map((v,i)=>Math.round(v+(b[1][i]-v)*f));
+  return "rgb("+c[0]+","+c[1]+","+c[2]+")";
+}
+const concColor = t => ramp(t,[[0,[237,241,246]],[0.5,[107,78,168]],[1,[22,48,92]]]);
+
+function bindRange(id,obj,key,after){
+  $(id).addEventListener("input",e=>{ obj[key]=parseFloat(e.target.value); after(); });
+}
+function bindCheck(id,obj,key,after){
+  $(id).addEventListener("change",e=>{ obj[key]=e.target.checked; after(); });
+}
+function bindSeg(id,onPick){
+  $(id).addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; onPick(b); });
+}
+function setSeg(id,attr,val){
+  [...$(id).querySelectorAll("button")].forEach(b=>
+    b.setAttribute("aria-pressed", String(b.dataset[attr]===String(val))));
+}
+function wireTabs(map,renderAll){
+  Object.keys(map).forEach(tid=>{
+    $(tid).addEventListener("click",()=>{
+      Object.keys(map).forEach(t=>{
+        const on=t===tid;
+        $(t).setAttribute("aria-selected",String(on));
+        $(map[t]).hidden=!on;
+      });
+      renderAll();
+    });
+  });
+  let rt;
+  window.addEventListener("resize",()=>{clearTimeout(rt);rt=setTimeout(renderAll,120);});
+}
+
+/* ============================================================
+   Topic 22 — Reaction and diffusion in porous catalyst pellets.
+   Lengths come off the sliders in mm; everything else is SI.
+   ============================================================ */
+
+/* cosh(a)/cosh(b) without ever forming cosh of a large number.
+   cosh(800) is Infinity in a double, but the ratio is a perfectly ordinary
+   number, so factor out e^(a-b) and keep both correction terms bounded. */
+function coshRatio(a,b){
+  if(b<1e-12) return 1;
+  return Math.exp(a-b)*(1+Math.exp(-2*a))/(1+Math.exp(-2*b));
+}
+/* sinh(a)/sinh(b), same trick.  Both arguments are non-negative here. */
+function sinhRatio(a,b){
+  if(b<1e-9) return b===0 ? 1 : a/b;
+  if(a<1e-12) return 0;
+  return Math.exp(a-b)*(1-Math.exp(-2*a))/(1-Math.exp(-2*b));
+}
+
+/* Pore / slab effectiveness.  tanh(h)/h is well conditioned all the way
+   down to zero, so no special case is needed at the small end. */
+const etaPore = h => h<1e-12 ? 1 : Math.tanh(h)/h;
+
+/* Sphere effectiveness.  The direct form subtracts 1 from a number that is
+   1 + L^2/3, so below L ~ 1e-2 the cancellation eats the answer entirely —
+   it returns a flat 0 by L = 1e-8.  Use the series there instead. */
+function etaSphere(L){
+  if(L<1e-2) return 1 - L*L/15 + 2*Math.pow(L,4)/315;
+  return (3/(L*L))*(L/Math.tanh(L) - 1);
+}
+/* Reactant left at the dead centre of a sphere: the r -> 0 limit of
+   (R/r) sinh(mr)/sinh(mR), which is just Lambda/sinh(Lambda). */
+function centreConc(L){
+  if(L<1e-6) return 1;
+  if(L>700)  return 0;                 // sinh would overflow; the core is empty
+  return L/Math.sinh(L);
+}
+
+/* Depth (as a fraction of the way in) at which C has fallen to `frac`.
+   Scanned rather than solved, so it cannot fail to converge. */
+function depthTo(profile,frac){
+  let prev=profile(0);
+  for(let i=1;i<=400;i++){
+    const z=i/400, cur=profile(z);
+    if(cur<=frac){
+      const t=(prev-frac)/((prev-cur)||1);
+      return (i-1+t)/400;
+    }
+    prev=cur;
+  }
+  return 1;
+}
+
+/* ---------------- Panel A: the single pore ---------------- */
+const A = {L:1, logRp:-8, logK:-6, logD:-6};
+
+function pore(s){
+  const L=s.L/1000, rp=Math.pow(10,s.logRp),
+        k=Math.pow(10,s.logK), D=Math.pow(10,s.logD);
+  const b=Math.sqrt(2*k/(rp*D)), hT=b*L;
+  /* insulated-tip fin solution: cosh of the distance from the DEAD END */
+  const prof = z => coshRatio(hT*(1-z), hT);
+  return {L:L, rp:rp, k:k, D:D, b:b, hT:hT, eta:etaPore(hT),
+          prof:prof, cEnd:coshRatio(0,hT), depth:depthTo(prof,0.1)};
+}
+
+function drawPore(p){
+  const cv=$("cvA"); if(!cv||!cv.parentElement.clientWidth) return;
+  const {ctx,w,h}=fitCanvas(cv,172);
+  ctx.clearRect(0,0,w,h);
+  const x0=46, x1=w-54, cy=76, rad=34;
+  for(let i=0;i<180;i++){
+    const z=i/179, x=x0+(x1-x0)*i/179;
+    ctx.fillStyle=concColor(clamp(p.prof(z),0,1));
+    ctx.fillRect(x,cy-rad,(x1-x0)/179+1,2*rad);
+  }
+  ctx.strokeStyle="#5A6675"; ctx.lineWidth=2.2;
+  ctx.beginPath(); ctx.moveTo(x0,cy-rad); ctx.lineTo(x1,cy-rad); ctx.lineTo(x1,cy+rad);
+  ctx.lineTo(x0,cy+rad); ctx.stroke(); ctx.lineWidth=1;
+  /* reactant arriving at the mouth */
+  ctx.strokeStyle="#16305C"; ctx.fillStyle="#16305C"; ctx.lineWidth=2.2;
+  ctx.beginPath(); ctx.moveTo(x0-34,cy); ctx.lineTo(x0-8,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x0-2,cy); ctx.lineTo(x0-11,cy-4.5); ctx.lineTo(x0-11,cy+4.5);
+  ctx.closePath(); ctx.fill(); ctx.lineWidth=1;
+  /* where the pore stops earning */
+  if(p.depth<0.995){
+    const xd=x0+(x1-x0)*p.depth;
+    ctx.strokeStyle="#B3202B"; ctx.setLineDash([4,3]); ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.moveTo(xd,cy-rad-8); ctx.lineTo(xd,cy+rad+8); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineWidth=1;
+    ctx.fillStyle="#B3202B"; ctx.font="600 11px ui-sans-serif,system-ui,sans-serif";
+    ctx.textAlign = p.depth>0.62 ? "right" : "left";
+    ctx.fillText("90% consumed by here", xd+(p.depth>0.62?-6:6), cy-rad-14);
+  }
+  ctx.fillStyle="#5A6675"; ctx.font="11.5px ui-monospace,Menlo,monospace";
+  ctx.textAlign="center";
+  ctx.fillText("mouth", x0, cy+rad+20);
+  ctx.fillText("dead end", x1, cy+rad+20);
+  ctx.fillText("z = 0", x0, cy+rad+36);
+  ctx.fillText("z = L", x1, cy+rad+36);
+  ctx.textAlign="left";
+  ctx.fillStyle="#16305C"; ctx.font="600 12px ui-monospace,Menlo,monospace";
+  ctx.fillText("h_T = "+fmt(p.hT,2)+"    η = "+fmt(p.eta,3), x0, 24);
+}
+
+function renderA(){
+  const p=pore(A);
+  $("aLv").textContent=fmt(A.L,2)+" mm";
+  $("aRpv").textContent=fmt(p.rp,2)+" m  ("+fmt(p.rp*1e9,1)+" nm)";
+  $("aKv").textContent=fmt(p.k,2)+" m/s";
+  $("aDv").textContent=fmt(p.D,2)+" m²/s";
+  $("aB").textContent=fmt(p.b,3)+" m⁻¹";
+  $("aHt").textContent=fmt(p.hT,3);
+  $("aEta").textContent=fmt(p.eta,4);
+  $("aCend").textContent=fmt(p.cEnd,4)+" of Cᴀ₀";
+  $("aDepth").textContent=p.depth>=0.995 ? "the whole pore"
+    : fmt(p.depth*A.L,3)+" mm of "+fmt(A.L,2)+" mm";
+  $("aAsym").textContent=fmt(1/p.hT,4);
+  $("aReg").innerHTML = p.hT<0.4 ? '<span class="flag ok">reaction-limited</span>'
+    : p.hT<3 ? '<span class="flag warn">both matter</span>'
+             : '<span class="flag bad">diffusion-limited</span>';
+  drawPore(p);
+
+  drawPlot($("plotA1"),{
+    x0:0, x1:1, xLabel:"z/L,  mouth at 0", yLabel:"Cᴀ / Cᴀ₀",
+    aria:"Reactant concentration down the pore.",
+    samples:240, yMin:0, yMax:1,
+    areas:[{f:z=>p.prof(z), x0:0, x1:1, color:"rgba(22,48,92,0.10)"}],
+    series:[
+      {f:()=>1,       color:"#5A6675", dash:"5 4", nocursor:true},
+      {f:z=>p.prof(z),color:"#16305C"}
+    ]
+  });
+
+  drawPlot($("plotA2"),{
+    x0:0.05, x1:60, logX:true, logY:true,
+    xLabel:"Thiele modulus h_T", yLabel:"effectiveness η",
+    aria:"Effectiveness factor against Thiele modulus for a single pore.",
+    samples:200, cursor:clamp(p.hT,0.05,60),
+    series:[
+      {f:x=>etaPore(x), color:"#0F7A6E"},
+      {f:x=>1/x,        color:"#5A6675", dash:"5 4", nocursor:true, xmin:1}
+    ],
+    points:[{x:clamp(p.hT,0.05,60), y:p.eta, color:"#0F7A6E"}],
+    marks:[{x:clamp(p.hT,0.05,60), label:"h_T"}]
+  });
+
+  $("noteA").className = p.hT>3 ? "note caution" : "note";
+  $("noteA").innerHTML = p.hT<0.4
+    ? "<b>Reaction-limited: the pore is nearly uniform.</b> With h<sub>T</sub> = "+fmt(p.hT,3)+
+      ", diffusion delivers reactant far faster than the walls can consume it, so the concentration "+
+      "barely drops over the whole length and η = "+fmt(p.eta,4)+" — essentially every square metre "+
+      "of catalyst is working at the full surface rate. <b>This is the regime you want</b>, and it is also "+
+      "the regime where measuring the kinetics tells you about the chemistry rather than about the "+
+      "plumbing. Push h<sub>T</sub> up and watch that change."
+    : p.hT<3
+    ? "<b>Both processes matter, which is the awkward middle.</b> At h<sub>T</sub> = "+fmt(p.hT,3)+
+      " the concentration has fallen to "+fmt(p.cEnd,3)+" of its mouth value by the dead end, and "+
+      "η = "+fmt(p.eta,4)+". Neither limiting approximation is safe here — you cannot pretend the pore "+
+      "is uniform, and the 1/h<sub>T</sub> asymptote is still "+fmt(100*(1/p.hT)/p.eta,0)+"% off. "+
+      "<b>Note that h<sub>T</sub> is not a property of the chemistry alone:</b> it bundles the rate constant, "+
+      "the diffusivity, the pore radius and the pore length into one number. Doubling the pore length "+
+      "doubles h<sub>T</sub> just as surely as quadrupling the rate constant does."
+    : "<b>Diffusion-limited: most of this pore is a wasted investment.</b> The reactant is 90% consumed "+
+      "within "+fmt(p.depth*A.L,3)+" mm of the mouth, and at the dead end the concentration is "+
+      fmt(p.cEnd,3)+" of its entry value — the far reaches of the pore are impregnated with expensive "+
+      "catalyst that never sees a reactant molecule. η has collapsed to "+fmt(p.eta,4)+
+      ", and the curve has joined its 1/h<sub>T</sub> asymptote ("+fmt(1/p.hT,4)+"), which is the signature "+
+      "of this regime. <b>Watch what happens to the measured rate here:</b> since η ≈ 1/h<sub>T</sub> and "+
+      "h<sub>T</sub> ∝ √k, the observed rate goes as √k rather than k. A kineticist who measures an "+
+      "activation energy in this regime gets <i>half</i> the true one, and concludes the wrong chemistry.";
+}
+
+/* ---------------- Panel B: the spherical pellet ---------------- */
+const B = {R:3, logA:7, logK:-6, logD:-6};
+
+function pellet(s){
+  const R=s.R/1000, a=Math.pow(10,s.logA),
+        k=Math.pow(10,s.logK), D=Math.pow(10,s.logD);
+  const ka=k*a, m=Math.sqrt(ka/D), Lam=m*R;
+  /* C_A(r)/C_AR = (R/r) sinh(m r)/sinh(m R), written in rho = r/R */
+  const prof = rho => rho<1e-9 ? centreConc(Lam) : sinhRatio(Lam*rho,Lam)/rho;
+  return {R:R, a:a, k:k, D:D, ka:ka, Lam:Lam, eta:etaSphere(Lam),
+          etaP:etaPore(Lam), prof:prof, cCentre:centreConc(Lam),
+          /* measure the live shell inward from the surface */
+          shell:1-depthTo(r=>prof(1-r),0.1)};
+}
+
+function drawPellet(p){
+  const cv=$("cvB"); if(!cv||!cv.parentElement.clientWidth) return;
+  const {ctx,w,h}=fitCanvas(cv,246);
+  ctx.clearRect(0,0,w,h);
+  const cx=w/2, cy=h/2-4, Rpx=Math.min(h*0.40,w*0.30);
+  /* concentric rings, outside in, so the shading is a true radial profile */
+  for(let i=70;i>=1;i--){
+    const rho=i/70;
+    ctx.beginPath(); ctx.arc(cx,cy,Rpx*rho,0,TAU);
+    ctx.fillStyle=concColor(clamp(p.prof(rho),0,1)); ctx.fill();
+  }
+  ctx.strokeStyle="#5A6675"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(cx,cy,Rpx,0,TAU); ctx.stroke(); ctx.lineWidth=1;
+  /* the 10% contour: everything inside it is effectively dead */
+  const rho10=1-p.shell;
+  if(rho10>0.02&&rho10<0.985){
+    ctx.strokeStyle="#B3202B"; ctx.setLineDash([4,3]); ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.arc(cx,cy,Rpx*rho10,0,TAU); ctx.stroke();
+    ctx.setLineDash([]); ctx.lineWidth=1;
+  }
+  ctx.strokeStyle="#16305C"; ctx.fillStyle="#16305C"; ctx.lineWidth=2;
+  for(let j=0;j<8;j++){
+    const th=j*TAU/8, sx=cx+Math.cos(th)*(Rpx+30), sy=cy+Math.sin(th)*(Rpx+30);
+    const ex=cx+Math.cos(th)*(Rpx+8), ey=cy+Math.sin(th)*(Rpx+8);
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+Math.cos(th)*(Rpx+2),cy+Math.sin(th)*(Rpx+2));
+    ctx.lineTo(ex-Math.cos(th+0.35)*7,ey-Math.sin(th+0.35)*7);
+    ctx.lineTo(ex-Math.cos(th-0.35)*7,ey-Math.sin(th-0.35)*7);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.lineWidth=1;
+  ctx.fillStyle="#16305C"; ctx.font="600 12px ui-monospace,Menlo,monospace";
+  ctx.textAlign="left";
+  ctx.fillText("Λ = "+fmt(p.Lam,2)+"    η = "+fmt(p.eta,3), 14, 20);
+  ctx.fillStyle="#5A6675"; ctx.font="11.5px ui-monospace,Menlo,monospace";
+  ctx.fillText("centre: "+fmt(p.cCentre,4)+" of surface", 14, h-10);
+  ctx.textAlign="right";
+  ctx.fillText("live shell: outer "+(100*p.shell).toFixed(0)+"%", w-14, h-10);
+  ctx.textAlign="left";
+}
+
+function renderB(){
+  const p=pellet(B);
+  $("bRv").textContent=fmt(B.R,2)+" mm";
+  $("bAv").textContent=fmt(p.a,2)+" m⁻¹";
+  $("bKv").textContent=fmt(p.k,2)+" m/s";
+  $("bDv").textContent=fmt(p.D,2)+" m²/s";
+  $("bKa").textContent=fmt(p.ka,2)+" s⁻¹";
+  $("bLam").textContent=fmt(p.Lam,3);
+  $("bEta").textContent=fmt(p.eta,4);
+  $("bEtaP").textContent=fmt(p.etaP,4);
+  $("bCc").textContent=fmt(p.cCentre,4)+" of Cᴀᴿ";
+  $("bShell").textContent=p.shell>=0.995 ? "the whole pellet"
+    : fmt(p.shell*B.R,4)+" mm of "+fmt(B.R,2)+" mm";
+  /* volume fraction of the pellet inside the 10% contour */
+  const deadVol=Math.pow(1-p.shell,3);
+  $("bDead").textContent=(100*deadVol).toFixed(1)+"% of the volume";
+  $("bReg").innerHTML = p.Lam<0.4 ? '<span class="flag ok">reaction-limited</span>'
+    : p.Lam<3 ? '<span class="flag warn">both matter</span>'
+              : '<span class="flag bad">diffusion-limited</span>';
+  drawPellet(p);
+
+  drawPlot($("plotB1"),{
+    x0:0, x1:1, xLabel:"r/R,  centre at 0", yLabel:"Cᴀ / Cᴀᴿ",
+    aria:"Reactant concentration against radius inside the pellet.",
+    samples:240, yMin:0, yMax:1,
+    areas:[{f:r=>p.prof(r), x0:0, x1:1, color:"rgba(22,48,92,0.10)"}],
+    series:[
+      {f:r=>p.prof(r), color:"#16305C"},
+      {f:()=>0.1,      color:"#B3202B", dash:"3 3", nocursor:true}
+    ]
+  });
+
+  drawPlot($("plotB2"),{
+    x0:0.05, x1:60, logX:true, logY:true,
+    xLabel:"modulus Λ", yLabel:"effectiveness η",
+    aria:"Sphere and pore effectiveness curves against the modulus, with the three-over-lambda asymptote.",
+    samples:200, cursor:clamp(p.Lam,0.05,60),
+    series:[
+      {f:x=>etaSphere(x), color:"#16305C"},
+      {f:x=>etaPore(x),   color:"#0F7A6E"},
+      {f:x=>3/x,          color:"#5A6675", dash:"5 4", nocursor:true, xmin:1}
+    ],
+    points:[{x:clamp(p.Lam,0.05,60), y:p.eta, color:"#16305C"}],
+    marks:[{x:clamp(p.Lam,0.05,60), label:"Λ"}]
+  });
+
+  $("noteB").className = p.Lam>3 ? "note caution" : "note";
+  $("noteB").innerHTML =
+    "<b>Compare the two curves in the right-hand plot.</b> At small modulus they sit on top of each other "+
+    "— when nothing is limiting, shape does not matter. At large modulus they separate by exactly a "+
+    "factor of three, because the sphere tends to 3/Λ while the pore tends to 1/Λ. "+
+    "<b>That factor of three is pure geometry:</b> a sphere presents three times the surface per unit "+
+    "volume that a slab of the same characteristic length does, so when only a thin skin is active the "+
+    "sphere has three times as much skin to work with. "+
+    "Right now Λ = "+fmt(p.Lam,3)+", η = "+fmt(p.eta,4)+", and the centre of the pellet sits at "+
+    fmt(p.cCentre,4)+" of the surface concentration"+
+    (p.cCentre<0.01 ? " — which is to say it is empty. The inner "+(100*Math.pow(1-p.shell,3)).toFixed(0)+
+      "% of the pellet's volume is inert ballast." : ".")+
+    " <b>The derivation is worth remembering as a trick, not a formula:</b> substitute C<sub>A</sub> = "+
+    "C<sub>AR</sub>f(r)/r and the spherical equation collapses to f″ = (k₁″a/D<sub>A</sub>)f — the fin "+
+    "equation from Topic 4, which you have already solved twice this semester.";
+}
+
+/* ---------------- Panel C: sizing ---------------- */
+const C = {R:3, Rref:3, logA:7, logK:-6, logD:-6};
+const lamOf = (Rmm,s) => (Rmm/1000)*Math.sqrt(Math.pow(10,s.logK)*Math.pow(10,s.logA)/Math.pow(10,s.logD));
+
+function renderC(){
+  const lam=lamOf(C.R,C), eta=etaSphere(lam);
+  const lamR=lamOf(C.Rref,C), etaR=etaSphere(lamR);
+  /* rate per pellet goes as R^3 * eta; per reactor volume the R^3 cancels
+     against how many pellets fit, leaving eta alone. */
+  const perPellet=Math.pow(C.R/C.Rref,3)*eta/etaR;
+  const perVolume=eta/etaR;
+  const count=Math.pow(C.Rref/C.R,3);
+  $("cRv").textContent=fmt(C.R,2)+" mm";
+  $("cRefv").textContent=fmt(C.Rref,2)+" mm";
+  $("cAv").textContent=fmt(Math.pow(10,C.logA),2)+" m⁻¹";
+  $("cKv").textContent=fmt(Math.pow(10,C.logK),2)+" m/s";
+  $("cDv").textContent=fmt(Math.pow(10,C.logD),2)+" m²/s";
+  $("cLam").textContent=fmt(lam,3);
+  $("cEta").textContent=fmt(eta,4);
+  $("cPer").textContent="×"+fmt(perPellet,3);
+  $("cVol").textContent="×"+fmt(perVolume,3);
+  $("cCount").textContent="×"+fmt(count,2);
+  $("cDp").textContent="×"+fmt(C.Rref/C.R,2);
+  $("cFlag").innerHTML = perVolume>1.05 ? '<span class="flag ok">more productive per m³</span>'
+    : perVolume<0.95 ? '<span class="flag bad">less productive per m³</span>'
+                     : '<span class="flag warn">about the same</span>';
+
+  drawPlot($("plotC1"),{
+    x0:0.1, x1:12, xLabel:"pellet radius R  (mm)", yLabel:"relative rate",
+    aria:"Rate per pellet and rate per reactor volume against pellet radius.",
+    samples:260, cursor:C.R, logY:true,
+    series:[
+      {f:R=>etaSphere(lamOf(R,C))/etaR, color:"#0F7A6E"},
+      {f:R=>Math.pow(R/C.Rref,3)*etaSphere(lamOf(R,C))/etaR, color:"#B3202B"}
+    ],
+    marks:[{x:C.Rref,label:"Rᵣₑᶠ"},{x:C.R,label:"R"}],
+    points:[{x:C.R,y:perVolume,color:"#0F7A6E"},{x:C.R,y:perPellet,color:"#B3202B"}]
+  });
+
+  /* R_eq = 3 V_p / S_p for the three shapes the lecture mentions */
+  const shapes=[
+    ["Sphere, radius 3 mm", 3],
+    ["Cylinder, r = 1 mm, L = 10 mm", 3*(Math.PI*1*1*10)/(2*Math.PI*1*10+2*Math.PI*1*1)],
+    ["Cylinder, r = 1 mm, L = 2 mm", 3*(Math.PI*1*1*2)/(2*Math.PI*1*2+2*Math.PI*1*1)],
+    ["Slab, half-thickness 1 mm", 3*1]
+  ];
+  let t='<table class="tbl"><thead><tr><th>Shape</th><th>R<sub>eq</sub> (mm)</th>'+
+        '<th>Λ</th><th>η</th></tr></thead><tbody>';
+  shapes.forEach(([name,Req])=>{
+    const l=lamOf(Req,C);
+    t+='<tr><td>'+name+'</td><td>'+fmt(Req,3)+'</td><td>'+fmt(l,2)+
+       '</td><td>'+fmt(etaSphere(l),3)+'</td></tr>';
+  });
+  t+='</tbody></table>';
+  $("cShapes").innerHTML=t;
+
+  $("noteC").className="note";
+  $("noteC").innerHTML =
+    "<b>The two curves cross nothing and tell opposite stories.</b> Shrink the pellet and the green "+
+    "curve climbs — each cubic metre of reactor does more work, because η rises and the number of "+
+    "pellets rises to match. The red curve falls, steeply, because an individual pellet has R³ less "+
+    "material in it. Going from "+fmt(C.Rref,2)+" mm to "+fmt(C.R,2)+" mm, each pellet does "+
+    fmt(perPellet,3)+" times as much work, but you fit "+fmt(count,2)+" times as many in, so the "+
+    "reactor as a whole does <b>"+fmt(perVolume,3)+" times</b> as much. "+
+    "<b>Rate per reactor volume is proportional to η and nothing else</b>, which is why maximising "+
+    "η is the same thing as minimising how big a reactor you have to buy. "+
+    "So why not grind the catalyst to dust? <b>Pressure drop.</b> Packed-bed ΔP scales roughly as "+
+    "1/d<sub>p</sub>, so the compressor bill climbs as fast as the reactor shrinks, and somewhere around "+
+    "1–5 mm the two meet. That is why industrial pellets are the size they are. "+
+    "The table below handles the shapes that are not spheres: replace any pellet by the sphere with the "+
+    "same volume-to-surface ratio, R<sub>eq</sub> = 3V<sub>p</sub>/S<sub>p</sub>, and the one η curve serves "+
+    "for all of them. Aris showed the residual spread between shapes is smaller than the uncertainty "+
+    "already sitting in D<sub>A</sub> and a.";
+}
+
+/* ---------------- wiring ---------------- */
+function renderAll(){ renderA(); renderB(); renderC(); }
+
+["aL","aRp","aK","aD"].forEach((id,i)=>bindRange(id,A,["L","logRp","logK","logD"][i],renderA));
+$("aReset").addEventListener("click",()=>{
+  Object.assign(A,{L:1,logRp:-8,logK:-6,logD:-6});
+  $("aL").value=1; $("aRp").value=-8; $("aK").value=-6; $("aD").value=-6;
+  renderA();
+});
+
+["bR","bA","bK","bD"].forEach((id,i)=>bindRange(id,B,["R","logA","logK","logD"][i],renderB));
+$("bLec").addEventListener("click",()=>{
+  Object.assign(B,{R:3,logA:7,logK:-6,logD:-6});
+  $("bR").value=3; $("bA").value=7; $("bK").value=-6; $("bD").value=-6;
+  renderB();
+});
+
+["cR","cRef","cA","cK","cD"].forEach((id,i)=>
+  bindRange(id,C,["R","Rref","logA","logK","logD"][i],renderC));
+
+wireTabs({"tab-a":"p-a","tab-b":"p-b","tab-c":"p-c"},renderAll);
+$("p-b").hidden=true; $("p-c").hidden=true;
+renderAll();
+
+</script>
+</body>
+</html>
