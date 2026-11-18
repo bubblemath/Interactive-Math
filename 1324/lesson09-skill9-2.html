@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill 9.2 Solving Minimization Problems</title>
+<!-- MathJax draws the equations. Pinned version; if it cannot load (offline), the page uses its own simpler typesetting. -->
+<script>
+window.MathJax = {
+  startup: { typeset: false, ready() {
+    MathJax.startup.defaultReady();
+    MathJax.startup.promise.then(() => {
+      document.head.appendChild(MathJax.svgStylesheet());          // styles for the drawn equations
+      window.mjReady = true; window.dispatchEvent(new Event("mathjax-ready"));
+    });
+  } },
+  svg: { fontCache: "none" },                                      // each equation is self-contained
+  options: { enableMenu: false, renderActions: { assistiveMml: [] } } // screen readers use our plain-text label instead
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-svg.js" async></script>
+<style>
+/* ===== Color tokens: light by default, dark when the device asks for it ===== */
+:root {
+  --bg: #f7f8fa; --panel: #ffffff; --ink: #1b1f24; --muted: #555d68; --line: #d5dae1;
+  --accent: #1f4e79; --accent-ink: #ffffff; --accent-soft: #e6eef7;
+  --curve: #1f4e79; --curve2: #b4461f; --grid: #e3e6ea; --axis: #222;
+  --dom: rgba(31, 78, 121, .18); --rng: rgba(180, 70, 31, .18); --asym: #8a1c1c;
+  --ok: #1d6b35; --ok-soft: #e4f3e8; --bad: #9b1c1c; --bad-soft: #fbe9e9; --hint-soft: #fff6dd;
+  --focus: #f0b400;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171b; --panel: #1d2127; --ink: #e9ecf0; --muted: #a7b0bb; --line: #343a43;
+    --accent: #7db3e8; --accent-ink: #0d1a26; --accent-soft: #1f2e3d;
+    --curve: #7db3e8; --curve2: #f0a07c; --grid: #2a3038; --axis: #cfd5dc;
+    --dom: rgba(125, 179, 232, .22); --rng: rgba(240, 160, 124, .22); --asym: #ff8f8f;
+    --ok: #7fd49a; --ok-soft: #1c3324; --bad: #ff9a9a; --bad-soft: #3a1f1f; --hint-soft: #3a3320;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171b; --panel: #1d2127; --ink: #e9ecf0; --muted: #a7b0bb; --line: #343a43;
+  --accent: #7db3e8; --accent-ink: #0d1a26; --accent-soft: #1f2e3d;
+  --curve: #7db3e8; --curve2: #f0a07c; --grid: #2a3038; --axis: #cfd5dc;
+  --dom: rgba(125, 179, 232, .22); --rng: rgba(240, 160, 124, .22); --asym: #ff8f8f;
+  --ok: #7fd49a; --ok-soft: #1c3324; --bad: #ff9a9a; --bad-soft: #3a1f1f; --hint-soft: #3a3320;
+}
+
+/* ===== Page layout ===== */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+a { color: var(--accent); }
+.skip { position: absolute; left: -9999px; }
+.skip:focus { left: 16px; top: 8px; background: var(--panel); padding: 8px 12px; z-index: 10; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+header.top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+header.top .crumb { font-size: 15px; color: var(--muted); }
+h1 { font-size: 28px; margin: 4px 0 4px; line-height: 1.2; }
+h2 { font-size: 21px; margin: 0 0 10px; }
+h3 { font-size: 18px; margin: 18px 0 8px; }
+.objective { background: var(--accent-soft); border-left: 5px solid var(--accent); padding: 10px 14px; border-radius: 6px; margin: 10px 0 16px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.muted { color: var(--muted); }
+button, select { font: inherit; }
+.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+.btn.secondary { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* ===== Tabs ===== */
+[role="tablist"] { display: flex; gap: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; overflow-x: auto; }
+[role="tab"] { background: none; border: 0; border-bottom: 4px solid transparent; padding: 10px 16px; font-weight: 600;
+  color: var(--muted); cursor: pointer; margin-bottom: -2px; white-space: nowrap; }
+[role="tab"][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+/* ===== Explore ===== */
+.explore { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 820px) { .explore { grid-template-columns: 1fr; } }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.gallery button { background: var(--panel); border: 2px solid var(--line); border-radius: 8px; padding: 4px 4px 6px; cursor: pointer;
+  color: var(--ink); font-size: 13px; line-height: 1.25; }
+.gallery button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.gallery svg { width: 100%; height: auto; display: block; }
+.graph { width: 100%; height: auto; display: block; background: var(--panel); border-radius: 8px; }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0; }
+.toggles label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.toggles input { width: 18px; height: 18px; accent-color: var(--accent); }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0; }
+.facts dt { font-weight: 600; color: var(--muted); }
+.facts dd { margin: 0; }
+.eq { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; color: var(--muted); margin-top: 4px; }
+.swatch { display: inline-block; width: 26px; height: 0; border-top: 3px solid var(--curve); vertical-align: middle; margin-right: 6px; }
+.swatch.second { border-top: 3px dashed var(--curve2); }
+.swatch.band { height: 12px; border: 0; }
+details { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 8px 0; background: var(--panel); }
+summary { cursor: pointer; font-weight: 600; }
+.desc { font-size: 15px; color: var(--muted); margin-top: 8px; }
+
+/* ===== Examples & practice ===== */
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.two.solo { grid-template-columns: minmax(0, 640px); }
+@media (max-width: 820px) { .two { grid-template-columns: 1fr; } }
+ol.steps { padding-left: 22px; }
+ol.steps li { margin: 8px 0; padding: 8px 10px; background: var(--accent-soft); border-radius: 6px; }
+.prompt { font-size: 19px; font-weight: 600; }
+fieldset { border: 0; padding: 0; margin: 10px 0; }
+legend { font-weight: 600; margin-bottom: 6px; }
+.choice { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px; margin: 6px 0; cursor: pointer; }
+.choice input { width: 18px; height: 18px; accent-color: var(--accent); }
+.choice.correct { border-color: var(--ok); background: var(--ok-soft); }
+.choice.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.feedback { margin-top: 10px; padding: 10px 12px; border-radius: 8px; }
+.feedback.ok { background: var(--ok-soft); color: var(--ink); border-left: 5px solid var(--ok); }
+.feedback.hint { background: var(--hint-soft); border-left: 5px solid var(--focus); }
+.feedback.bad { background: var(--bad-soft); border-left: 5px solid var(--bad); }
+.progress { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px; }
+.progress span { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700;
+  border: 2px solid var(--line); color: var(--muted); }
+.progress span.cur { border-color: var(--accent); color: var(--ink); }
+.progress span.ok { background: var(--ok); border-color: var(--ok); color: var(--panel); }
+.progress span.miss { background: var(--bad); border-color: var(--bad); color: var(--panel); }
+footer { margin-top: 24px; font-size: 14px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .choice, .gallery button { transition: border-color .15s, background .15s; } }
+/* ===== Math typesetting (see section 0 of the script) ===== */
+.m { font-family: "STIX Two Text", "Cambria Math", Cambria, "Latin Modern Roman", "Times New Roman", serif; font-size: 1.12em; font-weight: 400; letter-spacing: .01em; }
+.bigeq .m, .eq .m, .formula .m { font-weight: 500; }
+.m i { font-style: italic; padding-right: .03em; }
+.m .rad { display: inline-flex; align-items: stretch; white-space: nowrap; vertical-align: baseline; }
+.m .rs { position: relative; padding-right: .02em; }
+.m .ri { position: absolute; font-size: .55em; left: -.05em; top: -.25em; }
+.m .rc { border-top: .075em solid currentColor; padding: .02em .12em 0 .08em; margin-top: .14em; }
+.m .frac { display: inline-flex; flex-direction: column; vertical-align: -.55em; text-align: center; font-size: .86em; line-height: 1.15; margin: 0 .1em; }
+.m .fn { border-bottom: .08em solid currentColor; padding: 0 .2em .05em; }
+.m .fd { padding: .05em .2em 0; }
+.m .op { font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; font-size: .9em; padding: 0 .05em; }
+/* ===== Unit 1 additions ===== */
+.bigeq { font-size: 22px; font-weight: 600; margin: 6px 0 10px; overflow-x: auto; }
+.exprlab { display: block; font-weight: 600; margin: 4px 0; }
+.exprin { font: 18px/1.4 ui-monospace, "Cascadia Mono", Consolas, monospace; width: 100%; max-width: 460px; padding: 8px 10px;
+  border: 2px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.exprin:focus { border-color: var(--accent); }
+.preview { min-height: 32px; margin: 6px 0; font-size: 19px; }
+.typehelp { font-size: 14px; margin: 4px 0; }
+.mini { font-size: 15px; }
+/* term tables (area model, LCD table, factor pairs) */
+table.grid { border-collapse: collapse; margin: 8px 0; font-size: 18px; }
+table.grid th, table.grid td { border: 2px solid var(--line); padding: 8px 12px; text-align: center; min-width: 64px; }
+table.grid th { background: var(--accent-soft); font-weight: 600; }
+table.grid td.hit { background: var(--ok-soft); border-color: var(--ok); font-weight: 700; }
+.wide { overflow-x: auto; }
+/* like terms share a color AND a letter tag, so color is never the only clue */
+.d0 { background: rgba(120,120,120,.12); } .d1 { background: rgba(31,78,121,.14); } .d2 { background: rgba(180,70,31,.14); }
+.d3 { background: rgba(29,107,53,.16); } .d4 { background: rgba(140,60,160,.15); } .d5 { background: rgba(200,150,0,.18); } .d6 { background: rgba(0,130,140,.16); }
+.tag { display: inline-block; font-size: 12px; font-weight: 700; color: var(--muted); margin-left: 4px; }
+/* factor tiles (cancel machine) */
+.fracbox { display: inline-grid; grid-template-rows: auto auto; margin: 6px 4px; vertical-align: middle; }
+.fracbox .top, .fracbox .bot { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 6px; }
+.fracbox .top { border-bottom: 3px solid var(--ink); }
+.tile { font: inherit; font-size: 18px; border: 2px solid var(--accent); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 4px 10px; cursor: pointer; min-height: 40px; }
+.tile[aria-pressed="true"] { background: var(--accent-soft); box-shadow: 0 0 0 3px var(--focus); }
+.tile.gone { text-decoration: line-through; opacity: .45; border-style: dashed; cursor: default; }
+.opsign { font-size: 26px; padding: 0 6px; vertical-align: middle; }
+.stepbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.stepbar .btn { font-size: 15px; }
+.callout { border-left: 5px solid var(--focus); background: var(--hint-soft); border-radius: 8px; padding: 10px 14px; margin: 10px 0; }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.stepper button { width: 34px; height: 34px; border-radius: 8px; border: 2px solid var(--accent); background: var(--panel); color: var(--accent); font-weight: 700; cursor: pointer; }
+.stepper output { min-width: 26px; text-align: center; font-weight: 700; }
+.thumbm { height: 120px; border-radius: 8px; background: var(--accent-soft); display: grid; place-items: center; font-size: 22px; padding: 6px; text-align: center; }
+nav.skills { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+/* Phone widths: one column that never grows past the screen; wide math scrolls inside its own box */
+@media (max-width: 820px) { .explore, .two, .two.solo { grid-template-columns: minmax(0, 1fr); } }
+select { max-width: 100%; }
+.panel { min-width: 0; }
+ol.steps li, .feedback, .coachstep, .choice > span, legend, .bigeq { overflow-x: auto; overflow-wrap: anywhere; }
+.thumbm { overflow-x: auto; font-size: clamp(16px, 5vw, 22px); }
+.keypad { gap: 6px; margin: 8px 0; } .keypad .btn { padding: 4px 10px; font-size: 16px; min-width: 40px; }
+.nline { width: 100%; max-width: 440px; height: auto; display: block; }
+/* Multiple-choice answers that are graphs: a 2 × 2 grid on wider screens */
+#qPanel fieldset:has(.choice svg) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 600px) { #qPanel fieldset:has(.choice svg) { grid-template-columns: minmax(0, 1fr); } }
+#qPanel fieldset:has(.choice svg) .choice { margin: 0; }
+.choice svg { width: 100%; max-width: 240px; height: auto; }
+fieldset { min-width: 0; } legend { max-width: 100%; }   /* fieldsets otherwise refuse to shrink below their content */
+.pw { max-width: 100%; overflow-x: auto; }
+
+
+/* ===== Lesson 1 skill pages ===== */
+[hidden] { display: none !important; }                             /* hidden inputs stay hidden even inside grid and flex rows */
+.inputs { display: grid; grid-template-columns: auto 1fr; gap: 8px 10px; align-items: center; max-width: 560px; }
+.inputs .exprin { max-width: none; }
+.exprin.num { width: 84px; max-width: 84px; text-align: center; padding: 6px 6px; }
+.inputs .row { gap: 6px; flex-wrap: nowrap; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.presets .btn { font-size: 15px; padding: 6px 10px; }
+.pw svg.graph, legend .pw svg.graph { max-width: 320px; margin: 8px 0; border: 1px solid var(--line); }
+ol.steps li .pw svg.graph { max-width: 280px; }
+.money { font-variant-numeric: tabular-nums; }
+.slider { width: 100%; max-width: 420px; accent-color: var(--accent); }
+.status { display: inline-block; padding: 2px 10px; border-radius: 99px; font-weight: 700; font-size: 15px; }
+.status.profit { background: var(--ok-soft); color: var(--ok); border: 2px solid var(--ok); }
+.status.loss { background: var(--bad-soft); color: var(--bad); border: 2px solid var(--bad); }
+.status.even { background: var(--hint-soft); color: var(--ink); border: 2px solid var(--focus); }
+table.grid.vals td, table.grid.vals th { min-width: 56px; padding: 6px 10px; font-size: 17px; }
+.code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; background: var(--accent-soft); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+.pw-def { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; margin: 4px 0; }
+.pw-brace { font-size: 2.6em; line-height: 1; font-weight: 300; }
+.pw-rows { display: flex; flex-direction: column; gap: 2px; }
+.ends { display: flex; justify-content: space-between; font-size: 30px; font-weight: 700; color: var(--accent); max-width: 440px; }
+.pieces td { padding: 4px; } .pieces .exprin { max-width: 170px; } .pieces select { font-size: 16px; }
+tr.hit td { background: var(--ok-soft); }
+/* matrices and systems */
+.mat { position: relative; display: inline-block; padding: 2px 9px; margin: 4px 4px; vertical-align: middle; }
+.mat::before, .mat::after { content: ""; position: absolute; top: 0; bottom: 0; width: 7px; border: 2px solid currentColor; }
+.mat::before { left: 0; border-right: none; } .mat::after { right: 0; border-left: none; }
+.mat table { border-collapse: collapse; }
+.mat td { padding: 3px 9px; text-align: center; min-width: 34px; }
+.mat td.bar { border-left: 2px solid currentColor; }
+.mat tr.hl td { background: var(--hint-soft); }
+.sys { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; margin: 2px 0; }
+.sys-brace { font-size: 2.4em; line-height: 1; font-weight: 300; }
+.sys-rows { display: flex; flex-direction: column; gap: 2px; }
+.opbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 4px; }
+.opbar select { font-size: 16px; padding: 4px; }
+.stage { font-size: 20px; margin: 10px 0; overflow-x: auto; }
+ol.oplog li { padding: 4px 8px; margin: 4px 0; }
+.lmat { display: inline-flex; align-items: center; gap: 6px; vertical-align: middle; margin: 4px 2px; }
+.mat td.hl, table.labeled td.hl { background: var(--accent-soft); }
+.mat td.hit, table.labeled td.hit { background: var(--ok-soft); outline: 2px solid var(--ok); }
+.mat td[data-cell], table.labeled td[data-cell] { cursor: pointer; }
+table.labeled { border-collapse: collapse; }
+table.labeled th { font-size: 14px; color: var(--muted); padding: 2px 8px; font-weight: 600; }
+table.labeled td { padding: 4px 10px; text-align: center; }
+table.labeled td.lb { border-left: 2px solid currentColor; } table.labeled td.rb { border-right: 2px solid currentColor; }
+.cellin { width: 64px !important; max-width: 64px !important; padding: 4px !important; }
+.sizebox { font-size: 20px; font-weight: 700; margin: 8px 0; }
+.sizebox .in { color: var(--ok); } .sizebox .bad { color: var(--bad); } .sizebox .out { color: var(--accent); text-decoration: underline; }
+.workline { font-size: 18px; margin: 6px 0; overflow-x: auto; }
+/* Lesson 6: shaded regions and constraint editor */
+.gpick svg.graph { max-width: 230px; border: 1px solid var(--line); display: block; }
+#g61, #g62, #g63 { cursor: crosshair; max-width: 440px; width: 100%; border: 1px solid var(--line); border-radius: 8px; }
+table.cons td { padding: 3px 3px; font-size: 17px; white-space: nowrap; }
+table.cons select { font-size: 17px; padding: 3px; }
+.btn.mini { padding: 3px 9px; font-size: 14px; }
+ul.corners li { margin: 4px 0; }
+.zrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sys6 { display: inline-flex; align-items: stretch; gap: 4px; vertical-align: middle; margin: 4px 0; }
+.sys6 .brace6 { width: 12px; height: auto; flex: none; }
+.sys6 .sys-rows { display: flex; flex-direction: column; gap: 2px; padding: 2px 0; }
+/* Lesson 7 */
+table.org th[scope="row"] { text-align: left; font-size: 15px; }
+table.org select { font-size: 16px; padding: 3px; }
+.okcell { outline: 3px solid var(--ok); background: var(--ok-soft) !important; }
+.badcell { outline: 3px solid var(--bad); background: var(--bad-soft) !important; }
+.story { font-size: 17px; line-height: 1.5; }
+/* Lesson 8: simplex tableaus */
+table.tab { border-collapse: collapse; margin: 8px 0; font-size: 17px; }
+table.tab th, table.tab td { border: 1px solid var(--line); padding: 5px 10px; text-align: center; min-width: 46px; }
+table.tab th { background: var(--accent-soft); font-weight: 600; }
+table.tab th.basic { background: var(--ok-soft); outline: 2px solid var(--ok); outline-offset: -2px; }
+table.tab td.const { border-left: 3px solid currentColor; }
+table.tab tr.ind td { border-top: 3px solid currentColor; }
+table.tab .pc { background: var(--hint-soft); }
+table.tab tr.pr td { background: var(--hint-soft); }
+table.tab td.piv { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+table.tab td[data-cell] { cursor: pointer; }
+table.tab td[data-cell]:hover, table.tab td[data-cell]:focus { outline: 3px solid var(--focus); outline-offset: -3px; }
+table.tab td.quot, table.tab th.quot { border: none; background: none; color: var(--muted); font-size: 15px; text-align: left; }
+ol.oplog li { margin: 4px 0; }
+.legend8 { font-size: 14px; color: var(--muted); }
+.legend8 span { display: inline-block; padding: 1px 8px; border-radius: 4px; margin-right: 6px; }
+/* Lesson 9: color-coded rows and columns for transposes */
+.mat td.rc0 { background: rgba(31, 78, 121, .14); } .mat td.rc1 { background: rgba(180, 70, 31, .15); } .mat td.rc2 { background: rgba(29, 107, 53, .15); }
+.mat td.rc3 { background: rgba(138, 28, 138, .13); } .mat td.rc4 { background: rgba(200, 150, 0, .2); }
+.gridin td { padding: 2px; } .gridin input { width: 54px !important; max-width: 54px !important; text-align: center; padding: 4px !important; }
+.dualgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 800px) { .dualgrid { grid-template-columns: minmax(0, 1fr); } }
+.dualgrid svg.graph { max-width: 380px; width: 100%; border: 1px solid var(--line); border-radius: 8px; }
+table.tab td.ycol { background: var(--ok-soft); outline: 3px solid var(--ok); outline-offset: -3px; font-weight: 700; }
+.mat .mg { display: inline-grid; align-items: center; }
+.mat .mg > span { padding: 3px 9px; text-align: center; min-width: 30px; }
+.mat .mg > span.bar { border-left: 2px solid currentColor; }
+.mat .mg > span.rc0 { background: rgba(31, 78, 121, .14); } .mat .mg > span.rc1 { background: rgba(180, 70, 31, .15); } .mat .mg > span.rc2 { background: rgba(29, 107, 53, .15); }
+.mat .mg > span.rc3 { background: rgba(138, 28, 138, .13); } .mat .mg > span.rc4 { background: rgba(200, 150, 0, .2); }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="crumb"><a href="lesson09-hub.html">Lesson 9: Minimization Problems &amp; Duality</a> · Math 1324</div>
+      <h1>Skill 9.2: Solving Minimization Problems</h1>
+    </div>
+  </header>
+  <p class="objective"><strong>Goal:</strong> solve a standard minimum problem by solving its dual with the simplex method and reading the minimum solution from the bottom row.</p>
+  <main id="main">
+    <div role="tablist" aria-label="Skill 9.2 sections">
+      <button role="tab" id="tab-explore" aria-controls="panel-explore" aria-selected="true">Explore</button>
+      <button role="tab" id="tab-examples" aria-controls="panel-examples" aria-selected="false" tabindex="-1">Examples</button>
+      <button role="tab" id="tab-practice" aria-controls="panel-practice" aria-selected="false" tabindex="-1">Practice</button>
+    </div>
+
+    <!-- ================= EXPLORE ================= -->
+    <section role="tabpanel" id="panel-explore" aria-labelledby="tab-explore">
+      <h2>Side-by-side dual solver</h2>
+      <p class="muted">A minimum problem (left) and its dual (right) have the same optimum value. Step through the simplex method on the dual and watch the minimum answer appear in the bottom row.</p>
+      <div class="presets" role="group" aria-label="Minimum problems"><button class="btn secondary" data-p="exB">Example 3 (notes)</button><button class="btn secondary" data-p="dog">Dog breeder (notes)</button><button class="btn secondary" data-p="p1">Practice a</button><button class="btn secondary" data-p="p2">Practice b</button><button class="btn secondary" data-p="pd">Three constraints</button><button class="btn secondary" data-p="r2">Random problem</button></div>
+      <div class="dualgrid">
+        <div class="panel"><h3 style="margin-top:0">Minimum problem</h3><p id="minP"></p><svg id="gMin" class="graph" role="img" aria-label="Feasible region of the minimum problem"></svg><div id="minT"></div></div>
+        <div class="panel"><h3 style="margin-top:0">Dual maximum problem</h3><p id="maxP"></p><svg id="gMax" class="graph" role="img" aria-label="Feasible region of the dual"></svg><div id="maxT"></div></div>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <h3 style="margin-top:0">Simplex on the dual</h3>
+        <div id="tab92" class="stage"></div>
+        <div class="row"><button class="btn" id="next92">Next pivot</button><button class="btn secondary" id="run92">Run to the end</button><button class="btn secondary" id="reset92">Start over</button></div>
+        <p id="read92" aria-live="polite"></p>
+      </div>
+      <h3>Questions to explore</h3>
+      <details><summary>In Example 3, compare the two corner tables. What do you notice?</summary>
+        <p>The minimum of w (48 at (4, 1)) equals the maximum of z (48 at (2, 3)).</p></details>
+      <details><summary>Run Example 3 to the end. Where do 4 and 1 appear in the final tableau?</summary>
+        <p>In the bottom row under s₁ and s₂: exactly y₁ = 4 and y₂ = 1.</p></details>
+      <details><summary>In the dog breeder problem, are the answers whole numbers? Does that make sense?</summary>
+        <p>No: 3/5 and 9/5 bags a day. Averaged over several days (3 bags of feed 1 and 9 of feed 2 every 5 days) it is a sensible plan.</p></details>
+      <details><summary>Load Three constraints. Why is there no graph of the dual?</summary>
+        <p>The dual has three variables (one per constraint), so its region is three-dimensional. Simplex still solves it.</p></details>
+    </section>
+
+    <!-- ================= EXAMPLES ================= -->
+    <section role="tabpanel" id="panel-examples" aria-labelledby="tab-examples" hidden>
+      <h2>Worked examples</h2>
+      <p class="muted">Pick a type. Try each step yourself, then reveal it. Press <em>New example</em> as often as you like.</p>
+      <div class="row" role="group" aria-label="Example type" id="exTypes"></div>
+      <div class="two" style="margin-top:14px">
+        <div class="panel" id="exLeft"></div>
+        <div class="panel">
+          <h3 style="margin-top:0">Solution</h3>
+          <ol class="steps" id="exSteps" aria-live="polite"></ol>
+          <div class="row">
+            <button class="btn" id="exNext">Show next step</button>
+            <button class="btn secondary" id="exAll">Show all steps</button>
+            <button class="btn secondary" id="exNew">New example</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PRACTICE ================= -->
+    <section role="tabpanel" id="panel-practice" aria-labelledby="tab-practice" hidden>
+      <h2>Practice</h2>
+      <p class="muted">Eight questions. A wrong answer gives you a hint; a second wrong answer shows the solution. Fractions like 9/5 are fine.</p>
+      <div class="progress" id="progress" aria-label="Question progress"></div>
+      <div class="two solo"><div class="panel" id="qPanel"></div></div>
+    </section>
+  </main>
+  <nav class="skills" aria-label="Other pages in Lesson 9">
+    <a href="lesson09-skill9-1.html">← Skill 9.1: Transposes &amp; the Dual Problem</a>
+    <a href="lesson09-ladder.html">Lesson 9 Ladder: check everything →</a>
+  </nav>
+  <footer>Math 1324 · Lesson 9 Enhancement · Skill 9.2. Need more help? Use the Skill 9.2 notes or the <a href="lesson09-ladder.html">Lesson 9 Ladder</a>.</footer>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   UNIT 1 TOOLKIT (shared by every Unit 1 skill page, hub, and ladder)
+   Sections:
+     K1. Small helpers
+     K2. Math typesetting (MathJax, with an offline backup)
+     K3. Polynomials: build, multiply, and write them
+     K4. Reading typed answers (a small expression parser)
+     K5. Tabs
+     K6. Examples engine
+     K7. Practice engine
+   ===================================================================== */
+
+/* ---------- K1. Small helpers ---------- */
+const $ = id => document.getElementById(id);                       // shorthand for getElementById
+const NS = "http://www.w3.org/2000/svg";                            // SVG namespace for drawings
+function el(tag, attrs = {}, parent) {                              // make an SVG element with attributes
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const rand = n => Math.floor(Math.random() * n);                    // whole number 0 … n − 1
+const pick = arr => arr[rand(arr.length)];                          // one random item
+const randInt = (lo, hi) => lo + rand(hi - lo + 1);                 // whole number lo … hi
+const nz = (lo, hi) => { let v; do { v = randInt(lo, hi); } while (v === 0); return v; };   // never 0
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);            // capitalize the first letter
+const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };
+const fnum = v => {                                                 // numbers as in the notes: true minus, no float noise
+  if (Number.isInteger(v)) return String(v).replace("-", "−");
+  const r = +v.toFixed(4); return String(r).replace("-", "−");
+};
+// Right answer plus up to three different wrong answers, shuffled. keyFn decides when two answers count as "the same".
+function choices(right, wrongs, keyFn = x => String(x)) {
+  const seen = new Set([keyFn(right)]), out = [{ v: right, ok: true }];
+  for (const w of wrongs) { if (out.length === 4) break; const k = keyFn(w); if (w !== undefined && !seen.has(k)) { seen.add(k); out.push({ v: w, ok: false }); } }
+  return shuffle(out);
+}
+
+/* ---------- K2. Math typesetting ----------
+   Equations are marked with M("...") or written as <span class="m">...</span>.
+   They are written in plain notation (x², √(x + 4), (x − 3)/(x + 1), x^(1/2)),
+   converted to TeX, and drawn with MathJax. Screen readers hear the plain text.
+   A slash between two "atoms" (a parenthesized group, a number or term like 4x,
+   a letter, or a radical) becomes a stacked fraction. */
+const MS = "", ME = "";                                 // invisible start/end markers
+const M = s => MS + String(s).replace(/[]/g, "") + ME;  // nested marks are flattened
+const plainMath = s => String(s).replace(/[]/g, "");
+const escHTML = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const SUPS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const SUPL = { "ˣ": "x", "ʸ": "y", "ᵗ": "t", "ⁿ": "n", "ᵏ": "k" };           // letter exponents: 2ˣ, eᵏᵗ
+const SUBS = "₀₁₂₃₄₅₆₇₈₉";                                                       // subscripts: log₂, P₀
+const supVal = c => c in SUPL ? SUPL[c] : String(SUPS.indexOf(c));
+const isL = c => /[A-Za-zα-ωΑ-Ω]/.test(c || "")      /* Greek letters count: 5π, rθ, ω */, isD = c => /[0-9.]/.test(c || ""), isSup = c => !!c && (SUPS.includes(c) || c in SUPL);
+const isSub = c => !!c && SUBS.includes(c);
+function closeParen(s, i) { let d = 0; for (let j = i; j < s.length; j++) { if (s[j] === "(") d++; else if (s[j] === ")" && --d === 0) return j; } return -1; }
+const TEX_CHAR = { "°": "^{\\circ}", "−": "-", "·": "\\cdot ", "÷": "\\div ", "→": "\\to ", "∞": "\\infty ", "∪": "\\cup ", "∩": "\\cap ", "≥": "\\ge ", "≤": "\\le ",
+  "≠": "\\ne ", "±": "\\pm ", "∘": "\\circ ", "⁻": "^{-}", "⁺": "^{+}", "✓": "\\checkmark ", "{": "\\{", "}": "\\}", "%": "\\%", "#": "\\#", "&": "\\&", "$": "\\$" };
+const TEX_WORDS = { log: "\\log ", ln: "\\ln ", sin: "\\sin ", cos: "\\cos ", tan: "\\tan ", sec: "\\sec ", csc: "\\csc ", cot: "\\cot " };
+
+// Split plain math into atoms (things a fraction bar can sit on) and other symbols.
+function mathTokens(s, small) {
+  const toks = [];
+  let i = 0;
+  const power = j => {                                              // a power right after an atom: ², ^(1/2), ^3, ^−1
+    if (isSup(s[j])) { let t = ""; while (isSup(s[j])) t += supVal(s[j++]); return { tex: t, html: t, end: j }; }
+    if (s[j] === "⁻" && isSup(s[j + 1])) { let t = "-"; j++; while (isSup(s[j])) t += supVal(s[j++]); return { tex: t, html: "−" + t.slice(1), end: j }; }
+    if (s[j] === "^") {
+      if (s[j + 1] === "(") { const e = closeParen(s, j + 1); if (e > 0) { const inner = s.slice(j + 2, e); return { tex: mathRender(inner, "tex", true), html: mathRender(inner, "html", true), end: e + 1 }; } }
+      let k = j + 1; if (s[k] === "-" || s[k] === "−") k++; while (isD(s[k]) || isL(s[k])) k++;
+      const inner = s.slice(j + 1, k); return { tex: mathRender(inner, "tex", true), html: mathRender(inner, "html", true), end: k };
+    }
+    return null;
+  };
+  // a subscript right after a word or letter: log₂, log_b, log_(1/2), P₀
+  const sub = j => {
+    if (isSub(s[j])) { let t = ""; while (isSub(s[j])) t += SUBS.indexOf(s[j++]); return { tex: t, html: t, end: j }; }
+    if (s[j] === "_") {
+      if (s[j + 1] === "(") { const e = closeParen(s, j + 1); if (e > 0) { const inner = s.slice(j + 2, e); return { tex: mathRender(inner, "tex", true), html: mathRender(inner, "html", true), end: e + 1 }; } }
+      if (isL(s[j + 1]) || isD(s[j + 1])) return { tex: s[j + 1], html: s[j + 1], end: j + 2 };
+    }
+    return null;
+  };
+  const withPow = (atom, j) => {                                    // attach any power to the atom just read
+    const p = power(j); if (!p) { atom.end = j; return atom; }
+    atom.tex = (atom.paren ? (atom.tall ? `\\left(${atom.inner}\\right)` : `(${atom.inner})`) : atom.tex.length > 1 && !atom.word ? `{${atom.tex}}` : atom.tex) + `^{${p.tex}}`;
+    atom.html = (atom.paren ? `(${atom.innerHtml})` : atom.html) + `<sup>${p.html}</sup>`;
+    atom.paren = false; atom.end = p.end; return atom;
+  };
+  while (i < s.length) {
+    const c = s[i];
+    if (c === "(") {                                                // parenthesized group
+      const e = closeParen(s, i);
+      if (e > 0) { const inner = s.slice(i + 1, e);
+        const it = mathRender(inner, "tex", small), tall = /frac|sqrt/.test(it);   // stretchy parentheses only around tall content
+        const a = withPow({ atom: true, paren: true, tall, inner: it, innerHtml: mathRender(inner, "html", small),
+          tex: tall ? `\\left(${it}\\right)` : `(${it})`, html: `(${mathRender(inner, "html", small)})` }, e + 1);
+        toks.push(a); i = a.end; continue; }
+    }
+    if (c === "√" || c === "∛") {                                   // radicals: √(x + 4), √5, ∛x
+      let inner, end;
+      if (s[i + 1] === "(") { const e = closeParen(s, i + 1); inner = s.slice(i + 2, e); end = e + 1; }
+      else { let k = i + 1; while (isD(s[k])) k++; if (k === i + 1) while (isL(s[k])) k++; inner = s.slice(i + 1, k); end = k; }
+      const it = mathRender(inner, "tex", small), ih = mathRender(inner, "html", small);
+      const a = withPow({ atom: true, tex: c === "∛" ? `\\sqrt[3]{${it}}` : `\\sqrt{${it}}`,
+        html: `<span class="rad"><span class="rs">${c === "∛" ? '<span class="ri">3</span>√' : "√"}</span><span class="rc">${ih}</span></span>` }, end);
+      const prev = toks[toks.length - 1];
+      if (prev && prev.glue) { prev.tex += a.tex; prev.html += a.html; prev.glue = false; i = a.end; continue; }   // 2√3 is one piece, so 2√3/3 puts 2√3 on top
+      toks.push(a); i = a.end; continue;
+    }
+    if (isD(c)) {                                                   // a number, with any letters right after it (4x, 12xy)
+      let k = i; while (isD(s[k])) k++;
+      let tex = s.slice(i, k), html = tex;
+      let a = withPow({ atom: true, tex, html }, k);                // 2³
+      k = a.end;
+      while (isL(s[k]) && !/^(log|ln|sin|cos|tan|sec|csc|cot)/.test(s.slice(k))) {   // 4x²y: each letter may carry its own power (stop at a word: 2log₂ x)
+        const L = withPow({ atom: true, tex: s[k], html: `<i>${s[k]}</i>` }, k + 1);
+        a.tex += L.tex; a.html += L.html; k = L.end;
+      }
+      a.end = k; a.glue = s[k] === "√" || s[k] === "∛"; toks.push(a); i = k; continue;
+    }
+    if (isL(c)) {                                                   // a letter or a word (log, ln)
+      let k = i; while (isL(s[k])) k++;
+      const word = s.slice(i, k);
+      if (TEX_WORDS[word]) { const b = sub(k);                       // log₂ x → \log_{2} x
+        toks.push(b ? { atom: false, tex: `${TEX_WORDS[word].trim()}_{${b.tex}} `, html: `${word}<sub>${b.html}</sub>` } : { atom: false, tex: TEX_WORDS[word], html: word }); i = b ? b.end : k; continue; }
+      const b1 = sub(i + 1);                                         // P₀: a letter with a subscript
+      if (b1) { const a = withPow({ atom: true, tex: `${s[i]}_{${b1.tex}}`, html: `<i>${s[i]}</i><sub>${b1.html}</sub>` }, b1.end); toks.push(a); i = a.end; continue; }
+      const a = withPow({ atom: true, tex: s[i], html: `<i>${s[i]}</i>` }, i + 1);   // one letter at a time: xy → x, y
+      toks.push(a); i = a.end; continue;
+    }
+    if (isSup(c)) { const p = power(i); toks.push({ atom: false, tex: `^{${p.tex}}`, html: `<sup>${p.html}</sup>` }); i = p.end; continue; }
+    if (c === "|") { toks.push({ atom: false, bar: true, tex: "|", html: "|" }); i++; continue; }
+    if (c === "/") { toks.push({ slash: true, tex: "/", html: "/" }); i++; continue; }
+    if (c === " ") { toks.push({ space: true, tex: " ", html: " " }); i++; continue; }
+    toks.push({ atom: false, tex: TEX_CHAR[c] || c, html: c === "→" ? '<span class="op">→</span>' : escHTML(c) }); i++;
+  }
+  return toks;
+}
+// Join the tokens, turning atom / atom into a stacked fraction.
+function mathRender(s, mode, small = false) {            // (named to avoid clashing with page functions)
+  const toks = mathTokens(String(s), small), out = [];
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i], n = toks[i + 1], d = toks[i + 2];
+    if (t.atom && n && n.slash && d && d.atom) {
+      const top = t.paren ? (mode === "tex" ? t.inner : t.innerHtml) : t[mode], bot = d.paren ? (mode === "tex" ? d.inner : d.innerHtml) : d[mode];
+      if (small) { out.push(`${top}/${bot}`); i += 2; continue; }        // in an exponent, 3/2 reads better on one line
+      out.push(mode === "tex" ? `\\dfrac{${top}}{${bot}}` : `<span class="frac"><span class="fn">${top}</span><span class="fd">${bot}</span></span>`);
+      i += 2; continue;
+    }
+    out.push(t[mode]);
+  }
+  let r = out.join("");
+  if (mode === "tex") {                                             // absolute value bars that pair up get \left| \right|
+    let open = false; r = r.replace(/\|/g, () => (open = !open) ? "\\left|" : "\\right|");
+    if (open) r = r.replace(/\\left\|/g, "|").replace(/\\right\|/g, "|");
+  }
+  return r;
+}
+const toTeX = s => mathRender(s, "tex");
+const mathHTML = s => mathRender(s, "html");
+const mjOK = () => !!(window.mjReady && window.MathJax && MathJax.tex2svg);
+function drawMath(span) {                                           // MathJax if ready, else the backup
+  if (mjOK()) {
+    try { const node = MathJax.tex2svg(span.dataset.tex, { display: false }); node.setAttribute("aria-hidden", "true");
+      span.replaceChildren(node); span.dataset.mj = "1"; return; } catch (e) { /* use the backup */ }
+  }
+  span.innerHTML = mathHTML(span.getAttribute("aria-label"));
+}
+function mathSpan(plain) {                                          // one typeset equation with a spoken label
+  const span = document.createElement("span");
+  span.className = "m"; span.setAttribute("role", "math"); span.setAttribute("aria-label", plain);
+  span.dataset.m = "1"; span.dataset.tex = toTeX(plain); drawMath(span);
+  return span;
+}
+function typeset(root = document.body) {                            // find marked text and typeset it
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => /[]/.test(n.data) ? 1 : 3 });
+  const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+  nodes.forEach(n => {
+    const host = n.parentElement;
+    if (!host || host.closest("svg, option, select, textarea, title, input")) { n.data = plainMath(n.data); return; }
+    const frag = document.createDocumentFragment();
+    n.data.split(/([^]*)/).forEach(part => {
+      if (!part) return;
+      if (part[0] === MS) frag.appendChild(mathSpan(part.slice(1, -1)));
+      else frag.appendChild(document.createTextNode(plainMath(part)));
+    });
+    host.replaceChild(frag, n);
+  });
+  root.querySelectorAll("[aria-label], [title], [aria-valuetext]").forEach(e => {   // spoken labels: plain text only
+    for (const a of ["aria-label", "title", "aria-valuetext"]) { const v = e.getAttribute(a); if (v && /[]/.test(v)) e.setAttribute(a, plainMath(v)); }
+  });
+  root.querySelectorAll("span.m:not([data-m])").forEach(e => {     // hand-written <span class="m">
+    const plain = e.textContent; e.dataset.m = "1"; e.setAttribute("role", "math"); e.setAttribute("aria-label", plain);
+    e.dataset.tex = toTeX(plain); drawMath(e);
+  });
+  if (mjOK()) root.querySelectorAll("span.m[data-tex]:not([data-mj])").forEach(drawMath);   // upgrade backups
+}
+new MutationObserver(() => typeset()).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["aria-label", "title"] });
+window.addEventListener("mathjax-ready", () => typeset());
+
+/* ---------- K3. Polynomials ----------
+   A polynomial in x is an array of coefficients, lowest power first:
+   [−18, −9, 2] means 2x² − 9x − 18. */
+const P = {
+  trim: c => { c = c.slice(); while (c.length > 1 && c[c.length - 1] === 0) c.pop(); return c; },
+  add: (a, b) => P.trim(Array.from({ length: Math.max(a.length, b.length) }, (_, i) => (a[i] || 0) + (b[i] || 0))),
+  scale: (a, k) => P.trim(a.map(v => v * k)),
+  sub: (a, b) => P.add(a, P.scale(b, -1)),
+  mul: (a, b) => { const r = Array(a.length + b.length - 1).fill(0); a.forEach((x, i) => b.forEach((y, j) => r[i + j] += x * y)); return P.trim(r); },
+  pow: (a, n) => { let r = [1]; for (let i = 0; i < n; i++) r = P.mul(r, a); return r; },
+  prod: list => list.reduce((r, f) => P.mul(r, f), [1]),
+  deg: a => P.trim(a).length - 1,
+  at: (a, x) => a.reduce((s, v, i) => s + v * x ** i, 0),
+  same: (a, b) => { a = P.trim(a); b = P.trim(b); return a.length === b.length && a.every((v, i) => v === b[i]); },
+  lin: (a, b) => [b, a],                                             // ax + b
+};
+const supNum = n => String(n).split("").map(d => d === "-" ? "⁻" : SUPS[+d]).join("");
+// One term: coefficient, power, variable, and whether it is the first term (decides "−5" versus " − 5").
+function termText(c, n, first, v = "x") {
+  const m = Math.abs(c), sign = c < 0 ? (first ? "−" : " − ") : (first ? "" : " + ");
+  if (n === 0) return sign + fnum(m);
+  return sign + (m === 1 ? "" : fnum(m)) + v + (n > 1 ? supNum(n) : "");
+}
+function polyText(c, v = "x") {                                      // [−18, −9, 2] → "2x² − 9x − 18"
+  let s = "", first = true;
+  for (let n = c.length - 1; n >= 0; n--) if (c[n]) { s += termText(c[n], n, first, v); first = false; }
+  return s || "0";
+}
+const linText = (a, b, v = "x") => polyText([b, a], v);            // 2x − 3
+const paren = (s, k = 1) => `(${s})${k > 1 ? supNum(k) : ""}`;      // (2x − 3)²
+// Factored form: constant times factors. fs = [[poly, power], ...]; leading −1 is written as "−".
+function factoredText(k, fs, v = "x") {
+  const lead = k === 1 ? "" : k === -1 ? "−" : fnum(k);
+  const parts = fs.map(([p, n]) => {
+    const isMono = p.filter(x => x).length === 1;                    // x or 3x² needs no parentheses
+    if (isMono && n === 1) return polyText(p, v);
+    if (isMono) { const d = P.deg(p), co = p[d]; return co === 1 ? `${v}${supNum(d * n)}` : paren(polyText(p, v), n); }
+    return paren(polyText(p, v), n);
+  });
+  // a lone monomial factor goes first (2x(x − 1)), then the rest
+  return lead + parts.join("");
+}
+
+/* ---------- K4. Reading typed answers ----------
+   Students type things like 2x^2 - 9x - 18, (x+3)(x-3), or 3sqrt(2)/2.
+   parseExpr builds a tree; evalExpr finds its value; sameValue compares two
+   expressions at several random x-values (so any correct form is accepted). */
+function normInput(s) {                                              // tidy typed text before reading it
+  return String(s).replace(/π/g, "pi").replace(/[−–—]/g, "-").replace(/[·×∙*]/g, "*").replace(/÷/g, "/")
+    .replace(/√/g, "sqrt").replace(/∛/g, "cbrt")
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, m => "^" + m.split("").map(c => SUPS.indexOf(c)).join(""))
+    .replace(/[ˣʸᵗⁿᵏ]/g, c => "^" + { "ˣ": "x", "ʸ": "y", "ᵗ": "t", "ⁿ": "n", "ᵏ": "k" }[c])   // 4ˣ → 4^x
+    .replace(/[₀₁₂₃₄₅₆₇₈₉]+/g, m => "_(" + m.split("").map(c => SUBS.indexOf(c)).join("") + ")")   // log₂ 8 → log_(2)8, so the base stays separate
+    .replace(/\s+/g, "");
+}
+function parseExpr(raw) {
+  const s = normInput(raw); let i = 0, absDepth = 0;                // absDepth: how many |…| we are inside
+  const peek = () => s[i], eat = c => s[i] === c ? (i++, true) : false;
+  const fail = () => { throw new Error("parse"); };
+  // grammar: sum := term (± term)* ; term := factor (( * | / | implied ) factor)* ; factor := unary (^ factor)?
+  function sum() { let n = term(); while (peek() === "+" || peek() === "-") { const op = s[i++]; n = { op, a: n, b: term() }; } return n; }
+  function term() {
+    let n = unary();
+    for (;;) {
+      if (peek() === "*" || peek() === "/") { const op = s[i++]; n = { op, a: n, b: unary() }; continue; }
+      if (peek() && (/[0-9.a-z(]/i.test(peek()) || peek() === "|" && absDepth === 0)) { n = { op: "*", a: n, b: power() }; continue; }   // 2x, x(x+1), 2|x − 1|
+      return n;
+    }
+  }
+  function unary() { if (eat("-")) return { op: "neg", a: unary() }; if (eat("+")) return unary(); return power(); }
+  function power() { const b = atom(); if (eat("^")) return { op: "^", a: b, b: peek() === "-" ? unary() : power() }; return b; }
+  function atom() {
+    if (eat("(")) { const n = sum(); if (!eat(")")) fail(); return n; }
+    if (eat("|")) { absDepth++; const n = sum(); absDepth--; if (!eat("|")) fail(); return { op: "abs", a: n }; }   // |x − 1|
+    let m = /^\d*\.?\d+/.exec(s.slice(i)); if (m) { i += m[0].length; return { num: +m[0] }; }
+    m = /^(sqrt|cbrt)/.exec(s.slice(i)); if (m) { i += m[0].length; const arg = peek() === "(" ? atom() : power(); return { op: m[0], a: arg }; }
+    m = /^log_\((\d+(?:\.\d+)?|e)\)/.exec(s.slice(i)) || /^log_(\d+(?:\.\d+)?|e)(?=\()/.exec(s.slice(i)) || /^log(\d+)(?=\()/.exec(s.slice(i));   // log_(2)8, log_2(8), log2(8)
+    if (m) { i += m[0].length; const arg = peek() === "(" ? atom() : power(); return { op: "logb", base: m[1] === "e" ? Math.E : +m[1], a: arg }; }
+    m = /^(ln|log|exp)/.exec(s.slice(i)); if (m) { i += m[0].length; const arg = peek() === "(" ? atom() : power(); return { op: m[0], a: arg }; }   // ln(15), log(100), exp(2)
+    if (/^pi/.test(s.slice(i))) { i += 2; return { num: Math.PI }; }                     // π (typed as pi or π)
+    m = /^(sin|cos|tan|sec|csc|cot)/.exec(s.slice(i)); if (m) { i += 3; const arg = peek() === "(" ? atom() : power(); return { op: m[0], a: arg }; }   // sin(x), cos 2
+    if (peek() === "e" && !/[a-z]/i.test(s[i + 1] || "")) { i++; return { num: Math.E }; }   // the number e
+    if (/[a-z]/i.test(peek() || "")) return { v: s[i++] };           // single-letter variables
+    fail();
+  }
+  const tree = sum(); if (i !== s.length) fail(); return tree;
+}
+function evalExpr(n, env) {
+  if ("num" in n) return n.num;
+  if ("v" in n) { if (!(n.v in env)) throw new Error("var"); return env[n.v]; }
+  const a = evalExpr(n.a, env), b = n.b ? evalExpr(n.b, env) : 0;
+  switch (n.op) {
+    case "+": return a + b; case "-": return a - b; case "*": return a * b; case "/": return a / b;
+    case "^": return a ** b; case "neg": return -a; case "sqrt": return Math.sqrt(a); case "cbrt": return Math.cbrt(a); case "abs": return Math.abs(a);
+    case "sin": return Math.sin(a); case "cos": return Math.cos(a); case "tan": return Math.tan(a);
+    case "sec": return 1 / Math.cos(a); case "csc": return 1 / Math.sin(a); case "cot": return 1 / Math.tan(a);
+    case "ln": return Math.log(a); case "log": return Math.log10(a); case "exp": return Math.exp(a); case "logb": return Math.log(a) / Math.log(n.base);
+  }
+}
+// Do two expressions agree at several random points? (Works for any equivalent form.)
+function sameValue(treeA, treeB, vars = ["x"]) {
+  let tested = 0;
+  for (let t = 0; t < 40 && tested < 6; t++) {
+    const env = {}; vars.forEach(v => env[v] = +(Math.random() * 6 + 0.3).toFixed(3) * (Math.random() < 0.3 ? -1 : 1));
+    let a, b; try { a = evalExpr(treeA, env); b = evalExpr(treeB, env); } catch { return false; }
+    if (!isFinite(a) || !isFinite(b)) continue;                       // skip points outside the domain
+    if (Math.abs(a - b) > 1e-6 * Math.max(1, Math.abs(a), Math.abs(b))) return false;
+    tested++;
+  }
+  return tested >= 3;
+}
+// Shape checks, so "expand" and "factor" questions ask for the right form.
+const hasParen = raw => /\(/.test(normInput(raw).replace(/(sqrt|cbrt)\(/g, ""));   // a "(" that is not a root's
+function factorsOf(n) { return n.op === "*" ? [...factorsOf(n.a), ...factorsOf(n.b)] : n.op === "neg" ? [{ num: -1 }, ...factorsOf(n.a)] : [n]; }
+function degreeOf(n) {                                               // degree in x of a polynomial tree (or null)
+  if ("num" in n) return 0; if ("v" in n) return n.v === "x" ? 1 : 0;
+  if (n.op === "+" || n.op === "-") { const a = degreeOf(n.a), b = degreeOf(n.b); return a === null || b === null ? null : Math.max(a, b); }
+  if (n.op === "*") { const a = degreeOf(n.a), b = degreeOf(n.b); return a === null || b === null ? null : a + b; }
+  if (n.op === "neg") return degreeOf(n.a);
+  if (n.op === "^" && "num" in n.b && Number.isInteger(n.b.num) && n.b.num >= 0) { const a = degreeOf(n.a); return a === null ? null : a * n.b.num; }
+  return null;
+}
+// Factored into pieces no bigger than `maxDeg` (1 = linear factors; powers of a factor are allowed).
+function isFactoredTo(tree, maxDeg = 1) {
+  const fs = factorsOf(tree); if (fs.length < 2 && !(fs[0].op === "^")) return false;
+  return fs.every(f => { const base = f.op === "^" ? f.a : f; const d = degreeOf(base); return d !== null && d <= maxDeg; });
+}
+// Is there a root anywhere in a denominator? (for "rationalize" questions)
+const isLeaf = n => !n || "num" in n || "v" in n;
+function hasRoot(n) { if (isLeaf(n)) return false; if (n.op === "sqrt" || n.op === "cbrt") return true;
+  if (n.op === "^" && "num" in n.b && !Number.isInteger(n.b.num)) return true; return hasRoot(n.a) || hasRoot(n.b); }
+function rootInDen(n) { if (isLeaf(n)) return false; if (n.op === "/" && hasRoot(n.b)) return true; return rootInDen(n.a) || rootInDen(n.b); }
+// Simplified enough? A fully simplified answer has a numerator and denominator no bigger (in degree) than the answer key's.
+function isSimplified(tree, maxNum, maxDen) {
+  let n = tree; while (n.op === "neg") n = n.a;
+  if (n.op === "/") { const a = degreeOf(n.a), b = degreeOf(n.b); return a !== null && b !== null && a <= maxNum && b <= maxDen; }
+  const d = degreeOf(n); return d !== null && d <= maxNum && maxDen === 0;
+}
+// A typed polynomial in x as coefficients ([−18, −9, 2]); null if it is not a polynomial with integer coefficients.
+function treeToPoly(n) {
+  if ("num" in n) return Number.isInteger(n.num) ? [n.num] : null;
+  if ("v" in n) return n.v === "x" ? [0, 1] : null;
+  const a = n.a && treeToPoly(n.a);
+  if (n.op === "neg") return a && P.scale(a, -1);
+  if (n.op === "^") { const e = "num" in n.b ? n.b.num : null; return a && Number.isInteger(e) && e >= 0 && e <= 12 ? P.pow(a, e) : null; }
+  const b = n.b && treeToPoly(n.b); if (!a || !b) return null;
+  return n.op === "+" ? P.add(a, b) : n.op === "-" ? P.sub(a, b) : n.op === "*" ? P.mul(a, b) : null;
+}
+const termsOf = c => c.map((v, i) => [v, i]).filter(([v]) => v).reverse();   // [[coef, power], …], highest power first
+// A typed list of solutions → numbers. "x = 3, x = −5", "(3 ± sqrt(17))/4", "no solution" → []. null if unreadable.
+function readNums(raw) {
+  const t = String(raw).trim();
+  if (/^(no\s*(real\s*)?solutions?|none|∅|\{\s*\})\.?$/i.test(t)) return [];
+  const pieces = t.replace(/\b[a-z]\s*=/gi, "").split(/[,;]|\bor\b|\band\b/i).map(x => x.trim()).filter(Boolean);
+  const out = [];
+  for (const p of pieces) {
+    const pm = p.replace(/\+\/-|\+-/g, "±");
+    const forms = pm.includes("±") ? [pm.replace("±", "+"), pm.replace("±", "-")] : [pm];
+    for (const f of forms) { let v; try { v = evalExpr(parseExpr(f), {}); } catch { return null; } if (!isFinite(v)) return null; out.push(v); }
+  }
+  return out.length ? out : null;
+}
+// Turn typed text into the plain notation used for display: x^2 → x², * → ·, sqrt → √
+function prettyInput(raw) {
+  return String(raw).replace(/\*/g, "·").replace(/-/g, "−").replace(/sqrt/g, "√").replace(/cbrt/g, "∛")
+    .replace(/\^(\d+)/g, (_, d) => supNum(d)).replace(/\^\(?-(\d+)\)?/g, (_, d) => "⁻" + supNum(d));
+}
+
+/* ---------- K5. Tabs (keyboard: arrows, Home, End; #examples in the link opens that tab) ---------- */
+function setupTabs() {
+  const tabs = [...document.querySelectorAll('[role="tab"]')];
+  const select = (t, focus = true) => {
+    tabs.forEach(b => { const on = b === t; b.setAttribute("aria-selected", on); b.tabIndex = on ? 0 : -1; $(b.getAttribute("aria-controls")).hidden = !on; });
+    if (focus) t.focus();
+  };
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => select(t));
+    t.addEventListener("keydown", e => {
+      const k = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+      if (k !== undefined) { e.preventDefault(); select(tabs[(k + tabs.length) % tabs.length]); }
+    });
+  });
+  const linked = tabs.find(t => "#" + t.id.replace("tab-", "") === location.hash);
+  if (linked) select(linked, false);
+}
+
+/* ---------- K6. Examples engine ----------
+   EXAMPLES = [{ key, label, make() → { prompt, steps: [html, ...], note? } }]
+   Students try each step, then reveal it, and can ask for new examples forever. */
+function setupExamples(EXAMPLES) {
+  let type = EXAMPLES[0], ex = null, shown = 0;
+  $("exTypes").innerHTML = EXAMPLES.map((e, i) => `<button class="btn ${i ? "secondary" : ""}" data-k="${e.key}" aria-pressed="${!i}">${e.label}</button>`).join("");
+  $("exTypes").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    type = EXAMPLES.find(e => e.key === b.dataset.k);
+    $("exTypes").querySelectorAll("button").forEach(x => { const on = x === b; x.setAttribute("aria-pressed", on); x.classList.toggle("secondary", !on); });
+    fresh();
+  }));
+  function fresh() { let e, n = 0; do { e = type.make(); } while (ex && e.prompt === ex.prompt && ++n < 10); ex = e; shown = 0; draw(); }
+  function draw() {
+    const done = shown >= ex.steps.length;
+    $("exLeft").innerHTML = `<p class="muted" style="margin-top:0">${type.label}</p><p class="bigeq">${ex.prompt}</p>${ex.note ? `<p class="muted">${ex.note}</p>` : ""}`;
+    $("exSteps").innerHTML = ex.steps.slice(0, shown).map(s => `<li>${s}</li>`).join("") ||
+      `<li class="muted" style="background:none;padding-left:0;list-style:none">Try it yourself first, then press <em>Show next step</em>.</li>`;
+    $("exNext").disabled = $("exAll").disabled = done;
+  }
+  $("exNext").addEventListener("click", () => { shown++; draw(); });
+  $("exAll").addEventListener("click", () => { shown = ex.steps.length; draw(); });
+  $("exNew").addEventListener("click", fresh);
+  fresh();
+}
+
+/* ---------- K7. Practice engine ----------
+   QTYPES = { key: () → question }. A question is one of:
+     { kind: "mc",   prompt, choices: [{ label, ok }], hint, solve }
+     { kind: "expr", prompt, answer: "plain expression", form?: "expanded" | "factored", vars?, hint, solve }
+     { kind: "nums", prompt, answer: [numbers] (order does not matter), hint, solve }
+   A wrong answer gives the hint; a second wrong answer shows the solution.
+   An equal answer in the wrong form gets a nudge and does not use up a try. */
+function setupPractice(QTYPES, SET, doneMsg) {
+  let set = [], qi = 0;
+  const newSet = () => {
+    set = shuffle(SET).map(t => ({ ...QTYPES[t](), tries: 0, done: false, right: false }));
+    qi = 0; renderQ();
+  };
+  function renderProgress() {
+    $("progress").innerHTML = set.map((q, i) => {
+      const cls = q.done ? (q.right ? "ok" : "miss") : i === qi ? "cur" : "";
+      const label = `Question ${i + 1}: ${q.done ? (q.right ? "correct" : "answer shown") : i === qi ? "current" : "not started"}`;
+      return `<span class="${cls}" role="img" aria-label="${label}">${i + 1}</span>`;
+    }).join("");
+  }
+  function renderQ() {
+    renderProgress();
+    const q = set[qi], panel = $("qPanel");
+    if (!q) {
+      const score = set.filter(x => x.right).length;
+      panel.innerHTML = `<p class="prompt">You got ${score} of ${set.length} on the first or second try.</p>
+        <p>${score >= set.length - 1 ? doneMsg : "Try another set, or use the Examples tab for the types you missed."}</p>
+        <button class="btn" id="again">New set of questions</button>`;
+      $("again").addEventListener("click", newSet); $("again").focus(); return;
+    }
+    let body = "";
+    if (q.kind === "mc") body = q.choices.map((c, i) => `<label class="choice"><input type="radio" name="ans" value="${i}"> <span>${c.label}</span></label>`).join("");
+    if (q.kind === "expr") body = `<label class="exprlab" for="ain">Your answer</label>
+      <input id="ain" class="exprin" autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="${q.placeholder || "e.g. 2x^2 - 9x - 18"}">
+      <p class="preview" aria-live="polite"><span class="muted">Preview:</span> <span id="aprev"></span></p>
+      <p class="muted typehelp">Type ^ for powers (x^2), sqrt( ) for √. You can skip × signs: 2x(x+1). Any correct ${q.form === "expanded" ? "expanded form" : q.form === "factored" ? "factored form" : "form"} is accepted.</p>`;
+    if (q.kind === "nums") body = `<label class="exprlab" for="ain">Your answer</label>
+      <input id="ain" class="exprin" inputmode="text" autocomplete="off" spellcheck="false" placeholder="${q.placeholder || "e.g. −3, 1/2"}">
+      <p class="muted typehelp">Separate solutions with commas. For a pair you can type ± or +- (for example (3 +- sqrt(17))/4). Type <em>no solution</em> if there is none.${q.tol ? " Decimals rounded to " + q.tolText + " are fine." : ""}</p>`;
+    if (q.kind === "interval") body = `<label class="exprlab" for="ain">Your answer (interval notation)</label>
+      <input id="ain" class="exprin" autocomplete="off" spellcheck="false" placeholder="${q.placeholder || "e.g. (-inf, 2] U (6, inf)"}">
+      <div class="row keypad" role="group" aria-label="Insert a symbol">${[["−∞", "-inf"], ["∞", "inf"], ["∪", " U "], ["(", "("], ["[", "["], [")", ")"], ["]", "]"], ["no solution", "no solution"]]
+        .map(([l, v]) => `<button type="button" class="btn secondary" data-ins="${v}">${l}</button>`).join("")}</div>
+      <p class="preview" aria-live="polite"><span class="muted">Preview:</span> <span id="aprev"></span></p>
+      <p class="muted typehelp">Type inf for ∞ and U for ∪. Use ( ) for endpoints that are not included and [ ] for endpoints that are.</p>`;
+    panel.innerHTML = `<p class="muted">Question ${qi + 1} of ${set.length}</p>
+      <fieldset><legend class="prompt">${q.prompt}</legend>${body}</fieldset>
+      <div class="row"><button class="btn" id="check">Check answer</button><button class="btn secondary" id="next" hidden>Next question</button></div>
+      <div id="fb" aria-live="polite"></div>`;
+    $("check").addEventListener("click", checkQ);
+    $("next").addEventListener("click", () => { qi++; renderQ(); });
+    const ain = $("ain");
+    if (ain) {
+      ain.addEventListener("keydown", e => { if (e.key === "Enter") checkQ(); });
+      if (q.kind === "interval") {
+        const prev = () => { const r = readIntervals(ain.value); $("aprev").innerHTML = ""; if (ain.value.trim()) $("aprev").append(r ? (r.length ? M(ivText(r)) : "no solution") : "(not readable yet)"); };
+        ain.addEventListener("input", prev);
+        document.querySelectorAll("#qPanel [data-ins]").forEach(b => b.addEventListener("click", () => {
+          const v = b.dataset.ins; if (v === "no solution") ain.value = v; else { const p = ain.selectionStart ?? ain.value.length; ain.value = ain.value.slice(0, p) + v + ain.value.slice(ain.selectionEnd ?? p); ain.selectionStart = ain.selectionEnd = p + v.length; }
+          ain.focus(); prev(); }));
+      }
+      if (q.kind === "expr") ain.addEventListener("input", () => {     // live typeset preview of what was typed
+        const v = ain.value.trim(); let okParse = true; try { if (v) parseExpr(v); } catch { okParse = false; }
+        $("aprev").innerHTML = ""; if (v) $("aprev").append(okParse ? M(prettyInput(normInput(v).replace(/\*/g, "·"))) : "(not readable yet)");
+      });
+    }
+  }
+  function checkQ() {
+    const q = set[qi], fb = $("fb"); let ok, mark = () => {};
+    if (q.kind === "expr") {
+      const raw = $("ain").value.trim(); if (!raw) { fb.className = "feedback hint"; fb.textContent = "Type an answer first."; return; }
+      let t; try { t = parseExpr(raw); } catch { fb.className = "feedback hint"; fb.textContent = "I can't read that yet. Check the parentheses and use ^ for powers."; return; }
+      ok = sameValue(t, parseExpr(q.answer), q.vars || ["x"]);
+      if (ok && q.form === "expanded" && hasParen(raw)) { fb.className = "feedback hint"; fb.innerHTML = "<strong>Equal, but not expanded yet.</strong> Multiply out every set of parentheses and combine like terms."; return; }
+      if (ok && q.form === "simplified" && !isSimplified(t, q.maxNum, q.maxDen)) { fb.className = "feedback hint"; fb.innerHTML = "<strong>Equal, but not fully simplified.</strong> Factor the numerator and denominator and cancel every common factor."; return; }
+      if (ok && q.form === "rationalized" && rootInDen(t)) { fb.className = "feedback hint"; fb.innerHTML = "<strong>Equal, but there is still a square root in a denominator.</strong> Multiply the top and bottom by the root (or the conjugate)."; return; }
+      if (ok && q.form === "factored" && !isFactoredTo(t, q.maxDeg || 1)) { fb.className = "feedback hint"; fb.innerHTML = "<strong>Equal, but not factored completely.</strong> Write it as a product, and check whether any factor can be factored again."; return; }
+    } else if (q.kind === "interval") {
+      const raw = $("ain").value.trim(); if (!raw) { fb.className = "feedback hint"; fb.textContent = "Type an answer first."; return; }
+      if (/[<>≤≥]/.test(raw)) { fb.className = "feedback hint"; fb.textContent = "Write the answer in interval notation, like [2, 5) or (-inf, 1]."; return; }
+      const got = readIntervals(raw);
+      if (!got) { fb.className = "feedback hint"; fb.textContent = "I can't read that interval. Use a form like (-inf, 2] U (6, inf), and make sure the smaller number comes first."; return; }
+      const cmp = ivCompare(got, q.answer); ok = cmp === "same";
+      if (cmp === "brackets") { fb.className = "feedback hint"; fb.innerHTML = "<strong>Right numbers, but check your brackets.</strong> Use [ ] only where the endpoint is included, and always ( ) next to ∞."; return; }
+    } else if (q.kind === "nums") {
+      const raw = $("ain").value.trim(); if (!raw) { fb.className = "feedback hint"; fb.textContent = "Type an answer first."; return; }
+      let typed = raw.replace(/[$%°]/g, "");                              // $7821.88, 7.7%, and 150° are fine
+      if (q.answer.length === 1) typed = typed.replace(/(\d),(?=\d{3}(?!\d))/g, "$1");   // one answer expected: 33,062 means 33062
+      const got = readNums(typed);
+      if (!got) { fb.className = "feedback hint"; fb.textContent = "Type numbers only, like −3, 1/2, or 2 + sqrt(3), separated by commas."; return; }
+      const tol = q.tol || 1e-6, want = q.answer.slice().sort((a, b) => a - b);
+      const have = got.filter((v, i) => got.findIndex(w => Math.abs(w - v) < tol) === i).sort((a, b) => a - b);   // repeats count once
+      ok = want.length === have.length && want.every((v, i) => Math.abs(v - have[i]) < tol);
+      if (!ok && want.length && have.length < want.length && have.every(v => want.some(w => Math.abs(w - v) < tol))) {
+        fb.className = "feedback hint"; fb.innerHTML = `<strong>Correct so far, but there ${want.length - have.length === 1 ? "is another solution" : "are more solutions"}.</strong> Look for every value that works.`; return; }
+    } else {
+      const sel = document.querySelector('input[name="ans"]:checked');
+      if (!sel) { fb.className = "feedback hint"; fb.textContent = "Choose an answer first."; return; }
+      const labels = [...document.querySelectorAll("#qPanel .choice")]; ok = q.choices[+sel.value].ok;
+      mark = final => { labels[+sel.value].classList.add(ok ? "correct" : "wrong"); if (final && !ok) labels[q.choices.findIndex(c => c.ok)].classList.add("correct"); };
+    }
+    q.tries++;
+    if (ok) { q.done = q.right = true; mark(true); fb.className = "feedback ok"; fb.innerHTML = `<strong>Correct.</strong> ${q.solve}`; }
+    else if (q.tries === 1) { mark(false); fb.className = "feedback hint"; fb.innerHTML = `<strong>Not yet. Hint:</strong> ${q.hint} Try again.`; return; }
+    else { q.done = true; mark(true); fb.className = "feedback bad"; fb.innerHTML = `<strong>Here is the answer.</strong> ${q.solve}`; }
+    document.querySelectorAll("#qPanel input").forEach(i => i.disabled = true);
+    $("check").hidden = true; $("next").hidden = false; $("next").focus();
+    if (qi === set.length - 1) $("next").textContent = "See my results";
+    renderProgress();
+  }
+  window.__practice = () => ({ set, qi });                         // read-only hook for automated tests
+  newSet();
+}
+
+/* ---------- K8. Graphs ----------
+   drawGraph(svg, { win: [xmin, xmax, ymin, ymax], fns: [{ f, color, dash, width }], vlines: [x], hlines: [y],
+                    points: [{ x, y, open, label, color }] })
+   Colors are CSS variable names (e.g. "--curve") so graphs follow light and dark mode. */
+function drawGraph(svg, o) {
+  const W = 440, H = 440, pad = 26, [x0, x1, y0, y1] = o.win || [-10, 10, -10, 10];
+  const X = x => pad + (x - x0) / (x1 - x0) * (W - 2 * pad), Y = y => H - pad - (y - y0) / (y1 - y0) * (H - 2 * pad);
+  const css = getComputedStyle(document.documentElement), col = v => v && v.startsWith("--") ? css.getPropertyValue(v).trim() : v;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  [...svg.childNodes].forEach(c => { if (!["title", "desc"].includes(c.nodeName)) c.remove(); });   // keep the accessible title
+  el("rect", { x: 0, y: 0, width: W, height: H, fill: col("--panel") }, svg);
+  const step = v => { const r = v / 10, p = 10 ** Math.floor(Math.log10(r)); return [1, 2, 5, 10].map(m => m * p).find(s => s >= r); };
+  const sx = o.xstep || step(x1 - x0), sy = o.ystep || step(y1 - y0);
+  for (let x = Math.ceil(x0 / sx) * sx; x <= x1 + 1e-9; x += sx) el("line", { x1: X(x), y1: Y(y0), x2: X(x), y2: Y(y1), stroke: col("--grid"), "stroke-width": 1 }, svg);
+  for (let y = Math.ceil(y0 / sy) * sy; y <= y1 + 1e-9; y += sy) el("line", { x1: X(x0), y1: Y(y), x2: X(x1), y2: Y(y), stroke: col("--grid"), "stroke-width": 1 }, svg);
+  if (y0 <= 0 && y1 >= 0) el("line", { x1: X(x0), y1: Y(0), x2: X(x1), y2: Y(0), stroke: col("--axis"), "stroke-width": 1.6 }, svg);
+  if (x0 <= 0 && x1 >= 0) el("line", { x1: X(0), y1: Y(y0), x2: X(0), y2: Y(y1), stroke: col("--axis"), "stroke-width": 1.6 }, svg);
+  const lab = (x, y, t, a = "middle") => { const e = el("text", { x, y, "font-size": 12, fill: col("--muted"), "text-anchor": a }, svg); e.textContent = t; };
+  for (let x = Math.ceil(x0 / sx) * sx; x <= x1 + 1e-9; x += sx) if (Math.abs(x) > 1e-9) lab(X(x), Math.min(Math.max(Y(0) + 15, 14), H - 4), fnum(+x.toFixed(6)));
+  for (let y = Math.ceil(y0 / sy) * sy; y <= y1 + 1e-9; y += sy) if (Math.abs(y) > 1e-9) lab(Math.min(Math.max(X(0) - 5, 22), W - 4), Y(y) + 4, fnum(+y.toFixed(6)), "end");
+  (o.vlines || []).forEach(v => el("line", { x1: X(v), y1: Y(y0), x2: X(v), y2: Y(y1), stroke: col("--asym"), "stroke-width": 2, "stroke-dasharray": "7 5" }, svg));
+  (o.hlines || []).forEach(v => el("line", { x1: X(x0), y1: Y(v), x2: X(x1), y2: Y(v), stroke: col("--asym"), "stroke-width": 2, "stroke-dasharray": "7 5" }, svg));
+  (o.fns || []).forEach(g => {                                      // sample the curve; lift the pen at breaks and off-screen jumps
+    let d = "", pen = false, prev = null; const N = 700, span = y1 - y0;
+    for (let i = 0; i <= N; i++) { const x = x0 + (x1 - x0) * i / N, y = g.f(x);
+      if (!isFinite(y) || Math.abs(y - (prev ?? y)) > span * 1.5 || y < y0 - span || y > y1 + span) { pen = false; prev = isFinite(y) ? y : null; continue; }
+      d += (pen ? "L" : "M") + X(x).toFixed(1) + " " + Y(Math.max(y0 - span, Math.min(y1 + span, y))).toFixed(1); pen = true; prev = y; }
+    const clip = `clip${Math.random().toString(36).slice(2, 8)}`;
+    const cp = el("clipPath", { id: clip }, svg); el("rect", { x: pad, y: pad, width: W - 2 * pad, height: H - 2 * pad }, cp);
+    el("path", { d, fill: "none", stroke: col(g.color || "--curve"), "stroke-width": g.width || 3.2, "stroke-dasharray": g.dash || "none", "stroke-linecap": "round", "clip-path": `url(#${clip})` }, svg);
+  });
+  (o.points || []).forEach(p => { if (p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) return;
+    el("circle", { cx: X(p.x), cy: Y(p.y), r: 6, fill: p.open ? col("--panel") : col(p.color || "--curve2"), stroke: col(p.color || "--curve2"), "stroke-width": 2.5 }, svg);
+    if (p.label) { const t = el("text", { x: X(p.x) + 9, y: Y(p.y) - 9, "font-size": 14, "font-weight": 700, fill: col("--ink") }, svg); t.textContent = p.label; } });
+}
+
+/* ---------- K9. Exact answers: fractions, radicals, quadratic solutions ---------- */
+function fracText(n, d = 1) {                                       // reduced fraction as text: −3/4, 5, 1/2
+  if (d < 0) { n = -n; d = -d; } const g = gcd(n, d); n /= g; d /= g;
+  return d === 1 ? fnum(n) : `${n < 0 ? "−" : ""}${Math.abs(n)}/${d}`;
+}
+function sqrtParts(n) { let s = 1, m = n; for (let k = 2; k * k <= m; k++) while (m % (k * k) === 0) { m /= k * k; s *= k; } return [s, m]; }   // √72 = 6√2 → [6, 2]
+// Solutions of ax² + bx + c = 0 (integers a ≠ 0, b, c), in simplest exact form.
+function quadSolve(a, b, c) {
+  const D = b * b - 4 * a * c, kind = D > 0 ? "two" : D === 0 ? "one" : "complex";
+  if (D === 0) { const t = fracText(-b, 2 * a); return { D, kind, vals: [-b / (2 * a)], list: [t], text: t }; }
+  const [s, m] = sqrtParts(Math.abs(D));
+  if (m === 1 && D > 0) {                                           // a perfect square: two rational answers
+    const r1 = fracText(-b + s, 2 * a), r2 = fracText(-b - s, 2 * a), v = [(-b + s) / (2 * a), (-b - s) / (2 * a)].sort((x, y) => x - y);
+    return { D, kind, vals: v, list: [r1, r2], text: `${r1}, ${r2}` };
+  }
+  let g = gcd(gcd(b, s), 2 * a), p = -b / g, q = s / g, d = 2 * a / g;
+  if (d < 0) { p = -p; d = -d; }                                    // q stays positive because of the ±
+  const root = D > 0 ? (q === 1 ? "" : fnum(q)) + (m === 1 ? "" : "√" + m) : (q === 1 && m !== 1 ? "" : fnum(q)) + (m === 1 ? "i" : "i√" + m);
+  const core = p === 0 ? `±${root}` : `${fnum(p)} ± ${root}`;
+  const text = d === 1 ? core : `(${core})/${d}`;
+  const vals = D > 0 ? [(-b - Math.sqrt(D)) / (2 * a), (-b + Math.sqrt(D)) / (2 * a)].sort((x, y) => x - y) : [];
+  return { D, kind, vals, list: [text], text };
+}
+
+/* ---------- K10. Intervals and number lines ----------
+   A solution set is a list of intervals { a, b, lo, hi }: a and b are numbers (±Infinity allowed);
+   lo / hi say whether each endpoint is included ([ ]) or not (( )). [] is the empty set. */
+const IV = (a, b, lo = false, hi = false) => ({ a, b, lo: lo && isFinite(a), hi: hi && isFinite(b) });
+function ivNorm(set) {                                              // sort and merge touching or overlapping pieces
+  const s = set.filter(I => I.a < I.b || I.a === I.b && I.lo && I.hi).map(I => ({ ...I })).sort((p, q) => p.a - q.a || (q.lo - p.lo));
+  const out = [];
+  for (const I of s) {
+    const L = out[out.length - 1];
+    if (L && (I.a < L.b || I.a === L.b && (L.hi || I.lo))) {
+      if (I.b > L.b) { L.b = I.b; L.hi = I.hi; } else if (I.b === L.b) L.hi = L.hi || I.hi;   // extend, or just widen the bracket
+    } else out.push(I);
+  }
+  return out;
+}
+const numTxt = v => v === Infinity ? "∞" : v === -Infinity ? "−∞" : exactText(v);
+function exactText(v) {                                             // 0.5 → 1/2, 1.4142… → √2 when it is one
+  for (let d = 1; d <= 60; d++) { const n = v * d; if (Math.abs(n - Math.round(n)) < 1e-9) return fracText(Math.round(n), d); }
+  for (const k of [2, 3, 5, 6, 7]) for (const c of [1, 2, 3, -1, -2, -3]) for (const off of [0, 1, -1, 2, -2, 3, -3]) if (Math.abs(v - (off + c * Math.sqrt(k))) < 1e-9)
+    return `${off ? fnum(off) + (c < 0 ? " − " : " + ") : c < 0 ? "−" : ""}${Math.abs(c) === 1 ? "" : Math.abs(c)}√${k}`;
+  return fnum(+v.toFixed(4));
+}
+function ivText(set) {                                              // "(−∞, 2] ∪ (6, ∞)"
+  const s = ivNorm(set);
+  if (!s.length) return "no solution";
+  return s.map(I => I.a === I.b ? `{${numTxt(I.a)}}` : `${I.lo ? "[" : "("}${numTxt(I.a)}, ${numTxt(I.b)}${I.hi ? "]" : ")"}`).join(" ∪ ");
+}
+// Inequality wording of a set: x ≤ 2 or x > 6
+function ivIneq(set, v = "x") {
+  const s = ivNorm(set); if (!s.length) return "no solution";
+  return s.map(I => {
+    if (I.a === -Infinity && I.b === Infinity) return "all real numbers";
+    if (I.a === -Infinity) return `${v} ${I.hi ? "≤" : "<"} ${numTxt(I.b)}`;
+    if (I.b === Infinity) return `${v} ${I.lo ? "≥" : ">"} ${numTxt(I.a)}`;
+    if (I.a === I.b) return `${v} = ${numTxt(I.a)}`;
+    return `${numTxt(I.a)} ${I.lo ? "≤" : "<"} ${v} ${I.hi ? "≤" : "<"} ${numTxt(I.b)}`;
+  }).join(" or ");
+}
+// Read typed interval notation. Returns a set, or null if unreadable.
+function readIntervals(raw) {
+  let t = String(raw).trim().toLowerCase();
+  if (/^(no\s*(real\s*)?solutions?|none|∅|\{\s*\}|empty( set)?)\.?$/.test(t)) return [];
+  if (/^(all\s*real\s*numbers?|all reals|ℝ|r)$/.test(t)) return [IV(-Infinity, Infinity)];
+  t = t.replace(/infinity|inf|∞/g, "I").replace(/[−–—]/g, "-").replace(/\s+/g, "");
+  const parts = t.split(/∪|\bu\b|u(?=[\[(])|\bor\b|or/).filter(Boolean);
+  const out = [];
+  for (const p of parts) {
+    const m = /^([\[(])(.+),(.+)([\])])$/.exec(p);
+    if (!m) { const pt = /^\{(.+)\}$/.exec(p); if (pt) { try { const v = evalExpr(parseExpr(pt[1]), {}); out.push(IV(v, v, true, true)); continue; } catch { return null; } } return null; }
+    const val = s => s === "I" || s === "+I" ? Infinity : s === "-I" ? -Infinity : (() => { try { return evalExpr(parseExpr(s), {}); } catch { return NaN; } })();
+    const a = val(m[2]), b = val(m[3]); if (isNaN(a) || isNaN(b) || a > b) return null;
+    out.push(IV(a, b, m[1] === "[", m[4] === "]"));
+  }
+  return out.length ? out : null;
+}
+// Compare two sets. Returns "same", "brackets" (right endpoints, a wrong bracket), or "different".
+function ivCompare(A, B) {
+  const a = ivNorm(A), b = ivNorm(B), eq = (x, y) => x === y || Math.abs(x - y) < 1e-6;
+  if (a.length !== b.length || !a.every((I, i) => eq(I.a, b[i].a) && eq(I.b, b[i].b))) return "different";
+  return a.every((I, i) => I.lo === b[i].lo && I.hi === b[i].hi) ? "same" : "brackets";
+}
+const ivHas = (set, x) => set.some(I => (x > I.a || x === I.a && I.lo) && (x < I.b || x === I.b && I.hi));
+// Number line: drawNumberLine(svg, { min, max, step, set, marks: [{ x, label }] })
+function drawNumberLine(svg, o) {
+  const W = 440, H = o.h || 80, pad = 26, { min, max } = o, step = o.step || 1, X = x => pad + (x - min) / (max - min) * (W - 2 * pad), y = H / 2;
+  const css = getComputedStyle(document.documentElement), col = v => css.getPropertyValue(v).trim();
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  [...svg.childNodes].forEach(c => { if (!["title", "desc"].includes(c.nodeName)) c.remove(); });
+  el("line", { x1: 6, y1: y, x2: W - 6, y2: y, stroke: col("--axis"), "stroke-width": 1.6 }, svg);
+  el("path", { d: `M${W - 6} ${y} l-9 -5 v10 z M6 ${y} l9 -5 v10 z`, fill: col("--axis") }, svg);
+  for (let x = Math.ceil(min / step) * step; x <= max + 1e-9; x += step) {
+    el("line", { x1: X(x), y1: y - 6, x2: X(x), y2: y + 6, stroke: col("--axis"), "stroke-width": 1.2 }, svg);
+    const t = el("text", { x: X(x), y: y + 22, "text-anchor": "middle", "font-size": 12, fill: col("--muted") }, svg); t.textContent = fnum(+x.toFixed(6));
+  }
+  const clamp = v => Math.max(min - (max - min) * 0.04, Math.min(max + (max - min) * 0.04, v));
+  for (const I of ivNorm(o.set || [])) {
+    const x1 = I.a === -Infinity ? 8 : X(clamp(I.a)), x2 = I.b === Infinity ? W - 8 : X(clamp(I.b));
+    el("line", { x1, y1: y, x2, y2: y, stroke: col("--curve"), "stroke-width": 6, "stroke-linecap": "butt" }, svg);
+    if (I.a === -Infinity) el("path", { d: `M6 ${y} l12 -8 v16 z`, fill: col("--curve") }, svg);
+    if (I.b === Infinity) el("path", { d: `M${W - 6} ${y} l-12 -8 v16 z`, fill: col("--curve") }, svg);
+    [[I.a, I.lo], [I.b, I.hi]].forEach(([v, closed]) => { if (isFinite(v) && v >= min - 1e-9 && v <= max + 1e-9)
+      el("circle", { cx: X(v), cy: y, r: 7, fill: closed ? col("--curve") : col("--panel"), stroke: col("--curve"), "stroke-width": 3 }, svg); });
+  }
+  (o.marks || []).forEach(m => { if (m.dot !== false) el("circle", { cx: X(m.x), cy: y, r: 6, fill: col(m.color || "--curve2") }, svg); const t = el("text", { x: X(m.x), y: y - 14, "text-anchor": "middle", "font-size": 13, "font-weight": 700, fill: col(m.color || "--curve2") }, svg); t.textContent = m.label; });
+}
+// A number line as an HTML string (for practice feedback and examples)
+function numberLineHTML(set, min, max, label) {
+  const svg = document.createElementNS(NS, "svg"); svg.setAttribute("class", "nline"); svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", label || `Number line showing ${ivText(set)}`);
+  drawNumberLine(svg, { min, max, set, step: (max - min) > 24 ? 5 : (max - min) > 12 ? 2 : 1 }); return svg.outerHTML;
+}
+// A sensible window for a set's finite endpoints
+function ivWindow(set, extra = []) {
+  const pts = [...set.flatMap(I => [I.a, I.b]), ...extra].filter(isFinite); if (!pts.length) return [-5, 5];
+  let lo = Math.floor(Math.min(...pts)) - 2, hi = Math.ceil(Math.max(...pts)) + 2; if (hi - lo < 8) { const c = (hi + lo) / 2; lo = Math.floor(c - 4); hi = Math.ceil(c + 4); }
+  return [lo, hi];
+}
+// Intersection and union of solution sets
+function ivIntersect(A, B) {
+  const out = [];
+  for (const I of ivNorm(A)) for (const J of ivNorm(B)) {
+    const a = Math.max(I.a, J.a), b = Math.min(I.b, J.b);
+    const lo = I.a === J.a ? I.lo && J.lo : a === I.a ? I.lo : J.lo, hi = I.b === J.b ? I.hi && J.hi : b === I.b ? I.hi : J.hi;
+    if (a < b || a === b && lo && hi) out.push(IV(a, b, lo, hi));
+  }
+  return ivNorm(out);
+}
+const ivUnion = (A, B) => ivNorm([...A, ...B]);
+// The solution set of g(x) op 0 for a linear g(x) = m·x + c
+function linSet(m, c, op) {
+  if (Math.abs(m) < 1e-12) return ({ "<": c < 0, "<=": c <= 0, ">": c > 0, ">=": c >= 0 }[op]) ? [IV(-Infinity, Infinity)] : [];
+  const r = -c / m, incl = op.includes("="), less = op[0] === "<";
+  return (less === (m > 0)) ? [IV(-Infinity, r, false, incl)] : [IV(r, Infinity, incl)];
+}
+
+/* ---------- K11. Numeric domain finder ----------
+   Scans x from −lim to lim and returns the set where fn(x) is a real number.
+   Boundaries are snapped to the nearest 1/12 (all course examples use nice numbers),
+   and each one is tested to choose [ or (. Points like x = 2 where fn breaks are removed. */
+function numericDomain(fn, lim = 40) {
+  const ok = x => { try { return isFinite(fn(x)); } catch { return false; } }, step = 1 / 48, snap = v => Math.round(v * 12) / 12;
+  const out = []; let start = null;
+  for (let k = -lim / step; k <= lim / step + 1; k++) {
+    const x = k * step, good = k <= lim / step && ok(x) && !(ok(x) && Math.abs(snap(x) - x) < 1e-12 && !ok(snap(x)));
+    if (good && start === null) start = x;
+    if (!good && start !== null) { out.push([start, x - step]); start = null; }
+  }
+  const sets = [];
+  for (const [a0, b0] of out) {
+    const a = a0 <= -lim + 1e-9 ? -Infinity : snap(a0 - step / 2), b = b0 >= lim - 1e-9 ? Infinity : snap(b0 + step / 2);
+    sets.push(IV(a, b, isFinite(a) && ok(a), isFinite(b) && ok(b)));
+  }
+  // points the grid stepped over: x where fn breaks exactly (e.g. 1/(x − 1/3))
+  return ivNorm(sets);
+}
+
+/* =====================================================================
+   MATH 1324 LESSON 1 HELPERS (shared by the three skill pages and the ladder)
+     L1. Fractions as [numerator, denominator]
+     L2. Writing lines: slope-intercept, point-slope, standard form
+     L3. Money
+     L4. Graph helpers built on drawGraph (K8)
+     L5. Reading a typed number or fraction from an input box
+   ===================================================================== */
+
+/* ---------- L1. Fractions ---------- */
+const Q = (n, d = 1) => { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d); return [n / g, d / g]; };   // reduced [num, den], den > 0
+const QT = ([n, d]) => fracText(n, d);                               // [−3, 5] → "−3/5"
+const Qv = ([n, d]) => n / d;                                        // decimal value of a fraction
+const Qmul = (a, b) => Q(a[0] * b[0], a[1] * b[1]);                  // a · b
+const Qadd = (a, b) => Q(a[0] * b[1] + b[0] * a[1], a[1] * b[1]);   // a + b
+const Qneg = a => [-a[0], a[1]];                                     // −a
+const Qkey = a => `(${a[0]}/${a[1]})`;                               // a fraction the answer checker can read
+const neg = v => v < 0 ? `(${fnum(v)})` : fnum(v);                   // wrap negatives in parentheses when substituting
+const pt = (x, y) => `(${fnum(x)}, ${fnum(y)})`;                     // a point as plain math
+
+/* ---------- L2. Writing lines ---------- */
+// The x-term of a line: m = [−3, 5] → "−3/5 x" (the space keeps x out of the denominator), [2, 1] → "2x", [−1, 1] → "−x"
+function mxText(m, v = "x", first = true) {
+  if (m[0] === 0) return "";
+  const a = Math.abs(m[0]), sign = m[0] < 0 ? (first ? "−" : " − ") : (first ? "" : " + ");
+  return sign + (m[1] === 1 ? (a === 1 ? "" : String(a)) + v : `${a}/${m[1]} ${v}`);
+}
+// The right side of y = mx + b; m and b are fractions. Always shows something ("0" if both are zero).
+function slopeInt(m, b, v = "x") {
+  let s = mxText(m, v);
+  if (b[0] !== 0) s += (s ? (b[0] < 0 ? " − " : " + ") : (b[0] < 0 ? "−" : "")) + QT([Math.abs(b[0]), b[1]]);
+  return s || "0";
+}
+const slopeIntKey = (m, b, v = "x") => `${Qkey(m)}*${v} + ${Qkey(b)}`;   // the same line in a form parseExpr reads
+// y − y₁ = m(x − x₁) with the numbers put in: "y + 4 = −3/5(x − 6)"
+function pointSlope(m, x1, y1) {
+  const left = y1 === 0 ? "y" : `y ${y1 < 0 ? "+" : "−"} ${fnum(Math.abs(y1))}`;
+  const inner = x1 === 0 ? "x" : `x ${x1 < 0 ? "+" : "−"} ${fnum(Math.abs(x1))}`;
+  const mt = m[1] === 1 ? (m[0] === 1 ? "" : m[0] === -1 ? "−" : fnum(m[0])) : QT(m) + " ";
+  return `${left} = ${mt}(${inner})`;
+}
+// Standard form Ax + By = C with whole numbers, A ≥ 0 (B > 0 when A = 0), no common factor.
+function standardOf(m, b) {
+  const L = m[1] * b[1] / gcd(m[1], b[1]);                           // clear both denominators
+  let A = -m[0] * L / m[1], B = L, C = b[0] * L / b[1];
+  if (A < 0 || (A === 0 && B < 0)) { A = -A; B = -B; C = -C; }
+  const g = gcd(gcd(A, B), C) || 1; return [A / g, B / g, C / g];
+}
+function stdText(A, B, C) {                                          // "4x + 5y = 10", "x = 3", "y = −2"
+  let s = "";
+  if (A) s += (A === 1 ? "" : A === -1 ? "−" : fnum(A)) + "x";
+  if (B) s += (s ? (B < 0 ? " − " : " + ") : (B < 0 ? "−" : "")) + (Math.abs(B) === 1 ? "" : fnum(Math.abs(B))) + "y";
+  return `${s} = ${fnum(C)}`;
+}
+// Slope from two points with every substitution shown, as a list of plain-math pieces joined by " = "
+function slopeWork(x1, y1, x2, y2) {
+  const top = `${fnum(y2)} − ${neg(y1)}`, bot = `${fnum(x2)} − ${neg(x1)}`, dy = y2 - y1, dx = x2 - x1;
+  const parts = ["m = (y₂ − y₁)/(x₂ − x₁)", `(${top})/(${bot})`];
+  if (dx === 0) return { parts: [...parts, `${fnum(dy)}/0`], m: null, dx, dy };
+  parts.push(`${neg(dy)}/${neg(dx)}`.replace(/^\((−\d+)\)\//, "$1/"));   // the top may stay as −6; the bottom keeps its parentheses
+  const m = Q(dy, dx); if (QT(m) !== `${fnum(dy)}/${fnum(dx)}`) parts.push(QT(m));
+  return { parts, m, dx, dy };
+}
+const direction = m => m === null ? "vertical (undefined slope)" : m[0] > 0 ? "rising from left to right" : m[0] < 0 ? "falling from left to right" : "horizontal (slope 0)";
+
+/* ---------- L3. Money ---------- */
+// $1,500 or $0.40 or $2,250.75: cents only when they are needed, except prices under $10 keep two decimals
+function money(v, keepCents = false) {
+  const neg = v < 0; v = Math.abs(v);
+  const cents = keepCents || Math.round(v * 100) % 100 !== 0;
+  const s = v.toLocaleString("en-US", { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 });
+  return (neg ? "−$" : "$") + s;
+}
+const num2 = v => fnum(+v.toFixed(2));                               // 0.4, 1.25, 36 (for coefficients inside equations)
+
+/* ---------- L4. Graph helpers ---------- */
+const GW = 440, GP = 26;                                             // drawGraph's size and padding, so extra marks line up
+const gX = (win, x) => GP + (x - win[0]) / (win[1] - win[0]) * (GW - 2 * GP);
+const gY = (win, y) => GW - GP - (y - win[2]) / (win[3] - win[2]) * (GW - 2 * GP);
+const cssv = v => v.startsWith("--") ? getComputedStyle(document.documentElement).getPropertyValue(v).trim() : v;
+// A straight segment in graph coordinates (for vertical lines, rise/run triangles, and markers)
+function seg(svg, win, x1, y1, x2, y2, color = "--curve", width = 3.2, dash = "none") {
+  return el("line", { x1: gX(win, x1), y1: gY(win, y1), x2: gX(win, x2), y2: gY(win, y2), stroke: cssv(color), "stroke-width": width, "stroke-dasharray": dash, "stroke-linecap": "round" }, svg);
+}
+function gText(svg, win, x, y, t, dx = 0, dy = 0, anchor = "middle", color = "--ink") {   // a label placed at a graph point
+  const e = el("text", { x: gX(win, x) + dx, y: gY(win, y) + dy, "font-size": 14, "font-weight": 700, fill: cssv(color), "text-anchor": anchor,
+    stroke: cssv("--panel"), "stroke-width": 4, "paint-order": "stroke" }, svg);
+  e.textContent = t; return e;
+}
+// A whole graph as SVG markup, for questions and answer choices. line = { m, b } or { vx } (vertical); pts = [[x, y, label]]
+function lineGraphSVG(line, label, pts = [], win = [-8, 8, -8, 8]) {
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("class", "graph"); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", plainMath(label));
+  drawGraph(svg, { win, xstep: 1, ystep: 1, fns: line && line.vx === undefined ? [{ f: x => Qv(line.m) * x + Qv(line.b) }] : [],
+    points: pts.map(([x, y, l]) => ({ x, y, label: l || "" })) });
+  if (line && line.vx !== undefined) seg(svg, win, line.vx, win[2], line.vx, win[3]);
+  return svg.outerHTML;
+}
+
+/* ---------- L5. Reading inputs ---------- */
+// "3", "−2", "3/5", "0.4", "-1.25" → a fraction; null if it can't be read. Decimals become exact fractions.
+function readQ(raw) {
+  const s = String(raw).trim().replace(/[−–]/g, "-");
+  let m = /^(-?\d+)\s*\/\s*(-?\d+)$/.exec(s); if (m) return +m[2] === 0 ? null : Q(+m[1], +m[2]);
+  m = /^-?\d*\.?\d+$/.exec(s); if (!m) return null;
+  const places = (s.split(".")[1] || "").length; if (places > 4) return null;
+  const d = 10 ** places; return Q(Math.round(+s * d), d);
+}
+const readNum = raw => { const q = readQ(String(raw).replace(/[$,]/g, "")); return q ? Qv(q) : NaN; };   // money boxes: "$1,500" → 1500
+
+/* =====================================================================
+   MATH 1324 LESSON 6 HELPERS (linear inequalities and graphical LP)
+     I1. Inequalities as data: { a, b, op, c } means  a·x + b·y  op  c
+     I2. Writing them: standard form, solved for y, line type, side to shade
+     I3. Regions: clip a box by half-planes, find corner points, bounded or not
+     I4. Drawing a shaded region (built on drawGraph)
+     I5. Linear programming: evaluate the objective at the corners
+     I6. Random inequalities, systems, and LP problems with whole-number corners
+     I7. The constraint editor used on the 6.2 and 6.3 Explore tabs
+   ===================================================================== */
+
+/* ---------- I1. Inequalities as data ---------- */
+const OPS = ["<", "≤", ">", "≥"];
+const strict = op => op === "<" || op === ">";                      // dashed boundary
+const isLess = op => op === "<" || op === "≤";
+const flipOp = op => ({ "<": ">", ">": "<", "≤": "≥", "≥": "≤" })[op];   // multiply or divide by a negative
+const toggleStrict = op => ({ "<": "≤", "≤": "<", ">": "≥", "≥": ">" })[op];
+const C = (a, b, op, c) => ({ a, b, op, c });                        // a constraint
+const NONNEG = [C(1, 0, "≥", 0), C(0, 1, "≥", 0)];                  // x ≥ 0, y ≥ 0
+const val = (k, x, y) => k.a * x + k.b * y;                          // left side at a point
+// Does (x, y) satisfy k? loose = true counts points on a dashed line (used for corner points).
+function sat(k, x, y, loose = false) {
+  const d = val(k, x, y) - k.c, e = 1e-7;
+  if (loose || !strict(k.op)) return isLess(k.op) ? d <= e : d >= -e;
+  return isLess(k.op) ? d < -e : d > e;
+}
+const onLine = (k, x, y) => Math.abs(val(k, x, y) - k.c) < 1e-7;
+
+/* ---------- I2. Writing inequalities ---------- */
+const r6 = v => +(+v).toFixed(6);
+// A decimal as a fraction when it is a simple one: 0.5 → [1, 2], 2.333333 → [7, 3]
+function qOf(v) { for (let d = 1; d <= 120; d++) { const n = Math.round(v * d); if (Math.abs(n / d - v) < 1e-7) return Q(n, d); } return [r6(v), 1]; }
+const fr = v => QT(qOf(v));                                          // 4, −3/2, 10/3
+const pt6 = (x, y) => `(${fr(x)}, ${fr(y)})`;                        // (4, 3)
+// The left side a·x + b·y as text: "3x + 4y", "−x", "2y"
+function lhsText(a, b) {
+  let s = "";
+  [[a, "x"], [b, "y"]].forEach(([co, v]) => { if (!co) return; const neg = co < 0, m = Math.abs(co), t = (m === 1 ? "" : fr(m) + (qOf(m)[1] === 1 ? "" : " ")) + v;
+    s += s ? (neg ? " − " : " + ") + t : (neg ? "−" : "") + t; });
+  return s || "0";
+}
+const conText = k => `${lhsText(k.a, k.b)} ${k.op} ${fr(k.c)}`;     // "3x + 4y < 24"
+const lineText = k => `${lhsText(k.a, k.b)} = ${fr(k.c)}`;           // its boundary line
+// Solved for y (or x when there is no y): { text, op, m, k, flipped, kind }
+function yForm(k) {
+  if (k.b === 0) { const op = k.a < 0 ? flipOp(k.op) : k.op; return { kind: "v", op, flipped: k.a < 0, x: k.c / k.a, text: `x ${op} ${fr(k.c / k.a)}` }; }
+  const op = k.b < 0 ? flipOp(k.op) : k.op, m = qOf(-k.a / k.b), b = qOf(k.c / k.b);
+  return { kind: k.a === 0 ? "h" : "s", op, flipped: k.b < 0, m, b, text: `y ${op} ${slopeInt(m, b)}` };
+}
+const lineKind = k => strict(k.op) ? "dashed" : "solid";
+// Which side to shade, in words: above / below (or right / left for a vertical line)
+function shadeSide(k) { const f = yForm(k); return f.kind === "v" ? (isLess(f.op) ? "left" : "right") : (isLess(f.op) ? "below" : "above"); }
+const BRACE = `<svg class="brace6" viewBox="0 0 12 100" preserveAspectRatio="none" aria-hidden="true"><path d="M11 1 C5 1 6 12 6 26 C6 42 5 48 1 50 C5 52 6 58 6 74 C6 88 5 99 11 99" fill="none" stroke="currentColor" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`;
+const conHTML = cons => `<span class="sys6">${BRACE}<span class="sys-rows">${cons.map(k => `<span>${M(conText(k))}</span>`).join("")}</span></span>`;   // a system under a brace that stretches to fit
+
+/* ---------- I3. Regions ---------- */
+// Keep the part of a polygon (list of [x, y]) where k holds (dashed lines count as solid here).
+function clipHalf(poly, k) {
+  const out = [], inside = p => sat(k, p[0], p[1], true);
+  for (let i = 0; i < poly.length; i++) {
+    const P1 = poly[i], P2 = poly[(i + 1) % poly.length], in1 = inside(P1), in2 = inside(P2);
+    if (in1) out.push(P1);
+    if (in1 !== in2) { const d1 = val(k, ...P1) - k.c, d2 = val(k, ...P2) - k.c, t = d1 / (d1 - d2);   // where the edge crosses the line
+      out.push([P1[0] + t * (P2[0] - P1[0]), P1[1] + t * (P2[1] - P1[1])]); }
+  }
+  return out;
+}
+const boxPoly = ([x0, x1, y0, y1]) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+const regionPoly = (cons, box) => cons.reduce((p, k) => p.length ? clipHalf(p, k) : p, boxPoly(box));
+// Where two boundary lines meet (null if parallel)
+function meet(k1, k2) {
+  const D = k1.a * k2.b - k2.a * k1.b; if (Math.abs(D) < 1e-12) return null;
+  return [r6((k1.c * k2.b - k2.c * k1.b) / D), r6((k1.a * k2.c - k2.a * k1.c) / D)];
+}
+// Corner points: every meeting point that satisfies all constraints. on = indexes of the lines through it.
+function corners(cons) {
+  const out = [];
+  for (let i = 0; i < cons.length; i++) for (let j = i + 1; j < cons.length; j++) {
+    const p = meet(cons[i], cons[j]); if (!p || !cons.every(k => sat(k, p[0], p[1], true))) continue;
+    const old = out.find(q => Math.abs(q.x - p[0]) < 1e-6 && Math.abs(q.y - p[1]) < 1e-6);
+    if (old) { [i, j].forEach(t => old.on.includes(t) || old.on.push(t)); continue; }
+    out.push({ x: p[0] + 0, y: p[1] + 0, on: [i, j] });             // + 0 turns −0 into 0
+  }
+  if (out.length > 2) { const cx = out.reduce((s, p) => s + p.x, 0) / out.length, cy = out.reduce((s, p) => s + p.y, 0) / out.length;
+    out.sort((p, q) => Math.atan2(p.y - cy, p.x - cx) - Math.atan2(q.y - cy, q.x - cx)); }   // go around the region
+  out.forEach(p => p.open = cons.some(k => strict(k.op) && onLine(k, p.x, p.y)));   // on a dashed line: not in the region
+  return out;
+}
+const BIG = 1e5;
+// "bounded", "unbounded", or "empty"
+function regionKind(cons) {
+  const p = regionPoly(cons, [-BIG, BIG, -BIG, BIG]);
+  if (p.length < 3) return "empty";
+  return p.some(([x, y]) => Math.abs(x) > BIG / 10 || Math.abs(y) > BIG / 10) ? "unbounded" : "bounded";
+}
+
+/* ---------- I4. Drawing ---------- */
+const niceStep = R => R <= 12 ? 1 : R <= 24 ? 2 : R <= 60 ? 5 : R <= 120 ? 10 : 20;
+// A window that shows every corner and intercept. First-quadrant problems start just left of 0.
+function autoWin(cons) {
+  const q1 = cons.some(k => k.a === 1 && k.b === 0 && k.op === "≥" && k.c === 0) && cons.some(k => k.a === 0 && k.b === 1 && k.op === "≥" && k.c === 0);
+  const vals = [8];
+  corners(cons).forEach(p => vals.push(Math.abs(p.x), Math.abs(p.y)));
+  cons.forEach(k => { if (k.a) vals.push(Math.abs(k.c / k.a)); if (k.b) vals.push(Math.abs(k.c / k.b)); });
+  let R = Math.max(...vals.filter(isFinite)) * 1.15; const s = niceStep(R); R = Math.ceil(R / s) * s;
+  return q1 ? { win: [-s, R, -s, R], step: s } : { win: [-R, R, -R, R], step: s };
+}
+// Draw the region where every constraint holds, its boundary lines, and (optionally) the corner points.
+// o: { win, step, corners: true, labels: true, extra: svg => {...} }
+function drawRegion(svg, cons, o = {}) {
+  const { win, step } = o.win ? o : autoWin(cons);
+  drawGraph(svg, { win, xstep: step, ystep: step });
+  const poly = regionPoly(cons, win);
+  if (poly.length > 2) el("polygon", { points: poly.map(([x, y]) => `${gX(win, x)},${gY(win, y)}`).join(" "), fill: cssv("--accent"), "fill-opacity": 0.2, stroke: "none" }, svg);
+  const clip = "rc" + Math.random().toString(36).slice(2, 8);          // keep boundary lines inside the plot area
+  el("rect", { x: GP, y: GP, width: GW - 2 * GP, height: GW - 2 * GP }, el("clipPath", { id: clip }, svg));
+  cons.forEach(k => {                                              // each boundary line across the window
+    if (o.skipAxes && k.c === 0 && (k.a === 0 || k.b === 0)) return;   // x ≥ 0 and y ≥ 0 lie on the axes already
+    const dash = strict(k.op) ? "10 7" : "none";
+    const line = k.b === 0 ? seg(svg, win, k.c / k.a, win[2], k.c / k.a, win[3], "--curve", 3, dash)
+      : seg(svg, win, win[0], (k.c - k.a * win[0]) / k.b, win[1], (k.c - k.a * win[1]) / k.b, "--curve", 3, dash);
+    line.setAttribute("clip-path", `url(#${clip})`);
+  });
+  if (o.extra) o.extra(svg, win);
+  if (o.corners) corners(cons).forEach(p => {
+    if (p.x < win[0] || p.x > win[1] || p.y < win[2] || p.y > win[3]) return;
+    el("circle", { cx: gX(win, p.x), cy: gY(win, p.y), r: 6, fill: cssv(p.open ? "--panel" : "--curve2"), stroke: cssv("--curve2"), "stroke-width": 2.5 }, svg);
+    if (o.labels !== false) gText(svg, win, p.x, p.y, pt6(p.x, p.y), 10, -10, "start");
+  });
+  return { win, step };
+}
+// The same drawing as SVG markup (for questions, answer choices, and example steps)
+function regionSVG(cons, o = {}, label = "") {
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("class", "graph"); svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", label || "Shaded region for " + cons.map(conText).join(", "));
+  drawRegion(svg, cons, o); return svg.outerHTML;
+}
+const gpick = s => `<span class="gpick">${s}</span>`;                // a smaller graph inside an answer choice
+// Words for a single-inequality graph (used as the accessible name of graph choices)
+const ineqWords = k => `${lineKind(k)} boundary line ${lineText(k)}, shaded ${shadeSide(k)}`;
+const W8 = { win: [-8, 8, -8, 8], step: 1 };
+
+/* ---------- I5. Linear programming ---------- */
+// obj = { p, q } for z = p·x + q·y. Returns the corner table and the best value (or none if unbounded that way).
+function lpSolve(cons, obj, goal = "max") {
+  const cs = corners(cons).filter(p => !p.open), z = p => r6(obj.p * p.x + obj.q * p.y);
+  const table = cs.map(p => ({ ...p, z: z(p) }));
+  if (!table.length) return { table, none: true, why: "empty" };
+  const best = goal === "max" ? Math.max(...table.map(t => t.z)) : Math.min(...table.map(t => t.z));
+  const far = regionPoly(cons, [-BIG, BIG, -BIG, BIG]).map(([x, y]) => obj.p * x + obj.q * y);
+  const beyond = goal === "max" ? Math.max(...far) > best + 1e-3 : Math.min(...far) < best - 1e-3;   // z keeps growing (or shrinking)
+  return { table, best, at: table.filter(t => Math.abs(t.z - best) < 1e-9), none: beyond, why: beyond ? "unbounded" : "" };
+}
+const objText = o => `z = ${lhsText(o.p, o.q)}`;
+
+/* ---------- I6. Random problems ---------- */
+// One inequality with a whole-number y-intercept: b·y form chosen so solving for y may need a flip.
+function randIneq({ allowVH = false, needFlipChance = 0.4 } = {}) {
+  if (allowVH && Math.random() < 0.3) { const v = Math.random() < 0.5, k = nz(-6, 6); return v ? C(1, 0, pick(OPS), k) : C(0, 1, pick(OPS), k); }
+  const den = pick([1, 1, 2, 3]), num = nz(-4, 4), m = Q(num, den), yint = randInt(-5, 5);
+  let b = m[1] * (Math.random() < needFlipChance ? -1 : 1) * pick([1, 1, 2]), a = -m[0] * Math.abs(b) / m[1] * Math.sign(b);
+  return C(a, b, pick(OPS), yint * b);                               // a x + b y op yint·b has slope m and intercept yint
+}
+// y op m x + b written as given (b = 1): for the "already solved" examples
+function randSlopeIneq() { const den = pick([1, 1, 2, 3]), m = Q(nz(-4, 4), den); return C(-m[0], m[1], pick(OPS), randInt(-5, 5) * m[1]); }
+// Two "≤" constraints with x, y ≥ 0 whose four corners are whole numbers, crossing at (p, q).
+// For goal "min" the same lines with "≥" (an unbounded region with three corners).
+function randLP(goal = "max") {
+  for (let t = 0; t < 4000; t++) {
+    const p = randInt(1, 8), q = randInt(1, 8), a1 = randInt(1, 4), b1 = randInt(1, 4), a2 = randInt(1, 4), b2 = randInt(1, 4);
+    const c1 = a1 * p + b1 * q, c2 = a2 * p + b2 * q;
+    if (c1 % a1 || c1 % b1 || c2 % a2 || c2 % b2 || c1 > 48 || c2 > 48 || gcd(gcd(a1, b1), c1) > 1 || gcd(gcd(a2, b2), c2) > 1) continue;
+    const xi1 = c1 / a1, yi1 = c1 / b1, xi2 = c2 / a2, yi2 = c2 / b2;
+    if (!((xi1 < xi2 && yi1 > yi2) || (xi1 > xi2 && yi1 < yi2))) continue;   // the lines must cross inside the first quadrant
+    const op = goal === "max" ? "≤" : "≥", cons = [C(a1, b1, op, c1), C(a2, b2, op, c2), ...NONNEG];
+    return { cons, p, q, lines: cons.slice(0, 2) };
+  }
+}
+// An objective with one clear best corner
+function randObj(cons, goal) {
+  for (let t = 0; t < 200; t++) { const o = { p: randInt(1, 9), q: randInt(1, 9) }, s = lpSolve(cons, o, goal);
+    if (!s.none && s.at.length === 1) return { obj: o, sol: s }; }
+  const o = { p: 2, q: 3 }; return { obj: o, sol: lpSolve(cons, o, goal) };
+}
+// Elimination steps for where two boundary lines meet, as HTML lines
+function meetWork(k1, k2) {
+  const [x, y] = meet(k1, k2), s = [`Solve ${M(lineText(k1))} and ${M(lineText(k2))} together.`];
+  if (k1.b === k2.b) s.push(`Subtract the equations: ${M(`${lhsText(k1.a - k2.a, 0)} = ${fr(k1.c - k2.c)}`)}, so ${M(`x = ${fr(x)}`)}.`);
+  else if (k1.a === k2.a) s.push(`Subtract the equations: ${M(`${lhsText(0, k1.b - k2.b)} = ${fr(k1.c - k2.c)}`)}, so ${M(`y = ${fr(y)}`)}.`);
+  else { const L = k1.b * k2.b / gcd(k1.b, k2.b), f1 = L / k1.b, f2 = L / k2.b;
+    s.push(`Multiply to match the y-terms (${M(`${fr(f1)}`)} and ${M(`${fr(f2)}`)}): ${M(`${lhsText(k1.a * f1, L)} = ${fr(k1.c * f1)}`)} and ${M(`${lhsText(k2.a * f2, L)} = ${fr(k2.c * f2)}`)}.`,
+      `Subtract: ${M(`${lhsText(k1.a * f1 - k2.a * f2, 0)} = ${fr(k1.c * f1 - k2.c * f2)}`)}, so ${M(`x = ${fr(x)}`)}.`); }
+  s.push(`Substitute back to get the other coordinate. The corner is ${M(pt6(x, y))}.`);
+  return s;
+}
+
+/* ---------- I7. Constraint editor ---------- */
+// Rows of  [a] x + [b] y  [op]  [c]  with a remove button, plus "Add a constraint". onChange(list) after every edit.
+function consEditor(id, list, onChange) {
+  const box = $(id);
+  const draw = () => {
+    box.innerHTML = `<table class="cons"><tbody>${list.map((k, i) => `<tr>
+      <td><input class="exprin num" data-i="${i}" data-f="a" value="${fr(k.a).replace("−", "-")}" aria-label="x coefficient, constraint ${i + 1}"></td><td>x +</td>
+      <td><input class="exprin num" data-i="${i}" data-f="b" value="${fr(k.b).replace("−", "-")}" aria-label="y coefficient, constraint ${i + 1}"></td><td>y</td>
+      <td><select data-i="${i}" data-f="op" aria-label="inequality sign, constraint ${i + 1}">${OPS.map(o => `<option${o === k.op ? " selected" : ""}>${o}</option>`).join("")}</select></td>
+      <td><input class="exprin num" data-i="${i}" data-f="c" value="${fr(k.c).replace("−", "-")}" aria-label="right side, constraint ${i + 1}"></td>
+      <td><button type="button" class="btn secondary mini" data-del="${i}" aria-label="remove constraint ${i + 1}">✕</button></td></tr>`).join("")}</tbody></table>
+      <button type="button" class="btn secondary" id="${id}Add">Add a constraint</button>`;
+    box.querySelectorAll("[data-f]").forEach(inp => inp.addEventListener(inp.tagName === "SELECT" ? "change" : "input", () => {
+      const k = list[+inp.dataset.i], f = inp.dataset.f;
+      if (f === "op") k.op = inp.value; else { const v = readNum(inp.value); if (!isFinite(v)) return; k[f] = v; }
+      onChange(list);
+    }));
+    box.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => { list.splice(+b.dataset.del, 1); draw(); onChange(list); }));
+    $(id + "Add").addEventListener("click", () => { list.push(C(1, 1, "≤", 10)); draw(); onChange(list); });
+  };
+  draw();
+  return { set: L => { list = L; draw(); onChange(list); }, get: () => list };
+}
+// The grid point nearest a click on a drawRegion graph (snapped to the grid step)
+function graphPoint(svg, win, step, e) {
+  const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) * GW / r.width, py = (e.clientY - r.top) * GW / r.height;
+  const x = win[0] + (px - GP) / (GW - 2 * GP) * (win[1] - win[0]), y = win[2] + (GW - GP - py) / (GW - 2 * GP) * (win[3] - win[2]);
+  return [r6(Math.round(x / step) * step), r6(Math.round(y / step) * step)];
+}
+// Mark a tested point: green filled if it satisfies everything, red open otherwise
+function markPoint(svg, win, x, y, ok) {
+  el("circle", { cx: gX(win, x), cy: gY(win, y), r: 7, fill: cssv(ok ? "--ok" : "--panel"), stroke: cssv(ok ? "--ok" : "--bad"), "stroke-width": 3 }, svg);
+  gText(svg, win, x, y, pt6(x, y), 10, 18, "start", ok ? "--ok" : "--bad");
+}
+
+/* =====================================================================
+   MATH 1324 LESSON 8 HELPERS (the simplex method), exact fractions throughout
+     T1. Fraction tools beyond helpers.js
+     T2. Problems as data → slack equations → initial tableau
+     T3. Drawing a tableau (labels, pivot, highlighted row/column, basic columns)
+     T4. Pivoting, choosing the pivot, reading a solution
+     T5. Random problems whose arithmetic stays friendly
+   ===================================================================== */
+
+/* ---------- T1. Fractions ---------- */
+const Qdiv = (a, b) => Q(a[0] * b[1], a[1] * b[0]);                  // a ÷ b (b ≠ 0)
+const Qsub = (a, b) => Qadd(a, Qneg(b));
+const Qcmp = (a, b) => a[0] * b[1] - b[0] * a[1];                    // < 0, 0, > 0 like a − b
+const Qz = a => a[0] === 0;
+const Qint = a => a[1] === 1;
+const toQrow = r => r.map(v => Array.isArray(v) ? v : Q(v));
+const SUBN8 = n => String(n).split("").map(d => "₀₁₂₃₄₅₆₇₈₉"[+d]).join("");
+const Rn8 = i => `R${SUBN8(i + 1)}`;
+
+/* ---------- T2. Problems ----------
+   A problem is { obj: [c₁, …, cₙ], cons: [{ a: [a₁, …, aₙ], b }] } meaning
+   maximize z = c₁x₁ + … subject to a₁x₁ + … ≤ b for each constraint, all xᵢ ≥ 0. */
+const xName = j => `x${SUBN8(j + 1)}`, sName = i => `s${SUBN8(i + 1)}`;
+function termsText(co, names) {                                      // [2, −1, 0, 3], [x₁…] → "2x₁ − x₂ + 3x₄"
+  let s = ""; co.forEach((c, j) => { if (!c) return; const a = Math.abs(c), t = (a === 1 ? "" : fnum(a)) + names[j];
+    s += s ? (c < 0 ? " − " : " + ") + t : (c < 0 ? "−" : "") + t; }); return s || "0";
+}
+const xs = p => p.obj.map((_, j) => xName(j));
+const objText8 = p => `z = ${termsText(p.obj, xs(p))}`;
+const conText8 = (p, i) => `${termsText(p.cons[i].a, xs(p))} ≤ ${fnum(p.cons[i].b)}`;
+const slackEq = (p, i) => `${termsText(p.cons[i].a, xs(p))} + ${sName(i)} = ${fnum(p.cons[i].b)}`;
+const objEq = p => `${termsText(p.obj.map(c => -c), xs(p))} + z = 0`;
+const labels8 = p => [...xs(p), ...p.cons.map((_, i) => sName(i)), "z"];
+// The initial tableau: one row per constraint, then the objective row; last column is the constant
+function initTab(p) {
+  const n = p.obj.length, m = p.cons.length;
+  const rows = p.cons.map((k, i) => [...k.a, ...Array.from({ length: m }, (_, t) => t === i ? 1 : 0), 0, k.b]);
+  rows.push([...p.obj.map(c => -c), ...Array(m).fill(0), 1, 0]);
+  return rows.map(toQrow);
+}
+const probHTML = p => `Maximize ${M(objText8(p))} subject to <span class="sys6">${typeof BRACE === "string" ? BRACE : ""}<span class="sys-rows">${p.cons.map((_, i) => `<span>${M(conText8(p, i))}</span>`).join("")}</span></span> with ${M(xs(p).join(", ") + " ≥ 0")}.`;
+
+/* ---------- T3. Drawing a tableau ---------- */
+// o: { pivot: [r, c], col, row, quot: [text per row], click: true, showBasic: true }
+function tabHTML(T, labs, o = {}) {
+  const basic = basicCols(T);
+  const head = labs.map((l, j) => `<th scope="col" class="${o.showBasic !== false && basic[j] !== undefined ? "basic" : ""}${o.col === j ? " pc" : ""}">${M(l)}</th>`).join("");
+  const body = T.map((r, i) => `<tr class="${i === T.length - 1 ? "ind" : ""}${o.row === i ? " pr" : ""}">${r.map((v, j) => {
+    const cls = [j === r.length - 1 ? "const" : "", o.col === j ? "pc" : "", o.pivot && o.pivot[0] === i && o.pivot[1] === j ? "piv" : "", o.ycols && i === T.length - 1 && o.ycols.includes(j) ? "ycol" : ""].join(" ").trim();   // ycols: bottom-row cells to highlight (Lesson 9)
+    return `<td class="${cls}"${o.click && j < r.length - 1 && i < T.length ? ` data-cell="${i}|${j}" tabindex="0"` : ""}>${M(QT(v))}</td>`; }).join("")}${o.quot ? `<td class="quot">${o.quot[i] || ""}</td>` : ""}</tr>`).join("");
+  return `<table class="tab"><thead><tr>${head}<th scope="col">constant</th>${o.quot ? '<th scope="col" class="quot">quotient</th>' : ""}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+/* ---------- T4. Pivoting and reading ---------- */
+// Columns with exactly one nonzero entry: { column index: row index }
+function basicCols(T) {
+  const out = {}, used = new Set(), zc = T[0].length - 2, last = T.length - 1;
+  for (let j = 0; j < T[0].length - 1; j++) { const nz = T.map((r, i) => Qz(r[j]) ? -1 : i).filter(i => i >= 0);
+    if (nz.length !== 1 || used.has(nz[0]) || (nz[0] === last) !== (j === zc)) continue;   // only z may be basic in the indicator row; one basic variable per row
+    out[j] = nz[0]; used.add(nz[0]); }
+  return out;
+}
+// Value of every variable: basic → constant ÷ entry; nonbasic → 0
+function readTab(T, labs) {
+  const b = basicCols(T), out = {};
+  labs.forEach((l, j) => out[l] = b[j] !== undefined ? Qdiv(T[b[j]].at(-1), T[b[j]][j]) : [0, 1]);
+  return out;
+}
+const solLine = (T, labs) => Object.entries(readTab(T, labs)).map(([k, v]) => `${k} = ${QT(v)}`).join(", ");
+// A multiplier in front of a row name: "", "−", "5", "−(1/3)"
+const kText = k => (k[0] < 0 ? "−" : "") + (Math.abs(k[0]) === 1 && k[1] === 1 ? "" : k[1] === 1 ? fnum(Math.abs(k[0])) : `(${QT([Math.abs(k[0]), k[1]])})`);
+// Pivot about (r, c): returns { T, ops } with the operations in the notes' style
+function pivotTab(T, r, c) {
+  const A = T.map(row => row.slice()), ops = [], p = A[r][c];
+  if (Qz(p)) return { T: A, ops: ["Cannot pivot on 0."] };
+  if (!(p[0] === 1 && p[1] === 1)) { A[r] = A[r].map(v => Qdiv(v, p)); ops.push(Qint(p) ? `${Rn8(r)} ÷ ${QT(p)} → ${Rn8(r)}` : `${kText(Qdiv([1, 1], p))}${Rn8(r)} → ${Rn8(r)}`); }
+  A.forEach((row, i) => { if (i === r || Qz(row[c])) return; const k = Qneg(row[c]); A[i] = row.map((v, j) => Qadd(v, Qmul(k, A[r][j]))); ops.push(`${kText(k)}${Rn8(r)} + ${Rn8(i)} → ${Rn8(i)}`); });
+  return { T: A, ops };
+}
+// Pivot column: most negative indicator (leftmost on a tie), ignoring the z column. null = optimal.
+function pivotColOf(T) {
+  const ind = T.at(-1).slice(0, -2); let best = null;
+  ind.forEach((v, j) => { if (v[0] < 0 && (best === null || Qcmp(v, ind[best]) < 0)) best = j; });
+  return best;
+}
+// Pivot row: smallest quotient over positive entries (topmost on a tie). null = no maximum.
+function pivotRowOf(T, c) {
+  let best = null, bq = null;
+  for (let i = 0; i < T.length - 1; i++) { if (T[i][c][0] <= 0) continue; const q = Qdiv(T[i].at(-1), T[i][c]); if (bq === null || Qcmp(q, bq) < 0) { best = i; bq = q; } }
+  return best;
+}
+const quotients = (T, c) => T.map((r, i) => i === T.length - 1 ? "" : r[c][0] > 0 ? `${QT(r.at(-1))} ÷ ${QT(r[c])} = ${QT(Qdiv(r.at(-1), r[c]))}` : "skip");
+// Run simplex to the end: list of { T, r, c, ops } and the final tableau (or none = no maximum)
+function runSimplex(T0, maxSteps = 8) {
+  let T = T0, steps = [];
+  for (let s = 0; s < maxSteps; s++) { const c = pivotColOf(T); if (c === null) return { steps, T, ok: true };
+    const r = pivotRowOf(T, c); if (r === null) return { steps, T, ok: false, c };
+    const res = pivotTab(T, r, c); steps.push({ T, r, c, ops: res.ops }); T = res.T; }
+  return { steps, T, ok: false };
+}
+
+/* ---------- T5. Random problems ---------- */
+const maxDen = T => Math.max(...T.flat().map(v => v[1]));
+// n variables, m constraints; final solution in whole numbers, denominators ≤ 10 along the way, at least `pivots` pivots
+function randProblem(n = 2, m = 2, pivots = 1) {
+  for (let t = 0; t < 3000; t++) {
+    const p = { obj: Array.from({ length: n }, () => randInt(1, 9)), cons: Array.from({ length: m }, () => ({ a: Array.from({ length: n }, () => randInt(0, 5)), b: randInt(2, 12) * pick([1, 2, 5]) })) };
+    if (p.cons.some(k => k.a.every(v => v === 0)) || p.obj.some((_, j) => p.cons.every(k => k.a[j] === 0))) continue;
+    const T = initTab(p), run = runSimplex(T);
+    if (!run.ok || run.steps.length < pivots || run.steps.length > pivots + 1) continue;
+    if ([...run.steps.map(s => s.T), run.T].some(X => maxDen(X) > 10)) continue;
+    if (!Object.values(readTab(run.T, labels8(p))).every(Qint)) continue;
+    return p;
+  }
+  return { obj: [3, 2], cons: [{ a: [1, 1], b: 4 }, { a: [1, 3], b: 6 }] };
+}
+// 2-variable problems as Lesson 6 constraints (for the graph view)
+const asCons6 = p => [...p.cons.map(k => C(k.a[0], k.a[1], "≤", k.b)), ...NONNEG];
+
+/* =====================================================================
+   MATH 1324 LESSON 9 HELPERS (transposes, duals, minimization), built on Lessons 6 and 8
+     D1. Matrices: drawing (with colored rows/columns) and transposing
+     D2. Minimum problems as data, their text, and their duals
+     D3. Reading the minimum answer from the dual's final tableau
+     D4. Random minimum problems with whole-number answers
+   ===================================================================== */
+
+/* ---------- D1. Matrices ---------- */
+const transpose = A => A[0].map((_, j) => A.map(r => r[j]));
+const RC = ["rc0", "rc1", "rc2", "rc3", "rc4"];                     // CSS classes: one color per original row
+// A bracketed matrix. o: { aug: bar before last column, rows: color rows, cols: color columns }
+function mat9(A, o = {}) {                                             // built from spans (not a table) so it can sit inside a paragraph
+  const n = A[0].length;
+  return `<span class="mat" role="img" aria-label="matrix ${A.map(r => r.map(v => plainMath(QT(Array.isArray(v) ? v : Q(v)))).join(" ")).join("; ")}"><span class="mg" style="grid-template-columns:repeat(${n}, auto)">${A.map((r, i) => r.map((v, j) => {
+    const cls = [o.aug && j === n - 1 ? "bar" : "", o.rows ? RC[i % 5] : "", o.cols ? RC[j % 5] : ""].join(" ").trim();
+    return `<span${cls ? ` class="${cls}"` : ""}>${M(QT(Array.isArray(v) ? v : Q(v)))}</span>`; }).join("")).join("")}</span></span>`;
+}
+
+/* ---------- D2. Minimum problems ----------
+   { obj: [c₁, …, cₙ], cons: [{ a: [a₁, …, aₙ], b }] } means
+   minimize w = c₁y₁ + … subject to a₁y₁ + … ≥ b for each constraint, all yᵢ ≥ 0. */
+const yName = j => `y${SUBN8(j + 1)}`;
+const ys9 = q => q.obj.map((_, j) => yName(j));
+const minObjText = q => `w = ${termsText(q.obj, ys9(q))}`;
+const minConText = (q, i) => `${termsText(q.cons[i].a, ys9(q))} ≥ ${fnum(q.cons[i].b)}`;
+const minHTML = q => `Minimize ${M(minObjText(q))} subject to <span class="sys6">${BRACE}<span class="sys-rows">${q.cons.map((_, i) => `<span>${M(minConText(q, i))}</span>`).join("")}</span></span> with ${M(ys9(q).join(", ") + " ≥ 0")}.`;
+// The augmented matrix of a minimum problem: constraint rows, then the objective row (corner 0)
+const minMatrix = q => [...q.cons.map(k => [...k.a, k.b]), [...q.obj, 0]];
+// The dual: transpose, then read rows as ≤ constraints in x's; last row gives z
+function dualOf(q) {
+  const T = transpose(minMatrix(q)), last = T.at(-1);
+  return { obj: last.slice(0, -1), cons: T.slice(0, -1).map(r => ({ a: r.slice(0, -1), b: r.at(-1) })) };
+}
+const isStdMin = q => q.cons.every(k => k.b >= 0) && q.obj.every(c => c >= 0);
+
+/* ---------- D3. Reading the minimum answer ---------- */
+// From the dual's final tableau T (n = number of x's, m = number of dual constraints = number of y's)
+function minAnswer(T, n, m) {
+  const bot = T.at(-1), zc = bot[n + m];
+  return { y: Array.from({ length: m }, (_, i) => Qdiv(bot[n + i], zc)), surplus: Array.from({ length: n }, (_, j) => Qdiv(bot[j], zc)), w: Qdiv(bot.at(-1), zc) };
+}
+// Solve a minimum problem through its dual: { p (dual), L (labels), run, ans }
+function solveMin(q) {
+  const p = dualOf(q), L = labels8(p), run = runSimplex(initTab(p));
+  return { p, L, run, ans: run.ok ? minAnswer(run.T, p.obj.length, p.cons.length) : null };
+}
+// The minimum problem as Lesson 6 constraints (2 variables only), for graphing
+const minCons6 = q => [...q.cons.map(k => C(k.a[0], k.a[1], "≥", k.b)), ...NONNEG];
+
+/* ---------- D4. Random minimum problems ---------- */
+// n y-variables, m ≥ constraints; whole-number minimum point with every y > 0, at least one pivot in the dual, small fractions
+function randMin(n = 2, m = 2) {
+  for (let t = 0; t < 4000; t++) {
+    const q = { obj: Array.from({ length: n }, () => randInt(2, 20)), cons: Array.from({ length: m }, () => ({ a: Array.from({ length: n }, () => randInt(1, 5)), b: randInt(2, 12) })) };
+    const s = solveMin(q); if (!s.ans || s.run.steps.length < 1 || s.run.steps.length > 3) continue;
+    if ([...s.run.steps.map(x => x.T), s.run.T].some(X => maxDen(X) > 10)) continue;
+    if (!s.ans.y.every(v => Qint(v) && v[0] >= 0) || !Qint(s.ans.w) || s.ans.y.filter(v => v[0] > 0).length < Math.min(n, 2)) continue;
+    return q;
+  }
+  return { obj: [8, 16], cons: [{ a: [1, 5], b: 9 }, { a: [2, 2], b: 10 }] };
+}
+
+/* ---------- The notes' minimum problems (shared by the skill pages) ---------- */
+const P9 = {
+  exA: { obj: [6, 10], cons: [{ a: [3, 5], b: 15 }, { a: [4, 7], b: 20 }], name: "Example 2 (notes)" },
+  exB: { obj: [8, 16], cons: [{ a: [1, 5], b: 9 }, { a: [2, 2], b: 10 }], name: "Example 3 (notes)" },
+  dog: { obj: [3, 2], cons: [{ a: [1, 3], b: 6 }, { a: [2, 1], b: 3 }], name: "Dog breeder (notes)" },
+  p1: { obj: [16, 6], cons: [{ a: [3, 1], b: 9 }, { a: [3, 2], b: 12 }], name: "Practice 9.2 a" },
+  p2: { obj: [9, 9], cons: [{ a: [5, 1], b: 8 }, { a: [2, 3], b: 11 }], name: "Practice 9.2 b" },
+  pd: { obj: [12, 10], cons: [{ a: [1, 1], b: 3 }, { a: [2, 1], b: 4 }, { a: [1, 3], b: 5 }], name: "Practice 9.1 d" },
+};
+
+/* =====================================================================
+   LESSON 9 QUESTION BANK: multiple-choice questions shared by the skill
+   pages (Practice tabs) and the Lesson 9 Ladder.
+   ===================================================================== */
+function mcQ(prompt, right, wrongs, hint, solve, fmt = v => M(v), key = v => String(v)) {
+  return { kind: "mc", prompt, choices: choices(right, wrongs, key).map(o => ({ label: fmt(o.v), ok: o.ok })), hint, solve };
+}
+const randMat = (m, n) => Array.from({ length: m }, () => Array.from({ length: n }, () => randInt(-9, 9)));
+const mkey = A => JSON.stringify(A);
+const maxText = p => `${objText8(p)}; ${p.cons.map((_, i) => conText8(p, i)).join("; ")}`;
+const maxHTML9 = p => `Maximize ${M(objText8(p))} subject to <span class="sys6">${BRACE}<span class="sys-rows">${p.cons.map((_, i) => `<span>${M(conText8(p, i))}</span>`).join("")}</span></span>`;
+// The final bottom row of a dual as text (columns x's, s's, z, constant)
+const bottomText = (s) => `[${s.run.T.at(-1).slice(0, -1).map(QT).join("  ")} | ${QT(s.run.T.at(-1).at(-1))}]`;
+
+const QB = {
+  /* ----- 9.1 ----- */
+  transpose: () => { let m, n; do { m = randInt(2, 3); n = randInt(2, 4); } while (m === n && Math.random() < 0.5); const A = randMat(m, n), T = transpose(A);
+    const wr = [A.map(r => r.slice().reverse()), transpose(A.slice().reverse()), m === n ? A : A.map(r => r.map(v => -v)), T.map(r => r.slice().reverse()), T.map(r => r.map(v => -v)), T.map((r, i) => r.map((v, j) => i === j ? v + 1 : v))];
+    return mcQ(`What is the transpose of ${mat9(A)}?`, T, wr, "The first row becomes the first column, the second row the second column, and so on.", `Rows become columns: ${mat9(T)}.`, mat9, mkey); },
+  size: () => { let m, n; do { m = randInt(1, 5); n = randInt(1, 5); } while (m === n);
+    return mcQ(`A matrix is ${m} × ${n}. What size is its transpose?`, `${n} × ${m}`, [`${m} × ${n}`, `${m * n} × 1`, `${n} × ${n}`, `${m} × ${m}`, `1 × ${m * n}`], "Rows and columns trade places.", `${n} × ${m}.`, v => v); },
+  stdMin: () => { const q = randMin(2, 2), Y = ys9(q), k = q.cons[0];
+    const right = minHTML(q), w1 = minHTML(q).replace(/≥ (\d+)/, "≤ $1"), w2 = `Maximize ${M(minObjText(q).replace("w", "z"))} with the same constraints`;
+    const w3 = minHTML({ ...q, cons: [{ a: k.a, b: -k.b }, ...q.cons.slice(1)] });
+    return mcQ("Which problem is in standard minimum form?", right, [w1, w2, w3], "Standard minimum form: minimize, all variables ≥ 0, every constraint ≥ with a nonnegative constant.",
+      "Only this one minimizes with ≥ constraints and nonnegative constants.", v => v); },
+  dualObj: () => { const q = randMin(2, pick([2, 3])), p = dualOf(q), R = objText8(p);
+    return mcQ(`${minHTML(q)} What is the objective function of the dual?`, R, [`z = ${termsText(q.obj, xs({ obj: q.obj }))}`, `z = ${termsText(q.cons[0].a, xs({ obj: q.cons[0].a }))}`, `z = ${termsText(p.obj.slice().reverse(), xs(p))}`],
+      "The dual's objective uses the constants of the original constraints (the last column, transposed into the last row).", `Constants ${q.cons.map(k => k.b).join(", ")} become the coefficients: ${M(R)}.`); },
+  dualCon: () => { const q = randMin(2, pick([2, 3])), p = dualOf(q), j = randInt(0, p.cons.length - 1), R = conText8(p, j);
+    const wrongRow = { a: q.cons[j % q.cons.length].a, b: q.cons[j % q.cons.length].b };
+    return mcQ(`${minHTML(q)} Which is a constraint of the dual?`, R, [`${termsText(wrongRow.a, xs({ obj: wrongRow.a }))} ≤ ${wrongRow.b}`, R.replace("≤", "≥"), `${termsText(p.cons[j].a, xs(p))} ≤ ${q.cons[0].b}`, `${termsText(p.cons[j].a, xs(p))} ≤ ${p.cons[j].b + 1}`, `${termsText(p.cons[j].a.slice().reverse(), xs(p))} ≤ ${p.cons[j].b}`],
+      "Read down a column of the original matrix: the coefficients of one y become a dual row, and its cost becomes the constant.", `Column ${j + 1} of the original matrix gives ${M(R)}.`); },
+  fullDual: () => { const q = randMin(2, 2), p = dualOf(q);
+    const wA = { obj: p.obj, cons: q.cons.map((k, i) => ({ a: k.a, b: q.obj[i] })) }, wB = { obj: q.obj, cons: p.cons.map(k => ({ a: k.a, b: k.b })) }, wC = { obj: p.obj, cons: p.cons.map((k, i) => ({ a: k.a, b: p.cons[1 - i].b })) };
+    const wD = { obj: q.obj, cons: q.cons.map(k => ({ a: k.a, b: k.b })) }, wE = { obj: p.obj.slice().reverse(), cons: p.cons }, wF = { obj: p.obj.map(v => v + 1), cons: p.cons }, wG = { obj: p.obj, cons: p.cons.map(k => ({ a: k.a, b: k.b + 2 })) };
+    return mcQ(`${minHTML(q)} Which is the dual maximum problem?`, p, [wA, wB, wC, wD, wE, wF, wG], "Write the augmented matrix with the objective in the last row, transpose it, and read the rows as ≤ constraints.", `Maximize ${M(objText8(p))} subject to ${p.cons.map((_, i) => M(conText8(p, i))).join(", ")}.`, maxHTML9, maxText); },
+  noDivide: () => mcQ("In a dual problem, why shouldn't you divide a constraint like 4x₁ + 8x₂ ≤ 12 by 4?", "It changes the bottom-row values that give the minimum problem's answer",
+      ["It makes the constraint false", "It changes the maximum value of z only", "Dividing is fine in a dual problem"], "Think about where the minimum answer is read from.",
+      "The y's are read from the slack columns of the final bottom row; dividing a constraint rescales its slack and changes them.", v => v),
+
+  /* ----- 9.2 ----- */
+  whereY: () => mcQ("Where do you read the minimum solution y₁, y₂, … in the dual's final simplex tableau?", "In the bottom row, under the slack-variable columns",
+      ["In the constant column", "In the bottom row, under the x columns", "In the pivot row"], "Look at the bottom row; which columns match the original constraints' slack?", "The bottom row under s₁, s₂, … gives y₁, y₂, … (divide by z's entry if it is not 1).", v => v),
+  readBottom: () => { const q = randMin(2, 2), s = solveMin(q), y = s.ans.y.map(QT), sur = s.ans.surplus.map(QT);
+    return mcQ(`The final tableau of the dual of a 2-variable minimum problem has bottom row (columns ${M(s.L.join(", "))}, constant) ${M(bottomText(s))}. What is the minimum solution?`, `y₁ = ${y[0]}, y₂ = ${y[1]}, w = ${QT(s.ans.w)}`,
+      [`y₁ = ${sur[0]}, y₂ = ${sur[1]}, w = ${QT(s.ans.w)}`, `y₁ = ${y[1]}, y₂ = ${y[0]}, w = ${QT(s.ans.w)}`, `y₁ = ${y[0]}, y₂ = ${y[1]}, w = ${QT(Qneg(s.ans.w))}`],
+      "The y's are under the slack columns (s₁, s₂); w is the bottom constant.", `Under ${s.L[s.p.obj.length]} and ${s.L[s.p.obj.length + 1]}: y₁ = ${y[0]}, y₂ = ${y[1]}; w = ${QT(s.ans.w)}.`, v => v); },
+  minVal: () => { const q = randMin(2, 2), s = solveMin(q), w = s.ans.w, maxes = s.run.steps.map(st => readTab(st.T, s.L).z);
+    return mcQ(`${minHTML(q)} What is the minimum value of w?`, QT(w), [...maxes.map(QT), QT(Qadd(w, [q.obj[0], 1])), QT(Qadd(w, [q.obj[1], 1]))],
+      "Write the dual, solve it with the simplex method; the minimum of w equals the maximum of z.", `Dual: maximize ${M(objText8(s.p))}. Final: z = ${QT(w)}, so w = ${QT(w)} at y₁ = ${QT(s.ans.y[0])}, y₂ = ${QT(s.ans.y[1])}.`); },
+};
+
+/* =====================================================================
+   SKILL 9.2: SOLVING MINIMIZATION PROBLEMS WITH THE DUAL
+   ===================================================================== */
+/* ---------- Explore: the minimum problem and its dual, side by side ---------- */
+let q92, s92, T92, k92;                                              // problem, its dual solution, the tableau on screen, pivots done
+const cornerTable = (sol, letter, goal) => `<table class="grid vals"><thead><tr><th scope="col">Corner</th><th scope="col">${letter}</th></tr></thead><tbody>${sol.table.map(t =>
+  `<tr${!sol.none && sol.at.includes(t) ? ' class="hit"' : ""}><td>${M(pt6(t.x, t.y))}</td><td>${fnum(t.z)}</td></tr>`).join("")}</tbody></table><p class="mini">${sol.none ? "No optimum." : `${goal === "max" ? "Maximum" : "Minimum"} ${fnum(sol.best)}`}</p>`;
+function load92(key) { q92 = key === "r2" ? randMin(2, 2) : P9[key]; s92 = solveMin(q92); T92 = initTab(s92.p); k92 = 0; render92(); }
+function render92() {
+  const q = q92, p = s92.p, L = s92.L, n = p.obj.length, m = p.cons.length;
+  $("minP").innerHTML = minHTML(q);
+  const K = minCons6(q); drawRegion($("gMin"), K, { ...autoWin(K), corners: true, skipAxes: true });
+  $("minT").innerHTML = cornerTable(lpSolve(K, { p: q.obj[0], q: q.obj[1] }, "min"), M(minObjText(q)), "min");
+  $("maxP").innerHTML = `${maxHTML9(p)} with ${M(xs(p).join(", ") + " ≥ 0")}`;
+  const g = $("gMax"); g.hidden = n !== 2;
+  if (n === 2) { const K2 = asCons6(p); drawRegion(g, K2, { ...autoWin(K2), corners: true, skipAxes: true }); $("maxT").innerHTML = cornerTable(lpSolve(K2, { p: p.obj[0], q: p.obj[1] }, "max"), M(objText8(p)), "max"); }
+  else $("maxT").innerHTML = `<p class="mini muted">The dual has ${n} variables, so it cannot be graphed on a plane. Simplex handles it.</p>`;
+  const done = pivotColOf(T92) === null, c = pivotColOf(T92), r = c === null ? null : pivotRowOf(T92, c);
+  $("tab92").innerHTML = tabHTML(T92, L, done ? { ycols: Array.from({ length: m }, (_, i) => n + i) } : { pivot: [r, c], col: c, row: r });
+  if (done) { const a = minAnswer(T92, n, m);
+    $("read92").innerHTML = `<span class="status profit">Optimal</span> Max ${M(`z = ${QT(readTab(T92, L).z)}`)}. Read the minimum from the bottom row under the slack columns (green): ${a.y.map((v, i) => M(`${yName(i)} = ${QT(v)}`)).join(", ")}, and ${M(`w = ${QT(a.w)}`)}. ${QT(T92.at(-1)[n + m]) === "1" ? "" : "(z's entry is not 1, so divide by it.)"}`; }
+  else $("read92").innerHTML = `Pivot ${k92 + 1}: column ${M(L[c])}, row ${r + 1} (highlighted). Press <em>Next pivot</em>.`;
+  $("next92").disabled = done; typeset();
+}
+$("next92").addEventListener("click", () => { const c = pivotColOf(T92); if (c === null) return; T92 = pivotTab(T92, pivotRowOf(T92, c), c).T; k92++; render92(); });
+$("run92").addEventListener("click", () => { T92 = s92.run.T; k92 = s92.run.steps.length; render92(); });
+$("reset92").addEventListener("click", () => { T92 = initTab(s92.p); k92 = 0; render92(); });
+document.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => load92(b.dataset.p)));
+load92("exB");
+
+/* ---------- Examples ---------- */
+function solveSteps9(q) {
+  const s = solveMin(q), n = s.p.obj.length, m = s.p.cons.length, out = [`<strong>Dual:</strong> transpose ${mat9(minMatrix(q), { aug: true })} to get ${maxHTML9(s.p)}.`];
+  s.run.steps.forEach((st, k) => out.push(`<strong>Pivot ${k + 1}:</strong> column ${M(s.L[st.c])}, row ${st.r + 1}: ${st.ops.join("; ")}.<div class="stage">${tabHTML(k + 1 < s.run.steps.length ? s.run.steps[k + 1].T : s.run.T, s.L, k + 1 === s.run.steps.length ? { ycols: Array.from({ length: m }, (_, i) => n + i) } : {})}</div>`));
+  out.push(`<strong>Read the bottom row</strong> under the slack columns: ${s.ans.y.map((v, i) => M(`${yName(i)} = ${QT(v)}`)).join(", ")}; ${M(`w = ${QT(s.ans.w)}`)} (the same as the maximum of z).`);
+  return out;
+}
+const FEEDS = [["feed 1", "feed 2", "nutrient A", "nutrient B", "units"], ["tablet X", "tablet Y", "iron", "calcium", "mg"], ["mix A", "mix B", "nitrogen", "phosphate", "pounds"]];
+const story9 = q => { const [f1, f2, n1, n2, u] = pick(FEEDS);
+  return { text: `A buyer needs at least ${q.cons[0].b} ${u} of ${n1} and at least ${q.cons[1].b} ${u} of ${n2}. Each ${f1} costs $${q.obj[0]} and provides ${q.cons[0].a[0]} ${u} of ${n1} and ${q.cons[1].a[0]} of ${n2}; each ${f2} costs $${q.obj[1]} and provides ${q.cons[0].a[1]} ${u} of ${n1} and ${q.cons[1].a[1]} of ${n2}. Find the minimum cost.`, f1, f2 }; };
+const EXAMPLES = [
+  { key: "solve", label: "Solve with the dual", make: () => { const q = randMin(2, 2); return { prompt: minHTML(q), steps: solveSteps9(q) }; } },
+  { key: "graphs", label: "Check with graphs", make: () => { const q = randMin(2, 2), p = dualOf(q), K = minCons6(q), K2 = asCons6(p), a = lpSolve(K, { p: q.obj[0], q: q.obj[1] }, "min"), b = lpSolve(K2, { p: p.obj[0], q: p.obj[1] }, "max");
+    return { prompt: `${minHTML(q)} Graph it and its dual, and compare the optimum values.`, steps: [
+      `<strong>Minimum problem corners:</strong> ${a.table.map(t => `${M(pt6(t.x, t.y))}: ${fnum(t.z)}`).join("; ")}. Minimum ${fnum(a.best)}.<span class="pw">${regionSVG(K, { ...autoWin(K), corners: true, skipAxes: true })}</span>`,
+      `<strong>Dual:</strong> ${maxHTML9(p)}. Corners: ${b.table.map(t => `${M(pt6(t.x, t.y))}: ${fnum(t.z)}`).join("; ")}. Maximum ${fnum(b.best)}.<span class="pw">${regionSVG(K2, { ...autoWin(K2), corners: true, skipAxes: true })}</span>`,
+      `<strong>The same value:</strong> min w = max z = ${fnum(a.best)}. This is why solving the dual works.`] }; } },
+  { key: "read", label: "Read the bottom row", make: () => { const q = randMin(2, pick([2, 3])), s = solveMin(q), n = s.p.obj.length, m = s.p.cons.length;
+    return { prompt: `This is the final tableau of the dual of a minimum problem with ${m} variables. Give the minimum solution.<div class="stage">${tabHTML(s.run.T, s.L, { showBasic: false })}</div>`, steps: [
+      `<strong>Find the slack columns:</strong> ${s.L.slice(n, n + m).join(", ")}.`,
+      `<strong>Read under them in the bottom row</strong> (z's entry is ${QT(s.run.T.at(-1)[n + m])}): ${s.ans.y.map((v, i) => M(`${yName(i)} = ${QT(v)}`)).join(", ")}.`,
+      `<strong>The minimum value</strong> is the bottom constant: ${M(`w = ${QT(s.ans.w)}`)}.`] }; } },
+  { key: "word", label: "Word problem", make: () => { const q = randMin(2, 2), st = story9(q);
+    return { prompt: st.text, steps: [`<strong>Variables:</strong> ${M("y₁")} = number of ${st.f1}, ${M("y₂")} = number of ${st.f2}.`, `<strong>Minimum problem:</strong> ${minHTML(q)}`, ...solveSteps9(q),
+      `<strong>Answer:</strong> buy ${QT(solveMin(q).ans.y[0])} of ${st.f1} and ${QT(solveMin(q).ans.y[1])} of ${st.f2} for ${money(Qv(solveMin(q).ans.w))}.`] }; } },
+];
+setupExamples(EXAMPLES);
+
+/* ---------- Practice ---------- */
+const QTYPES = {
+  minVal: QB.minVal, readBottom: QB.readBottom, whereY: QB.whereY,
+  yVal: () => { const q = randMin(2, 2), s = solveMin(q), i = randInt(0, 1);
+    return { kind: "nums", prompt: `${minHTML(q)} Solve with the dual. What is ${M(yName(i))} at the minimum?`, answer: [Qv(s.ans.y[i])], placeholder: "e.g. 4",
+      hint: `Solve the dual with simplex; ${yName(i)} is in the bottom row under ${sName(i)}.`, solve: `Final bottom row ${M(bottomText(s))}: ${s.ans.y.map((v, k) => `${yName(k)} = ${QT(v)}`).join(", ")}, w = ${QT(s.ans.w)}.` }; },
+  wVal: () => { const q = randMin(2, pick([2, 3])), s = solveMin(q);
+    return { kind: "nums", prompt: `${minHTML(q)} What is the minimum value of w?`, answer: [Qv(s.ans.w)], placeholder: "e.g. 48",
+      hint: "Write the dual, solve it with simplex, and use min w = max z.", solve: `Dual: maximize ${M(objText8(s.p))}. Max z = ${QT(s.ans.w)} = min w.` }; },
+  zNot1: () => { const q = randMin(2, 2), s = solveMin(q), k = pick([2, 3, 4]), bot = s.run.T.at(-1).map(v => Qmul(v, [k, 1])), n = s.p.obj.length, i = randInt(0, 1);
+    return { kind: "nums", prompt: `A dual's final bottom row (columns ${M(s.L.join(", "))}, constant) is [${bot.slice(0, -1).map(QT).join("  ")} | ${QT(bot.at(-1))}]. Notice z's entry is ${k}. What is ${M(yName(i))}?`, answer: [Qv(s.ans.y[i])],
+      hint: `Divide the whole row by ${k} first, then read under ${sName(i)}.`, solve: `${QT(bot[n + i])} ÷ ${k} = ${QT(s.ans.y[i])}.` }; },
+  surplus: () => { const q = randMin(2, 2), s = solveMin(q), j = randInt(0, 1), y = s.ans.y.map(Qv), used = q.cons[j].a[0] * y[0] + q.cons[j].a[1] * y[1];
+    return { kind: "nums", prompt: `${minHTML(q)} At the minimum point, how much more than ${q.cons[j].b} is ${M(termsText(q.cons[j].a, ys9(q)))}? (This surplus also appears in the dual's bottom row under ${M(xName(j))}.)`, answer: [r6(used - q.cons[j].b)], placeholder: "e.g. 0",
+      hint: "Find the minimum point, substitute it into the constraint, and subtract the constant.", solve: `At (${y.map(fnum).join(", ")}), ${fnum(r6(used))} − ${q.cons[j].b} = ${fnum(r6(used - q.cons[j].b))}; bottom row under ${xName(j)}: ${QT(s.ans.surplus[j])}.` }; },
+  word: () => { const q = randMin(2, 2), st = story9(q), s = solveMin(q);
+    return { kind: "nums", prompt: `${st.text} (Answer in dollars.)`, answer: [Qv(s.ans.w)], placeholder: "e.g. 5.40",
+      hint: "Write the minimum problem (≥ constraints), take its dual, and solve with simplex.", solve: `${minHTML(q)} Minimum ${money(Qv(s.ans.w))} with ${QT(s.ans.y[0])} of ${st.f1} and ${QT(s.ans.y[1])} of ${st.f2}.` }; },
+};
+setupPractice(QTYPES, ["minVal", "readBottom", "whereY", "yVal", "wVal", "zNot1", "surplus", "word"], "Nice work. Climb the Lesson 9 Ladder, then review Unit 2 for Exam 2.");
+
+/* ===== Start up ===== */
+setupTabs();
+typeset();
+
+</script>
+</body>
+</html>
