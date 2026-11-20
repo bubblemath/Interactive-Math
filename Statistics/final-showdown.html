@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Final Boss Showdown · Math 1342</title>
+<style>
+:root{
+  --paper:#F3F1E7; --sheet:#FBFAF4; --card:#FFFFFF; --rule:#D8D3C2; --ink:#14213D; --ink-soft:#4F586C;
+  --blue:#1F4E9C; --blue-soft:#E4EBF7; --on-blue:#FFFFFF; --ok:#22603C; --ok-soft:#E2EFE7; --no:#A31F1C; --no-soft:#F7E4E3; --gold:#B58B15; --gold-soft:#F6EED5;
+  --hp:#A31F1C; --hp-track:#E9DCD9;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif; --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --paper:#151A22; --sheet:#1B212B; --card:#212834; --rule:#38414F; --ink:#E8EBF1; --ink-soft:#A7B0BF;
+  --blue:#8FB0EC; --blue-soft:#24324A; --on-blue:#0F1724; --ok:#7BD3A0; --ok-soft:#1E3529; --no:#F29A92; --no-soft:#3A2224; --gold:#E0BC5A; --gold-soft:#3A3220;
+  --hp:#F07A70; --hp-track:#3A2A2C; color-scheme:dark;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:19px;line-height:1.5}
+.wrap{max-width:1260px;margin:0 auto;padding:16px 24px 40px}
+header.top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:3px double var(--ink);padding:4px 0 10px;margin-bottom:16px;flex-wrap:wrap}
+h1{font-family:var(--serif);font-size:30px;margin:0;line-height:1.1}
+h1 small{display:block;font-family:var(--mono);font-size:13px;font-weight:400;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.meta{font-family:var(--mono);font-size:15px;color:var(--ink-soft);display:flex;gap:18px;flex-wrap:wrap}
+.meta b{color:var(--ink)}
+h2{font-family:var(--serif);font-size:26px;margin:0 0 10px}
+h3{font-family:var(--serif);font-size:20px;margin:18px 0 8px}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:20px 22px}
+.lede{color:var(--ink-soft);margin:0 0 14px}
+.btn{font:inherit;font-weight:600;padding:11px 22px;border-radius:6px;border:1px solid var(--blue);background:var(--blue);color:var(--on-blue);cursor:pointer}
+.btn.quiet{background:transparent;color:var(--blue)}
+.btn.big{font-size:22px;padding:14px 30px}
+.btn:disabled{opacity:.5;cursor:default}
+.btnrow{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:16px}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.hidden{display:none!important}
+.msg{margin:12px 0 0;padding:10px 14px;border-left:4px solid var(--no);background:var(--no-soft);border-radius:0 4px 4px 0;font-size:16px}
+.msg:empty{display:none}
+.note{margin:12px 0 0;padding:10px 14px;border-left:4px solid var(--blue);background:var(--blue-soft);border-radius:0 4px 4px 0;font-size:16px}
+.setup{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:900px){.setup{grid-template-columns:1fr}}
+fieldset{border:1px solid var(--rule);border-radius:4px;padding:12px 16px 14px;margin:0 0 14px}
+legend{font-weight:700;padding:0 6px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.row label{min-width:230px}
+.row small{color:var(--ink-soft);font-size:14.5px}
+input[type=number]{font:inherit;width:80px;padding:6px 10px;border:1px solid var(--rule);border-radius:4px;background:var(--card);color:var(--ink)}
+.chk{display:flex;gap:10px;align-items:flex-start;margin:6px 0;cursor:pointer}
+.chk input{width:20px;height:20px;margin-top:4px;flex:0 0 auto}
+.chk small{display:block;color:var(--ink-soft);font-size:14.5px}
+/* boss */
+.boss{display:flex;gap:18px;align-items:center}
+.boss svg{flex:0 0 auto}
+.boss.small svg{width:70px;height:70px}
+.boss.big svg{width:210px;height:210px}
+.hpwrap{flex:1;min-width:0}
+.bname{font-family:var(--mono);font-weight:700;letter-spacing:.12em;font-size:15px;display:flex;justify-content:space-between;gap:10px}
+.bname span{color:var(--ink-soft);font-weight:400;letter-spacing:0}
+.hpbar{height:20px;border-radius:10px;background:var(--hp-track);overflow:hidden;margin-top:6px;border:1px solid var(--rule)}
+.hpbar i{display:block;height:100%;background:var(--hp);transition:width 1s ease}
+.boss.big .hpbar{height:28px;border-radius:14px}
+.shake svg{animation:shake .6s}
+@keyframes shake{0%,100%{transform:translate(0)}20%{transform:translate(-10px,2px) rotate(-4deg)}40%{transform:translate(9px,-2px) rotate(3deg)}60%{transform:translate(-6px,1px)}80%{transform:translate(4px,0)}}
+.flash .body{animation:flash .6s}
+@keyframes flash{30%{fill:#F7B6B0}}
+.defeated svg{filter:grayscale(1);opacity:.55;transform:rotate(-14deg) translateY(12px);transition:all 1.2s}
+.bosshead{margin-bottom:14px}
+/* lobby */
+.lobby{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:start}
+@media (max-width:900px){.lobby{grid-template-columns:1fr}}
+.qr{background:#fff;padding:14px;border-radius:6px;width:max-content}
+.code{font-family:var(--mono);font-size:72px;font-weight:700;letter-spacing:.18em;margin:0;line-height:1}
+.url{font-family:var(--mono);font-size:17px;color:var(--ink-soft);margin:6px 0 16px;word-break:break-all}
+.joined{font-family:var(--serif);font-size:28px;margin:10px 0}
+/* round intro */
+.intro{text-align:center;padding:30px 20px}
+.intro .rn{font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft)}
+.intro h2{font-size:44px;margin:6px 0}
+.intro .boss{justify-content:center;flex-direction:column}
+.intro .hpwrap{width:min(560px,90%)}
+/* question */
+.qhead{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.step{font-family:var(--mono);font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+.qtext{font-family:var(--serif);font-size:30px;line-height:1.38;margin:6px 0 16px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:860px){.opts{grid-template-columns:1fr}}
+.opt{display:flex;gap:16px;align-items:center;padding:14px 18px;border:2px solid var(--rule);border-radius:8px;background:var(--card);font-size:28px;line-height:1.25;position:relative;overflow:hidden;min-height:74px}
+.opt .ltr{font-family:var(--mono);font-weight:700;font-size:28px;flex:0 0 30px;position:relative}
+.opt .txt{position:relative;flex:1;font-family:var(--mono)}
+.opt .cnt{position:relative;font-family:var(--mono);font-size:19px;font-weight:700;color:var(--ink-soft);text-align:right}
+.opt .mis{display:block;font-family:var(--sans);font-size:15px;color:var(--ink-soft);margin-top:2px}
+.opt .fill{position:absolute;left:0;top:0;bottom:0;background:var(--blue-soft);width:0;transition:width .6s}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.right .fill{background:color-mix(in srgb, var(--ok) 22%, transparent)}
+.opt.right .ltr::after{content:'✓';margin-left:4px;color:var(--ok)}
+.timer{height:14px;border-radius:7px;background:var(--rule);overflow:hidden;margin:16px 0 6px}
+.timer i{display:block;height:100%;background:var(--blue);width:100%;transition:width .25s linear}
+.timer.low i{background:var(--no)}
+.tline{display:flex;justify-content:space-between;font-family:var(--mono);font-size:18px;color:var(--ink-soft)}
+.tline b{color:var(--ink);font-size:24px}
+.how{margin:16px 0 0;padding:12px 16px;border-left:5px solid var(--ok);background:var(--ok-soft);border-radius:0 4px 4px 0;font-size:20px}
+.how b{font-family:var(--mono);font-size:14px;letter-spacing:.06em;text-transform:uppercase;display:block;color:var(--ok)}
+.hit{margin:14px 0 0;padding:14px 18px;border-radius:6px;background:var(--gold-soft);border:1px solid var(--gold);font-size:22px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.hit b{font-family:var(--mono);font-size:30px}
+.hit.heal{background:var(--no-soft);border-color:var(--no)}
+.offl{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:14px}
+.offl input[type=range]{width:300px}
+.offl output{font-family:var(--mono);font-weight:700;font-size:22px;min-width:60px}
+/* end */
+.result{text-align:center}
+.result h2{font-size:40px}
+.result .boss{justify-content:center;flex-direction:column}
+.stats{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin:14px 0 20px}
+.stats div{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:12px 18px;min-width:150px}
+.stats b{display:block;font-family:var(--mono);font-size:28px}
+.stats span{font-size:14px;color:var(--ink-soft)}
+table{border-collapse:collapse;width:100%;font-size:16px;text-align:left}
+th,td{border-bottom:1px solid var(--rule);padding:8px 10px;vertical-align:top}
+thead th{font-family:var(--mono);font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft)}
+td.num{font-family:var(--mono);white-space:nowrap}
+.kbd{font-family:var(--mono);font-size:13px;color:var(--ink-soft);margin-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1><small>Math 1342 · Final review</small>Final Boss Showdown</h1>
+    <div class="meta" id="meta"></div>
+  </header>
+  <main id="app" aria-live="polite"></main>
+  <p class="msg" id="msg" role="alert"></p>
+</div>
+<script>
+/* ===========================================================================
+   REASONABLE DOUBT — shared puzzle engine (Math 1342, Exam IV review)
+   Every lock generates a fresh problem on each load, so this file is the
+   single source of statistical truth. It is tested standalone by test.js
+   (against SciPy values) and then inlined verbatim into each room page.
+   Test statistics and p-values are computed the way the course applets do:
+   one-proportion SE uses p0, two-proportion SE uses the pooled p-hat, and the
+   two-sample t-test uses Welch's df rounded down.
+   =========================================================================== */
+
+/* ---------- small helpers ---------- */
+const RI = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;   /* inclusive */
+const RF = (a, b, d) => +(a + Math.random() * (b - a)).toFixed(d);   /* random decimal */
+const PICK = a => a[Math.floor(Math.random() * a.length)];
+const SHUF = a => { for (let i = a.length - 1; i > 0; i--) { const j = RI(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const MINUS = '−';
+const sgn = n => (n < 0 ? MINUS + Math.abs(n) : String(n));
+const r2 = x => (Math.round(x * 100) / 100).toFixed(2).replace('-', MINUS);
+const r4 = x => (Math.round(x * 10000) / 10000).toFixed(4);
+const pTxt = p => (p < 0.0001 ? 'less than 0.0001' : r4(p));
+const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+const trim0 = x => String(+(+x).toFixed(4));
+const sum = a => a.reduce((s, x) => s + x, 0);
+const mean = a => sum(a) / a.length;
+const sd = a => { const m = mean(a); return Math.sqrt(sum(a.map(x => (x - m) * (x - m))) / (a.length - 1)); };
+
+/* ---------- distributions ---------- */
+/* complementary error function (Numerical Recipes erfcc, |error| < 1.2e-7) */
+function erfc(x) {
+  const z = Math.abs(x), t = 1 / (1 + 0.5 * z);
+  const r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 +
+    t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
+  return x >= 0 ? r : 2 - r;
+}
+const normCDF = z => 0.5 * erfc(-z / Math.SQRT2);
+function logGamma(x) {
+  const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+  let y = x, tmp = x + 5.5; tmp -= (x + 0.5) * Math.log(tmp);
+  let ser = 1.000000000190015; for (let j = 0; j < 6; j++) ser += c[j] / ++y;
+  return -tmp + Math.log(2.5066282746310005 * ser / x);
+}
+/* regularized incomplete beta I_x(a, b), continued fraction */
+function betacf(a, b, x) {
+  const FPMIN = 1e-300; let qab = a + b, qap = a + 1, qam = a - 1, c = 1, d = 1 - qab * x / qap;
+  if (Math.abs(d) < FPMIN) d = FPMIN; d = 1 / d; let h = d;
+  for (let m = 1; m <= 300; m++) {
+    const m2 = 2 * m; let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+    d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN; c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN; d = 1 / d; h *= d * c;
+    aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+    d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN; c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN; d = 1 / d;
+    const del = d * c; h *= del; if (Math.abs(del - 1) < 1e-14) break;
+  }
+  return h;
+}
+function betai(a, b, x) {
+  if (x <= 0) return 0; if (x >= 1) return 1;
+  const bt = Math.exp(logGamma(a + b) - logGamma(a) - logGamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+  return x < (a + 1) / (a + b + 2) ? bt * betacf(a, b, x) / a : 1 - bt * betacf(b, a, 1 - x) / b;
+}
+function tCDF(t, df) { const p = 0.5 * betai(df / 2, 0.5, df / (df + t * t)); return t > 0 ? 1 - p : p; }
+/* upper tail of chi-square: regularized gamma Q(k/2, x/2) */
+function gammaQ(a, x) {
+  if (x <= 0) return 1;
+  if (x < a + 1) {                                   /* series for P, then 1 - P */
+    let ap = a, s = 1 / a, del = s;
+    for (let n = 0; n < 500; n++) { ap++; del *= x / ap; s += del; if (Math.abs(del) < Math.abs(s) * 1e-15) break; }
+    return 1 - s * Math.exp(-x + a * Math.log(x) - logGamma(a));
+  }
+  let b = x + 1 - a, c = 1e300, d = 1 / b, h = d;     /* continued fraction for Q */
+  for (let i = 1; i < 500; i++) {
+    const an = -i * (i - a); b += 2; d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300;
+    c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300; d = 1 / d; const del = d * c; h *= del; if (Math.abs(del - 1) < 1e-15) break;
+  }
+  return Math.exp(-x + a * Math.log(x) - logGamma(a)) * h;
+}
+const chiSF = (x, df) => gammaQ(df / 2, x / 2);
+/* p-value for a z or t statistic, by the sign in Ha */
+function pFromStat(stat, sign, df) {
+  const cdf = df ? tCDF(stat, df) : normCDF(stat);
+  return sign === '<' ? cdf : sign === '>' ? 1 - cdf : 2 * Math.min(cdf, 1 - cdf);
+}
+
+/* ---------- answer parsing ---------- */
+function parseNum(s) {
+  const t = String(s == null ? '' : s).trim().replace(/[−–—]/g, '-').replace(/\s+/g, '').replace(/^\+/, '');
+  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(t)) {
+    const m = t.match(/^(-?\d+)\/(\d+)$/); if (m && +m[2] !== 0) return +m[1] / +m[2];
+    return NaN;
+  }
+  return parseFloat(t);
+}
+const numEq = (s, v, tol) => { const x = parseNum(s); return !isNaN(x) && Math.abs(x - v) <= (tol == null ? 1e-9 : tol) + 1e-12; };
+const statEq = (s, v) => numEq(s, v, 0.011);                 /* test statistics: 2 decimals is enough */
+const expEq = (s, v) => numEq(s, v, 0.011);                  /* expected counts */
+/* p-values: right to about 3 decimals; a tiny p may be typed as 0 or 0.0001 */
+function pEq(s, p) {
+  const x = parseNum(s); if (isNaN(x) || x < 0 || x > 1) return false;
+  if (p < 0.0005) return x <= 0.0006;
+  return Math.abs(x - p) <= Math.max(0.0011, 0.01 * p);
+}
+/* multiple choice: the field remembers its right option text */
+const mc = (label, right, wrong) => ({ type: 'mc', label, options: SHUF([right].concat(wrong)), check: v => v === right, show: right });
+const signOpts = (lhs, rhs, right) => {
+  const all = ['<', '>', '≠', '='].map(s => lhs + ' ' + s + ' ' + rhs);
+  return mc('The alternative hypothesis H<sub>a</sub>', lhs + ' ' + right + ' ' + rhs, all.filter(x => x !== lhs + ' ' + right + ' ' + rhs));
+};
+const TAILWORD = { '<': 'left-tail', '>': 'right-tail', '≠': 'two-tail' };
+const DIRWORD = { '<': 'less than', '>': 'greater than', '≠': 'different from' };
+
+
+const fr = (a, b) => a + '/' + b;
+const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) { [a, b] = [b, a % b]; } return a || 1; };
+const frac = (a, b) => { const g = gcd(a, b); return (a / g) + '/' + (b / g); };
+const p4 = x => (Math.round(x * 10000) / 10000).toFixed(4);
+const probEq = (s, v) => numEq(s, v, 0.0006);                     /* a probability to 4 places, or an exact fraction */
+const dec2Eq = (s, v) => numEq(s, v, 0.0051);                     /* to 2 places, or an exact fraction */
+const money2 = x => (x < 0 ? '−$' : '$') + Math.abs(x).toFixed(2);
+const moneyEq = (s, v) => { const t = String(s).replace(/\$/g, '').replace(/^\s*[−–—]/, '-').replace(/^-\s*/, '-'); return numEq(t, v, 0.0051); };
+function normInv(p) { let lo = -10, hi = 10; for (let i = 0; i < 100; i++) { const m = (lo + hi) / 2; if (normCDF(m) < p) lo = m; else hi = m; } return (lo + hi) / 2; }
+function tInv(p, df) { let lo = -60, hi = 60; for (let i = 0; i < 120; i++) { const m = (lo + hi) / 2; if (tCDF(m, df) < p) lo = m; else hi = m; } return (lo + hi) / 2; }
+const r1 = x => (Math.round(x * 10) / 10).toFixed(1);
+/* a normal probability between a and b: accept the applet's exact answer or the table answer with z rounded to 2 places */
+function normBetween(a, b, mu, s) {
+  const exact = normCDF((b - mu) / s) - normCDF((a - mu) / s);
+  const rz = z => Math.round(z * 100) / 100;
+  const table = normCDF(rz((b - mu) / s)) - normCDF(rz((a - mu) / s));
+  return { exact, table, check: v => numEq(v, exact, 0.0011) || numEq(v, table, 0.0011) };
+}
+/* medians of the halves (median excluded), and the applet's position method, for the agreement check */
+function quartilesHalves(s) {
+  const n = s.length, med = a => (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2);
+  return [med(s.slice(0, Math.floor(n / 2))), med(s), med(s.slice(Math.ceil(n / 2)))];
+}
+function quartilesInc(s) {
+  const q = f => { const pos = f * (s.length - 1), lo = Math.floor(pos), hi = Math.ceil(pos); return s[lo] + (s[hi] - s[lo]) * (pos - lo); };
+  return [q(0.25), q(0.5), q(0.75)];
+}
+
+
+/* ===========================================================================
+   FINAL BOSS SHOWDOWN — question generators (Math 1342 final review)
+   Each generator returns
+     { q: question text (plain, so phones can show it), ans: number, fmt: number → text,
+       dist: [[value, 'the mistake that gives it'], …], how: one-line worked answer,
+       gap?: smallest allowed difference between choices, valid?: value → bool, meta }
+   makeQuestion() keeps the right answer plus three distractors that are clearly
+   different from each other, shuffles the four choices, and labels each
+   wrong choice with the mistake that produces it. New numbers every game.
+   Course conventions: probabilities to 4 places; z rounded to 2 places before
+   a table lookup; one-proportion test SE uses p0; quartiles are medians of the halves.
+   =========================================================================== */
+const ROUNDS = [
+  { id: 'r1', title: 'Describing data', flavor: 'The Final rises from a stack of unsorted data.' },
+  { id: 'r2', title: 'Probability', flavor: 'The Final starts rolling loaded dice.' },
+  { id: 'r3', title: 'Distributions & intervals', flavor: 'The Final hides in the tails of the curve.' },
+  { id: 'r4', title: 'Tests & regression', flavor: 'The Final demands a verdict.' }
+];
+const isProb = v => v >= 0 && v <= 1;
+const ZS = { 90: 1.645, 95: 1.96, 99: 2.576 };
+const zr = z => Math.round(z * 100) / 100;
+const PHI = z => normCDF(zr(z));                  /* table lookup with z rounded to 2 places */
+const fInt = x => Math.round(x).toLocaleString('en-US');
+const fMoney = x => (x < 0 ? '−$' : '$') + Math.abs(x).toFixed(2);
+const f1 = x => (Math.round(x * 10) / 10).toFixed(1).replace('-', '−');
+const QG = {};
+const RJ = (a, b) => RI(Math.ceil(a), Math.floor(b));          /* random integer in [a, b] even when a, b are not whole */
+function binomPMF(k, n, p) { let c = 1; for (let i = 0; i < k; i++) c = c * (n - i) / (i + 1); return c * Math.pow(p, k) * Math.pow(1 - p, n - k); }
+const binomCDF = (k, n, p) => { let s = 0; for (let i = 0; i <= k; i++) s += binomPMF(i, n, p); return s; };
+const nPr = (n, r) => { let x = 1; for (let i = 0; i < r; i++) x *= n - i; return x; };
+const nCr = (n, r) => nPr(n, r) / nPr(r, r);
+
+/* ---------------- Round 1 · describing data ---------------- */
+QG.freqMean = { round: 'r1', topic: 'Mean from a frequency table', make() {
+  const xs = SHUF([0, 1, 2, 3, 4, 5]).slice(0, 4).sort((a, b) => a - b), fs = xs.map(() => RJ(2, 12));
+  const N = sum(fs), sxf = sum(xs.map((x, i) => x * fs[i])), ctx = PICK(['pets per household', 'siblings per student', 'cars per family', 'classes missed per student']);
+  return { q: 'A survey of ' + ctx + ': ' + xs.map((x, i) => x + ' (' + fs[i] + ' people)').join(', ') + '. Find the mean.',
+    ans: sxf / N, fmt: r2, gap: 0.05,
+    dist: [[mean(xs), 'averaged the values and ignored the frequencies'], [sxf / xs.length, 'divided Σxf by the number of rows, not Σf'], [sxf / (N - 1), 'divided by Σf − 1']],
+    how: 'Mean = Σxf / Σf = ' + sxf + ' / ' + N + ' = ' + r2(sxf / N), meta: { kind: 'freqMean', xs, fs } };
+} };
+QG.sampleSD = { round: 'r1', topic: 'Sample standard deviation', make() {
+  const n = RJ(5, 6), d = Array.from({ length: n }, () => RJ(5, 30)), m = mean(d), SS = sum(d.map(x => (x - m) * (x - m)));
+  const ctx = PICK(['quiz scores', 'minutes of homework', 'texts sent in an hour', 'customers per hour']);
+  return { q: 'Find the sample standard deviation of these ' + ctx + ': ' + d.join(', ') + '.',
+    ans: Math.sqrt(SS / (n - 1)), fmt: r2, gap: 0.08,
+    dist: [[Math.sqrt(SS / n), 'divided by n instead of n − 1'], [SS / (n - 1), 'stopped at the variance (no square root)'], [sum(d.map(x => Math.abs(x - m))) / n, 'averaged the distances from the mean']],
+    how: 's = √(Σ(x − x̄)² / (n − 1)) = √(' + r2(SS) + ' / ' + (n - 1) + ') = ' + r2(Math.sqrt(SS / (n - 1))), meta: { kind: 'sampleSD', d } };
+} };
+QG.iqr = { round: 'r1', topic: 'IQR', make() {
+  const n = PICK([10, 11, 12, 13]); let d;
+  do { d = Array.from({ length: n }, () => RJ(10, 70)).sort((a, b) => a - b); } while (new Set(d).size < n - 2);
+  const [q1, med, q3] = quartilesHalves(d);
+  return { q: 'Find the IQR of these test times (minutes): ' + SHUF(d.slice()).join(', ') + '.',
+    ans: q3 - q1, fmt: trim0, gap: 0.9,
+    dist: [[d[n - 1] - d[0], 'found the range instead'], [q3 - med, 'used Q3 − median'], [med - q1, 'used median − Q1'], [(q3 - q1) * 1.5, 'multiplied by 1.5 (that is the fence step)']],
+    how: 'Sorted, Q1 = ' + trim0(q1) + ' and Q3 = ' + trim0(q3) + ' (medians of the halves), so IQR = ' + trim0(q3 - q1), meta: { kind: 'iqr', d, iqr: q3 - q1 } };
+} };
+QG.fence = { round: 'r1', topic: 'Upper fence for outliers', make() {
+  const q1 = RJ(20, 50), iqr = RJ(4, 16) * 2, q3 = q1 + iqr, med = q1 + RJ(2, iqr - 2);
+  return { q: 'Home prices ($ thousands) have Q1 = ' + q1 + ', median = ' + med + ' and Q3 = ' + q3 + '. Find the upper fence for outliers.',
+    ans: q3 + 1.5 * iqr, fmt: trim0, gap: 0.9,
+    dist: [[q3 + iqr, 'added one IQR, not 1.5 × IQR'], [med + 1.5 * iqr, 'started from the median instead of Q3'], [1.5 * iqr, 'forgot to add Q3'], [q3 + 3 * iqr, 'used 3 × IQR']],
+    how: 'Upper fence = Q3 + 1.5 × IQR = ' + q3 + ' + 1.5(' + iqr + ') = ' + trim0(q3 + 1.5 * iqr), meta: { kind: 'fence', q1, q3 } };
+} };
+QG.zscore = { round: 'r1', topic: 'z-score', make() {
+  const mu = RJ(60, 85), s = RJ(4, 12); let x; do { x = RJ(mu - 2 * s, mu + 2 * s); } while (Math.abs(x - mu) < 2);
+  return { q: 'Exam scores have mean ' + mu + ' and SD ' + s + '. Find the z-score of a score of ' + x + '.',
+    ans: (x - mu) / s, fmt: r2, gap: 0.05,
+    dist: [[(mu - x) / s, 'subtracted in the wrong order (μ − x)'], [(x - mu) / (s * s), 'divided by the variance'], [x / s, 'forgot to subtract the mean'], [(x - mu) * s / 100, 'multiplied by σ']],
+    how: 'z = (x − μ)/σ = (' + x + ' − ' + mu + ')/' + s + ' = ' + r2((x - mu) / s), meta: { kind: 'z', x, mu, s } };
+} };
+
+/* ---------------- Round 2 · probability ---------------- */
+QG.orRule = { round: 'r2', topic: 'Addition rule', make() {
+  const N = PICK([200, 250, 400, 500]), a = RJ(N * 0.2, N * 0.45), b = RJ(N * 0.15, N * 0.4), ab = RJ(N * 0.04, Math.min(a, b) * 0.5);
+  const c = PICK([['play a sport', 'have a job'], ['own a cat', 'own a dog'], ['take an online class', 'take a night class']]);
+  return { q: 'Of ' + N + ' students, ' + a + ' ' + c[0] + ', ' + b + ' ' + c[1] + ', and ' + ab + ' do both. Find P(' + c[0] + ' or ' + c[1] + ').',
+    ans: (a + b - ab) / N, fmt: p4, gap: 0.005, valid: isProb,
+    dist: [[(a + b) / N, 'did not subtract the overlap'], [ab / N, 'found P(both) instead'], [1 - (a + b - ab) / N, 'found P(neither)'], [(a / N) * (b / N), 'multiplied as if independent']],
+    how: 'P(A or B) = (' + a + ' + ' + b + ' − ' + ab + ')/' + N + ' = ' + p4((a + b - ab) / N), meta: { kind: 'or', N, a, b, ab } };
+} };
+QG.condTable = { round: 'r2', topic: 'Conditional probability', make() {
+  const c = PICK([['Commuters', 'On campus', 'late', 'on time', 'is late', 'is a commuter'], ['Tutored', 'Not tutored', 'passed', 'failed', 'passed', 'was tutored'], ['Phone users', 'No phone', 'crashed', 'did not crash', 'crashed', 'used a phone']]);
+  const t = [[RJ(15, 60), RJ(20, 80)], [RJ(15, 60), RJ(20, 90)]], N = t[0][0] + t[0][1] + t[1][0] + t[1][1], row = t[0][0] + t[0][1], col = t[0][0] + t[1][0];
+  return { q: c[0] + ': ' + t[0][0] + ' ' + c[2] + ', ' + t[0][1] + ' ' + c[3] + '. ' + c[1] + ': ' + t[1][0] + ' ' + c[2] + ', ' + t[1][1] + ' ' + c[3] + '. Find P(' + c[4] + ' | ' + c[5] + ').',
+    ans: t[0][0] / row, fmt: p4, gap: 0.005, valid: isProb,
+    dist: [[t[0][0] / N, 'divided by the grand total'], [t[0][0] / col, 'divided by the column total (the reverse condition)'], [row / N, 'found P(' + c[5] + ') instead']],
+    how: 'Only the ' + c[0] + ' row counts: ' + t[0][0] + ' / ' + row + ' = ' + p4(t[0][0] / row), meta: { kind: 'cond', t } };
+} };
+QG.atLeastOne = { round: 'r2', topic: 'At least one', make() {
+  const d = PICK([0.03, 0.05, 0.08, 0.1, 0.12, 0.15]), n = RJ(4, 10), c = PICK([['flights', 'delayed'], ['light bulbs', 'defective'], ['packages', 'damaged']]);
+  return { q: 'Each of ' + n + ' ' + c[0] + ' is ' + c[1] + ' with probability ' + d + ', independently. Find P(at least one is ' + c[1] + ').',
+    ans: 1 - Math.pow(1 - d, n), fmt: p4, gap: 0.005, valid: isProb,
+    dist: [[Math.pow(1 - d, n), 'found P(none) and stopped'], [1 - Math.pow(d, n), 'used ' + d + ' where 1 − ' + d + ' belongs'], [n * d, 'multiplied n × p'], [d, 'used the chance for just one']],
+    how: '1 − P(none) = 1 − (' + (1 - d).toFixed(2) + ')^' + n + ' = ' + p4(1 - Math.pow(1 - d, n)), meta: { kind: 'atLeast', d, n } };
+} };
+QG.binomEq = { round: 'r2', topic: 'Binomial: exactly', make() {
+  let n, p, k, ans; do { n = RJ(6, 14); p = PICK([0.2, 0.25, 0.3, 0.4, 0.6, 0.7, 0.75]); k = RJ(1, n - 1); ans = binomPMF(k, n, p); } while (ans < 0.05);
+  return { q: 'A player makes ' + Math.round(p * 100) + '% of her shots. In ' + n + ' shots, find P(exactly ' + k + ' made).',
+    ans, fmt: p4, gap: 0.005, valid: isProb,
+    dist: [[Math.pow(p, k) * Math.pow(1 - p, n - k), 'left out the nCk count'], [binomCDF(k, n, p), 'found P(X ≤ ' + k + ')'], [nCr(n, k) * Math.pow(p, k), 'left out (1 − p)^(n − k)'], [1 - binomCDF(k - 1, n, p), 'found P(X ≥ ' + k + ')']],
+    how: 'P(X = ' + k + ') = ' + n + 'C' + k + ' (' + p + ')^' + k + ' (' + trim0(1 - p) + ')^' + (n - k) + ' = ' + p4(ans), meta: { kind: 'binomEq', n, p, k } };
+} };
+QG.binomAtMost = { round: 'r2', topic: 'Binomial: at most / fewer than', make() {
+  let n, p, k, strict, ans; do { n = RJ(8, 15); p = PICK([0.2, 0.3, 0.35, 0.4, 0.5, 0.6]); k = RJ(2, n - 3); strict = Math.random() < 0.5; ans = binomCDF(strict ? k - 1 : k, n, p); } while (ans < 0.06 || ans > 0.94);
+  return { q: Math.round(p * 100) + '% of customers buy dessert. Of the next ' + n + ', find P(' + (strict ? 'fewer than ' : 'at most ') + k + ' buy dessert).',
+    ans, fmt: p4, gap: 0.005, valid: isProb,
+    dist: [[binomCDF(strict ? k : k - 1, n, p), strict ? 'included ' + k + ' (that is “at most ' + k + '”)' : 'left out ' + k + ' (that is “fewer than ' + k + '”)'], [1 - ans, 'found the complement'], [binomPMF(strict ? k - 1 : k, n, p), 'found just one value, P(X = ' + (strict ? k - 1 : k) + ')']],
+    how: 'P(X ≤ ' + (strict ? k - 1 : k) + ') with n = ' + n + ', p = ' + p + ': ' + p4(ans), meta: { kind: 'binomCdf', n, p, k: strict ? k - 1 : k } };
+} };
+QG.netEV = { round: 'r2', topic: 'Expected value of a game', make() {
+  const g = PICK([[6, 'rolling a 6'], [4, 'drawing a heart'], [10, 'spinning a 7 on a 10-section wheel'], [5, 'picking the gold ticket of 5']]), p = 1 / g[0], C = PICK([2, 3, 5]);
+  let Wn; do { Wn = RJ(2, 8) * g[0] / 2; } while (Wn % 1 || Wn <= C || Wn * p - C >= 0 || Wn * p - C < -C + 0.5);
+  return { q: 'A game costs ' + fMoney(C) + '. You win ' + fMoney(Wn) + ' for ' + g[1] + ', otherwise nothing. Find the expected value of playing.',
+    ans: Wn * p - C, fmt: fMoney, gap: 0.05,
+    dist: [[Wn * p, 'ignored the cost to play'], [(Wn - C) * p, 'subtracted the cost only when you win'], [Wn * p - C * p, 'charged the cost only on a win'], [-C * (1 - p), 'counted only the losses']],
+    how: 'E = (' + (Wn - C) + ')(1/' + g[0] + ') + (−' + C + ')(' + (g[0] - 1) + '/' + g[0] + ') = ' + fMoney(Wn * p - C), meta: { kind: 'ev', Wn, C, p } };
+} };
+QG.counting = { round: 'r2', topic: 'Counting', make() {
+  const n = RJ(8, 14), k = PICK([3, 4]), comb = Math.random() < 0.5;
+  const ans = comb ? nCr(n, k) : nPr(n, k);
+  return { q: comb ? 'How many ways can a committee of ' + k + ' be chosen from ' + n + ' people?' : 'How many ways can ' + n + ' runners finish in the top ' + k + ' places (1st, 2nd, …)?',
+    ans, fmt: fInt, gap: 0.5,
+    dist: [[comb ? nPr(n, k) : nCr(n, k), comb ? 'used a permutation (order does not matter here)' : 'used a combination (order matters here)'], [Math.pow(n, k), 'allowed repeats (n^k)'], [n * k, 'multiplied n × k']],
+    how: (comb ? n + 'C' + k : n + 'P' + k) + ' = ' + fInt(ans), meta: { kind: 'count', n, k, comb } };
+} };
+QG.noRepl = { round: 'r2', topic: 'Without replacement', make() {
+  const a = RJ(4, 9), b = RJ(5, 12), N = a + b, c = PICK(['red marbles', 'cherry candies', 'winning tickets']);
+  return { q: 'A bag has ' + a + ' ' + c + ' out of ' + N + ' in all. Two are drawn without replacement. Find P(both are ' + c + ').',
+    ans: a * (a - 1) / (N * (N - 1)), fmt: p4, gap: 0.004, valid: isProb,
+    dist: [[(a / N) * (a / N), 'treated the draws as independent (with replacement)'], [a / N + (a - 1) / (N - 1), 'added instead of multiplying'], [(a / N) * ((a - 1) / N), 'reduced only the top number']],
+    how: '(' + a + '/' + N + ')(' + (a - 1) + '/' + (N - 1) + ') = ' + p4(a * (a - 1) / (N * (N - 1))), meta: { kind: 'noRepl', a, N } };
+} };
+
+/* ---------------- Round 3 · distributions & intervals ---------------- */
+function nctx() { return PICK([['Adult heights', 'in', 66, 3, 0], ['Battery lives', 'h', 40, 5, 0], ['Commute times', 'min', 28, 6, 0], ['Birth weights', 'lb', 7.5, 1.1, 1], ['Exam scores', 'points', 72, 9, 0]]); }
+QG.normTail = { round: 'r3', topic: 'Normal: one value', make() {
+  const c = nctx(), mu = c[2], s = c[3]; let x, z; do { x = +(mu + (0.3 + Math.random() * 1.5) * s * (Math.random() < 0.5 ? -1 : 1)).toFixed(c[4] ? 1 : 0); z = zr((x - mu) / s); } while (Math.abs(z) < 0.3);
+  const gt = Math.random() < 0.5, ans = gt ? 1 - PHI(z) : PHI(z);
+  return { q: c[0] + ' are normal with mean ' + mu + ' and SD ' + s + ' ' + c[1] + '. Find P(X ' + (gt ? '>' : '<') + ' ' + x + ').',
+    ans, fmt: p4, gap: 0.006, valid: isProb,
+    dist: [[1 - ans, 'gave the area on the other side'], [Math.abs(PHI(z) - 0.5), 'found only the area between the mean and x'], [gt ? 1 - normCDF(zr((x - mu) / (s * s))) : normCDF(zr((x - mu) / (s * s))), 'divided by the variance when finding z']],
+    how: 'z = (' + x + ' − ' + mu + ')/' + s + ' = ' + r2(z) + '; ' + (gt ? '1 − ' + p4(PHI(z)) + ' = ' : '') + p4(ans), meta: { kind: 'tail', mu, s, x, gt } };
+} };
+QG.normBetween = { round: 'r3', topic: 'Normal: between', make() {
+  const c = nctx(), mu = c[2], s = c[3], dp = c[4] ? 1 : 0;
+  const a = +(mu - (0.4 + Math.random()) * s).toFixed(dp), b = +(mu + (0.4 + Math.random()) * s).toFixed(dp), za = zr((a - mu) / s), zb = zr((b - mu) / s);
+  const ans = PHI(zb) - PHI(za);
+  return { q: c[0] + ' are normal with mean ' + mu + ' and SD ' + s + ' ' + c[1] + '. Find P(' + a + ' < X < ' + b + ').',
+    ans, fmt: p4, gap: 0.006, valid: isProb,
+    dist: [[1 - ans, 'found the area outside the interval'], [PHI(zb), 'used only the upper value'], [PHI(zb) - (1 - PHI(za)), 'subtracted the wrong tail areas']],
+    how: 'z = ' + r2(za) + ' and ' + r2(zb) + '; ' + p4(PHI(zb)) + ' − ' + p4(PHI(za)) + ' = ' + p4(ans), meta: { kind: 'between', mu, s, a, b } };
+} };
+QG.invNorm = { round: 'r3', topic: 'Inverse normal', make() {
+  const c = nctx(), mu = c[2], s = c[3], p = PICK([5, 10, 15, 20, 25]), dp = c[4] ? 2 : 1;
+  const z = zr(normInv(1 - p / 100)), fx = v => v.toFixed(dp);
+  return { q: c[0] + ' are normal with mean ' + mu + ' and SD ' + s + ' ' + c[1] + '. What value marks the top ' + p + '%?',
+    ans: mu + z * s, fmt: fx, gap: 0.04 * s,
+    dist: [[mu - z * s, 'used the bottom ' + p + '% (wrong sign on z)'], [mu + zr(normInv(1 - p / 200)) * s, 'split the ' + p + '% into two tails'], [mu + (1 - p / 100) * s, 'used ' + (1 - p / 100).toFixed(2) + ' as the z-score']],
+    how: 'z = ' + r2(z) + ', so x = ' + mu + ' + ' + r2(z) + '(' + s + ') = ' + fx(mu + z * s), meta: { kind: 'inv', mu, s, p } };
+} };
+QG.clt = { round: 'r3', topic: 'CLT: a sample mean', make() {
+  const c = PICK([['Bags of chips', 'oz', 10, 0.4], ['Delivery times', 'min', 32, 9], ['Phone bills', 'dollars', 85, 20]]), mu = c[2], s = c[3], n = PICK([25, 36, 49, 64, 100]), se = s / Math.sqrt(n);
+  let xb, z; do { xb = +(mu + (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 1.5) * se).toFixed(2); z = zr((xb - mu) / se); } while (Math.abs(z) < 0.5);
+  const gt = xb > mu, area = zz => gt ? 1 - normCDF(zr(zz)) : normCDF(zr(zz)), ans = area((xb - mu) / se);
+  return { q: c[0] + ' have mean ' + mu + ' and SD ' + s + ' ' + c[1] + '. For a random sample of ' + n + ', find P(x̄ ' + (gt ? '>' : '<') + ' ' + xb + ').',
+    ans, fmt: p4, gap: 0.006, valid: isProb,
+    dist: [[area((xb - mu) / s), 'used σ instead of σ/√n'], [1 - ans, 'gave the area on the other side'], [area((xb - mu) / (s / n)), 'used σ/n instead of σ/√n']],
+    how: 'SE = ' + s + '/√' + n + ' = ' + r2(se) + ', z = ' + r2(z) + ', area = ' + p4(ans), meta: { kind: 'clt', mu, s, n, xb, gt } };
+} };
+QG.uniform = { round: 'r3', topic: 'Uniform distribution', make() {
+  const a = RJ(2, 10), b = a + RJ(8, 20), lo = RJ(a + 1, b - 4), hi = RJ(lo + 2, b - 1);
+  return { q: 'A bus arrives at a time uniformly distributed between ' + a + ' and ' + b + ' minutes from now. Find P(' + lo + ' < X < ' + hi + ').',
+    ans: (hi - lo) / (b - a), fmt: p4, gap: 0.006, valid: isProb,
+    dist: [[(hi - lo) / b, 'used 1/b for the height instead of 1/(b − a)'], [hi / (b - a), 'used the upper value as the width'], [1 - (hi - lo) / (b - a), 'found the area outside the interval']],
+    how: '(' + hi + ' − ' + lo + ') × 1/(' + b + ' − ' + a + ') = ' + p4((hi - lo) / (b - a)), meta: { kind: 'unif', a, b, lo, hi } };
+} };
+QG.tMargin = { round: 'r3', topic: 'Margin of error for μ', make() {
+  const n = RJ(10, 24), conf = PICK([90, 95, 99]), s = PICK([2.4, 3.1, 4.8, 6.5, 12, 15]), ts = tInv(1 - (1 - conf / 100) / 2, n - 1);
+  return { q: 'A sample of ' + n + ' has s = ' + s + '. Find the margin of error for a ' + conf + '% confidence interval for μ (σ unknown).',
+    ans: ts * s / Math.sqrt(n), fmt: r2, gap: 0.05,
+    dist: [[ZS[conf] * s / Math.sqrt(n), 'used z* instead of t*'], [ts * s, 'forgot to divide by √n'], [ts * s / n, 'divided by n instead of √n']],
+    how: 't* (df = ' + (n - 1) + ') = ' + ts.toFixed(3) + '; E = ' + ts.toFixed(3) + ' × ' + s + '/√' + n + ' = ' + r2(ts * s / Math.sqrt(n)), meta: { kind: 'tE', n, conf, s } };
+} };
+QG.pMargin = { round: 'r3', topic: 'Margin of error for p', make() {
+  const n = PICK([200, 250, 400, 500, 800]), x = RJ(n * 0.2, n * 0.7), conf = PICK([90, 95, 99]), ph = +(x / n).toFixed(4), se = Math.sqrt(ph * (1 - ph) / n);
+  const other = conf === 95 ? 90 : 95;
+  return { q: 'In a poll of ' + n + ' voters, ' + x + ' support a measure. Find the margin of error for a ' + conf + '% confidence interval.',
+    ans: ZS[conf] * se, fmt: p4, gap: 0.003,
+    dist: [[ZS[conf] * ph * (1 - ph) / n, 'left off the square root'], [se, 'forgot to multiply by z*'], [ZS[other] * se, 'used the ' + other + '% critical value']],
+    how: 'p̂ = ' + p4(ph) + '; E = ' + ZS[conf] + ' × √(' + p4(ph) + '(' + p4(1 - ph) + ')/' + n + ') = ' + p4(ZS[conf] * se), meta: { kind: 'pE', n, x, conf } };
+} };
+QG.nMean = { round: 'r3', topic: 'Sample size for μ', make() {
+  let conf, sig, E, ex; do { conf = PICK([90, 95, 99]); sig = RJ(5, 30); E = PICK([1, 1.5, 2, 2.5, 3, 4]); ex = Math.pow(ZS[conf] * sig / E, 2); } while (ex % 1 < 0.05 || ex < 20 || ex > 2000);
+  const other = conf === 95 ? 99 : 95;
+  return { q: 'How many measurements are needed to estimate μ within ' + E + ' at ' + conf + '% confidence, if σ ≈ ' + sig + '?',
+    ans: Math.ceil(ex), fmt: fInt, gap: 1.5,
+    dist: [[Math.ceil(ZS[conf] * sig / E), 'forgot to square'], [Math.ceil(Math.pow(ZS[other] * sig / E, 2)), 'used the ' + other + '% critical value'], [Math.ceil(ZS[conf] * ZS[conf] * sig / E), 'squared z* but not σ/E']],
+    how: 'n = (' + ZS[conf] + ' × ' + sig + '/' + E + ')² = ' + r2(ex) + ' → round up to ' + Math.ceil(ex), meta: { kind: 'nMean', conf, sig, E } };
+} };
+QG.nProp = { round: 'r3', topic: 'Sample size for p', make() {
+  const conf = PICK([90, 95, 99]), E = PICK([0.02, 0.03, 0.04, 0.05]), est = Math.random() < 0.5 ? null : PICK([0.2, 0.3, 0.35, 0.6, 0.7]);
+  const pp = est == null ? 0.5 : est, ans = Math.ceil(ZS[conf] * ZS[conf] * pp * (1 - pp) / (E * E));
+  return { q: 'Estimate a proportion within ' + Math.round(E * 100) + '% at ' + conf + '% confidence' + (est == null ? ', with no earlier estimate.' : '. A past study found p̂ = ' + est + '.') + ' How many people are needed?',
+    ans, fmt: fInt, gap: 1.5,
+    dist: [[Math.ceil(ZS[conf] * ZS[conf] * (est == null ? 0.25 * 0.75 : 0.25) / (E * E)), est == null ? 'used p̂ = 0.25 instead of 0.5' : 'used 0.5 even though p̂ = ' + est + ' was given'], [Math.ceil(ZS[conf] * pp * (1 - pp) / (E * E)), 'did not square z*'], [Math.ceil(ZS[conf] * ZS[conf] * pp * (1 - pp) / E), 'did not square E']],
+    how: 'n = ' + ZS[conf] + '²(' + pp + ')(' + trim0(1 - pp) + ')/' + E + '² → round up to ' + ans, meta: { kind: 'nProp', conf, E, pp } };
+} };
+
+/* ---------------- Round 4 · tests & regression ---------------- */
+QG.propZ = { round: 'r4', topic: 'One-proportion test statistic', make() {
+  let p0, n, x, ph; do { p0 = PICK([0.25, 0.3, 0.4, 0.5, 0.6]); n = PICK([120, 150, 200, 250]); x = Math.round(n * (p0 + (Math.random() < 0.5 ? -1 : 1) * (0.05 + Math.random() * 0.08))); ph = x / n; } while (Math.abs(Math.sqrt(ph * (1 - ph) / n) - Math.sqrt(p0 * (1 - p0) / n)) < 0.002);
+  const z = (ph - p0) / Math.sqrt(p0 * (1 - p0) / n);
+  return { q: 'H₀: p = ' + p0 + '. In a sample of ' + n + ', ' + x + ' are successes. Find the z test statistic.',
+    ans: z, fmt: r2, gap: 0.06,
+    dist: [[(ph - p0) / Math.sqrt(ph * (1 - ph) / n), 'used p̂ instead of p₀ in the SE'], [-z, 'subtracted in the wrong order (p₀ − p̂)'], [(ph - p0) / Math.sqrt(p0 * (1 - p0)), 'forgot to divide by n inside the root']],
+    how: 'p̂ = ' + p4(ph) + '; z = (' + p4(ph) + ' − ' + p0 + ')/√(' + p0 + '(' + trim0(1 - p0) + ')/' + n + ') = ' + r2(z), meta: { kind: 'propZ', p0, n, x } };
+} };
+QG.tStat = { round: 'r4', topic: 'One-sample t statistic', make() {
+  const mu0 = PICK([50, 30, 16, 45, 120]), s = +(mu0 * RF(0.06, 0.2, 2)).toFixed(1), n = RJ(10, 30);
+  let xb, t; do { xb = +(mu0 + (Math.random() < 0.5 ? -1 : 1) * RF(0.6, 2.6, 2) * s / Math.sqrt(n)).toFixed(1); t = (xb - mu0) / (s / Math.sqrt(n)); } while (Math.abs(t) < 0.5);
+  return { q: 'H₀: μ = ' + mu0 + '. A sample of ' + n + ' has x̄ = ' + xb + ' and s = ' + s + '. Find the t test statistic.',
+    ans: t, fmt: r2, gap: 0.06,
+    dist: [[(xb - mu0) / s, 'divided by s, not s/√n'], [(xb - mu0) / (s / n), 'divided by s/n'], [-t, 'subtracted in the wrong order (μ₀ − x̄)']],
+    how: 't = (' + xb + ' − ' + mu0 + ')/(' + s + '/√' + n + ') = ' + r2(t), meta: { kind: 't', mu0, s, n, xb } };
+} };
+QG.twoTailP = { round: 'r4', topic: 'Two-tailed p-value', make() {
+  const z = +((Math.random() < 0.5 ? -1 : 1) * RF(1.1, 2.6, 2)).toFixed(2), one = 1 - normCDF(Math.abs(z));
+  return { q: 'H₀: μ = μ₀ vs Hₐ: μ ≠ μ₀. The test statistic is z = ' + r2(z) + '. Find the p-value.',
+    ans: 2 * one, fmt: p4, gap: 0.005, valid: isProb,
+    dist: [[one, 'did not double it for a two-tailed test'], [normCDF(Math.abs(z)), 'gave the area below |z|'], [1 - 2 * one, 'found the area between −z and z']],
+    how: '2 × P(Z > ' + r2(Math.abs(z)) + ') = 2(' + p4(one) + ') = ' + p4(2 * one), meta: { kind: 'twoTail', z } };
+} };
+QG.gofExp = { round: 'r4', topic: 'Chi-square expected count', make() {
+  const c = PICK([[['O', 'A', 'B', 'AB'], [0.44, 0.42, 0.1, 0.04], 'blood types'], [['Red', 'Blue', 'Green', 'Yellow', 'Orange'], [0.3, 0.25, 0.2, 0.15, 0.1], 'candy colors'], [['Morning', 'Afternoon', 'Evening'], [0.5, 0.3, 0.2], 'class times']]);
+  const n = PICK([150, 200, 250, 300, 400]), j = RJ(0, c[0].length - 1), k = c[0].length;
+  const obs = Math.round(n * c[1][j] + RJ(4, 12) * (Math.random() < 0.5 ? -1 : 1));
+  return { q: 'A goodness-of-fit test on ' + n + ' ' + c[2] + ' uses the claimed shares ' + c[0].map((x, i) => x + ' ' + Math.round(c[1][i] * 100) + '%').join(', ') + '. ' + obs + ' were ' + c[0][j] + '. Find the expected count for ' + c[0][j] + '.',
+    ans: n * c[1][j], fmt: trim0, gap: 0.9,
+    dist: [[n / k, 'assumed equal shares'], [obs, 'used the observed count'], [Math.round(c[1][j] * 100), 'used the percent itself'], [n * (1 - c[1][j]), 'used 1 − the claimed share']],
+    how: 'E = n × claimed share = ' + n + ' × ' + c[1][j] + ' = ' + trim0(n * c[1][j]), meta: { kind: 'gofExp', n, p: c[1][j] } };
+} };
+QG.chiStat = { round: 'r4', topic: 'Chi-square statistic', make() {
+  const k = 3, n = PICK([90, 120, 150, 180]), E = n / k; let O; do { O = [RJ(E - 15, E + 15), RJ(E - 15, E + 15)]; O.push(n - O[0] - O[1]); } while (O[2] < 5 || sum(O.map(o => Math.abs(o - E))) < 10);
+  const chi = sum(O.map(o => (o - E) * (o - E) / E)), c = PICK(['three menu specials', 'three bus routes', 'three study rooms']);
+  return { q: n + ' students chose among ' + c + ' (H₀: equal shares). Observed: ' + O.join(', ') + '. Find χ².',
+    ans: chi, fmt: r2, gap: 0.1,
+    dist: [[sum(O.map(o => (o - E) * (o - E) / o)), 'divided by O instead of E'], [sum(O.map(o => (o - E) * (o - E))), 'forgot to divide by E'], [sum(O.map(o => Math.abs(o - E) / E)), 'did not square (O − E)']],
+    how: 'E = ' + trim0(E) + ' each; Σ(O − E)²/E = ' + r2(chi), meta: { kind: 'chi', O, E } };
+} };
+QG.chiDf = { round: 'r4', topic: 'Chi-square degrees of freedom', make() {
+  const r = RJ(2, 5), c = RJ(3, 5), ctx = PICK(['class year and favorite study spot', 'age group and news source', 'major and preferred class time']);
+  return { q: 'A test of independence for ' + ctx + ' uses a table with ' + r + ' rows and ' + c + ' columns. Find the degrees of freedom.',
+    ans: (r - 1) * (c - 1), fmt: fInt, gap: 0.5,
+    dist: [[r * c - 1, 'used (rows × columns) − 1'], [r + c - 2, 'added (r − 1) + (c − 1)'], [r * c, 'used rows × columns']],
+    how: 'df = (' + r + ' − 1)(' + c + ' − 1) = ' + (r - 1) * (c - 1), meta: { kind: 'df', r, c } };
+} };
+QG.predict = { round: 'r4', topic: 'Regression prediction', make() {
+  let a, b; do { a = RF(10, 70, 1); b = RF(-4, 5, 2); } while (Math.abs(b) < 0.5);
+  const x = RJ(3, 15), c = PICK([['hours studied', 'exam score'], ['age of a car', 'value ($ thousands)'], ['temperature', 'iced coffees sold']]);
+  return { q: 'Regression output for predicting ' + c[1] + ' from ' + c[0] + ': intercept ' + r2(a) + ', slope ' + r2(b) + '. Predict y when x = ' + x + '.',
+    ans: a + b * x, fmt: r2, gap: 0.3,
+    dist: [[b + a * x, 'swapped the slope and the intercept'], [a + b, 'forgot to multiply the slope by x'], [a - b * x, 'subtracted the slope term']],
+    how: 'ŷ = ' + r2(a) + ' + ' + r2(b) + '(' + x + ') = ' + r2(a + b * x), meta: { kind: 'pred', a, b, x } };
+} };
+QG.residual = { round: 'r4', topic: 'Residual', make() {
+  let a, b, x, y, yh; do { a = RF(5, 60, 1); b = RF(0.5, 6, 2); x = RJ(2, 20); yh = a + b * x; y = Math.round(yh + (Math.random() < 0.5 ? -1 : 1) * RF(1.5, 9, 1)); } while (Math.abs(y - yh) < 1.2);
+  return { q: 'The line ŷ = ' + r2(a) + ' + ' + r2(b) + 'x is fit to data. One point is (' + x + ', ' + y + '). Find its residual.',
+    ans: y - yh, fmt: r2, gap: 0.3,
+    dist: [[yh - y, 'computed ŷ − y'], [y - a, 'subtracted only the intercept'], [yh, 'gave the predicted value ŷ']],
+    how: 'ŷ = ' + r2(yh) + '; residual = y − ŷ = ' + y + ' − ' + r2(yh) + ' = ' + r2(y - yh), meta: { kind: 'res', a, b, x, y } };
+} };
+QG.pooled = { round: 'r4', topic: 'Two proportions: pooled p̂', make() {
+  const n1 = PICK([120, 150, 200, 250]), n2 = PICK([80, 100, 160, 300]), x1 = RJ(n1 * 0.2, n1 * 0.6), x2 = RJ(n2 * 0.2, n2 * 0.6);
+  return { q: 'Group 1: ' + x1 + ' of ' + n1 + ' said yes. Group 2: ' + x2 + ' of ' + n2 + '. Find the pooled p̂ for a two-proportion test.',
+    ans: (x1 + x2) / (n1 + n2), fmt: p4, gap: 0.004, valid: isProb,
+    dist: [[(x1 / n1 + x2 / n2) / 2, 'averaged the two sample proportions'], [x1 / n1 - x2 / n2, 'found p̂₁ − p̂₂'], [(x1 + x2) / n1, 'divided by n₁ only']],
+    how: '(' + x1 + ' + ' + x2 + ')/(' + n1 + ' + ' + n2 + ') = ' + p4((x1 + x2) / (n1 + n2)), meta: { kind: 'pool', x1, n1, x2, n2 } };
+} };
+
+/* ---------------- building a question and a game ---------------- */
+function makeQuestion(key) {
+  for (let tries = 0; tries < 60; tries++) {
+    const g = QG[key].make(), gap = g.gap || 0, ok = v => isFinite(v) && (!g.valid || g.valid(v));
+    if (!ok(g.ans)) continue;
+    const opts = [{ v: g.ans, t: g.fmt(g.ans), right: true, why: '' }];
+    const far = v => opts.every(o => Math.abs(o.v - v) >= gap && o.t !== g.fmt(v));
+    SHUF(g.dist.slice()).forEach(([v, why]) => { if (opts.length < 4 && ok(v) && far(v)) opts.push({ v, t: g.fmt(v), right: false, why }); });
+    if (opts.length < 4) continue;
+    SHUF(opts);                      /* letters are shuffled: sorting by value would leave the right answer in the same spot */
+    return { key, round: QG[key].round, topic: QG[key].topic, q: g.q, how: g.how, opts: opts.map(o => o.t), correct: opts.findIndex(o => o.right), why: opts.map(o => o.why), meta: g.meta, ans: g.ans };
+  }
+  throw new Error('could not build ' + key);
+}
+const DEFAULT_COUNTS = { r1: 3, r2: 4, r3: 4, r4: 4 };
+/* A game: for each chosen round, that many questions from different generators (in round order). */
+function buildGame(counts) {
+  const qs = [];
+  ROUNDS.forEach(r => {
+    const n = counts[r.id] || 0; if (!n) return;
+    let bag = [];
+    for (let i = 0; i < n; i++) { if (!bag.length) bag = SHUF(Object.keys(QG).filter(k => QG[k].round === r.id)); qs.push(makeQuestion(bag.pop())); }
+  });
+  return qs;
+}
+/* Damage from one question: the class percent correct, +25 for 90% or better; under 40%, the boss heals 20. */
+function damageFor(pct) { if (pct == null) return { dmg: 0, heal: 0, crit: false }; return { dmg: Math.round(pct) + (pct >= 90 ? 25 : 0), heal: pct < 40 ? 20 : 0, crit: pct >= 90 }; }
+const bossHp = n => Math.max(100, Math.round(75 * n / 10) * 10);     /* the class needs about 75% on average */
+
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module">
+/* ==================================================================
+   Host page. The class plays together against THE FINAL:
+   each question's percent correct is damage (90%+ is a critical hit,
+   +25); under 40%, the boss heals 20. Phones answer through race-style
+   live polling on the shared Firebase project (same sessions/answers/
+   members shapes, so the existing rules work unchanged). Without
+   Firebase it runs projector-only: the teacher sets the percent.
+   ================================================================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const LETTERS = ['A', 'B', 'C', 'D', 'E'], SAVE = 'finalShowdownV1', CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const app = $('app');
+
+let S = { counts: Object.assign({}, DEFAULT_COUNTS), lim: 60, mode: 'live' };
+try { Object.assign(S, JSON.parse(localStorage.getItem(SAVE) || '{}')); } catch (e) {}
+const saveS = () => { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (e) {} };
+
+const G = { phase: 'setup', qs: [], i: 0, hp: 0, max: 0, log: [], last: null, timerEnd: 0, timerMs: 0, tick: null, applied: false };
+
+/* ---------- Firebase (live mode) ---------- */
+const L = { ok: false, F: null, auth: null, db: null, user: null, code: null, ref: null, endedRef: null, joined: 0, answers: [], unsubs: [], unsubQ: null, error: '' };
+async function liveLoad() {
+  try {
+    const cfg = await import('./live-config.js');
+    const base = `https://www.gstatic.com/firebasejs/${cfg.FIREBASE_VERSION}/`;
+    const [a, au, fs] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-firestore.js')]);
+    L.F = { ...au, ...fs };
+    const fa = a.initializeApp(cfg.firebaseConfig);
+    L.auth = au.getAuth(fa); L.db = fs.getFirestore(fa);
+    au.onAuthStateChanged(L.auth, u => { L.user = u && !u.isAnonymous ? u : null; if (G.phase === 'setup') render(); });
+    L.ok = true;
+  } catch (e) { L.ok = false; L.error = 'Phones are unavailable here (this computer could not reach Firebase). Projector-only mode still works.'; }
+  if (G.phase === 'setup') render();
+}
+function explain(e) {
+  if (e && e.code === 'permission-denied') return 'Firebase refused the request. Check that your Google email is in the security rules and that the rules are published.';
+  if (e && e.code === 'auth/popup-blocked') return 'The browser blocked the sign-in window. Allow pop-ups for this site and try again.';
+  if (e && e.code === 'auth/unauthorized-domain') return 'This website is not on the Authorized domains list in Firebase.';
+  if (e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request')) return 'Sign-in was cancelled.';
+  return 'Something went wrong talking to Firebase' + (e && e.code ? ' (' + e.code + ')' : '') + '.';
+}
+const setMsg = t => { $('msg').textContent = t || ''; };
+const live = () => S.mode === 'live' && L.ok;
+async function liveStart() {
+  const F = L.F;
+  if (!L.user) { try { L.user = (await F.signInWithPopup(L.auth, new F.GoogleAuthProvider())).user; } catch (e) { setMsg(explain(e)); return false; } }
+  try {
+    let code = null;
+    for (let t = 0; t < 8 && !code; t++) {
+      let c = ''; for (let k = 0; k < 4; k++) c += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+      if (!(await F.getDoc(F.doc(L.db, 'sessions', c))).exists()) code = c;
+    }
+    if (!code) throw new Error('no free code');
+    L.code = code; L.ref = F.doc(L.db, 'sessions', code);
+    await F.setDoc(L.ref, { host: L.user.uid, created: F.serverTimestamp(), game: 'boss', open: false, q: -1, asked: 0, qtext: '', opts: [], label: '', limit: 0,
+      reveal: null, boss: { hp: G.hp, max: G.max }, ended: false });
+    L.unsubs.push(F.onSnapshot(F.collection(L.ref, 'members'), s => { L.joined = s.size; drawMeta(); const j = $('joined'); if (j) j.textContent = L.joined + ' joined'; }));
+    return true;
+  } catch (e) { setMsg(explain(e)); L.ref = null; return false; }
+}
+async function liveAsk(q, text, opts, label, limitSec) {
+  const F = L.F;
+  L.answers = [];
+  if (L.unsubQ) L.unsubQ();
+  L.unsubQ = F.onSnapshot(F.query(F.collection(L.ref, 'answers'), F.where('q', '==', q)), s => {
+    const a = []; s.forEach(d => { const x = d.data(); a.push({ uid: x.uid, choice: x.choice }); });
+    L.answers = a; if (G.phase === 'ask') drawAnswered();
+  }, () => {});
+  try { await F.updateDoc(L.ref, { q, asked: q + 1, open: true, qtext: text, opts, label, limit: limitSec, reveal: null }); } catch (e) { setMsg(explain(e)); }
+}
+async function liveUpdate(fields) { if (!L.ref) return; try { await L.F.updateDoc(L.ref, fields); } catch (e) { setMsg(explain(e)); } }
+async function liveEnd() {
+  if (!L.ref) return;
+  if (L.unsubQ) { L.unsubQ(); L.unsubQ = null; }
+  L.unsubs.forEach(u => u()); L.unsubs = [];
+  await liveUpdate({ open: false, ended: true, boss: { hp: G.hp, max: G.max } });
+  L.endedRef = L.ref; L.ref = null;
+}
+async function liveDelete(m) {
+  const F = L.F, ref = L.endedRef;
+  if (!ref) { if (m) m.textContent = 'Already deleted.'; return; }
+  if (m) m.textContent = 'Deleting…';
+  try {
+    for (const sub of ['answers', 'members']) {
+      const snap = await F.getDocs(F.collection(ref, sub)); const docs = []; snap.forEach(d => docs.push(d.ref));
+      for (let i = 0; i < docs.length; i += 400) { const b = F.writeBatch(L.db); docs.slice(i, i + 400).forEach(r => b.delete(r)); await b.commit(); }
+    }
+    await F.deleteDoc(ref); L.endedRef = null;
+    if (m) m.textContent = 'Deleted from Firebase. This summary stays until you leave the page.';
+  } catch (e) { if (m) m.textContent = explain(e); }
+}
+
+/* ---------- the boss ---------- */
+function bossSvg() {
+  return '<svg viewBox="0 0 120 120" aria-hidden="true"><g transform="rotate(-4 60 60)">' +
+    '<path class="body" d="M24 10 h56 l18 18 v82 h-74 z" fill="#FFFDF5" stroke="#14213D" stroke-width="3" stroke-linejoin="round"/>' +
+    '<path d="M80 10 v18 h18" fill="#EDE6D2" stroke="#14213D" stroke-width="3" stroke-linejoin="round"/>' +
+    '<g stroke="#9DB3D8" stroke-width="2"><line x1="32" y1="76" x2="90" y2="76"/><line x1="32" y1="86" x2="90" y2="86"/><line x1="32" y1="96" x2="78" y2="96"/></g>' +
+    '<path d="M34 36 l18 7" stroke="#14213D" stroke-width="4" stroke-linecap="round"/><path d="M88 36 l-18 7" stroke="#14213D" stroke-width="4" stroke-linecap="round"/>' +
+    '<ellipse cx="44" cy="50" rx="8" ry="7" fill="#fff" stroke="#14213D" stroke-width="2.5"/><ellipse cx="76" cy="50" rx="8" ry="7" fill="#fff" stroke="#14213D" stroke-width="2.5"/>' +
+    '<circle cx="46" cy="51" r="3.4" fill="#A31F1C"/><circle cx="74" cy="51" r="3.4" fill="#A31F1C"/>' +
+    '<path d="M40 64 l6 -5 l6 5 l6 -5 l6 5 l6 -5 l6 5" fill="none" stroke="#14213D" stroke-width="3" stroke-linejoin="round"/>' +
+    '<text x="86" y="106" font-family="Georgia,serif" font-size="20" font-weight="700" fill="#A31F1C" text-anchor="middle">F</text></g></svg>';
+}
+function bossHtml(size, id) {
+  const pct = G.max ? Math.max(0, 100 * G.hp / G.max) : 100;
+  return '<div class="boss ' + size + (G.hp <= 0 && G.max ? ' defeated' : '') + '" id="' + (id || 'boss') + '">' + bossSvg() +
+    '<div class="hpwrap"><div class="bname">THE FINAL <span>HP ' + Math.max(0, G.hp) + ' / ' + G.max + '</span></div><div class="hpbar" role="img" aria-label="Boss health ' + Math.max(0, G.hp) + ' of ' + G.max + '"><i style="width:' + pct + '%"></i></div></div></div>';
+}
+
+/* ---------- screens ---------- */
+function drawMeta() {
+  const m = $('meta');
+  if (G.phase === 'setup') { m.innerHTML = ''; return; }
+  let h = '';
+  if (live() && (L.code || L.endedRef)) h += '<span>Room <b>' + esc(L.code || '') + '</b></span><span>' + L.joined + ' joined</span>';
+  if (G.qs.length && G.phase !== 'lobby') h += '<span>Question <b>' + Math.min(G.i + 1, G.qs.length) + '</b> of ' + G.qs.length + '</span>';
+  m.innerHTML = h;
+}
+function render() { drawMeta(); ({ setup: renderSetup, lobby: renderLobby, intro: renderIntro, ask: renderAsk, reveal: renderReveal, final: renderFinal })[G.phase](); }
+
+function renderSetup() {
+  const total = ROUNDS.reduce((a, r) => a + (S.counts[r.id] || 0), 0);
+  let h = '<div class="setup"><div class="card"><h2>Set up the showdown</h2><p class="lede">The whole class plays together. Each question’s percent correct is damage to THE FINAL; 90% or better is a critical hit (+25), and under 40% the boss heals 20. Beat it by averaging about 75%.</p>' +
+    '<fieldset><legend>Rounds</legend>' + ROUNDS.map((r, k) => '<div class="row"><label for="c' + r.id + '">Round ' + (k + 1) + ' · ' + esc(r.title) + '</label><input type="number" id="c' + r.id + '" min="0" max="8" value="' + (S.counts[r.id] || 0) + '"><small>' +
+      Object.keys(QG).filter(key => QG[key].round === r.id).length + ' question types</small></div>').join('') +
+    '<p class="lede" style="margin:6px 0 0">' + total + ' questions, about ' + Math.round(total * (S.lim + 40) / 60) + ' minutes.</p></fieldset>' +
+    '<fieldset><legend>Timer</legend><div class="row"><label for="lim">Seconds per question</label><input type="number" id="lim" min="20" max="240" value="' + S.lim + '"><small>calculations need a minute or so</small></div></fieldset></div>';
+  h += '<div class="card"><fieldset><legend>How students answer</legend>' +
+    '<label class="chk"><input type="radio" name="mode" value="live"' + (live() ? ' checked' : '') + (L.ok ? '' : ' disabled') + '><span>On phones<small>Students scan a QR code and answer on showdown.html. You sign in with Google. No names are collected.' + (L.ok ? '' : ' <b>Not available on this computer right now.</b>') + '</small></span></label>' +
+    '<label class="chk"><input type="radio" name="mode" value="offline"' + (!live() ? ' checked' : '') + '><span>Projector only<small>Students answer on paper or whiteboards; after each reveal you set roughly what percent got it.</small></span></label>' +
+    '</fieldset><p class="lede">Every game has new numbers, and each wrong choice is the answer a common mistake gives, so the reveal shows what each wrong answer came from.</p>' +
+    '<div class="btnrow"><button class="btn big" id="go">' + (live() ? (L.user ? 'Open the room' : 'Sign in and open the room') : 'Start the showdown') + '</button></div>' +
+    (L.error ? '<p class="note">' + esc(L.error) + '</p>' : '') + '</div></div>';
+  app.innerHTML = h;
+  const read = () => {
+    ROUNDS.forEach(r => S.counts[r.id] = clampInt($('c' + r.id).value, 0, 8, DEFAULT_COUNTS[r.id]));
+    S.lim = clampInt($('lim').value, 20, 240, 60);
+    const m = app.querySelector('[name=mode]:checked'); if (m) S.mode = m.value;
+    saveS();
+  };
+  app.querySelectorAll('input').forEach(x => x.addEventListener('change', () => { if (!x.isConnected) return; read(); setTimeout(renderSetup, 0); }));
+  $('go').onclick = async () => {
+    read(); setMsg('');
+    const n = ROUNDS.reduce((a, r) => a + S.counts[r.id], 0);
+    if (!n) { setMsg('Give at least one round some questions.'); return; }
+    G.qs = buildGame(S.counts); G.i = 0; G.max = bossHp(n); G.hp = G.max; G.log = [];
+    if (live()) { $('go').disabled = true; if (!(await liveStart())) { $('go').disabled = false; return; } G.phase = 'lobby'; }
+    else G.phase = 'intro';
+    render();
+  };
+}
+const clampInt = (v, lo, hi, d) => { const n = parseInt(v, 10); return isNaN(n) ? d : Math.max(lo, Math.min(hi, n)); };
+
+function renderLobby() {
+  const url = new URL('showdown.html?room=' + L.code, location.href).href;
+  app.innerHTML = '<div class="card lobby"><div><div class="qr" id="qr" aria-hidden="true"></div></div><div>' +
+    '<p class="step">Scan, or go to the address and type the code</p><p class="code" aria-label="Room code ' + esc(L.code.split('').join(' ')) + '">' + esc(L.code) + '</p>' +
+    '<p class="url">' + esc(url.replace(/^https?:\/\//, '')) + '</p><p class="joined" id="joined">' + L.joined + ' joined</p>' +
+    '<div class="bosshead">' + bossHtml('small') + '</div><p class="lede">Have a calculator or the course applets ready. Late arrivals can scan in any time.</p>' +
+    '<div class="btnrow"><button class="btn big" id="begin">Begin</button></div></div></div>';
+  try { new window.QRCode($('qr'), { text: url, width: 260, height: 260, correctLevel: window.QRCode.CorrectLevel.M }); } catch (e) { $('qr').textContent = ''; }
+  $('begin').onclick = () => { G.phase = 'intro'; render(); };
+}
+const roundOf = q => ROUNDS.findIndex(r => r.id === q.round);
+function renderIntro() {
+  const q = G.qs[G.i], k = roundOf(q), r = ROUNDS[k], n = G.qs.filter(x => x.round === q.round).length;
+  app.innerHTML = '<div class="card intro"><p class="rn">Round ' + (k + 1) + ' · ' + n + ' question' + (n > 1 ? 's' : '') + '</p><h2>' + esc(r.title) + '</h2><p class="lede">' + esc(r.flavor) + '</p>' +
+    bossHtml('big') + '<div class="btnrow" style="justify-content:center"><button class="btn big" id="fight">Fight</button></div><p class="kbd">Keyboard: Enter or → goes on.</p></div>';
+  $('fight').onclick = ask; $('fight').focus();
+  if (live()) liveUpdate({ open: false, label: 'Round ' + (k + 1) + ': ' + r.title, reveal: null, boss: { hp: G.hp, max: G.max } });
+}
+
+async function ask() {
+  const q = G.qs[G.i];
+  G.phase = 'ask'; G.timerMs = S.lim * 1000; closing = false;
+  render();
+  if (live()) await liveAsk(G.i + 1, q.q, q.opts, 'Round ' + (roundOf(q) + 1) + ' · Question ' + (G.i + 1) + ' of ' + G.qs.length, S.lim);
+  G.timerEnd = Date.now() + G.timerMs;
+  clearInterval(G.tick); G.tick = setInterval(tickTimer, 250); tickTimer();
+}
+function tickTimer() {
+  if (G.phase !== 'ask') { clearInterval(G.tick); return; }
+  const left = Math.max(0, G.timerEnd - Date.now()), el = $('tbar'), tx = $('tleft');
+  if (el) { el.firstChild.style.width = (100 * left / G.timerMs) + '%'; el.classList.toggle('low', left < 10000); }
+  if (tx) tx.textContent = Math.ceil(left / 1000) + ' s';
+  if (left <= 0) closeQ();
+}
+function drawAnswered() {
+  const el = $('answered'); if (!el) return;
+  el.textContent = L.answers.length + ' of ' + L.joined + ' answered';
+  if (L.joined > 0 && L.answers.length >= L.joined && G.timerEnd - Date.now() > 2000) G.timerEnd = Date.now() + 2000;   // everyone is in: close soon
+}
+function qHtml(reveal) {
+  const q = G.qs[G.i], e = reveal ? G.log[G.i] : null;
+  let h = '<div class="qhead"><span class="step">Round ' + (roundOf(q) + 1) + ' · ' + esc(q.topic) + '</span><span class="step">Question ' + (G.i + 1) + ' of ' + G.qs.length + '</span></div>' +
+    '<p class="qtext">' + esc(q.q) + '</p><div class="opts">';
+  q.opts.forEach((t, i) => {
+    const right = reveal && i === q.correct, n = e && e.counts ? (e.counts[LETTERS[i]] || 0) : null, pct = e && e.total ? Math.round(100 * n / e.total) : 0;
+    h += '<div class="opt' + (right ? ' right' : '') + '">' + (n != null ? '<span class="fill" style="width:' + pct + '%"></span>' : '') + '<span class="ltr">' + LETTERS[i] + '</span><span class="txt">' + esc(t) +
+      (reveal && !right ? '<span class="mis">' + esc(q.why[i]) + '</span>' : '') + '</span>' + (n != null ? '<span class="cnt">' + n + '<br>' + pct + '%</span>' : '') + '</div>';
+  });
+  return h + '</div>';
+}
+function renderAsk() {
+  app.innerHTML = '<div class="card"><div class="bosshead">' + bossHtml('small') + '</div>' + qHtml(false) +
+    '<div class="timer" id="tbar"><i></i></div><div class="tline"><span id="answered">' + (live() ? '' : 'Work it out, then pick a letter') + '</span><b id="tleft"></b></div>' +
+    '<div class="btnrow"><button class="btn" id="closeNow">Close and reveal</button><button class="btn quiet" id="addTime">+15 s</button></div><p class="kbd">Keyboard: Enter or → closes and reveals.</p></div>';
+  $('closeNow').onclick = closeQ;
+  $('addTime').onclick = () => { G.timerEnd += 15000; G.timerMs += 15000; if (live()) liveUpdate({ limit: Math.round(G.timerMs / 1000) }); };
+  if (live()) drawAnswered();
+}
+
+let closing = false;
+async function closeQ() {
+  if (G.phase !== 'ask' || closing) return;
+  closing = true; clearInterval(G.tick);
+  const q = G.qs[G.i];
+  const e = G.log[G.i] = { key: q.key, topic: q.topic, q: q.q, right: q.opts[q.correct], counts: null, total: 0, pct: null, dmg: 0, heal: 0, crit: false };
+  if (live()) {
+    await liveUpdate({ open: false }); await new Promise(r => setTimeout(r, 900));
+    const c = {}; L.answers.forEach(a => c[a.choice] = (c[a.choice] || 0) + 1);
+    e.counts = c; e.total = L.answers.length; e.pct = e.total ? 100 * (c[LETTERS[q.correct]] || 0) / e.total : null;
+    applyDamage(e);
+  }
+  G.phase = 'reveal'; G.applied = live();
+  render();
+  if (live()) liveUpdate({ reveal: { q: G.i + 1, letter: LETTERS[q.correct], note: q.how + '. ' + hitText(e) }, boss: { hp: Math.max(0, G.hp), max: G.max } });
+}
+function applyDamage(e) {
+  const d = damageFor(e.pct); e.dmg = d.dmg; e.heal = d.heal; e.crit = d.crit;
+  G.hp = Math.min(G.max, G.hp - d.dmg + d.heal);
+}
+function hitText(e) {
+  if (e.pct == null) return 'No answers came in, so no damage.';
+  return Math.round(e.pct) + '% correct: ' + (e.crit ? 'critical hit, ' : '') + e.dmg + ' damage' + (e.heal ? '; the boss heals ' + e.heal : '') + '.';
+}
+function renderReveal() {
+  const q = G.qs[G.i], e = G.log[G.i], last = G.i === G.qs.length - 1, dead = G.hp <= 0;
+  let h = '<div class="card"><div class="bosshead">' + bossHtml('small') + '</div>' + qHtml(true) + '<p class="how"><b>How</b>' + esc(q.how) + '</p>';
+  if (!G.applied) h += '<div class="offl"><label for="pct">About what percent of the class got it?</label><input type="range" id="pct" min="0" max="100" step="10" value="50"><output id="pctOut">50%</output><button class="btn" id="strike">Strike</button></div>';
+  else h += '<div class="hit' + (e.heal ? ' heal' : '') + '"><b>' + (e.pct == null ? '—' : (e.crit ? 'CRITICAL ' : '') + '−' + e.dmg) + '</b><span>' + esc(hitText(e)) + '</span></div>';
+  h += '<div class="btnrow"><button class="btn big" id="next"' + (G.applied ? '' : ' disabled') + '>' + (dead ? 'Victory!' : last ? 'Final result' : 'Next question') + '</button><button class="btn quiet" id="endNow">End showdown</button></div><p class="kbd">Keyboard: Enter or → goes on.</p></div>';
+  app.innerHTML = h;
+  if (G.applied && e.pct != null) { const b = $('boss'); b.classList.add('shake', 'flash'); }
+  if ($('pct')) { $('pct').oninput = () => $('pctOut').textContent = $('pct').value + '%'; $('strike').onclick = () => { e.pct = +$('pct').value; applyDamage(e); G.applied = true; render(); }; }
+  $('next').onclick = next; $('endNow').onclick = finish;
+}
+function next() {
+  if (G.phase !== 'reveal' || !G.applied) return;
+  if (G.hp <= 0 || G.i >= G.qs.length - 1) { finish(); return; }
+  const prev = G.qs[G.i]; G.i++;
+  G.phase = G.qs[G.i].round !== prev.round ? 'intro' : 'ask';
+  if (G.phase === 'intro') render(); else ask();
+}
+async function finish() {
+  clearInterval(G.tick); G.phase = 'final';
+  if (live()) await liveEnd();
+  render();
+}
+function renderFinal() {
+  const won = G.hp <= 0, asked = G.log.filter(Boolean), pcts = asked.filter(e => e.pct != null).map(e => e.pct);
+  const avg = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : 0;
+  let h = '<div class="card result"><h2>' + (won ? 'THE FINAL is defeated!' : 'THE FINAL escapes… for now') + '</h2><p class="lede">' + (won ? 'The class brought it down in ' + asked.length + ' questions.' : 'It got away with ' + Math.max(0, G.hp) + ' HP left. Next time, aim for 75% or better on every question.') + '</p>' +
+    bossHtml('big', 'bossEnd') + '<div class="stats"><div><b>' + asked.length + '</b><span>questions</span></div><div><b>' + avg + '%</b><span>average correct</span></div><div><b>' + asked.filter(e => e.crit).length + '</b><span>critical hits</span></div><div><b>' + asked.filter(e => e.heal).length + '</b><span>boss heals</span></div></div></div>';
+  const rows = asked.map((e, k) => ({ e, k, q: G.qs[k] })).sort((a, b) => (a.e.pct == null ? 101 : a.e.pct) - (b.e.pct == null ? 101 : b.e.pct));
+  h += '<div class="card" style="margin-top:16px"><h3 style="margin-top:0">Worth another look</h3><p class="lede">Hardest first. “Most popular wrong answer” shows the mistake behind it' + (live() ? '' : ' (phones only)') + '.</p>' +
+    '<table><thead><tr><th>#</th><th>Topic</th><th>Correct</th><th>Most popular wrong answer</th></tr></thead><tbody>' + rows.map(({ e, k, q }) => {
+      let top = '';
+      if (e.counts) { let best = -1, bi = -1; q.opts.forEach((_, i) => { if (i === q.correct) return; const n = e.counts[LETTERS[i]] || 0; if (n > best) { best = n; bi = i; } }); if (best > 0) top = esc(q.opts[bi]) + ' (' + best + '): ' + esc(q.why[bi]); }
+      return '<tr><td class="num">' + (k + 1) + '</td><td>' + esc(e.topic) + '</td><td class="num">' + (e.pct == null ? '–' : Math.round(e.pct) + '%') + '</td><td>' + (top || '–') + '</td></tr>';
+    }).join('') + '</tbody></table><div class="btnrow"><button class="btn" id="csv">Download results</button>' + (L.endedRef ? '<button class="btn quiet" id="del">Delete session data</button>' : '') +
+    '<button class="btn quiet" id="again">New showdown</button><span id="delMsg" role="status" class="lede" style="margin:0"></span></div></div>';
+  app.innerHTML = h;
+  $('csv').onclick = downloadCsv;
+  if ($('del')) $('del').onclick = () => liveDelete($('delMsg'));
+  $('again').onclick = () => { G.phase = 'setup'; G.qs = []; L.code = null; render(); };
+}
+function downloadCsv() {
+  const cell = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const lines = [['Order', 'Topic', 'Question', 'Correct answer', 'A', 'B', 'C', 'D', 'Answered', 'Percent correct', 'Damage', 'Boss healed'].join(',')]
+    .concat(G.log.filter(Boolean).map((e, k) => { const q = G.qs[k]; return [k + 1, e.topic, e.q, e.right, ...LETTERS.slice(0, 4).map((l, i) => q.opts[i] + (e.counts ? ' (' + (e.counts[l] || 0) + ')' : '')), e.total, e.pct == null ? '' : Math.round(e.pct), e.dmg, e.heal].map(cell).join(','); }));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+  a.download = 'final-showdown' + (L.code ? '-' + L.code : '') + '.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+document.addEventListener('keydown', e => {
+  if (!['Enter', 'ArrowRight', 'PageDown', ' '].includes(e.key)) return;
+  const t = e.target;
+  if (t.matches && t.matches('input[type=number],input[type=text],input[type=range],textarea,select')) return;
+  if (t.matches && t.matches('button,input[type=checkbox],input[type=radio]') && (e.key === 'Enter' || e.key === ' ')) return;
+  if (G.phase === 'ask') { e.preventDefault(); closeQ(); }
+  else if (G.phase === 'reveal') { e.preventDefault(); next(); }
+  else if (G.phase === 'intro') { e.preventDefault(); ask(); }
+});
+window.addEventListener('beforeunload', e => { if (['intro', 'ask', 'reveal'].includes(G.phase)) { e.preventDefault(); e.returnValue = ''; } });
+
+window.SHOW = { G, S, L };   /* read-only hook for testing */
+render();
+liveLoad();
+</script>
+</body>
+</html>
