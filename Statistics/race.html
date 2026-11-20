@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Which Tool? Race</title>
+<style>
+:root{
+  --paper:#F3F1E7; --sheet:#FBFAF4; --card:#FFFFFF; --rule:#D8D3C2; --ink:#14213D; --ink-soft:#4F586C;
+  --blue:#1F4E9C; --blue-soft:#E4EBF7; --on-blue:#FFFFFF; --ok:#22603C; --ok-soft:#E2EFE7; --no:#A31F1C; --no-soft:#F7E4E3; --gold:#B58B15;
+  --t0:#1F4E9C; --t1:#A33A1C; --t2:#22603C; --t3:#6B3FA0; --t4:#8A6A0A;
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif; --sans:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --paper:#151A22; --sheet:#1B212B; --card:#212834; --rule:#38414F; --ink:#E8EBF1; --ink-soft:#A7B0BF;
+  --blue:#8FB0EC; --blue-soft:#24324A; --on-blue:#0F1724; --ok:#7BD3A0; --ok-soft:#1E3529; --no:#F29A92; --no-soft:#3A2224; --gold:#E0BC5A;
+  --t0:#8FB0EC; --t1:#F0A080; --t2:#7BD3A0; --t3:#C4A5F0; --t4:#E0BC5A; color-scheme:dark;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:18px;line-height:1.5}
+.wrap{max-width:560px;margin:0 auto;padding:max(14px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom))}
+header{border-bottom:3px double var(--ink);padding:6px 0 10px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+h1{font-family:var(--serif);font-size:25px;margin:0;line-height:1.1}
+.room{font-family:var(--mono);font-size:15px;color:var(--ink-soft);text-align:right}
+.chip{display:inline-block;font-weight:700;padding:3px 10px;border-radius:4px;color:#fff;font-size:15px;margin-bottom:10px}
+.chip.none{background:var(--no-soft);color:var(--no)}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:16px}
+.label{font-family:var(--mono);font-size:13px;color:var(--ink-soft);margin:0 0 6px;display:flex;justify-content:space-between;gap:10px}
+.label b{color:var(--ink);font-size:16px}
+.label b.low{color:var(--no)}
+.qtext{font-family:var(--serif);font-size:19px;line-height:1.45;margin:0 0 6px;white-space:pre-line}
+.ask{font-weight:700;margin:0 0 12px}
+.choices{display:grid;gap:10px}
+.choice{font:inherit;text-align:left;display:flex;gap:14px;align-items:center;width:100%;padding:12px 14px;min-height:58px;
+  border:2px solid var(--rule);border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer}
+.choice .ltr{font-family:var(--mono);font-weight:700;font-size:22px;line-height:1.2;flex:0 0 26px}
+.choice .txt{font-size:16.5px;line-height:1.35}
+.choice.on{border-color:var(--blue);background:var(--blue-soft)}
+.choice.right{border-color:var(--ok);background:var(--ok-soft)}
+.choice.wrong{border-color:var(--no);background:var(--no-soft)}
+.choice:disabled{cursor:default;opacity:.6}
+.choice.on:disabled,.choice.right:disabled,.choice.wrong:disabled{opacity:1}
+.team .choice .ltr{color:#fff;border-radius:4px;text-align:center;flex-basis:32px;padding:2px 0}
+.status{margin:14px 0 0;padding:10px 14px;border-radius:0 4px 4px 0;border-left:4px solid var(--blue);background:var(--blue-soft);font-size:16px}
+.status.ok{border-left-color:var(--ok);background:var(--ok-soft)}
+.status.no{border-left-color:var(--no);background:var(--no-soft)}
+.status:empty{display:none}
+.wait{font-family:var(--serif);font-size:21px;text-align:center;padding:26px 8px;margin:0}
+.board{margin-top:16px}
+.board h2{font-family:var(--serif);font-size:18px;margin:0 0 6px}
+.brow{display:flex;justify-content:space-between;padding:6px 10px;border-radius:4px;font-size:16px}
+.brow.me{background:var(--blue-soft);font-weight:700}
+.brow span:last-child{font-family:var(--mono);font-weight:700}
+.join label{display:block;font-weight:600;margin-bottom:6px}
+.join input{font:inherit;font-family:var(--mono);font-size:30px;letter-spacing:.2em;text-transform:uppercase;width:100%;padding:10px 12px;
+  border:2px solid var(--rule);border-radius:6px;background:var(--card);color:var(--ink)}
+.btn{font:inherit;font-weight:600;padding:12px 20px;border-radius:6px;border:1px solid var(--blue);background:var(--blue);color:var(--on-blue);margin-top:12px;width:100%;cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.foot{margin-top:18px;font-size:13.5px;color:var(--ink-soft);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Which Tool? Race</h1><span class="room" id="room"></span></header>
+  <main id="main" aria-live="polite"><div class="card"><p class="wait">Connecting…</p></div></main>
+  <p class="foot">No names are collected. Your teacher sees team scores and how many picked each letter.</p>
+</div>
+<script type="module">
+import { firebaseConfig, FIREBASE_VERSION } from './live-config.js';
+const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+const COLORS = ['var(--t0)', 'var(--t1)', 'var(--t2)', 'var(--t3)', 'var(--t4)'];
+const main = document.getElementById('main'), roomEl = document.getElementById('room');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let F, auth, db, uid = null, code = null, session = null, seen = false, mine = {}, statusMsg = null;
+let shownQ = null, shownAt = 0, tick = null;    // when this phone first saw the current question, for its countdown
+
+function codeFromUrl() { const c = new URLSearchParams(location.search).get('room') || ''; return /^[A-Za-z]{4}$/.test(c) ? c.toUpperCase() : null; }
+function showJoin(err) {
+  main.innerHTML = '<div class="card"><form class="join" id="joinForm"><label for="code">Room code from the screen</label>' +
+    '<input id="code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false">' +
+    '<button class="btn" type="submit">Join</button>' + (err ? '<p class="status no">' + esc(err) + '</p>' : '') + '</form></div>';
+  const input = document.getElementById('code'); input.focus();
+  document.getElementById('joinForm').onsubmit = e => {
+    e.preventDefault();
+    const c = input.value.trim().toUpperCase();
+    if (!/^[A-Z]{4}$/.test(c)) { showJoin('Type the 4 letters shown on the screen.'); return; }
+    history.replaceState(null, '', '?room=' + c); join(c);
+  };
+}
+const myTeam = () => { const t = LETTERS.indexOf(mine[0]); return session && session.teams && t >= 0 && t < session.teams.length ? t : -1; };
+function save() { try { sessionStorage.setItem('race-' + code, JSON.stringify(mine)); } catch (e) {} }
+
+function boardHtml() {
+  const b = session && session.board; if (!b || !b.length) return '';
+  const me = myTeam();
+  return '<div class="card board"><h2>Leaderboard</h2>' + b.map((r, k) => '<div class="brow' + (r.team === me ? ' me' : '') + '"><span>' + (k + 1) + '. ' + esc(r.name) + (r.team === me ? ' (you)' : '') + '</span><span>' + r.score + '</span></div>').join('') + '</div>';
+}
+function render() {
+  if (!session) { main.innerHTML = '<div class="card"><p class="wait">' + (seen ? 'This race has ended. Thanks for playing!' : 'Room ' + esc(code) + ' was not found. Check the code on the screen.') + '</p></div>'; return; }
+  if (session.ended) { main.innerHTML = '<div class="card"><p class="wait">The race is over. Look up for the podium!</p></div>' + boardHtml(); return; }
+  const q = session.q, open = !!session.open, me = myTeam();
+  if (q < 0 || !session.opts || !session.opts.length) { main.innerHTML = '<div class="card"><p class="wait">You’re in. Wait for your teacher.</p></div>'; return; }
+  if (q !== shownQ || (open && !shownAt)) { shownQ = q; shownAt = open ? Date.now() : 0; }
+  let h = '<div class="card">';
+  if (q === 0) {
+    /* team pick */
+    h += '<p class="qtext" style="font-size:22px">Pick your team</p><p class="ask">Sit with your team, then tap its name.</p><div class="choices team">';
+    session.opts.forEach((t, i) => {
+      const L = LETTERS[i], on = mine[0] === L;
+      h += '<button type="button" class="choice' + (on ? ' on' : '') + '" data-l="' + L + '" aria-pressed="' + on + '"' + (open ? '' : ' disabled') + '><span class="ltr" style="background:' + COLORS[i] + '">' + L + '</span><span class="txt">' + esc(t) + '</span></button>';
+    });
+    h += '</div>';
+    const st = statusMsg && statusMsg.q === 0 ? statusMsg : (me >= 0 ? { text: 'You’re on ' + session.teams[me] + '. Wait for the race to start.', cls: 'ok' } : open ? { text: 'Tap a team.', cls: '' } : { text: 'Team pick is closed.', cls: '' });
+    h += '<p class="status ' + st.cls + '">' + esc(st.text) + '</p></div>' + boardHtml();
+    main.innerHTML = h; wire(); return;
+  }
+  const picked = mine[q], rv = session.reveal && session.reveal.q === q ? session.reveal : null;
+  const parts = String(session.qtext || '').split('\n\n'), ask = parts.length > 1 ? parts.pop() : '', text = parts.join('\n\n');
+  h += me >= 0 ? '<span class="chip" style="background:' + COLORS[me] + '">' + esc(session.teams[me]) + '</span>' : '<span class="chip none">Not on a team: your answers will not score. Ask your teacher to open team pick.</span>';
+  h += '<p class="label"><span>' + esc(session.label || '') + '</span><b id="tl"></b></p><p class="qtext">' + esc(text) + '</p>' + (ask ? '<p class="ask">' + esc(ask) + '</p>' : '') + '<div class="choices" role="group" aria-label="Answer choices">';
+  session.opts.forEach((t, i) => {
+    const L = LETTERS[i], on = picked === L;
+    const cls = rv ? (L === rv.letter ? ' right' : on ? ' wrong' : '') : on ? ' on' : '';
+    h += '<button type="button" class="choice' + cls + '" data-l="' + L + '" aria-pressed="' + on + '"' + (open ? '' : ' disabled') + ' aria-label="' + L + '. ' + esc(t) + '"><span class="ltr">' + L + '</span><span class="txt">' + esc(t) + '</span></button>';
+  });
+  h += '</div>';
+  let st = '', cls = '';
+  if (statusMsg && statusMsg.q === q) { st = statusMsg.text; cls = statusMsg.cls; }
+  else if (rv) {
+    if (!picked) st = 'No answer this time. The answer was ' + rv.letter + '.';
+    else if (picked === rv.letter) { st = 'Right! ' + rv.letter + ' it is.'; cls = 'ok'; }
+    else { st = 'Not this time: you picked ' + picked + ', the answer was ' + rv.letter + '.'; cls = 'no'; }
+    if (rv.note) st += ' ' + rv.note;
+  }
+  else if (!open) st = picked ? 'Time! You picked ' + picked + '. Look up at the screen.' : 'Time! Look up at the screen.';
+  else if (picked) { st = picked + ' locked in. You can change it until time runs out. Faster right answers earn more points.'; cls = 'ok'; }
+  h += '<p class="status ' + cls + '">' + esc(st) + '</p></div>' + (rv ? boardHtml() : '');
+  main.innerHTML = h; wire(); countdown();
+}
+function wire() { main.querySelectorAll('button.choice').forEach(b => b.onclick = () => answer(b.getAttribute('data-l'))); }
+/* A countdown from when this phone saw the question; the projector's timer is the official one. */
+function countdown() {
+  clearInterval(tick);
+  const el = document.getElementById('tl');
+  if (!el || !session || !session.open || !session.limit || !shownAt) { if (el) el.textContent = ''; return; }
+  const draw = () => { const left = Math.max(0, Math.ceil(session.limit - (Date.now() - shownAt) / 1000)); el.textContent = left + ' s'; el.classList.toggle('low', left <= 5); if (!left) clearInterval(tick); };
+  draw(); tick = setInterval(draw, 250);
+}
+async function answer(L) {
+  const q = session.q;
+  if (!session.open) return;
+  const prev = mine[q];
+  mine[q] = L; statusMsg = { q, text: 'Sending ' + L + '…', cls: '' }; render();
+  try {
+    await F.setDoc(F.doc(db, 'sessions', code, 'answers', uid + '_' + q), { uid, q, choice: L, at: F.serverTimestamp() });
+    statusMsg = null;
+  } catch (e) {
+    mine[q] = prev;
+    statusMsg = { q, text: e && e.code === 'permission-denied' ? 'Time ran out before your answer arrived, so it did not count.' : 'Your answer did not send. Check your connection and tap again.', cls: 'no' };
+  }
+  save(); render();
+}
+async function join(c) {
+  code = c; roomEl.textContent = 'Room ' + c;
+  try { mine = JSON.parse(sessionStorage.getItem('race-' + c) || '{}') || {}; } catch (e) { mine = {}; }
+  main.innerHTML = '<div class="card"><p class="wait">Joining room ' + esc(c) + '…</p></div>';
+  try {
+    const ref = F.doc(db, 'sessions', c), first = await F.getDoc(ref);
+    if (!first.exists()) { showJoin('Room ' + c + ' was not found. Check the code on the screen.'); roomEl.textContent = ''; return; }
+    F.setDoc(F.doc(db, 'sessions', c, 'members', uid), { at: F.serverTimestamp() }).catch(() => {});
+    F.onSnapshot(ref, s => {
+      session = s.exists() ? s.data() : null; if (session) seen = true;
+      if (statusMsg && session && statusMsg.q !== session.q) statusMsg = null;
+      render();
+    }, () => { main.innerHTML = '<div class="card"><p class="wait">Lost the connection to the room. Reload the page to rejoin.</p></div>'; });
+  } catch (e) { main.innerHTML = '<div class="card"><p class="wait">Could not reach the room. Check your Wi-Fi and reload the page.</p></div>'; }
+}
+(async () => {
+  try {
+    const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/`;
+    const [app, au, fs] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-firestore.js')]);
+    F = { ...au, ...fs };
+    const a = app.initializeApp(firebaseConfig);
+    auth = au.getAuth(a); db = fs.getFirestore(a);
+    const saved = await new Promise(res => { const off = au.onAuthStateChanged(auth, u => { off(); res(u); }); });
+    uid = saved ? saved.uid : (await au.signInAnonymously(auth)).user.uid;
+  } catch (e) { main.innerHTML = '<div class="card"><p class="wait">This phone could not connect. If you are on school Wi-Fi, tell your teacher; the network may be blocking it.</p></div>'; return; }
+  const c = codeFromUrl(); if (c) join(c); else showJoin();
+})();
+</script>
+</body>
+</html>
